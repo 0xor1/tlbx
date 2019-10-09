@@ -57,7 +57,7 @@ func TestConfig_GetString(t *testing.T) {
 func TestConfig_GetStringSlice(t *testing.T) {
 	a := assert.New(t)
 
-	a.Equal(New("").SetDefault(str, []interface{}{str}).GetStringSlice(str), []string{str})
+	a.Equal(New("").SetDefault(str, []string{str}).GetStringSlice(str), []string{str})
 }
 
 func TestConfig_GetMap(t *testing.T) {
@@ -69,7 +69,7 @@ func TestConfig_GetMap(t *testing.T) {
 func TestConfig_GetMapString(t *testing.T) {
 	a := assert.New(t)
 
-	a.Equal(New("").SetDefault(str, map[string]interface{}{str: str}).GetMapString(str), map[string]string{str: str})
+	a.Equal(New("").SetDefault(str, map[string]string{str: str}).GetMapString(str), map[string]string{str: str})
 }
 
 func TestConfig_GetInt(t *testing.T) {

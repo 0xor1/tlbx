@@ -376,10 +376,13 @@ func (j *Json) Map(path ...interface{}) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if tmp.data == nil {
+		return map[string]interface{}{}, nil
+	}
 	if m, ok := tmp.data.(map[string]interface{}); ok {
 		return m, nil
 	}
-	return nil, errors.New("type assertion to map[string]interface{} failed")
+	return nil, invalidTypeErr
 }
 
 func (j *Json) MustMap(path ...interface{}) map[string]interface{} {
@@ -400,18 +403,24 @@ func (j *Json) MapString(path ...interface{}) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	if tmp.data == nil {
+		return map[string]string{}, nil
+	}
+	if m, ok := tmp.data.(map[string]string); ok {
+		return m, nil
+	}
 	if m, ok := tmp.data.(map[string]interface{}); ok {
 		ms := map[string]string{}
 		for k, v := range m {
 			if kStr, ok := v.(string); ok {
 				ms[k] = kStr
 			} else {
-				return nil, errors.New("type assertion of map value to string failed")
+				return nil, invalidTypeErr
 			}
 		}
 		return ms, nil
 	}
-	return nil, errors.New("type assertion to map[string]string{} failed")
+	return nil, invalidTypeErr
 }
 
 func (j *Json) MustMapString(path ...interface{}) map[string]string {
@@ -435,7 +444,7 @@ func (j *Json) Slice(path ...interface{}) ([]interface{}, error) {
 	if a, ok := tmp.data.([]interface{}); ok {
 		return a, nil
 	}
-	return nil, errors.New("type assertion to []interface{} failed")
+	return nil, invalidTypeErr
 }
 
 func (j *Json) MustSlice(path ...interface{}) []interface{} {
@@ -459,7 +468,7 @@ func (j *Json) Bool(path ...interface{}) (bool, error) {
 	if s, ok := tmp.data.(bool); ok {
 		return s, nil
 	}
-	return false, errors.New("type assertion to bool failed")
+	return false, invalidTypeErr
 }
 
 func (j *Json) MustBool(path ...interface{}) bool {
@@ -483,7 +492,7 @@ func (j *Json) String(path ...interface{}) (string, error) {
 	if s, ok := tmp.data.(string); ok {
 		return s, nil
 	}
-	return "", errors.New("type assertion to string failed")
+	return "", invalidTypeErr
 }
 
 func (j *Json) MustString(path ...interface{}) string {
@@ -500,19 +509,30 @@ func (j *Json) StringOrDefault(def string, path ...interface{}) string {
 }
 
 func (j *Json) StringSlice(path ...interface{}) ([]string, error) {
-	arr, err := j.Slice(path...)
+	js, err := j.Get(path...)
 	if err != nil {
 		return nil, err
 	}
-	retArr := make([]string, 0, len(arr))
-	for _, a := range arr {
-		if s, ok := a.(string); a == nil || !ok {
-			return nil, errors.New("none string value encountered")
-		} else {
-			retArr = append(retArr, s)
-		}
+
+	if js.data == nil {
+		return nil, nil
 	}
-	return retArr, nil
+	if data, ok := js.data.([]string); ok {
+		return data, nil
+	}
+	if data, ok := js.data.([]interface{}); ok {
+		strs := make([]string, 0, len(data))
+		for _, item := range data {
+			if str, ok := item.(string); !ok {
+				return nil, invalidTypeErr
+			} else {
+				strs = append(strs, str)
+			}
+		}
+		return strs, nil
+	}
+
+	return nil, invalidTypeErr
 }
 
 func (j *Json) MustStringSlice(path ...interface{}) []string {
@@ -536,12 +556,12 @@ func (j *Json) Time(path ...interface{}) (time.Time, error) {
 	}
 	if t, ok := tmp.data.(time.Time); ok {
 		return t, nil
-	} else if tStr, ok := tmp.data.(string); ok {
-		if t.UnmarshalText([]byte(tStr)) == nil {
-			return t, nil
-		}
 	}
-	return t, errors.New("type assertion/unmarshalling to time.Time failed")
+	if tStr, ok := tmp.data.(string); ok {
+		err := t.UnmarshalText([]byte(tStr))
+		return t, err
+	}
+	return t, invalidTypeErr
 }
 
 func (j *Json) MustTime(path ...interface{}) time.Time {
@@ -558,19 +578,31 @@ func (j *Json) TimeOrDefault(def time.Time, path ...interface{}) time.Time {
 }
 
 func (j *Json) TimeSlice(path ...interface{}) ([]time.Time, error) {
-	arr, err := j.Slice(path...)
+	js, err := j.Get(path...)
 	if err != nil {
 		return nil, err
 	}
-	retArr := make([]time.Time, 0, len(arr))
-	for _, a := range arr {
-		if s, ok := a.(time.Time); a == nil || !ok {
-			return nil, errors.New("none time.Time value encountered")
-		} else {
-			retArr = append(retArr, s)
-		}
+
+	if js.data == nil {
+		return nil, nil
 	}
-	return retArr, nil
+	if data, ok := js.data.([]time.Time); ok {
+		return data, nil
+	}
+	data, err := js.StringSlice()
+	if err != nil {
+		return nil, err
+	}
+	ts := make([]time.Time, 0, len(data))
+	for _, item := range data {
+		t := time.Time{}
+		err := t.UnmarshalText([]byte(item))
+		if err != nil {
+			return nil, err
+		}
+		ts = append(ts, t)
+	}
+	return ts, nil
 }
 
 func (j *Json) MustTimeSlice(path ...interface{}) []time.Time {
@@ -614,19 +646,29 @@ func (j *Json) DurationOrDefault(def time.Duration, path ...interface{}) time.Du
 }
 
 func (j *Json) DurationSlice(path ...interface{}) ([]time.Duration, error) {
-	arr, err := j.StringSlice(path...)
+	js, err := j.Get(path...)
 	if err != nil {
 		return nil, err
 	}
-	retArr := make([]time.Duration, 0, len(arr))
-	for _, a := range arr {
-		if d, err := time.ParseDuration(a); err != nil {
-			return nil, err
-		} else {
-			retArr = append(retArr, d)
-		}
+	if js.data == nil {
+		return nil, nil
 	}
-	return retArr, nil
+	if ds, ok := js.data.([]time.Duration); ok {
+		return ds, nil
+	}
+	data, err := js.StringSlice()
+	if err != nil {
+		return nil, err
+	}
+	ds := make([]time.Duration, 0, len(data))
+	for _, item := range data {
+		d, err := time.ParseDuration(item)
+		if err != nil {
+			return nil, err
+		}
+		ds = append(ds, d)
+	}
+	return ds, nil
 }
 
 func (j *Json) MustDurationSlice(path ...interface{}) []time.Duration {
@@ -661,20 +703,31 @@ func (j *Json) IntOrDefault(def int, path ...interface{}) int {
 }
 
 func (j *Json) IntSlice(path ...interface{}) ([]int, error) {
-	arr, err := j.Slice(path...)
+	js, err := j.Get(path...)
 	if err != nil {
 		return nil, err
 	}
-	retArr := make([]int, 0, len(arr))
-	for _, a := range arr {
-		tmp := &Json{a}
-		if i, err := tmp.Int(); err != nil {
-			return nil, err
-		} else {
-			retArr = append(retArr, i)
-		}
+
+	if js.data == nil {
+		return nil, nil
 	}
-	return retArr, nil
+	if data, ok := js.data.([]int); ok {
+		return data, nil
+	}
+	if data, ok := js.data.([]interface{}); ok {
+		is := make([]int, 0, len(data))
+		for _, item := range data {
+			tmp := &Json{item}
+			if i, err := tmp.Int(); err != nil {
+				return nil, err
+			} else {
+				is = append(is, i)
+			}
+		}
+		return is, nil
+	}
+
+	return nil, invalidTypeErr
 }
 
 func (j *Json) MustIntSlice(path ...interface{}) []int {
@@ -724,20 +777,31 @@ func (j *Json) Float64OrDefault(def float64, path ...interface{}) float64 {
 }
 
 func (j *Json) Float64Slice(path ...interface{}) ([]float64, error) {
-	arr, err := j.Slice(path...)
+	js, err := j.Get(path...)
 	if err != nil {
 		return nil, err
 	}
-	retArr := make([]float64, 0, len(arr))
-	for _, a := range arr {
-		tmp := &Json{a}
-		if f, err := tmp.Float64(); err != nil {
-			return nil, err
-		} else {
-			retArr = append(retArr, f)
-		}
+
+	if js.data == nil {
+		return nil, nil
 	}
-	return retArr, nil
+	if data, ok := js.data.([]float64); ok {
+		return data, nil
+	}
+	if data, ok := js.data.([]interface{}); ok {
+		fs := make([]float64, 0, len(data))
+		for _, item := range data {
+			tmp := &Json{item}
+			if i, err := tmp.Float64(); err != nil {
+				return nil, err
+			} else {
+				fs = append(fs, i)
+			}
+		}
+		return fs, nil
+	}
+
+	return nil, invalidTypeErr
 }
 
 func (j *Json) MustFloat64Slice(path ...interface{}) []float64 {
@@ -787,20 +851,31 @@ func (j *Json) Int64OrDefault(def int64, path ...interface{}) int64 {
 }
 
 func (j *Json) Int64Slice(path ...interface{}) ([]int64, error) {
-	arr, err := j.Slice(path...)
+	js, err := j.Get(path...)
 	if err != nil {
 		return nil, err
 	}
-	retArr := make([]int64, 0, len(arr))
-	for _, a := range arr {
-		tmp := &Json{a}
-		if i, err := tmp.Int64(); err != nil {
-			return nil, err
-		} else {
-			retArr = append(retArr, i)
-		}
+
+	if js.data == nil {
+		return nil, nil
 	}
-	return retArr, nil
+	if data, ok := js.data.([]int64); ok {
+		return data, nil
+	}
+	if data, ok := js.data.([]interface{}); ok {
+		is := make([]int64, 0, len(data))
+		for _, item := range data {
+			tmp := &Json{item}
+			if i, err := tmp.Int64(); err != nil {
+				return nil, err
+			} else {
+				is = append(is, i)
+			}
+		}
+		return is, nil
+	}
+
+	return nil, invalidTypeErr
 }
 
 func (j *Json) MustInt64Slice(path ...interface{}) []int64 {
@@ -850,20 +925,31 @@ func (j *Json) Uint64OrDefault(def uint64, path ...interface{}) uint64 {
 }
 
 func (j *Json) Uint64Slice(path ...interface{}) ([]uint64, error) {
-	arr, err := j.Slice(path...)
+	js, err := j.Get(path...)
 	if err != nil {
 		return nil, err
 	}
-	retArr := make([]uint64, 0, len(arr))
-	for _, a := range arr {
-		tmp := &Json{a}
-		if u, err := tmp.Uint64(); err != nil {
-			return nil, err
-		} else {
-			retArr = append(retArr, u)
-		}
+
+	if js.data == nil {
+		return nil, nil
 	}
-	return retArr, nil
+	if data, ok := js.data.([]uint64); ok {
+		return data, nil
+	}
+	if data, ok := js.data.([]interface{}); ok {
+		is := make([]uint64, 0, len(data))
+		for _, item := range data {
+			tmp := &Json{item}
+			if i, err := tmp.Uint64(); err != nil {
+				return nil, err
+			} else {
+				is = append(is, i)
+			}
+		}
+		return is, nil
+	}
+
+	return nil, invalidTypeErr
 }
 
 func (j *Json) MustUint64Slice(path ...interface{}) []uint64 {
