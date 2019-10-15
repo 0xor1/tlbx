@@ -255,11 +255,11 @@ func (j *Json) MustGet(path ...interface{}) *Json {
 }
 
 func (j *Json) Set(pathThenValue ...interface{}) error {
-	if len(pathThenValue) == 0 {
-		return fmt.Errorf("no value supplied")
+	path, val, err := splitPathThenValue(pathThenValue)
+	if err != nil {
+		return err
 	}
-	path := pathThenValue[:len(pathThenValue)-1]
-	val := pathThenValue[len(pathThenValue)-1]
+
 	if len(path) == 0 {
 		j.data = val
 		return nil
@@ -364,7 +364,8 @@ func (j *Json) MustInterface(path ...interface{}) interface{} {
 	return i
 }
 
-func (j *Json) InterfaceOrDefault(def interface{}, path ...interface{}) interface{} {
+func (j *Json) InterfaceOrDefault(pathThenDefault ...interface{}) interface{} {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.Interface(path...); err == nil {
 		return a
 	}
@@ -391,11 +392,12 @@ func (j *Json) MustMap(path ...interface{}) map[string]interface{} {
 	return v
 }
 
-func (j *Json) MapOrDefault(def map[string]interface{}, path ...interface{}) map[string]interface{} {
+func (j *Json) MapOrDefault(pathThenDefault ...interface{}) map[string]interface{} {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.Map(path...); err == nil {
 		return a
 	}
-	return def
+	return def.(map[string]interface{})
 }
 
 func (j *Json) MapString(path ...interface{}) (map[string]string, error) {
@@ -429,11 +431,12 @@ func (j *Json) MustMapString(path ...interface{}) map[string]string {
 	return v
 }
 
-func (j *Json) MapStringOrDefault(def map[string]string, path ...interface{}) map[string]string {
+func (j *Json) MapStringOrDefault(pathThenDefault ...interface{}) map[string]string {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if m, err := j.MapString(path...); err == nil {
 		return m
 	}
-	return def
+	return def.(map[string]string)
 }
 
 func (j *Json) Slice(path ...interface{}) ([]interface{}, error) {
@@ -453,11 +456,12 @@ func (j *Json) MustSlice(path ...interface{}) []interface{} {
 	return v
 }
 
-func (j *Json) SliceOrDefault(def []interface{}, path ...interface{}) []interface{} {
+func (j *Json) SliceOrDefault(pathThenDefault ...interface{}) []interface{} {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.Slice(path...); err == nil {
 		return a
 	}
-	return def
+	return def.([]interface{})
 }
 
 func (j *Json) Bool(path ...interface{}) (bool, error) {
@@ -477,11 +481,42 @@ func (j *Json) MustBool(path ...interface{}) bool {
 	return v
 }
 
-func (j *Json) BoolOrDefault(def bool, path ...interface{}) bool {
+func (j *Json) BoolOrDefault(pathThenDefault ...interface{}) bool {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if b, err := j.Bool(path...); err == nil {
 		return b
 	}
-	return def
+	return def.(bool)
+}
+
+func (j *Json) ID(path ...interface{}) (ID, error) {
+	tmp, err := j.Get(path...)
+	if err != nil {
+		return ID{}, err
+	}
+	if i, ok := tmp.data.(ID); ok {
+		return i, nil
+	}
+	if s, ok := tmp.data.(string); ok {
+		i := ID{}
+		err = i.UnmarshalText([]byte(s))
+		return i, err
+	}
+	return ID{}, invalidTypeErr
+}
+
+func (j *Json) MustID(path ...interface{}) ID {
+	v, err := j.ID(path...)
+	PanicOn(err)
+	return v
+}
+
+func (j *Json) IDOrDefault(pathThenDefault ...interface{}) ID {
+	path, def := mustSplitPathThenValue(pathThenDefault)
+	if i, err := j.ID(path...); err == nil {
+		return i
+	}
+	return def.(ID)
 }
 
 func (j *Json) String(path ...interface{}) (string, error) {
@@ -501,11 +536,12 @@ func (j *Json) MustString(path ...interface{}) string {
 	return v
 }
 
-func (j *Json) StringOrDefault(def string, path ...interface{}) string {
+func (j *Json) StringOrDefault(pathThenDefault ...interface{}) string {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if s, err := j.String(path...); err == nil {
 		return s
 	}
-	return def
+	return def.(string)
 }
 
 func (j *Json) StringSlice(path ...interface{}) ([]string, error) {
@@ -541,11 +577,12 @@ func (j *Json) MustStringSlice(path ...interface{}) []string {
 	return v
 }
 
-func (j *Json) StringSliceOrDefault(def []string, path ...interface{}) []string {
+func (j *Json) StringSliceOrDefault(pathThenDefault ...interface{}) []string {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.StringSlice(path...); err == nil {
 		return a
 	}
-	return def
+	return def.([]string)
 }
 
 func (j *Json) Time(path ...interface{}) (time.Time, error) {
@@ -570,11 +607,12 @@ func (j *Json) MustTime(path ...interface{}) time.Time {
 	return v
 }
 
-func (j *Json) TimeOrDefault(def time.Time, path ...interface{}) time.Time {
+func (j *Json) TimeOrDefault(pathThenDefault ...interface{}) time.Time {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if t, err := j.Time(path...); err == nil {
 		return t
 	}
-	return def
+	return def.(time.Time)
 }
 
 func (j *Json) TimeSlice(path ...interface{}) ([]time.Time, error) {
@@ -611,11 +649,12 @@ func (j *Json) MustTimeSlice(path ...interface{}) []time.Time {
 	return v
 }
 
-func (j *Json) TimeSliceOrDefault(def []time.Time, path ...interface{}) []time.Time {
+func (j *Json) TimeSliceOrDefault(pathThenDefault ...interface{}) []time.Time {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.TimeSlice(path...); err == nil {
 		return a
 	}
-	return def
+	return def.([]time.Time)
 }
 
 func (j *Json) Duration(path ...interface{}) (time.Duration, error) {
@@ -638,11 +677,12 @@ func (j *Json) MustDuration(path ...interface{}) time.Duration {
 	return v
 }
 
-func (j *Json) DurationOrDefault(def time.Duration, path ...interface{}) time.Duration {
+func (j *Json) DurationOrDefault(pathThenDefault ...interface{}) time.Duration {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if d, err := j.Duration(path...); err == nil {
 		return d
 	}
-	return def
+	return def.(time.Duration)
 }
 
 func (j *Json) DurationSlice(path ...interface{}) ([]time.Duration, error) {
@@ -677,11 +717,12 @@ func (j *Json) MustDurationSlice(path ...interface{}) []time.Duration {
 	return v
 }
 
-func (j *Json) DurationSliceOrDefault(def []time.Duration, path ...interface{}) []time.Duration {
+func (j *Json) DurationSliceOrDefault(pathThenDefault ...interface{}) []time.Duration {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.DurationSlice(path...); err == nil {
 		return a
 	}
-	return def
+	return def.([]time.Duration)
 }
 
 func (j *Json) Int(path ...interface{}) (int, error) {
@@ -695,11 +736,12 @@ func (j *Json) MustInt(path ...interface{}) int {
 	return v
 }
 
-func (j *Json) IntOrDefault(def int, path ...interface{}) int {
+func (j *Json) IntOrDefault(pathThenDefault ...interface{}) int {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if i, err := j.Int(path...); err == nil {
 		return i
 	}
-	return def
+	return def.(int)
 }
 
 func (j *Json) IntSlice(path ...interface{}) ([]int, error) {
@@ -736,11 +778,12 @@ func (j *Json) MustIntSlice(path ...interface{}) []int {
 	return v
 }
 
-func (j *Json) IntSliceOrDefault(def []int, path ...interface{}) []int {
+func (j *Json) IntSliceOrDefault(pathThenDefault ...interface{}) []int {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.IntSlice(path...); err == nil {
 		return a
 	}
-	return def
+	return def.([]int)
 }
 
 func (j *Json) Float64(path ...interface{}) (float64, error) {
@@ -769,11 +812,12 @@ func (j *Json) MustFloat64(path ...interface{}) float64 {
 	return v
 }
 
-func (j *Json) Float64OrDefault(def float64, path ...interface{}) float64 {
+func (j *Json) Float64OrDefault(pathThenDefault ...interface{}) float64 {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if f, err := j.Float64(path...); err == nil {
 		return f
 	}
-	return def
+	return def.(float64)
 }
 
 func (j *Json) Float64Slice(path ...interface{}) ([]float64, error) {
@@ -810,11 +854,12 @@ func (j *Json) MustFloat64Slice(path ...interface{}) []float64 {
 	return v
 }
 
-func (j *Json) Float64SliceOrDefault(def []float64, path ...interface{}) []float64 {
+func (j *Json) Float64SliceOrDefault(pathThenDefault ...interface{}) []float64 {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.Float64Slice(path...); err == nil {
 		return a
 	}
-	return def
+	return def.([]float64)
 }
 
 func (j *Json) Int64(path ...interface{}) (int64, error) {
@@ -843,11 +888,12 @@ func (j *Json) MustInt64(path ...interface{}) int64 {
 	return v
 }
 
-func (j *Json) Int64OrDefault(def int64, path ...interface{}) int64 {
+func (j *Json) Int64OrDefault(pathThenDefault ...interface{}) int64 {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if i, err := j.Int64(path...); err == nil {
 		return i
 	}
-	return def
+	return def.(int64)
 }
 
 func (j *Json) Int64Slice(path ...interface{}) ([]int64, error) {
@@ -884,11 +930,12 @@ func (j *Json) MustInt64Slice(path ...interface{}) []int64 {
 	return v
 }
 
-func (j *Json) Int64SliceDefault(def []int64, path ...interface{}) []int64 {
+func (j *Json) Int64SliceDefault(pathThenDefault ...interface{}) []int64 {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.Int64Slice(path...); err == nil {
 		return a
 	}
-	return def
+	return def.([]int64)
 }
 
 func (j *Json) Uint64(path ...interface{}) (uint64, error) {
@@ -917,11 +964,12 @@ func (j *Json) MustUint64(path ...interface{}) uint64 {
 	return v
 }
 
-func (j *Json) Uint64OrDefault(def uint64, path ...interface{}) uint64 {
+func (j *Json) Uint64OrDefault(pathThenDefault ...interface{}) uint64 {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if i, err := j.Uint64(path...); err == nil {
 		return i
 	}
-	return def
+	return def.(uint64)
 }
 
 func (j *Json) Uint64Slice(path ...interface{}) ([]uint64, error) {
@@ -958,11 +1006,25 @@ func (j *Json) MustUint64Slice(path ...interface{}) []uint64 {
 	return v
 }
 
-func (j *Json) Uint64SliceOrDefault(def []uint64, path ...interface{}) []uint64 {
+func (j *Json) Uint64SliceOrDefault(pathThenDefault ...interface{}) []uint64 {
+	path, def := mustSplitPathThenValue(pathThenDefault)
 	if a, err := j.Uint64Slice(path...); err == nil {
 		return a
 	}
-	return def
+	return def.([]uint64)
+}
+
+func splitPathThenValue(pathThenValue []interface{}) ([]interface{}, interface{}, error) {
+	if len(pathThenValue) == 0 {
+		return nil, nil, fmt.Errorf("no value supplied")
+	}
+	return pathThenValue[:len(pathThenValue)-1], pathThenValue[len(pathThenValue)-1], nil
+}
+
+func mustSplitPathThenValue(pathThenValue []interface{}) ([]interface{}, interface{}) {
+	path, val, err := splitPathThenValue(pathThenValue)
+	PanicOn(err)
+	return path, val
 }
 
 type jsonPathError struct {

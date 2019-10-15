@@ -1,11 +1,12 @@
 package json
 
 import (
+	"fmt"
+	. "github.com/0xor1/wtf/pkg/core"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-	. "github.com/0xor1/wtf/pkg/core"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -604,9 +605,9 @@ func Test_Interface(t *testing.T) {
 	a.Nil(err, "err is nil")
 	a.Equal(map[string]interface{}{"a": true}, val, "val is correct")
 
-	val = obj.InterfaceOrDefault(false, "a")
+	val = obj.InterfaceOrDefault("a", false)
 	a.Equal(true, val)
-	val = obj.InterfaceOrDefault(false, "b")
+	val = obj.InterfaceOrDefault("b", false)
 	a.Equal(false, val)
 }
 
@@ -640,7 +641,7 @@ func Test_MapOrDefault(t *testing.T) {
 	obj, err := FromString(`[{"a":true}]`)
 	a.Nil(err, "err is nil")
 
-	val := obj.MapOrDefault(nil, 0)
+	val := obj.MapOrDefault(0, nil)
 	a.Equal(map[string]interface{}{"a": true}, val, "val is correct")
 }
 
@@ -707,7 +708,7 @@ func Test_MapStringOrDefault(t *testing.T) {
 	obj, err := FromString(`[{"a":"b"}]`)
 	a.Nil(err, "err is nil")
 
-	val := obj.MapStringOrDefault(nil, 0)
+	val := obj.MapStringOrDefault(0, nil)
 	a.Equal(map[string]string{"a": "b"}, val, "val is correct")
 
 	obj, err = FromString(`[{"a":"b"}]`)
@@ -748,7 +749,7 @@ func Test_SliceOrDefault(t *testing.T) {
 	obj, err := FromString(`{"a":[true,false,true]}`)
 	a.Nil(err, "err is nil")
 
-	val := obj.SliceOrDefault([]interface{}{}, "a")
+	val := obj.SliceOrDefault("a", []interface{}{})
 	a.Equal([]interface{}{true, false, true}, val, "val is correct")
 
 	obj, err = FromString(`{}`)
@@ -830,6 +831,34 @@ func Test_MustBool(t *testing.T) {
 	a.Equal(true, val, "val is correct")
 }
 
+func Test_ID(t *testing.T) {
+	a := assert.New(t)
+
+	idGen := NewIDGenerator()
+	id := idGen.MustNew()
+	obj := &Json{id}
+	a.Equal(id, obj.MustID())
+	a.Equal(id, obj.IDOrDefault(id))
+	a.Equal(id, (&Json{}).IDOrDefault(id))
+
+	id, err := obj.ID("a")
+	a.NotNil(err)
+
+	obj = &Json{true}
+	id, err = obj.ID()
+	a.Equal(invalidTypeErr, err)
+
+	id = idGen.MustNew()
+	obj = &Json{id.String()}
+	id, err = obj.ID()
+	a.Nil(err)
+
+	id = idGen.MustNew()
+	obj = MustFromString(fmt.Sprintf(`{"a": "%s"}`, id.String()))
+	id, err = obj.ID("a")
+	a.Nil(err)
+}
+
 func Test_String_Error(t *testing.T) {
 	a := assert.New(t)
 
@@ -909,7 +938,7 @@ func Test_StringSliceOrDefault(t *testing.T) {
 	obj, err := FromString(`{"a":["hi"]}`)
 	a.Nil(err, "err is nil")
 
-	val := obj.StringSliceOrDefault(nil, "a")
+	val := obj.StringSliceOrDefault("a", nil)
 	a.Equal([]string{"hi"}, val, "val is correct")
 
 	obj, err = FromString(`"hi"`)
@@ -1044,14 +1073,14 @@ func Test_TimeSliceOrDefault(t *testing.T) {
 	now := Now()
 	obj := FromInterface(map[string]interface{}{"a": []time.Time{now}})
 
-	val := obj.TimeSliceOrDefault(nil, "a")
+	val := obj.TimeSliceOrDefault("a", nil)
 	a.Equal([]time.Time{now}, val, "val is correct")
 
 	obj, err := FromString(`"hi"`)
 	a.Nil(err, "err is nil")
 
 	def := []time.Time{Now()}
-	val = obj.TimeSliceOrDefault(def, "a")
+	val = obj.TimeSliceOrDefault("a", def)
 	a.Equal(def, val, "val is correct")
 }
 
@@ -1117,13 +1146,13 @@ func Test_DurationOrDefault(t *testing.T) {
 	obj, err := FromString(`{"a": "1s"}`)
 	a.Nil(err, "err is nil")
 
-	val := obj.DurationOrDefault(5*time.Second, "a")
+	val := obj.DurationOrDefault("a", 5*time.Second)
 	a.Equal(time.Second, val, "val is correct")
 
 	obj, err = FromString(`{"a": "s"}`)
 	a.Nil(err, "err is nil")
 
-	val = obj.DurationOrDefault(5*time.Second, "a")
+	val = obj.DurationOrDefault("a", 5*time.Second)
 	a.Equal(5*time.Second, val, "val is correct")
 }
 
@@ -1179,13 +1208,13 @@ func Test_DurationSliceOrDefault(t *testing.T) {
 	obj, err := FromString(`{"a": ["1s"]}`)
 	a.Nil(err, "err is nil")
 
-	val := obj.DurationSliceOrDefault([]time.Duration{5 * time.Second}, "a")
+	val := obj.DurationSliceOrDefault("a", []time.Duration{5 * time.Second})
 	a.Equal(time.Second, val[0], "val is correct")
 
 	obj, err = FromString(`{"a": ["s"]}`)
 	a.Nil(err, "err is nil")
 
-	val = obj.DurationSliceOrDefault([]time.Duration{5 * time.Second}, "a")
+	val = obj.DurationSliceOrDefault("a", []time.Duration{5 * time.Second})
 	a.Equal([]time.Duration{5 * time.Second}, val, "val is correct")
 }
 
@@ -1374,12 +1403,12 @@ func Test_Float64OrDefault(t *testing.T) {
 
 	obj := &Json{42}
 
-	val := obj.Float64OrDefault(24)
+	val := obj.Float64OrDefault(float64(24))
 	a.Equal(42.0, val, "val is correct")
 
 	obj = &Json{"hi"}
 
-	val = obj.Float64OrDefault(24)
+	val = obj.Float64OrDefault(float64(24))
 	a.Equal(24.0, val, "val is correct")
 }
 
@@ -1542,12 +1571,12 @@ func Test_Int64OrDefault(t *testing.T) {
 
 	obj := &Json{42}
 
-	val := obj.Int64OrDefault(24)
+	val := obj.Int64OrDefault(int64(24))
 	a.Equal(int64(42), val, "val is correct")
 
 	obj = &Json{"hi"}
 
-	val = obj.Int64OrDefault(24)
+	val = obj.Int64OrDefault(int64(24))
 	a.Equal(int64(24), val, "val is correct")
 }
 
@@ -1710,12 +1739,12 @@ func Test_MustUint64OrDefault(t *testing.T) {
 
 	obj := &Json{42}
 
-	val := obj.Uint64OrDefault(24)
+	val := obj.Uint64OrDefault(uint64(24))
 	a.Equal(uint64(42), val, "val is correct")
 
 	obj = &Json{"hi"}
 
-	val = obj.Uint64OrDefault(24)
+	val = obj.Uint64OrDefault(uint64(24))
 	a.Equal(uint64(24), val, "val is correct")
 }
 

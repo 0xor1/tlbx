@@ -1,9 +1,7 @@
 WTF
 ===
 
-#### Run Tests
+#### Fmt & Test
 ```
-go test -coverprofile=coverage.out ./... && \
-go tool cover -html=coverage.out && \
-rm coverage.out
+./bin/pre.sh
 ```
