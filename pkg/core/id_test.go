@@ -1,10 +1,11 @@
 package core
 
 import (
-	"github.com/oklog/ulid/v2"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/oklog/ulid/v2"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_IDGenerator(t *testing.T) {

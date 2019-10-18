@@ -2,10 +2,11 @@ package crypt
 
 import (
 	"crypto/rand"
-	. "github.com/0xor1/wtf/pkg/core"
-	"golang.org/x/crypto/scrypt"
 	"io"
 	"math/big"
+
+	. "github.com/0xor1/wtf/pkg/core"
+	"golang.org/x/crypto/scrypt"
 )
 
 var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

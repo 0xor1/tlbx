@@ -2,11 +2,12 @@ package core
 
 import (
 	"database/sql/driver"
-	"github.com/oklog/ulid/v2"
 	"io"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/oklog/ulid/v2"
 )
 
 var (

@@ -2,11 +2,12 @@ package json
 
 import (
 	"fmt"
-	. "github.com/0xor1/wtf/pkg/core"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	. "github.com/0xor1/wtf/pkg/core"
 
 	"github.com/stretchr/testify/assert"
 )

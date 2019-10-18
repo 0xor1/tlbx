@@ -4,9 +4,10 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"os"
+
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/crypt"
-	"os"
 )
 
 func main() {
