@@ -1,12 +1,14 @@
 package config
 
 import (
+	"os"
+	"strings"
+	"testing"
+	"time"
+
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/json"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
-	"time"
 )
 
 var (
@@ -42,10 +44,11 @@ func TestConfig_GetFromEnvVar(t *testing.T) {
 
 	c := New("")
 	a.NotNil(c)
-	PanicOn(os.Setenv(str, "true"))
+	PanicOn(os.Unsetenv(strings.ToUpper(str)))
+	PanicOn(os.Setenv(strings.ToUpper(str), "true"))
 
 	a.True(c.SetDefault(str, false).GetBool(str))
-	os.Unsetenv(str)
+	PanicOn(os.Unsetenv(strings.ToUpper(str)))
 }
 
 func TestConfig_GetString(t *testing.T) {

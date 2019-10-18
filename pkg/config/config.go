@@ -1,11 +1,12 @@
 package config
 
 import (
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/json"
 	"os"
 	"strings"
 	"time"
+
+	. "github.com/0xor1/wtf/pkg/core"
+	"github.com/0xor1/wtf/pkg/json"
 )
 
 type config struct {
