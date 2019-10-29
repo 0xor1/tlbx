@@ -2,7 +2,6 @@ package core
 
 import (
 	"testing"
-	"time"
 
 	"github.com/oklog/ulid/v2"
 	"github.com/stretchr/testify/assert"
@@ -59,9 +58,4 @@ func Test_ID(t *testing.T) {
 	val, err := id1.Value()
 	a.Nil(err)
 	a.NotNil(val)
-}
-
-func Test_Now(t *testing.T) {
-	a := assert.New(t)
-	a.Equal(time.Now().UTC().Round(time.Second).Unix(), Now().Round(time.Second).Unix())
 }

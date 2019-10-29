@@ -3,8 +3,13 @@ package core
 import (
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"sync"
 )
+
+func Panic(v interface{}) {
+	PanicOn(ToError(v))
+}
 
 func PanicOn(err error) {
 	if err != nil {
@@ -23,21 +28,23 @@ func ToError(v interface{}) error {
 		if err, ok := v.(error); ok {
 			return err
 		} else {
-			return fmt.Errorf("recover type: %T, value: %#v", v, v)
+			return fmt.Errorf("type: %T, value: %#v", v, v)
 		}
 	}
 	return nil
+}
+
+func Recover(r func(err error)) {
+	if err := ToError(recover()); err != nil {
+		r(err)
+	}
 }
 
 func Go(f func(), r func(err error)) {
 	PanicIf(f == nil, "f must be none nil go routine func")
 	PanicIf(r == nil, "r must be none nil recover func")
 	go func() {
-		defer func() {
-			if err := ToError(recover()); err != nil {
-				r(err)
-			}
-		}()
+		defer Recover(r)
 		f()
 	}()
 }
@@ -56,8 +63,8 @@ func GoGroup(fs ...func()) error {
 		func(f func()) {
 			Go(func() {
 				f()
-				gg.Done(nil)
-			}, gg.Done)
+				gg.done(nil)
+			}, gg.done)
 		}(f)
 	}
 	gg.wg.Wait()
@@ -77,7 +84,7 @@ type stackError struct {
 }
 
 func (e *stackError) Error() string {
-	return fmt.Sprintf("error:\n%s\nstacktrace:\n%s", e.err.Error(), e.stackTrace)
+	return fmt.Sprintf("error: %s\nstacktrace: %s\n", e.err.Error(), e.stackTrace)
 }
 
 func (e *stackError) String() string {
@@ -91,14 +98,18 @@ type goGroup struct {
 }
 
 func (gg *goGroup) Error() string {
-	return fmt.Sprintf("errors:\n%s\n", gg.errs)
+	errs := make([]string, 0, len(gg.errs))
+	for _, err := range gg.errs {
+		errs = append(errs, err.Error())
+	}
+	return fmt.Sprintf("errors:\n%s", strings.Join(errs, ""))
 }
 
 func (gg *goGroup) String() string {
 	return gg.Error()
 }
 
-func (gg *goGroup) Done(e error) {
+func (gg *goGroup) done(e error) {
 	defer gg.wg.Done()
 	if e != nil {
 		gg.errsMtx.Lock()

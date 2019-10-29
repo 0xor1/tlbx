@@ -5,14 +5,13 @@ import (
 	"io"
 	"math/rand"
 	"sync"
-	"time"
 
 	"github.com/oklog/ulid/v2"
 )
 
 var (
-	now    = Now().UnixNano()
-	nowMtx = &sync.Mutex{}
+	seed    = NowUnixNano()
+	seedMtx = &sync.Mutex{}
 )
 
 type IDGenerator interface {
@@ -21,10 +20,10 @@ type IDGenerator interface {
 }
 
 func NewIDGenerator() IDGenerator {
-	nowMtx.Lock()
-	t := now
-	now++
-	nowMtx.Unlock()
+	seedMtx.Lock()
+	t := seed
+	seed++
+	seedMtx.Unlock()
 	return &idGenerator{
 		entropyMtx: &sync.Mutex{},
 		entropy:    rand.New(rand.NewSource(t)),
@@ -119,8 +118,4 @@ func (id ID) Copy() ID {
 		copy[i] = b
 	}
 	return ID(copy)
-}
-
-func Now() time.Time {
-	return time.Now().UTC()
 }

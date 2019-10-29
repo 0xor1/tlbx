@@ -219,6 +219,11 @@ func (j *Json) UnmarshalJSON(p []byte) error {
 	return err
 }
 
+func (j *Json) Exists(path ...interface{}) bool {
+	_, err := j.Get(path...)
+	return err == nil
+}
+
 func (j *Json) Get(path ...interface{}) (*Json, error) {
 	tmp := j
 	for i, k := range path {

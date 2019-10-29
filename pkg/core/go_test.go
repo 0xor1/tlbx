@@ -11,6 +11,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func Test_Panic(t *testing.T) {
+	a := assert.New(t)
+	Panic(nil)
+	defer func() {
+		a.Equal(assert.AnError, ToError(recover()))
+	}()
+
+	Panic(assert.AnError)
+}
+
 func Test_PanicOn(t *testing.T) {
 	a := assert.New(t)
 	PanicOn(nil)
@@ -37,7 +47,7 @@ func Test_ToError(t *testing.T) {
 	defer func() {
 		a.Equal(assert.AnError, ToError(recover()))
 		defer func() {
-			a.Equal("recover type: int, value: 1", ToError(recover()).Error())
+			a.Equal("type: int, value: 1", ToError(recover()).Error())
 		}()
 		panic(1)
 	}()
@@ -70,7 +80,7 @@ func Test_GoGroup(t *testing.T) {
 	a.Equal(3, len(err.(*goGroup).errs))
 	idxIsPresent := []bool{false, false, false}
 	for _, err := range err.(*goGroup).errs {
-		runes := []rune(strings.Split(err.Error(), "\n")[1])
+		runes := []rune(strings.Split(err.Error(), "\n")[0])
 		idx, _ := strconv.Atoi(string(runes[len(runes)-1:]))
 		idxIsPresent[idx] = true
 	}
@@ -103,7 +113,7 @@ func Test_GoGroup(t *testing.T) {
 	a.Equal(3, len(err.(*goGroup).errs))
 	idxIsPresent = []bool{false, false, false, false}
 	for _, e := range err.(*goGroup).errs {
-		runes := []rune(strings.Split(e.Error(), "\n")[1])
+		runes := []rune(strings.Split(e.Error(), "\n")[0])
 		idx, _ := strconv.Atoi(string(runes[len(runes)-1:]))
 		idxIsPresent[idx] = true
 	}

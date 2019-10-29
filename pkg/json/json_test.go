@@ -215,6 +215,13 @@ func Test_ToReader(t *testing.T) {
 	obj.MustToReader()
 }
 
+func Test_Exists(t *testing.T) {
+	a := assert.New(t)
+
+	a.True(MustFromString(`{"v": null}`).Exists("v"))
+	a.False(MustFromString(`{"v": null}`).Exists("x"))
+}
+
 func Test_Get(t *testing.T) {
 	a := assert.New(t)
 
