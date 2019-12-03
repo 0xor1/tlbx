@@ -7,6 +7,20 @@ import (
 	"sync"
 )
 
+func Exit(v interface{}) {
+	ExitOn(ToError(v))
+}
+
+func ExitOn(err error) {
+	defaultLog.FatalOn(err)
+}
+
+func ExitIf(condition bool, format string, args ...interface{}) {
+	if condition {
+		ExitOn(fmt.Errorf(format, args...))
+	}
+}
+
 func Panic(v interface{}) {
 	PanicOn(ToError(v))
 }
@@ -36,6 +50,7 @@ func ToError(v interface{}) error {
 
 func Recover(r func(err error)) {
 	if err := ToError(recover()); err != nil {
+		defaultLog.ErrorOn(err)
 		r(err)
 	}
 }
