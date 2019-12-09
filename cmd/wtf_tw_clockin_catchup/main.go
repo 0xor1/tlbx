@@ -30,6 +30,10 @@ func main() {
 	fs.StringVar(&baseHref, "b", "", fmt.Sprintf("baseHref e.g. %s", exampleBaseHref))
 	var username string
 	fs.StringVar(&username, "u", "", fmt.Sprintf("username e.g. %s", exampleUsername))
+	var hour int
+	fs.IntVar(&hour, "h", 8, "hour e.g. 8")
+	var minutes int
+	fs.IntVar(&minutes, "m", 30, "minutes e.g. 30")
 	log := NewLog(nil, false, true)
 	ExitOn(fs.Parse(os.Args[1:]))
 	ExitIf(baseHref == "", "please enter a baseHref e.g. -b=%s", exampleBaseHref)
@@ -47,10 +51,11 @@ func main() {
 
 	// get last clockin
 	now := Now()
-	clockin := time.Date(now.Year(), now.Month(), now.Day(), 8, 30, 0, 0, time.Local)
+	clockin := time.Date(now.Year(), now.Month(), now.Day(), hour, minutes, 0, 0, time.Local)
 	resp := mustDoReq(http.MethodGet, baseHref, "/me/clockins.json?pageSize=1", username, pwd, nil)
 	if resp.Exists("clockIns", 0, "clockInDatetime") {
 		clockin = resp.MustTime("clockIns", 0, "clockInDatetime").Add(time.Hour * 24)
+		clockin = time.Date(clockin.Year(), clockin.Month(), clockin.Day(), hour, minutes, 0, 0, time.Local)
 	}
 	log.Info("starting at clockin: %s", clockin)
 	clockout := clockin.Add((8 * time.Hour) + (30 * time.Minute))
