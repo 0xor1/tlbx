@@ -49,6 +49,8 @@ func main() {
 	pwd := string(bytePassword)
 	fmt.Println()
 
+	rand.Seed(NowUnixMilli())
+
 	// get my user id
 	myID := mustDoReq(http.MethodGet, baseHref, "/me.json", username, pwd, nil).MustInt64("person", "id")
 	log.Info("myID: %d", myID)
