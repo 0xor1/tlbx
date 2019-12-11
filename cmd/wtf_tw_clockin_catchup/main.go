@@ -71,8 +71,9 @@ func main() {
 			clockinToUse := clockin
 			clockoutToUse := clockout
 			if randomMinutes > 0 {
-				clockinToUse = clockinToUse.Add(time.Duration(rand.Int63n(randomMinutes)) * time.Minute)
-				clockoutToUse = clockoutToUse.Add(time.Duration(rand.Int63n(randomMinutes)) * time.Minute)
+				posNegVar := (rand.Int63n(1) * -1) + 1
+				clockinToUse = clockinToUse.Add(time.Duration(rand.Int63n(randomMinutes)*posNegVar) * time.Minute)
+				clockoutToUse = clockoutToUse.Add(time.Duration(rand.Int63n(randomMinutes)*posNegVar) * time.Minute)
 			}
 			mustDoReq(http.MethodPost, baseHref, "/clockin.json", username, pwd,
 				json.MustFromString(`{"clockIn":{}}`).
