@@ -12,7 +12,7 @@ func Exit(v interface{}) {
 }
 
 func ExitOn(err error) {
-	defaultLog.FatalOn(err)
+	theLog.FatalOn(err)
 }
 
 func ExitIf(condition bool, format string, args ...interface{}) {
@@ -50,7 +50,7 @@ func ToError(v interface{}) error {
 
 func Recover(r func(err error)) {
 	if err := ToError(recover()); err != nil {
-		defaultLog.ErrorOn(err)
+		theLog.ErrorOn(err)
 		r(err)
 	}
 }

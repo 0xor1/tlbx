@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"syscall"
@@ -34,10 +35,13 @@ func main() {
 	fs.IntVar(&hour, "h", 8, "hour e.g. 8")
 	var minutes int
 	fs.IntVar(&minutes, "m", 30, "minutes e.g. 30")
-	log := NewLog(nil, false, true)
+	var randomMinutes int64
+	fs.Int64Var(&randomMinutes, "r", 0, "randomMinutes to vary start and end times e.g. 15")
+	log := GetLog()
 	ExitOn(fs.Parse(os.Args[1:]))
 	ExitIf(baseHref == "", "please enter a baseHref e.g. -b=%s", exampleBaseHref)
 	ExitIf(username == "", "please enter a username e.g. -u=%s", exampleUsername)
+	ExitIf(randomMinutes < 0 || randomMinutes > 60, "please enter a randomMinutes between 0 and 59 e.g. -r=15")
 
 	fmt.Print("Enter Password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
@@ -62,13 +66,19 @@ func main() {
 
 	for clockout.Before(time.Now()) {
 		if !(clockin.Weekday() == time.Saturday || clockin.Weekday() == time.Sunday) {
+			clockinToUse := clockin
+			clockoutToUse := clockout
+			if randomMinutes > 0 {
+				clockinToUse = clockinToUse.Add(time.Duration(rand.Int63n(randomMinutes)) * time.Minute)
+				clockoutToUse = clockoutToUse.Add(time.Duration(rand.Int63n(randomMinutes)) * time.Minute)
+			}
 			mustDoReq(http.MethodPost, baseHref, "/clockin.json", username, pwd,
 				json.MustFromString(`{"clockIn":{}}`).
 					MustSet("clockIn", "userId", myID).
-					MustSet("clockIn", "clockInDatetime", clockin.Format("20060102150405")).
-					MustSet("clockIn", "clockOutDatetime", clockout.Format("20060102150405")).
+					MustSet("clockIn", "clockInDatetime", clockinToUse.Format("20060102150405")).
+					MustSet("clockIn", "clockOutDatetime", clockoutToUse.Format("20060102150405")).
 					MustToReader())
-			log.Info("clocking in: clockin: %s clockout: %s", clockin, clockout)
+			log.Info("clocking in: clockin: %s clockout: %s", clockinToUse, clockoutToUse)
 		}
 		clockin = clockin.Add(time.Hour * 24)
 		clockout = clockout.Add(time.Hour * 24)

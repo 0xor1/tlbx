@@ -10,13 +10,15 @@ import (
 )
 
 var (
-	defaultLog   Log
-	fmtStr       = "%s\t%s\t%s"
-	nowLogFormat = "2006-01-02 15:04:05.000"
+	theLog        *log
+	logConfigured = false
+	fmtStr        = "%s\t%s\t%s"
+	nowLogFormat  = "2006-01-02 15:04:05.000"
 )
 
 func init() {
-	NewLog(nil, false, true)
+	ConfigLog(nil, false, true)
+	logConfigured = false
 }
 
 type Log interface {
@@ -27,16 +29,23 @@ type Log interface {
 	FatalOn(err error)
 }
 
-func NewLog(l func(string), asJSON, withColors bool) Log {
+func GetLog() Log {
+	return theLog
+}
+
+// ConfigLog may only be called once to set the log behaviour
+// for the application and get the log instance
+func ConfigLog(l func(string), asJSON, withColors bool) {
+	PanicIf(logConfigured, "log may only be configured once")
+	logConfigured = true
 	if l == nil {
 		l = func(s string) { fmt.Println(s) }
 	}
-	defaultLog = &log{
+	theLog = &log{
 		l:          l,
 		asJSON:     asJSON,
 		withColors: withColors,
 	}
-	return defaultLog
 }
 
 type log struct {
