@@ -14,35 +14,35 @@ var (
 	seedMtx = &sync.Mutex{}
 )
 
-type IDGenerator interface {
+type IDGen interface {
 	New() (ID, error)
 	MustNew() ID
 }
 
-func NewIDGenerator() IDGenerator {
+func NewIDGen() IDGen {
 	seedMtx.Lock()
 	t := seed
 	seed++
 	seedMtx.Unlock()
-	return &idGenerator{
+	return &idGen{
 		entropyMtx: &sync.Mutex{},
 		entropy:    rand.New(rand.NewSource(t)),
 	}
 }
 
-type idGenerator struct {
+type idGen struct {
 	entropyMtx *sync.Mutex
 	entropy    io.Reader
 }
 
-func (g *idGenerator) New() (ID, error) {
+func (g *idGen) New() (ID, error) {
 	g.entropyMtx.Lock()
 	defer g.entropyMtx.Unlock()
 	id, e := ulid.New(ulid.Now(), g.entropy)
 	return ID(id), e
 }
 
-func (g *idGenerator) MustNew() ID {
+func (g *idGen) MustNew() ID {
 	id, err := g.New()
 	PanicOn(err)
 	return id

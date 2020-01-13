@@ -11,21 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Panic(t *testing.T) {
-	a := assert.New(t)
-	Panic(nil)
-	defer func() {
-		a.Equal(assert.AnError, ToError(recover()))
-	}()
-
-	Panic(assert.AnError)
-}
-
 func Test_PanicOn(t *testing.T) {
 	a := assert.New(t)
 	PanicOn(nil)
 	defer func() {
-		a.Equal(assert.AnError, ToError(recover()))
+		a.Equal(assert.AnError.Error(), ToError(recover()).(*err).Message())
 	}()
 
 	PanicOn(assert.AnError)
@@ -36,7 +26,7 @@ func Test_PanicIf(t *testing.T) {
 	errStr := assert.AnError.Error()
 	PanicIf(false, errStr)
 	defer func() {
-		a.Equal(errStr, ToError(recover()).Error())
+		a.Equal(errStr, ToError(recover()).(*err).Message())
 	}()
 
 	PanicIf(true, errStr)
@@ -44,14 +34,12 @@ func Test_PanicIf(t *testing.T) {
 
 func Test_ToError(t *testing.T) {
 	a := assert.New(t)
-	defer func() {
-		a.Equal(assert.AnError, ToError(recover()))
-		defer func() {
-			a.Equal("type: int, value: 1", ToError(recover()).Error())
-		}()
-		panic(1)
-	}()
-	panic(assert.AnError)
+	e := assert.AnError
+	a.Equal(e.Error(), ToError(assert.AnError).(*err).Message())
+	e = ToError(assert.AnError)
+	a.Equal(e, ToError(e))
+	a.Equal("test", ToError("test").(*err).Message())
+	a.Equal("type: int, value: 42", ToError(42).(*err).Message())
 }
 
 func Test_Go(t *testing.T) {
@@ -60,16 +48,16 @@ func Test_Go(t *testing.T) {
 	wg.Add(1)
 	Go(func() {
 		panic(assert.AnError)
-	}, func(err error) {
+	}, func(e Error) {
 		defer wg.Done()
-		a.Equal(assert.AnError, err)
+		a.Equal(assert.AnError.Error(), e.(*err).Message())
 	})
 	wg.Wait()
 }
 
 func Test_GoGroup(t *testing.T) {
 	a := assert.New(t)
-	err := GoGroup(func() {
+	e := GoGroup(func() {
 		panic(0)
 	}, func() {
 		panic(1)
@@ -77,27 +65,28 @@ func Test_GoGroup(t *testing.T) {
 		panic(2)
 	})
 
-	a.Equal(3, len(err.(*goGroup).errs))
+	a.Equal(3, len(e.Value().(Errors)))
 	idxIsPresent := []bool{false, false, false}
-	for _, err := range err.(*goGroup).errs {
-		runes := []rune(strings.Split(err.Error(), "\n")[0])
+	for _, e := range e.Value().(Errors) {
+		runes := []rune(strings.Split(e.Error(), "\n")[0])
 		idx, _ := strconv.Atoi(string(runes[len(runes)-1:]))
 		idxIsPresent[idx] = true
 	}
 	a.True(idxIsPresent[0] && idxIsPresent[1] && idxIsPresent[2])
 
-	a.Nil(GoGroup(func() {
+	e = GoGroup(func() {
 		time.Sleep(time.Second)
 	}, func() {
 		time.Sleep(time.Second)
 	}, func() {
 		time.Sleep(time.Second)
-	}))
+	})
+	a.Nil(e)
 
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
-	err = GoGroup(func() {
+	e = GoGroup(func() {
 		panic(0)
 	}, func() {
 		panic(1)
@@ -110,17 +99,18 @@ func Test_GoGroup(t *testing.T) {
 		}
 	})
 
-	a.Equal(3, len(err.(*goGroup).errs))
+	a.Equal(3, len(e.Value().(Errors)))
 	idxIsPresent = []bool{false, false, false, false}
-	for _, e := range err.(*goGroup).errs {
+	for _, e := range e.Value().(Errors) {
 		runes := []rune(strings.Split(e.Error(), "\n")[0])
 		idx, _ := strconv.Atoi(string(runes[len(runes)-1:]))
 		idxIsPresent[idx] = true
 	}
 	a.True(idxIsPresent[0] && idxIsPresent[1] && !idxIsPresent[2] && idxIsPresent[3])
-	a.Nil(GoGroup())
-	MustGoGroup()
-	a.NotEmpty(err.Error())
-	a.NotEmpty(err.(*goGroup).String())
-	a.NotEmpty(err.(*goGroup).errs[0].String())
+	GoGroup(nil)
+	a.NotEmpty(e.Error())
+	a.NotEmpty(e.Value().(Errors).String())
+	a.NotEmpty(e.Value().(Errors)[0].(*err).String())
+	a.NotEmpty(e.Value().(Errors)[0].(*err).Message())
+	a.NotEmpty(e.Value().(Errors)[0].(*err).StackTrace())
 }

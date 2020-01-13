@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/base64"
 	"flag"
-	"fmt"
 	"os"
 
 	. "github.com/0xor1/wtf/pkg/core"
@@ -23,11 +22,11 @@ func main() {
 	l := int(lTmp)
 	if t == "s" {
 		for i := 0; i < n; i++ {
-			fmt.Println(crypt.UrlSafeString(l))
+			Println(crypt.UrlSafeString(l))
 		}
 	} else {
 		for i := 0; i < n; i++ {
-			fmt.Println(fmt.Sprintf("%s", base64.RawURLEncoding.EncodeToString(crypt.Bytes(l))))
+			Println(Sprintf("%s", base64.RawURLEncoding.EncodeToString(crypt.Bytes(l))))
 		}
 	}
 }

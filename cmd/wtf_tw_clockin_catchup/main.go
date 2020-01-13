@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -13,6 +12,7 @@ import (
 
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/json"
+	"github.com/0xor1/wtf/pkg/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -24,30 +24,30 @@ const (
 // clocks in from my last clockin date for every weekday through to today
 // go run main.go
 func main() {
-	fmt.Println("Starting")
+	log := log.New()
+	log.Info("Starting")
 
 	fs := flag.NewFlagSet("wtf_tw_clockin_catchup", flag.ExitOnError)
 	var baseHref string
-	fs.StringVar(&baseHref, "b", "", fmt.Sprintf("baseHref e.g. %s", exampleBaseHref))
+	fs.StringVar(&baseHref, "b", "", Sprintf("baseHref e.g. %s", exampleBaseHref))
 	var username string
-	fs.StringVar(&username, "u", "", fmt.Sprintf("username e.g. %s", exampleUsername))
+	fs.StringVar(&username, "u", "", Sprintf("username e.g. %s", exampleUsername))
 	var hour int
 	fs.IntVar(&hour, "h", 8, "hour e.g. 8")
 	var minutes int
 	fs.IntVar(&minutes, "m", 30, "minutes e.g. 30")
 	var randomMinutes int64
 	fs.Int64Var(&randomMinutes, "r", 0, "randomMinutes to vary start and end times e.g. 15")
-	log := GetLog()
 	ExitOn(fs.Parse(os.Args[1:]))
 	ExitIf(baseHref == "", "please enter a baseHref e.g. -b=%s", exampleBaseHref)
 	ExitIf(username == "", "please enter a username e.g. -u=%s", exampleUsername)
 	ExitIf(randomMinutes < 0 || randomMinutes > 60, "please enter a randomMinutes between 0 and 59 e.g. -r=15")
 
-	fmt.Print("Enter Password: ")
+	Print("Enter Password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 	ExitOn(err)
 	pwd := string(bytePassword)
-	fmt.Println()
+	Println()
 
 	rand.Seed(NowUnixMilli())
 

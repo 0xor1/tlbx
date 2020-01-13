@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -18,11 +18,72 @@ import (
 	. "github.com/0xor1/wtf/pkg/core"
 )
 
+const (
+	ContentType = "application/json;charset=utf-8"
+)
+
 var (
 	strIsInt         = regexp.MustCompile(`^[1-9][0-9]*$`)
 	invalidTypeErr   = errors.New("invalid value type")
 	emptyPathPartErr = errors.New("empty path part")
 )
+
+func WriteHttpOk(w http.ResponseWriter, body interface{}) {
+	WriteHttp(w, http.StatusOK, body)
+}
+
+func WriteHttp(w http.ResponseWriter, status int, body interface{}) {
+	bodyBytes, err := json.Marshal(body)
+	PanicOn(err)
+	WriteHttpRaw(w, status, bodyBytes)
+}
+
+func WriteHttpRaw(w http.ResponseWriter, status int, body []byte) {
+	w.Header().Set("Content-Type", ContentType)
+	w.WriteHeader(status)
+	_, err := w.Write(body)
+	PanicOn(err)
+}
+
+func Marshal(v interface{}) ([]byte, error) {
+	return json.Marshal(v)
+}
+
+func MustMarshal(v interface{}) []byte {
+	bs, err := Marshal(v)
+	PanicOn(err)
+	return bs
+}
+
+func MarshalIndent(v interface{}, prefix, indent string) ([]byte, error) {
+	return json.MarshalIndent(v, prefix, indent)
+}
+
+func MustMarshalIndent(v interface{}, prefix, indent string) []byte {
+	bs, err := MarshalIndent(v, prefix, indent)
+	PanicOn(err)
+	return bs
+}
+
+func Unmarshal(data []byte, v interface{}) error {
+	return json.Unmarshal(data, v)
+}
+
+func MustUnmarshal(data []byte, v interface{}) {
+	PanicOn(json.Unmarshal(data, v))
+}
+
+func UnmarshalReader(data io.Reader, v interface{}) error {
+	bs, err := ioutil.ReadAll(data)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bs, v)
+}
+
+func MustUnmarshalReader(data io.Reader, v interface{}) {
+	PanicOn(UnmarshalReader(data, v))
+}
 
 func SplitPath(path string) ([]interface{}, error) {
 	parts := strings.Split(path, ".")
@@ -1022,7 +1083,7 @@ func (j *Json) Uint64SliceOrDefault(pathThenDefault ...interface{}) []uint64 {
 
 func splitPathThenValue(pathThenValue []interface{}) ([]interface{}, interface{}, error) {
 	if len(pathThenValue) == 0 {
-		return nil, nil, fmt.Errorf("no value supplied")
+		return nil, nil, Errorf("no value supplied")
 	}
 	return pathThenValue[:len(pathThenValue)-1], pathThenValue[len(pathThenValue)-1], nil
 }
@@ -1039,5 +1100,5 @@ type jsonPathError struct {
 }
 
 func (e *jsonPathError) Error() string {
-	return fmt.Sprintf("found: %v missing: %v", e.FoundPath, e.MissingPath)
+	return Sprintf("found: %v missing: %v", e.FoundPath, e.MissingPath)
 }

@@ -1,137 +1,166 @@
 package core
 
 import (
-	"fmt"
+	"os"
 	"runtime/debug"
 	"strings"
 	"sync"
 )
 
-func Exit(v interface{}) {
-	ExitOn(ToError(v))
+type Fn func()
+type ErrFn func(Error)
+
+type Error interface {
+	Error() string
+	String() string
+	Message() string
+	StackTrace() string
+	Value() interface{}
 }
 
-func ExitOn(err error) {
-	theLog.FatalOn(err)
+type Errors []Error
+
+func (es Errors) Error() string {
+	errStrs := make([]string, 0, len(es))
+	for _, err := range es {
+		errStrs = append(errStrs, err.Error())
+	}
+	return Sprintf("errors:\n%s", strings.Join(errStrs, ""))
+}
+
+func (es Errors) String() string {
+	return es.Error()
+}
+
+type err struct {
+	Message_    string      `json:"message"`
+	StackTrace_ string      `json:"stackTrace"`
+	Value_      interface{} `json:"value"`
+}
+
+func (e *err) Error() string {
+	return Sprintf("message: %s\nstackTrace: %s", e.Message_, e.StackTrace_)
+}
+
+func (e *err) String() string {
+	return e.Error()
+}
+
+func (e *err) Message() string {
+	return e.Message_
+}
+
+func (e *err) StackTrace() string {
+	return e.StackTrace_
+}
+
+func (e *err) Value() interface{} {
+	return e.Value_
+}
+
+func ToError(i interface{}) Error {
+	if i == nil {
+		return nil
+	}
+
+	var msg string
+
+	switch v := i.(type) {
+	case *err:
+		return v
+	case error:
+		msg = v.Error()
+	case string:
+		msg = v
+	default:
+		msg = Sprintf("type: %T, value: %#v", i, i)
+	}
+
+	return &err{
+		Message_:    msg,
+		StackTrace_: string(debug.Stack()),
+		Value_:      i,
+	}
+}
+
+func ExitOn(i interface{}) {
+	if err := ToError(i); err != nil {
+		os.Exit(1)
+	}
 }
 
 func ExitIf(condition bool, format string, args ...interface{}) {
 	if condition {
-		ExitOn(fmt.Errorf(format, args...))
+		ExitOn(Sprintf(format, args...))
 	}
 }
 
-func Panic(v interface{}) {
-	PanicOn(ToError(v))
-}
-
-func PanicOn(err error) {
-	if err != nil {
+func PanicOn(i interface{}) {
+	if err := ToError(i); err != nil {
 		panic(err)
 	}
 }
 
 func PanicIf(condition bool, format string, args ...interface{}) {
 	if condition {
-		PanicOn(fmt.Errorf(format, args...))
+		PanicOn(Sprintf(format, args...))
 	}
 }
 
-func ToError(v interface{}) error {
-	if v != nil {
-		if err, ok := v.(error); ok {
-			return err
-		} else {
-			return fmt.Errorf("type: %T, value: %#v", v, v)
-		}
+func Recover(ef ErrFn) {
+	if ef == nil {
+		return
 	}
-	return nil
-}
-
-func Recover(r func(err error)) {
 	if err := ToError(recover()); err != nil {
-		theLog.ErrorOn(err)
-		r(err)
+		ef(err)
 	}
 }
 
-func Go(f func(), r func(err error)) {
-	PanicIf(f == nil, "f must be none nil go routine func")
-	PanicIf(r == nil, "r must be none nil recover func")
-	go func() {
-		defer Recover(r)
-		f()
-	}()
+func Do(f func(), ef ErrFn) {
+	defer Recover(ef)
+	f()
 }
 
-func GoGroup(fs ...func()) error {
+func Go(f Fn, ef ErrFn) {
+	go Do(f, ef)
+}
+
+func GoGroup(fs ...Fn) Error {
 	if len(fs) == 0 {
 		return nil
 	}
 	gg := &goGroup{
-		errs:    make([]*stackError, 0, len(fs)),
+		errs:    make(Errors, 0, len(fs)),
 		errsMtx: &sync.Mutex{},
 		wg:      &sync.WaitGroup{},
 	}
 	gg.wg.Add(len(fs))
-	for _, f := range fs {
+	for _, a := range fs {
 		func(f func()) {
 			Go(func() {
 				f()
 				gg.done(nil)
 			}, gg.done)
-		}(f)
+		}(a)
 	}
 	gg.wg.Wait()
 	if len(gg.errs) > 0 {
-		return gg
+		return ToError(gg.errs)
 	}
 	return nil
 }
 
-func MustGoGroup(fs ...func()) {
-	PanicOn(GoGroup(fs...))
-}
-
-type stackError struct {
-	err        error
-	stackTrace string
-}
-
-func (e *stackError) Error() string {
-	return fmt.Sprintf("error: %s\nstacktrace: %s\n", e.err.Error(), e.stackTrace)
-}
-
-func (e *stackError) String() string {
-	return e.Error()
-}
-
 type goGroup struct {
-	errs    []*stackError
+	errs    Errors
 	errsMtx *sync.Mutex
 	wg      *sync.WaitGroup
 }
 
-func (gg *goGroup) Error() string {
-	errs := make([]string, 0, len(gg.errs))
-	for _, err := range gg.errs {
-		errs = append(errs, err.Error())
-	}
-	return fmt.Sprintf("errors:\n%s", strings.Join(errs, ""))
-}
-
-func (gg *goGroup) String() string {
-	return gg.Error()
-}
-
-func (gg *goGroup) done(e error) {
+func (gg *goGroup) done(e Error) {
 	defer gg.wg.Done()
 	if e != nil {
 		gg.errsMtx.Lock()
 		defer gg.errsMtx.Unlock()
-		gg.errs = append(gg.errs, &stackError{
-			err:        e,
-			stackTrace: string(debug.Stack()),
-		})
+		gg.errs = append(gg.errs, ToError(e))
 	}
 }

@@ -3,4 +3,4 @@
 coverage.out
 index.html
 *.gen.go
-vendor/
+main
