@@ -25,6 +25,7 @@ const (
 // go run main.go
 func main() {
 	log := log.New()
+	defer Recover(func(e Error) { log.ErrorOn(e) })
 	log.Info("Starting")
 
 	fs := flag.NewFlagSet("wtf_tw_clockin_catchup", flag.ExitOnError)
@@ -38,14 +39,14 @@ func main() {
 	fs.IntVar(&minutes, "m", 30, "minutes e.g. 30")
 	var randomMinutes int64
 	fs.Int64Var(&randomMinutes, "r", 0, "randomMinutes to vary start and end times e.g. 15")
-	ExitOn(fs.Parse(os.Args[1:]))
-	ExitIf(baseHref == "", "please enter a baseHref e.g. -b=%s", exampleBaseHref)
-	ExitIf(username == "", "please enter a username e.g. -u=%s", exampleUsername)
-	ExitIf(randomMinutes < 0 || randomMinutes > 60, "please enter a randomMinutes between 0 and 59 e.g. -r=15")
+	PanicOn(fs.Parse(os.Args[1:]))
+	PanicIf(baseHref == "", "please enter a baseHref e.g. -b=%s", exampleBaseHref)
+	PanicIf(username == "", "please enter a username e.g. -u=%s", exampleUsername)
+	PanicIf(randomMinutes < 0 || randomMinutes > 60, "please enter a randomMinutes between 0 and 59 e.g. -r=15")
 
 	Print("Enter Password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-	ExitOn(err)
+	PanicOn(err)
 	pwd := string(bytePassword)
 	Println()
 
@@ -91,15 +92,15 @@ func main() {
 
 func mustDoReq(method, baseHref, path, username, pwd string, body io.Reader) *json.Json {
 	req, err := http.NewRequest(method, baseHref+path, body)
-	ExitOn(err)
+	PanicOn(err)
 	req.SetBasicAuth(username, pwd)
 	resp, err := http.DefaultClient.Do(req)
-	ExitOn(err)
+	PanicOn(err)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
-	ExitOn(err)
-	ExitIf(resp.StatusCode > 299, "error making request, status code: %d, status: %s body: %s", resp.StatusCode, resp.Status, string(respBody))
+	PanicOn(err)
+	PanicIf(resp.StatusCode > 299, "error making request, status code: %d, status: %s body: %s", resp.StatusCode, resp.Status, string(respBody))
 	return json.MustFromBytes(respBody)
 }

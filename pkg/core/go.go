@@ -85,6 +85,7 @@ func ToError(i interface{}) Error {
 
 func ExitOn(i interface{}) {
 	if err := ToError(i); err != nil {
+		Println(i)
 		os.Exit(1)
 	}
 }
