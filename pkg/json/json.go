@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,23 +26,6 @@ var (
 	invalidTypeErr   = errors.New("invalid value type")
 	emptyPathPartErr = errors.New("empty path part")
 )
-
-func WriteHttpOk(w http.ResponseWriter, body interface{}) {
-	WriteHttp(w, http.StatusOK, body)
-}
-
-func WriteHttp(w http.ResponseWriter, status int, body interface{}) {
-	bodyBytes, err := json.Marshal(body)
-	PanicOn(err)
-	WriteHttpRaw(w, status, bodyBytes)
-}
-
-func WriteHttpRaw(w http.ResponseWriter, status int, body []byte) {
-	w.Header().Set("Content-Type", ContentType)
-	w.WriteHeader(status)
-	_, err := w.Write(body)
-	PanicOn(err)
-}
 
 func Marshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)

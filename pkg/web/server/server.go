@@ -22,13 +22,13 @@ type Config struct {
 	Handler               http.HandlerFunc
 }
 
-func Run(configs ...func(c *Config)) error {
+func Run(configs ...func(c *Config)) {
 	c := config(configs...)
 
 	if !c.UseHttps {
 		c.Log.Info("Insecure app server running bound to %s", c.AppBindTo)
 		appServer := appServer(c, c.Handler, nil)
-		return appServer.ListenAndServe()
+		c.Log.ErrorOn(appServer.ListenAndServe())
 	}
 
 	certManager := certManager(c)
@@ -42,7 +42,7 @@ func Run(configs ...func(c *Config)) error {
 		TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
 	}
 	c.Log.Info("Secure app server running bound to %s", c.AppBindTo)
-	return appServer.ListenAndServeTLS("", "")
+	c.Log.ErrorOn(appServer.ListenAndServeTLS("", ""))
 }
 
 func config(configs ...func(c *Config)) *Config {
