@@ -358,16 +358,16 @@ func config(configs ...func(*Config)) *Config {
 				},
 				GetExampleArgs: func() interface{} {
 					return &map[string]interface{}{
-						"whatever": "you",
-						"want":     "to",
-						"send":     "here",
+						"a": "ali",
+						"b": "bob",
+						"c": "cat",
 					}
 				},
 				GetExampleResponse: func() interface{} {
 					return &map[string]interface{}{
-						"whatever": "you",
-						"want":     "to",
-						"send":     "here",
+						"a": "ali",
+						"b": "bob",
+						"c": "cat",
 					}
 				},
 				Handler: func(tlbx Toolbox, args interface{}) interface{} {
