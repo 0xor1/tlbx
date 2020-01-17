@@ -9,6 +9,7 @@ import (
 	"time"
 
 	. "github.com/0xor1/wtf/pkg/core"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func NewOpener() Opener {
@@ -16,7 +17,7 @@ func NewOpener() Opener {
 }
 
 type Opener interface {
-	Open(driverName, dataSourceName string) (DB, error)
+	Open(dataSourceName string) (DB, error)
 }
 
 func NewDB(db *sql.DB) DB {
@@ -47,9 +48,9 @@ type DB interface {
 	Stats() sql.DBStats
 }
 
-func NewReplicaSet(driverName, primaryDataSourceName string, slaveDataSourceNames ...string) (ReplicaSet, error) {
+func NewReplicaSet(primaryDataSourceName string, slaveDataSourceNames ...string) (ReplicaSet, error) {
 	op := &opener{}
-	primary, err := op.Open(driverName, primaryDataSourceName)
+	primary, err := op.Open(primaryDataSourceName)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func NewReplicaSet(driverName, primaryDataSourceName string, slaveDataSourceName
 		slaves:  make([]DBCore, 0, len(slaveDataSourceNames)),
 	}
 	for _, slaveDataSourceName := range slaveDataSourceNames {
-		slave, err := op.Open(driverName, slaveDataSourceName)
+		slave, err := op.Open(slaveDataSourceName)
 		if err != nil {
 			return nil, err
 		}
@@ -68,7 +69,7 @@ func NewReplicaSet(driverName, primaryDataSourceName string, slaveDataSourceName
 }
 
 func MustNewReplicaSet(driverName, primaryDataSourceName string, slaveDataSourceNames ...string) ReplicaSet {
-	rs, err := NewReplicaSet(driverName, primaryDataSourceName, slaveDataSourceNames...)
+	rs, err := NewReplicaSet(primaryDataSourceName, slaveDataSourceNames...)
 	PanicOn(err)
 	return rs
 }
@@ -179,8 +180,8 @@ type ColumnType interface {
 type opener struct {
 }
 
-func (o *opener) Open(driverName, dataSourceName string) (DB, error) {
-	db, err := sql.Open(driverName, dataSourceName)
+func (o *opener) Open(dataSourceName string) (DB, error) {
+	db, err := sql.Open("mysql", dataSourceName)
 	if err != nil {
 		if db != nil {
 			db.Close()

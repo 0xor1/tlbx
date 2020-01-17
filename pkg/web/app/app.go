@@ -578,6 +578,7 @@ func (s *session) AuthedOn() time.Time {
 }
 
 func (s *session) Login(me ID) {
+	s.isAuthed = true
 	s.me = &me
 	s.authedOn = Now()
 	s.gorilla.Values = map[interface{}]interface{}{
@@ -588,6 +589,7 @@ func (s *session) Login(me ID) {
 }
 
 func (s *session) Logout(w http.ResponseWriter, r *http.Request) {
+	s.isAuthed = false
 	s.me = nil
 	s.authedOn = time.Time{}
 	s.gorilla.Options.MaxAge = -1
@@ -616,10 +618,10 @@ type ByteStream struct {
 
 func (bs *ByteStream) MarshalJSON() ([]byte, error) {
 	return []byte(
-		`body contains content bytes plus headers:
-"Content-Type": "mime_type",
-"Content-Length": bytes_count,
-"Content-Name": "name"`), nil
+		`"body contains content bytes plus headers:
+\"Content-Type\": \"mime_type\",
+\"Content-Length\": bytes_count,
+\"Content-Name\": \"name\""`), nil
 }
 
 func ExampleID() ID {
