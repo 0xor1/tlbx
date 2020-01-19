@@ -28,19 +28,20 @@ const (
 )
 
 type Config struct {
-	Log          log.Log
-	Version      string
-	StaticDir    string
-	Session      SessionConfig
-	MDoMax       int
-	IsStaticReq  func(*http.Request) bool
-	IsDocsReq    func(*http.Request) bool
-	IsMDoReq     func(*http.Request) bool
-	ToolboxMware func(Toolbox)
-	Name         string
-	Description  string
-	Endpoints    []*Endpoint
-	Serve        func(http.HandlerFunc)
+	Log             log.Log
+	Version         string
+	StaticDir       string
+	Session         SessionConfig
+	MDoMax          int
+	MDoMaxBodyBytes int64
+	IsStaticReq     func(*http.Request) bool
+	IsDocsReq       func(*http.Request) bool
+	IsMDoReq        func(*http.Request) bool
+	ToolboxMware    func(Toolbox)
+	Name            string
+	Description     string
+	Endpoints       []*Endpoint
+	Serve           func(http.HandlerFunc)
 }
 
 type SessionConfig struct {
@@ -174,16 +175,26 @@ func Run(configs ...func(*Config)) {
 		tlbx.req.URL.Path = strings.ToLower(tlbx.req.URL.Path)
 		// do mdo
 		if c.IsMDoReq(tlbx.req) {
+			if c.MDoMaxBodyBytes > 0 {
+				tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, c.MDoMaxBodyBytes)
+			}
 			var err error
 			mDoReqs := map[string]*mDoReq{}
 			argsStr := tlbx.req.URL.Query().Get("args")
 			argsBytes := []byte(argsStr)
 			if argsStr == "" {
 				argsBytes, err = ioutil.ReadAll(tlbx.req.Body)
-				PanicOn(err)
+				if err != nil {
+					tlbx.ReturnMsgIf(
+						err.Error() == "http: request body too large",
+						http.StatusBadRequest,
+						"request body too large")
+					PanicOn(err)
+				}
 			}
 			err = json.Unmarshal(argsBytes, &mDoReqs)
 			tlbx.ReturnMsgIf(err != nil, http.StatusBadRequest, "error unmarshalling json: %s", err)
+			tlbx.ReturnMsgIf(len(mDoReqs) > c.MDoMax, http.StatusBadRequest, "too many mdo reqs, max reqs allowed: %d", c.MDoMax)
 			fullMDoResp := map[string]*mDoResp{}
 			fullMDoRespMtx := &sync.Mutex{}
 			does := make([]Fn, 0, len(mDoReqs))
@@ -211,7 +222,7 @@ func Run(configs ...func(*Config)) {
 			}
 			err = GoGroup(does...)
 			tlbx.ReturnMsgIf(err != nil, http.StatusInternalServerError, "error executing mdo")
-			writeJsonOk(w, fullMDoResp)
+			writeJsonOk(tlbx.resp, fullMDoResp)
 			return
 		}
 		// session
@@ -236,7 +247,7 @@ func Run(configs ...func(*Config)) {
 		}
 		// endpoint docs
 		if c.IsDocsReq(tlbx.req) {
-			writeJsonRaw(w, http.StatusOK, docsBytes)
+			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
 			return
 		}
 
@@ -244,7 +255,7 @@ func Run(configs ...func(*Config)) {
 		tlbx.ReturnMsgIf(!exists, http.StatusNotFound, http.StatusText(http.StatusNotFound))
 
 		if ep.MaxBodyBytes > 0 {
-			tlbx.req.Body = http.MaxBytesReader(w, tlbx.req.Body, ep.MaxBodyBytes)
+			tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, ep.MaxBodyBytes)
 		}
 
 		ctx := tlbx.req.Context()
@@ -292,15 +303,15 @@ func Run(configs ...func(*Config)) {
 			res := ep.Handler(tlbx, args)
 			if bs, ok := res.(*ByteStream); ok {
 				tlbx.ReturnMsgIf(tlbx.isSubMDo, http.StatusBadRequest, "can not call ByteStream endpoint in an mdo request")
-				w.Header().Add("Content-Type", bs.Type)
-				w.Header().Add("Content-Length", Sprintf("%d", bs.Size))
-				w.Header().Add("Content-Name", bs.Name)
-				w.WriteHeader(http.StatusOK)
-				_, err := io.Copy(w, bs.Stream)
+				tlbx.resp.Header().Add("Content-Type", bs.Type)
+				tlbx.resp.Header().Add("Content-Length", Sprintf("%d", bs.Size))
+				tlbx.resp.Header().Add("Content-Name", bs.Name)
+				tlbx.resp.WriteHeader(http.StatusOK)
+				_, err := io.Copy(tlbx.resp, bs.Stream)
 				PanicOn(err)
 				return
 			}
-			writeJsonOk(w, res)
+			writeJsonOk(tlbx.resp, res)
 			cancel()
 		}
 
@@ -315,7 +326,7 @@ func Run(configs ...func(*Config)) {
 			case <-ctx.Done():
 				return
 			case <-time.After(timeout):
-				writeJson(w, http.StatusServiceUnavailable, http.StatusText(http.StatusServiceUnavailable))
+				writeJson(tlbx.resp, http.StatusServiceUnavailable, http.StatusText(http.StatusServiceUnavailable))
 			}
 		} else {
 			do()
@@ -340,7 +351,8 @@ func config(configs ...func(*Config)) *Config {
 			HttpOnly:   true,
 			SameSite:   http.SameSiteDefaultMode,
 		},
-		MDoMax: 20,
+		MDoMax:          20,
+		MDoMaxBodyBytes: MB,
 		IsStaticReq: func(r *http.Request) bool {
 			return !strings.HasPrefix(strings.ToLower(r.URL.Path), "/api/")
 		},
