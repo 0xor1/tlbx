@@ -184,13 +184,7 @@ func Run(configs ...func(*Config)) {
 			argsBytes := []byte(argsStr)
 			if argsStr == "" {
 				argsBytes, err = ioutil.ReadAll(tlbx.req.Body)
-				if err != nil {
-					tlbx.ReturnMsgIf(
-						err.Error() == "http: request body too large",
-						http.StatusBadRequest,
-						"request body too large")
-					PanicOn(err)
-				}
+				checkErrForMaxBytes(tlbx, err)
 			}
 			err = json.Unmarshal(argsBytes, &mDoReqs)
 			tlbx.ReturnMsgIf(err != nil, http.StatusBadRequest, "error unmarshalling json: %s", err)
@@ -287,13 +281,7 @@ func Run(configs ...func(*Config)) {
 				if argsStr == "" {
 					var err error
 					argsBytes, err = ioutil.ReadAll(tlbx.req.Body)
-					if err != nil {
-						tlbx.ReturnMsgIf(
-							err.Error() == "http: request body too large",
-							http.StatusBadRequest,
-							"request body too large")
-						PanicOn(err)
-					}
+					checkErrForMaxBytes(tlbx, err)
 				}
 				if len(argsBytes) > 0 {
 					err := json.Unmarshal(argsBytes, args)
@@ -662,4 +650,14 @@ type endpointDoc struct {
 	DefaultArgs     interface{} `json:"defaultArgs"`
 	ExampleArgs     interface{} `json:"exampleArgs"`
 	ExampleResponse interface{} `json:"exampleResponse"`
+}
+
+func checkErrForMaxBytes(tlbx *toolbox, err error) {
+	if err != nil {
+		tlbx.ReturnMsgIf(
+			err.Error() == "http: request body too large",
+			http.StatusBadRequest,
+			"request body too large")
+		PanicOn(err)
+	}
 }
