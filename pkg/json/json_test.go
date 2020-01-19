@@ -1,7 +1,6 @@
 package json
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -842,7 +841,7 @@ func Test_MustBool(t *testing.T) {
 func Test_ID(t *testing.T) {
 	a := assert.New(t)
 
-	idGen := NewIDGenerator()
+	idGen := NewIDGen()
 	id := idGen.MustNew()
 	obj := &Json{id}
 	a.Equal(id, obj.MustID())

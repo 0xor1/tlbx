@@ -8,12 +8,12 @@ import (
 )
 
 func Test_IDGenerator(t *testing.T) {
-	NewIDGenerator().MustNew()
+	NewIDGen().MustNew()
 }
 
 func Test_ID(t *testing.T) {
 	a := assert.New(t)
-	gen := NewIDGenerator()
+	gen := NewIDGen()
 	id1 := gen.MustNew()
 	bin1, err := id1.MarshalBinary()
 	a.Nil(err)

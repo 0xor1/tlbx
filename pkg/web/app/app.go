@@ -276,7 +276,13 @@ func Run(configs ...func(*Config)) {
 				if argsStr == "" {
 					var err error
 					argsBytes, err = ioutil.ReadAll(tlbx.req.Body)
-					PanicOn(err)
+					if err != nil {
+						tlbx.ReturnMsgIf(
+							err.Error() == "http: request body too large",
+							http.StatusBadRequest,
+							"request body too large")
+						PanicOn(err)
+					}
 				}
 				if len(argsBytes) > 0 {
 					err := json.Unmarshal(argsBytes, args)
