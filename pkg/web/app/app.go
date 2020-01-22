@@ -211,16 +211,8 @@ func Run(configs ...func(*Config)) {
 			if c.MDoMaxBodyBytes > 0 {
 				tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, c.MDoMaxBodyBytes)
 			}
-			var err error
 			mDoReqs := map[string]*mDoReq{}
-			argsStr := tlbx.req.URL.Query().Get("args")
-			argsBytes := []byte(argsStr)
-			if argsStr == "" {
-				argsBytes, err = ioutil.ReadAll(tlbx.req.Body)
-				checkErrForMaxBytes(tlbx, err)
-			}
-			err = json.Unmarshal(argsBytes, &mDoReqs)
-			tlbx.ReturnMsgIf(err != nil, http.StatusBadRequest, "error unmarshalling json: %s", err)
+			getJsonArgs(tlbx, &mDoReqs)
 			tlbx.ReturnMsgIf(len(mDoReqs) > c.MDoMax, http.StatusBadRequest, "too many mdo reqs, max reqs allowed: %d", c.MDoMax)
 			fullMDoResp := map[string]*mDoResp{}
 			fullMDoRespMtx := &sync.Mutex{}
@@ -284,17 +276,7 @@ func Run(configs ...func(*Config)) {
 				bs.Stream = tlbx.req.Body
 				args = bs
 			} else {
-				argsStr := tlbx.req.URL.Query().Get("args")
-				argsBytes := []byte(argsStr)
-				if argsStr == "" {
-					var err error
-					argsBytes, err = ioutil.ReadAll(tlbx.req.Body)
-					checkErrForMaxBytes(tlbx, err)
-				}
-				if len(argsBytes) > 0 {
-					err := json.Unmarshal(argsBytes, args)
-					tlbx.ReturnMsgIf(err != nil, http.StatusBadRequest, "error unmarshalling json: %s", err)
-				}
+				getJsonArgs(tlbx, args)
 			}
 			res := ep.Handler(tlbx, args)
 			if bs, ok := res.(*ByteStream); ok {
@@ -446,6 +428,7 @@ func (r *responseWrapper) WriteHeader(status int) {
 
 type Toolbox interface {
 	Ctx() context.Context
+	NewID() ID
 	Log() log.Log
 	LogQueryStats(*QueryStats)
 	ReturnMsgIf(condition bool, status int, format string, args ...interface{})
@@ -457,6 +440,7 @@ type Toolbox interface {
 type toolbox struct {
 	resp          *responseWrapper
 	req           *http.Request
+	idGen         IDGen
 	session       *session
 	isSubMDo      bool
 	log           log.Log
@@ -468,6 +452,13 @@ type toolbox struct {
 
 func (t *toolbox) Ctx() context.Context {
 	return t.req.Context()
+}
+
+func (t *toolbox) NewID() ID {
+	if t.idGen == nil {
+		t.idGen = NewIDGen()
+	}
+	return t.idGen.MustNew()
 }
 
 func (t *toolbox) Log() log.Log {
@@ -775,4 +766,18 @@ func rateLimit(c *Config, tlbx *toolbox) {
 	tlbx.resp.Header().Add("X-Rate-Limit-Reset", "60")
 
 	tlbx.ReturnMsgIf(remaining < 1, http.StatusTooManyRequests, "")
+}
+
+func getJsonArgs(tlbx *toolbox, args interface{}) {
+	argsStr := tlbx.req.URL.Query().Get("args")
+	argsBytes := []byte(argsStr)
+	if argsStr == "" {
+		var err error
+		argsBytes, err = ioutil.ReadAll(tlbx.req.Body)
+		checkErrForMaxBytes(tlbx, err)
+	}
+	if len(argsBytes) > 0 {
+		err := json.Unmarshal(argsBytes, args)
+		tlbx.ReturnMsgIf(err != nil, http.StatusBadRequest, "error unmarshalling json: %s", err)
+	}
 }
