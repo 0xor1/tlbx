@@ -700,14 +700,6 @@ func rateLimit(c *Config, tlbx *toolbox) {
 		return
 	}
 
-	err = cnn.Send("ZADD", key, now, now)
-	if err != nil {
-		if c.RateLimitExitOnError {
-			PanicOn(err)
-		}
-		return
-	}
-
 	err = cnn.Send("ZREMRANGEBYSCORE", key, 0, now-time.Minute.Nanoseconds())
 	if err != nil {
 		if c.RateLimitExitOnError {
@@ -739,7 +731,44 @@ func rateLimit(c *Config, tlbx *toolbox) {
 		}
 		return
 	}
+
 	remaining := c.RateLimitPerMinute - len(keys)
+
+	if remaining > 0 {
+		remaining--
+
+		err := cnn.Send("MULTI")
+		if err != nil {
+			if c.RateLimitExitOnError {
+				PanicOn(err)
+			}
+			return
+		}
+
+		err = cnn.Send("ZADD", key, now, now)
+		if err != nil {
+			if c.RateLimitExitOnError {
+				PanicOn(err)
+			}
+			return
+		}
+
+		err = cnn.Send("EXPIRE", key, 60)
+		if err != nil {
+			if c.RateLimitExitOnError {
+				PanicOn(err)
+			}
+			return
+		}
+
+		_, err = cnn.Do("EXEC")
+		if err != nil {
+			if c.RateLimitExitOnError {
+				PanicOn(err)
+			}
+			return
+		}
+	}
 
 	tlbx.resp.Header().Add("X-Rate-Limit-Limit", strconv.Itoa(c.RateLimitPerMinute))
 	tlbx.resp.Header().Add("X-Rate-Limit-Remaining", strconv.Itoa(remaining))
