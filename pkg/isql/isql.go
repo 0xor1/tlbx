@@ -56,7 +56,7 @@ func NewReplicaSet(primaryDataSourceName string, slaveDataSourceNames ...string)
 	}
 	rs := &replicaSet{
 		primary: primary,
-		slaves:  make([]DBCore, 0, len(slaveDataSourceNames)),
+		slaves:  make([]DB, 0, len(slaveDataSourceNames)),
 	}
 	for _, slaveDataSourceName := range slaveDataSourceNames {
 		slave, err := op.Open(slaveDataSourceName)
@@ -81,9 +81,8 @@ type DBCore interface {
 }
 
 type ReplicaSet interface {
-	DBCore
-	Primary() DBCore
-	Slaves() []DBCore
+	Primary() DB
+	RandSlave() DB
 }
 
 func NewRow(row *sql.Row) Row {
@@ -274,36 +273,20 @@ func (d *dbWrapper) Stats() sql.DBStats {
 }
 
 type replicaSet struct {
-	primary DBCore
-	slaves  []DBCore
+	primary DB
+	slaves  []DB
 }
 
-func (r *replicaSet) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return r.primary.ExecContext(ctx, query, args...)
-}
-
-func (r *replicaSet) QueryContext(ctx context.Context, query string, args ...interface{}) (Rows, error) {
-	if len(r.slaves) > 0 {
-		return r.slaves[rand.Intn(len(r.slaves))].QueryContext(ctx, query, args...)
-	} else {
-		return r.primary.QueryContext(ctx, query, args...)
-	}
-}
-
-func (r *replicaSet) QueryRowContext(ctx context.Context, query string, args ...interface{}) Row {
-	if len(r.slaves) > 0 {
-		return r.slaves[rand.Intn(len(r.slaves))].QueryRowContext(ctx, query, args...)
-	} else {
-		return r.primary.QueryRowContext(ctx, query, args...)
-	}
-}
-
-func (r *replicaSet) Primary() DBCore {
+func (r *replicaSet) Primary() DB {
 	return r.primary
 }
 
-func (r *replicaSet) Slaves() []DBCore {
-	return r.slaves
+func (r *replicaSet) RandSlave() DB {
+	if len(r.slaves) > 0 {
+		return r.slaves[rand.Intn(len(r.slaves))]
+	} else {
+		return r.primary
+	}
 }
 
 type rowWrapper struct {

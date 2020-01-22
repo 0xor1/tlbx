@@ -15,10 +15,13 @@ import (
 
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/crypt"
+	"github.com/0xor1/wtf/pkg/iredis"
 	"github.com/0xor1/wtf/pkg/json"
 	"github.com/0xor1/wtf/pkg/log"
 	"github.com/0xor1/wtf/pkg/web/server"
+	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/sessions"
+	"github.com/tomasen/realip"
 )
 
 const (
@@ -28,20 +31,23 @@ const (
 )
 
 type Config struct {
-	Log             log.Log
-	Version         string
-	StaticDir       string
-	Session         SessionConfig
-	MDoMax          int
-	MDoMaxBodyBytes int64
-	IsStaticReq     func(*http.Request) bool
-	IsDocsReq       func(*http.Request) bool
-	IsMDoReq        func(*http.Request) bool
-	ToolboxMware    func(Toolbox)
-	Name            string
-	Description     string
-	Endpoints       []*Endpoint
-	Serve           func(http.HandlerFunc)
+	Log                  log.Log
+	Version              string
+	StaticDir            string
+	Session              SessionConfig
+	RateLimitPerMinute   int
+	RateLimitExitOnError bool
+	RateLimiterPool      iredis.Pool
+	MDoMax               int
+	MDoMaxBodyBytes      int64
+	IsStaticReq          func(*http.Request) bool
+	IsDocsReq            func(*http.Request) bool
+	IsMDoReq             func(*http.Request) bool
+	ToolboxMware         func(Toolbox)
+	Name                 string
+	Description          string
+	Endpoints            []*Endpoint
+	Serve                func(http.HandlerFunc)
 }
 
 type SessionConfig struct {
@@ -146,10 +152,10 @@ func Run(configs ...func(*Config)) {
 		// recover from errors
 		defer func() {
 			if e := ToError(recover()); e != nil {
-				tlbx.log.ErrorOn(e)
 				if err, ok := e.Value().(*returnMsg); ok {
 					writeJson(tlbx.resp, err.status, err.msg)
 				} else {
+					tlbx.log.ErrorOn(e)
 					writeJson(tlbx.resp, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 				}
 			}
@@ -164,6 +170,33 @@ func Run(configs ...func(*Config)) {
 		if tlbx.req.Method == http.MethodOptions {
 			tlbx.resp.Header().Add("Access-Control-Allow-Methods", "GET, PUT")
 			tlbx.resp.WriteHeader(200)
+			return
+		}
+		// session
+		gses, err := sessionStore.Get(tlbx.req, c.Session.Name)
+		PanicOn(err)
+		tlbx.session = &session{
+			r:       tlbx.req,
+			w:       tlbx.resp,
+			gorilla: gses,
+		}
+		if !tlbx.session.gorilla.IsNew {
+			i, ok := tlbx.session.gorilla.Values["me"]
+			if ok {
+				me := i.(ID)
+				tlbx.session.me = &me
+				tlbx.session.isAuthed = true
+			}
+			i, ok = tlbx.session.gorilla.Values["authedOn"]
+			if ok {
+				tlbx.session.authedOn = i.(time.Time)
+			}
+		}
+		// rate limiter
+		rateLimit(c, tlbx)
+		// endpoint docs
+		if c.IsDocsReq(tlbx.req) {
+			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
 			return
 		}
 		// serve static file
@@ -215,38 +248,13 @@ func Run(configs ...func(*Config)) {
 				}(key, mDoReqs[key]))
 			}
 			err = GoGroup(does...)
-			tlbx.ReturnMsgIf(err != nil, http.StatusInternalServerError, "error executing mdo")
+			PanicOn(err)
 			writeJsonOk(tlbx.resp, fullMDoResp)
 			return
 		}
-		// session
-		gses, err := sessionStore.Get(tlbx.req, c.Session.Name)
-		tlbx.ReturnMsgIf(err != nil, http.StatusInternalServerError, "error getting session: %s", err)
-		tlbx.session = &session{
-			r:       tlbx.req,
-			w:       tlbx.resp,
-			gorilla: gses,
-		}
-		if !tlbx.session.gorilla.IsNew {
-			i, ok := tlbx.session.gorilla.Values["me"]
-			if ok {
-				me := i.(ID)
-				tlbx.session.me = &me
-				tlbx.session.isAuthed = true
-			}
-			i, ok = tlbx.session.gorilla.Values["authedOn"]
-			if ok {
-				tlbx.session.authedOn = i.(time.Time)
-			}
-		}
-		// endpoint docs
-		if c.IsDocsReq(tlbx.req) {
-			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
-			return
-		}
-
+		// endpoints
 		ep, exists := router[tlbx.req.URL.Path]
-		tlbx.ReturnMsgIf(!exists, http.StatusNotFound, http.StatusText(http.StatusNotFound))
+		tlbx.ReturnMsgIf(!exists, http.StatusNotFound, "")
 
 		if ep.MaxBodyBytes > 0 {
 			tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, ep.MaxBodyBytes)
@@ -314,7 +322,7 @@ func Run(configs ...func(*Config)) {
 			case <-ctx.Done():
 				return
 			case <-time.After(timeout):
-				writeJson(tlbx.resp, http.StatusServiceUnavailable, http.StatusText(http.StatusServiceUnavailable))
+				writeJson(tlbx.resp, http.StatusServiceUnavailable, "")
 			}
 		} else {
 			do()
@@ -327,6 +335,7 @@ func config(configs ...func(*Config)) *Config {
 	l := log.New()
 	c := &Config{
 		Log:       l,
+		Version:   "dev",
 		StaticDir: ".",
 		Session: SessionConfig{
 			AuthKey64s: [][]byte{crypt.Bytes(64)},
@@ -339,8 +348,11 @@ func config(configs ...func(*Config)) *Config {
 			HttpOnly:   true,
 			SameSite:   http.SameSiteDefaultMode,
 		},
-		MDoMax:          20,
-		MDoMaxBodyBytes: MB,
+		RateLimitPerMinute:   120,
+		RateLimitExitOnError: false,
+		RateLimiterPool:      nil,
+		MDoMax:               20,
+		MDoMaxBodyBytes:      MB,
 		IsStaticReq: func(r *http.Request) bool {
 			return !strings.HasPrefix(strings.ToLower(r.URL.Path), "/api/")
 		},
@@ -469,6 +481,9 @@ func (t *toolbox) LogQueryStats(qs *QueryStats) {
 }
 
 func (t *toolbox) ReturnMsgIf(condition bool, status int, format string, args ...interface{}) {
+	if format == "" {
+		format = http.StatusText(status)
+	}
 	if condition {
 		PanicOn(&returnMsg{
 			status: status,
@@ -660,4 +675,75 @@ func checkErrForMaxBytes(tlbx *toolbox, err error) {
 			"request body too large")
 		PanicOn(err)
 	}
+}
+
+func rateLimit(c *Config, tlbx *toolbox) {
+	if c.RateLimiterPool == nil || c.RateLimitPerMinute < 1 {
+		return
+	}
+	// get key
+	var key string
+	if tlbx.session.me != nil {
+		key = tlbx.session.me.String()
+	}
+	key = Sprintf("rate-limiter-%s-%s", realip.RealIP(tlbx.req), key)
+
+	now := NowUnixNano()
+	cnn := c.RateLimiterPool.Get()
+	defer cnn.Close()
+
+	err := cnn.Send("MULTI")
+	if err != nil {
+		if c.RateLimitExitOnError {
+			PanicOn(err)
+		}
+		return
+	}
+
+	err = cnn.Send("ZADD", key, now, now)
+	if err != nil {
+		if c.RateLimitExitOnError {
+			PanicOn(err)
+		}
+		return
+	}
+
+	err = cnn.Send("ZREMRANGEBYSCORE", key, 0, now-time.Minute.Nanoseconds())
+	if err != nil {
+		if c.RateLimitExitOnError {
+			PanicOn(err)
+		}
+		return
+	}
+
+	err = cnn.Send("ZRANGE", key, 0, -1)
+	if err != nil {
+		if c.RateLimitExitOnError {
+			PanicOn(err)
+		}
+		return
+	}
+
+	results, err := redis.Values(cnn.Do("EXEC"))
+	if err != nil {
+		if c.RateLimitExitOnError {
+			PanicOn(err)
+		}
+		return
+	}
+
+	keys, err := redis.Strings(results[len(results)-1], err)
+	if err != nil {
+		if c.RateLimitExitOnError {
+			PanicOn(err)
+		}
+		return
+	}
+	remaining := c.RateLimitPerMinute - len(keys)
+
+	tlbx.resp.Header().Add("X-Rate-Limit-Limit", strconv.Itoa(c.RateLimitPerMinute))
+	tlbx.resp.Header().Add("X-Rate-Limit-Remaining", strconv.Itoa(remaining))
+	tlbx.resp.Header().Add("X-Rate-Limit-Reset", "60")
+
+	tlbx.ReturnMsgIf(remaining < 1, http.StatusTooManyRequests, "")
 }
