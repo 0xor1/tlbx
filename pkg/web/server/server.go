@@ -44,7 +44,7 @@ func Run(configs ...func(c *Config)) {
 		}
 	}
 	logDoneError := func(err error) {
-		if err.Error() != "http: Server closed" {
+		if err != nil && err.Error() != "http: Server closed" {
 			c.Log.ErrorOn(err)
 		}
 	}
