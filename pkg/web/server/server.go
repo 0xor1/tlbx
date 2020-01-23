@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/0xor1/wtf/pkg/log"
@@ -29,7 +30,8 @@ func Run(configs ...func(c *Config)) {
 	c := config(configs...)
 
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
+	signal.Notify(quit, syscall.SIGINT)
+	signal.Notify(quit, syscall.SIGTERM)
 	shutdownServers := func(servers ...*http.Server) {
 		<-quit
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
