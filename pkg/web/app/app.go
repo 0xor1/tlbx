@@ -672,6 +672,17 @@ func rateLimit(c *Config, tlbx *toolbox) {
 	if c.RateLimiterPool == nil || c.RateLimitPerMinute < 1 {
 		return
 	}
+
+	remaining := c.RateLimitPerMinute
+
+	defer func() {
+		tlbx.resp.Header().Add("X-Rate-Limit-Limit", strconv.Itoa(c.RateLimitPerMinute))
+		tlbx.resp.Header().Add("X-Rate-Limit-Remaining", strconv.Itoa(remaining))
+		tlbx.resp.Header().Add("X-Rate-Limit-Reset", "60")
+
+		tlbx.ReturnMsgIf(remaining < 1, http.StatusTooManyRequests, "")
+	}()
+
 	// get key
 	var key string
 	if tlbx.session.me != nil {
@@ -723,7 +734,7 @@ func rateLimit(c *Config, tlbx *toolbox) {
 		return
 	}
 
-	remaining := c.RateLimitPerMinute - len(keys)
+	remaining = remaining - len(keys)
 
 	if remaining > 0 {
 		remaining--
@@ -760,12 +771,6 @@ func rateLimit(c *Config, tlbx *toolbox) {
 			return
 		}
 	}
-
-	tlbx.resp.Header().Add("X-Rate-Limit-Limit", strconv.Itoa(c.RateLimitPerMinute))
-	tlbx.resp.Header().Add("X-Rate-Limit-Remaining", strconv.Itoa(remaining))
-	tlbx.resp.Header().Add("X-Rate-Limit-Reset", "60")
-
-	tlbx.ReturnMsgIf(remaining < 1, http.StatusTooManyRequests, "")
 }
 
 func getJsonArgs(tlbx *toolbox, args interface{}) {
