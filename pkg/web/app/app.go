@@ -673,6 +673,17 @@ func rateLimit(c *Config, tlbx *toolbox) {
 		return
 	}
 
+	shouldReturn := func(err error) bool {
+		if err != nil {
+			if c.RateLimitExitOnError {
+				PanicOn(err)
+			}
+			c.Log.ErrorOn(err)
+			return true
+		}
+		return false
+	}
+
 	remaining := c.RateLimitPerMinute
 
 	defer func() {
@@ -695,42 +706,27 @@ func rateLimit(c *Config, tlbx *toolbox) {
 	defer cnn.Close()
 
 	err := cnn.Send("MULTI")
-	if err != nil {
-		if c.RateLimitExitOnError {
-			PanicOn(err)
-		}
+	if shouldReturn(err) {
 		return
 	}
 
 	err = cnn.Send("ZREMRANGEBYSCORE", key, 0, now-time.Minute.Nanoseconds())
-	if err != nil {
-		if c.RateLimitExitOnError {
-			PanicOn(err)
-		}
+	if shouldReturn(err) {
 		return
 	}
 
 	err = cnn.Send("ZRANGE", key, 0, -1)
-	if err != nil {
-		if c.RateLimitExitOnError {
-			PanicOn(err)
-		}
+	if shouldReturn(err) {
 		return
 	}
 
 	results, err := redis.Values(cnn.Do("EXEC"))
-	if err != nil {
-		if c.RateLimitExitOnError {
-			PanicOn(err)
-		}
+	if shouldReturn(err) {
 		return
 	}
 
 	keys, err := redis.Strings(results[len(results)-1], err)
-	if err != nil {
-		if c.RateLimitExitOnError {
-			PanicOn(err)
-		}
+	if shouldReturn(err) {
 		return
 	}
 
@@ -740,34 +736,22 @@ func rateLimit(c *Config, tlbx *toolbox) {
 		remaining--
 
 		err := cnn.Send("MULTI")
-		if err != nil {
-			if c.RateLimitExitOnError {
-				PanicOn(err)
-			}
+		if shouldReturn(err) {
 			return
 		}
 
 		err = cnn.Send("ZADD", key, now, now)
-		if err != nil {
-			if c.RateLimitExitOnError {
-				PanicOn(err)
-			}
+		if shouldReturn(err) {
 			return
 		}
 
 		err = cnn.Send("EXPIRE", key, 60)
-		if err != nil {
-			if c.RateLimitExitOnError {
-				PanicOn(err)
-			}
+		if shouldReturn(err) {
 			return
 		}
 
 		_, err = cnn.Do("EXEC")
-		if err != nil {
-			if c.RateLimitExitOnError {
-				PanicOn(err)
-			}
+		if shouldReturn(err) {
 			return
 		}
 	}
