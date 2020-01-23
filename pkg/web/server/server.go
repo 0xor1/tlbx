@@ -1,8 +1,11 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/0xor1/wtf/pkg/log"
@@ -25,24 +28,47 @@ type Config struct {
 func Run(configs ...func(c *Config)) {
 	c := config(configs...)
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	shutdownServers := func(servers ...*http.Server) {
+		<-quit
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		for _, server := range servers {
+			server.SetKeepAlivesEnabled(false)
+			c.Log.Info("Server %s shutting down", server.Addr)
+			c.Log.ErrorOn(server.Shutdown(ctx))
+		}
+	}
+	logDoneError := func(err error) {
+		if err.Error() != "http: Server closed" {
+			c.Log.ErrorOn(err)
+		}
+	}
+
 	if !c.UseHttps {
 		c.Log.Info("Insecure app server running bound to %s", c.AppBindTo)
 		appServer := appServer(c, c.Handler, nil)
-		c.Log.ErrorOn(appServer.ListenAndServe())
-	}
+		go shutdownServers(appServer)
+		logDoneError(appServer.ListenAndServe())
+	} else {
+		certManager := certManager(c)
+		certServer := certServer(c, certManager)
+		c.Log.Info("cert server running bound to %s", c.CertBindTo)
+		go certServer.ListenAndServe()
 
-	certManager := certManager(c)
-	certServer := certServer(c, certManager)
-	c.Log.Info("cert server running bound to %s", c.CertBindTo)
-	go certServer.ListenAndServe()
+		appServer := &http.Server{
+			Addr:      c.AppBindTo,
+			Handler:   c.Handler,
+			TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
+		}
 
-	appServer := &http.Server{
-		Addr:      c.AppBindTo,
-		Handler:   c.Handler,
-		TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
+		c.Log.Info("Secure app server running bound to %s", c.AppBindTo)
+		go shutdownServers(certServer, appServer)
+		logDoneError(appServer.ListenAndServeTLS("", ""))
 	}
-	c.Log.Info("Secure app server running bound to %s", c.AppBindTo)
-	c.Log.ErrorOn(appServer.ListenAndServeTLS("", ""))
+	c.Log.Info("Server stopped")
 }
 
 func config(configs ...func(c *Config)) *Config {
