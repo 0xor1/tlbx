@@ -30,8 +30,7 @@ func Run(configs ...func(c *Config)) {
 	c := config(configs...)
 
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT)
-	signal.Notify(quit, syscall.SIGTERM)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 	shutdownServers := func(servers ...*http.Server) {
 		<-quit
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
