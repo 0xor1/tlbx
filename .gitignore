@@ -4,3 +4,4 @@ coverage.out
 index.html
 *.gen.go
 main
+__local_store_obj_info__.json

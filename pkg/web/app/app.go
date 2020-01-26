@@ -166,12 +166,6 @@ func Run(configs ...func(*Config)) {
 		tlbx.resp.Header().Set("Content-Security-Policy", "default-src 'self'")
 		tlbx.resp.Header().Set("Cache-Control", "no-cache, no-store")
 		tlbx.resp.Header().Set("X-Version", c.Version)
-		// return headers for pre flight cors options reqs
-		if tlbx.req.Method == http.MethodOptions {
-			tlbx.resp.Header().Add("Access-Control-Allow-Methods", "GET, PUT")
-			tlbx.resp.WriteHeader(200)
-			return
-		}
 		// session
 		gses, err := sessionStore.Get(tlbx.req, c.Session.Name)
 		PanicOn(err)
@@ -206,6 +200,10 @@ func Run(configs ...func(*Config)) {
 		}
 		// lower path now we have passed static file server
 		tlbx.req.URL.Path = strings.ToLower(tlbx.req.URL.Path)
+		// toolbox mware
+		if c.ToolboxMware != nil {
+			c.ToolboxMware(tlbx)
+		}
 		// do mdo
 		if c.IsMDoReq(tlbx.req) {
 			if c.MDoMaxBodyBytes > 0 {
@@ -216,7 +214,7 @@ func Run(configs ...func(*Config)) {
 			tlbx.ReturnMsgIf(len(mDoReqs) > c.MDoMax, http.StatusBadRequest, "too many mdo reqs, max reqs allowed: %d", c.MDoMax)
 			fullMDoResp := map[string]*mDoResp{}
 			fullMDoRespMtx := &sync.Mutex{}
-			does := make([]Fn, 0, len(mDoReqs))
+			does := make([]func(), 0, len(mDoReqs))
 			for key := range mDoReqs {
 				does = append(does, func(key string, mdoReq *mDoReq) func() {
 					return func() {
@@ -262,40 +260,49 @@ func Run(configs ...func(*Config)) {
 		}
 
 		do := func() {
+			// validation check
 			if tlbx.isSubMDo {
 				_, ok := ep.GetExampleResponse().(*ByteStream)
 				tlbx.ReturnMsgIf(ok, http.StatusBadRequest, "can not call ByteStream endpoint in an mdo request")
 			}
+			// process args
 			args := ep.GetDefaultArgs()
 			bs, isByteStream := args.(*ByteStream)
 			tlbx.ReturnMsgIf(isByteStream && tlbx.isSubMDo, http.StatusBadRequest, "can not call ByteStream endpoint in an mdo request")
 			if isByteStream {
 				bs.Type = tlbx.req.Header.Get("Content-Type")
 				bs.Size, err = strconv.ParseInt(tlbx.req.Header.Get("Content-Length"), 10, 64)
+				PanicOn(err)
 				bs.Name = tlbx.req.Header.Get("Content-Name")
 				bs.Stream = tlbx.req.Body
 				args = bs
 			} else {
 				getJsonArgs(tlbx, args)
 			}
+			// handle request
 			res := ep.Handler(tlbx, args)
+			// process response
 			if bs, ok := res.(*ByteStream); ok {
+				defer bs.Stream.Close()
 				tlbx.ReturnMsgIf(tlbx.isSubMDo, http.StatusBadRequest, "can not call ByteStream endpoint in an mdo request")
 				tlbx.resp.Header().Add("Content-Type", bs.Type)
 				tlbx.resp.Header().Add("Content-Length", Sprintf("%d", bs.Size))
-				tlbx.resp.Header().Add("Content-Name", bs.Name)
+				tlbx.resp.Header().Add("Content-Name", Sprintf("%d", bs.Name))
+				if bs.IsDownload {
+					tlbx.resp.Header().Add("Content-Disposition", Sprintf(`attachment; filename="%s"`, bs.Name))
+				}
 				tlbx.resp.WriteHeader(http.StatusOK)
-				_, err := io.Copy(tlbx.resp, bs.Stream)
+				_, err = io.Copy(tlbx.resp, bs.Stream)
 				PanicOn(err)
-				return
+			} else {
+				writeJsonOk(tlbx.resp, res)
 			}
-			writeJsonOk(tlbx.resp, res)
 			cancel()
 		}
 
 		if ep.Timeout > 0 {
-			errCh := make(chan Error)
-			Go(do, func(err Error) {
+			errCh := make(chan interface{})
+			Go(do, func(err interface{}) {
 				errCh <- err
 			})
 			select {
@@ -402,7 +409,11 @@ type reqStats struct {
 }
 
 func (r *reqStats) String() string {
-	return Sprintf("%dms\t%d\t%s\t%s", r.Milli, r.Status, r.Method, r.Path)
+	queries := make([]string, 0, len(r.Queries))
+	for _, q := range r.Queries {
+		queries = append(queries, Sprintf("%dms\t%s", q.Milli, q.Query))
+	}
+	return Sprintf("%dms\t%d\t%s\t%s\n%s", r.Milli, r.Status, r.Method, r.Path, strings.Join(queries, "\n"))
 }
 
 type responseWrapper struct {
@@ -427,6 +438,7 @@ func (r *responseWrapper) WriteHeader(status int) {
 }
 
 type Toolbox interface {
+	Session() Session
 	Ctx() context.Context
 	NewID() ID
 	Log() log.Log
@@ -448,6 +460,10 @@ type toolbox struct {
 	queryStats    []*QueryStats
 	storeMtx      *sync.RWMutex
 	store         map[interface{}]interface{}
+}
+
+func (t *toolbox) Session() Session {
+	return t.session
 }
 
 func (t *toolbox) Ctx() context.Context {
@@ -600,13 +616,13 @@ func (s *session) Login(me ID) {
 	s.gorilla.Save(s.r, s.w)
 }
 
-func (s *session) Logout(w http.ResponseWriter, r *http.Request) {
+func (s *session) Logout() {
 	s.isAuthed = false
 	s.me = nil
 	s.authedOn = time.Time{}
 	s.gorilla.Options.MaxAge = -1
 	s.gorilla.Values = map[interface{}]interface{}{}
-	s.gorilla.Save(r, w)
+	s.gorilla.Save(s.r, s.w)
 }
 
 type Endpoint struct {
@@ -622,18 +638,18 @@ type Endpoint struct {
 }
 
 type ByteStream struct {
-	Type   string        `json:"type"`
-	Name   string        `json:"name"`
-	Size   int64         `json:"size"`
-	Stream io.ReadCloser `json:"-"`
+	Type       string        `json:"type"`
+	Name       string        `json:"name"`
+	Size       int64         `json:"size"`
+	IsDownload bool          `json:"-"`
+	Stream     io.ReadCloser `json:"-"`
 }
 
 func (bs *ByteStream) MarshalJSON() ([]byte, error) {
-	return []byte(
-		`"body contains content bytes plus headers:
-\"Content-Type\": \"mime_type\",
-\"Content-Length\": bytes_count,
-\"Content-Name\": \"name\""`), nil
+	return json.Marshal(`body contains content bytes plus headers:
+"Content-Type": "mime_type",
+"Content-Length": bytes_count,
+"Content-Name": "name"`)
 }
 
 func ExampleID() ID {
@@ -653,6 +669,7 @@ type endpointDoc struct {
 	Path            string      `json:"path"`
 	Timeout         int64       `json:"timeoutmilli"`
 	MaxBodyBytes    int64       `json:"maxBodyBytes"`
+	ArgsTypes       interface{} `json:"argsTypes"`
 	DefaultArgs     interface{} `json:"defaultArgs"`
 	ExampleArgs     interface{} `json:"exampleArgs"`
 	ExampleResponse interface{} `json:"exampleResponse"`
@@ -662,7 +679,7 @@ func checkErrForMaxBytes(tlbx *toolbox, err error) {
 	if err != nil {
 		tlbx.ReturnMsgIf(
 			err.Error() == "http: request body too large",
-			http.StatusBadRequest,
+			http.StatusRequestEntityTooLarge,
 			"request body too large")
 		PanicOn(err)
 	}

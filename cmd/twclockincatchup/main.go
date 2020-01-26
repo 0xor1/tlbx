@@ -25,7 +25,7 @@ const (
 // go run main.go
 func main() {
 	log := log.New()
-	defer Recover(func(e Error) { log.ErrorOn(e) })
+	defer Recover(log.ErrorOn)
 	log.Info("Starting")
 
 	fs := flag.NewFlagSet("wtf_tw_clockin_catchup", flag.ExitOnError)

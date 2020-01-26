@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/log"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -31,15 +32,17 @@ func Run(configs ...func(c *Config)) {
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-	shutdownServers := func(servers ...*http.Server) {
-		<-quit
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
+	shutdownServers := func(servers ...*http.Server) func() {
+		return func() {
+			<-quit
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
 
-		for _, server := range servers {
-			server.SetKeepAlivesEnabled(false)
-			c.Log.Info("Server %s shutting down", server.Addr)
-			c.Log.ErrorOn(server.Shutdown(ctx))
+			for _, server := range servers {
+				server.SetKeepAlivesEnabled(false)
+				c.Log.Info("Server %s shutting down", server.Addr)
+				c.Log.ErrorOn(server.Shutdown(ctx))
+			}
 		}
 	}
 	logDoneError := func(err error) {
@@ -51,7 +54,7 @@ func Run(configs ...func(c *Config)) {
 	if !c.UseHttps {
 		c.Log.Info("Insecure app server running bound to %s", c.AppBindTo)
 		appServer := appServer(c, c.Handler, nil)
-		go shutdownServers(appServer)
+		Go(shutdownServers(appServer), c.Log.ErrorOn)
 		logDoneError(appServer.ListenAndServe())
 	} else {
 		certManager := certManager(c)
@@ -66,7 +69,7 @@ func Run(configs ...func(c *Config)) {
 		}
 
 		c.Log.Info("Secure app server running bound to %s", c.AppBindTo)
-		go shutdownServers(certServer, appServer)
+		Go(shutdownServers(appServer, certServer), c.Log.ErrorOn)
 		logDoneError(appServer.ListenAndServeTLS("", ""))
 	}
 	c.Log.Info("Server stopped")

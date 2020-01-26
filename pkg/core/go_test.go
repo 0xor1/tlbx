@@ -48,9 +48,9 @@ func Test_Go(t *testing.T) {
 	wg.Add(1)
 	Go(func() {
 		panic(assert.AnError)
-	}, func(e Error) {
+	}, func(i interface{}) {
 		defer wg.Done()
-		a.Equal(assert.AnError.Error(), e.(*err).Message())
+		a.Equal(assert.AnError.Error(), ToError(i).(*err).Message())
 	})
 	wg.Wait()
 }

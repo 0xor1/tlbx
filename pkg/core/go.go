@@ -7,9 +7,6 @@ import (
 	"sync"
 )
 
-type Fn func()
-type ErrFn func(Error)
-
 type Error interface {
 	Error() string
 	String() string
@@ -108,25 +105,25 @@ func PanicIf(condition bool, format string, args ...interface{}) {
 	}
 }
 
-func Recover(ef ErrFn) {
-	if ef == nil {
+func Recover(r func(interface{})) {
+	if r == nil {
 		return
 	}
 	if err := ToError(recover()); err != nil {
-		ef(err)
+		r(err)
 	}
 }
 
-func Do(f func(), ef ErrFn) {
-	defer Recover(ef)
+func Do(f func(), r func(interface{})) {
+	defer Recover(r)
 	f()
 }
 
-func Go(f Fn, ef ErrFn) {
-	go Do(f, ef)
+func Go(f func(), r func(interface{})) {
+	go Do(f, r)
 }
 
-func GoGroup(fs ...Fn) Error {
+func GoGroup(fs ...func()) Error {
 	if len(fs) == 0 {
 		return nil
 	}
@@ -157,11 +154,11 @@ type goGroup struct {
 	wg      *sync.WaitGroup
 }
 
-func (gg *goGroup) done(e Error) {
+func (gg *goGroup) done(i interface{}) {
 	defer gg.wg.Done()
-	if e != nil {
+	if i != nil {
 		gg.errsMtx.Lock()
 		defer gg.errsMtx.Unlock()
-		gg.errs = append(gg.errs, ToError(e))
+		gg.errs = append(gg.errs, ToError(i))
 	}
 }
