@@ -6,13 +6,12 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     id BINARY(16) NOT NULL,
 	email VARCHAR(250) NOT NULL,
-    name VARCHAR(100) NOT NULL,
     registeredOn DATETIME NOT NULL,
     activatedOn DATETIME NULL,
 	newEmail VARCHAR(250) NULL,
 	activateCode VARCHAR(250) NULL,
-	confirmChangeEmailCode VARCHAR(250) NULL,
-	resetPwdCode VARCHAR(250) NULL,
+	changeEmailCode VARCHAR(250) NULL,
+	lastPwdResetOn DATETIME NULL,
     PRIMARY KEY name (email),
     UNIQUE INDEX id (id)
 );

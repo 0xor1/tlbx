@@ -32,16 +32,26 @@ type Client interface {
 	MustPresignedGetUrl(key string) string
 }
 
-func NewLocalClient(dir string) Client {
+type LocalClient interface {
+	Client
+	DeleteStore() error
+	MustDeleteStore()
+}
+
+func NewLocalClient(dir string) LocalClient {
+	PanicIf(dir == "" || dir == ".", "dir must be a named directory")
 	dir, err := filepath.Abs(dir)
 	PanicOn(err)
-	PanicOn(os.MkdirAll(dir, os.ModeDir))
+	PanicOn(os.MkdirAll(dir, os.ModePerm))
 	info := map[string]objInfo{}
 	path := filepath.Join(dir, localStoreObjInfo)
-	f, err := os.Open(path)
+	_, err = os.Stat(path)
+	Println(path, err)
 	if os.IsNotExist(err) {
 		json.MustNew().ToFile(path, os.ModePerm)
 	} else {
+		PanicOn(err)
+		f, err := os.Open(path)
 		PanicOn(err)
 		json.MustUnmarshalReader(f, &info)
 	}
@@ -160,8 +170,7 @@ func (c *localClient) Delete(key string) error {
 		return Errorf("object with key: %s, does not exist", key)
 	}
 
-	err := os.Remove(filepath.Join(c.dir, key))
-	if err != nil {
+	if err := os.Remove(filepath.Join(c.dir, key)); err != nil {
 		return err
 	}
 
@@ -191,6 +200,17 @@ func (c *localClient) MustPresignedGetUrl(key string) string {
 	str, err := c.PresignedGetUrl(key)
 	PanicOn(err)
 	return str
+}
+
+func (c *localClient) DeleteStore() error {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	return os.RemoveAll(c.dir)
+}
+
+func (c *localClient) MustDeleteStore() {
+	PanicOn(c.DeleteStore())
 }
 
 func checkKey(key string) error {

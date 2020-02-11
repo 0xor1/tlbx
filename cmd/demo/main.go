@@ -8,7 +8,7 @@ import (
 	"github.com/0xor1/wtf/pkg/log"
 	"github.com/0xor1/wtf/pkg/store"
 	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/common/auth"
+	"github.com/0xor1/wtf/pkg/web/app/common/auth/authendpoints"
 	"github.com/0xor1/wtf/pkg/web/app/common/service"
 )
 
@@ -27,6 +27,6 @@ func main() {
 		c.Log = l
 		c.ToolboxMware = service.Mware(cache, user, pwd, data, email, store)
 		c.RateLimiterPool = cache
-		c.Endpoints = auth.Endpoints(nil, nil, "local@host.test", "http://localhost:8080", 64, 32768, 8, 1, 32)
+		c.Endpoints = authendpoints.New(nil, "local@host.test", "http://localhost:8080")
 	})
 }

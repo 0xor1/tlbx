@@ -54,7 +54,7 @@ type Entry struct {
 func color(level level) func(interface{}) aurora.Value {
 	switch level {
 	case LevelDebug:
-		return aurora.White
+		return aurora.BgMagenta
 	case LevelInfo:
 		return aurora.Cyan
 	case LevelWarning:

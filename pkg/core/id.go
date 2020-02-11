@@ -50,6 +50,18 @@ func (g *idGen) MustNew() ID {
 
 type ID ulid.ULID
 
+func ParseID(id string) (ID, error) {
+	i := &ID{}
+	err := i.UnmarshalText([]byte(id))
+	return *i, err
+}
+
+func MustParseID(id string) ID {
+	i, err := ParseID(id)
+	PanicOn(err)
+	return i
+}
+
 func (id ID) MarshalBinary() ([]byte, error) {
 	return ulid.ULID(id).MarshalBinary()
 }

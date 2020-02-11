@@ -166,6 +166,9 @@ func Run(configs ...func(*Config)) {
 		tlbx.resp.Header().Set("Content-Security-Policy", "default-src 'self'")
 		tlbx.resp.Header().Set("Cache-Control", "no-cache, no-store")
 		tlbx.resp.Header().Set("X-Version", c.Version)
+		// check method
+		method := tlbx.req.Method
+		tlbx.ReturnMsgIf(method != http.MethodGet && method != http.MethodPut, http.StatusMethodNotAllowed, "only GET and PUT methods are accepted")
 		// session
 		gses, err := sessionStore.Get(tlbx.req, c.Session.Name)
 		PanicOn(err)
@@ -262,37 +265,42 @@ func Run(configs ...func(*Config)) {
 		do := func() {
 			// validation check
 			if tlbx.isSubMDo {
-				_, ok := ep.GetExampleResponse().(*ByteStream)
-				tlbx.ReturnMsgIf(ok, http.StatusBadRequest, "can not call ByteStream endpoint in an mdo request")
+				_, ok := ep.GetExampleResponse().(*Stream)
+				tlbx.ReturnMsgIf(ok, http.StatusBadRequest, "can not call stream endpoint in an mdo request")
 			}
 			// process args
 			args := ep.GetDefaultArgs()
-			bs, isByteStream := args.(*ByteStream)
-			tlbx.ReturnMsgIf(isByteStream && tlbx.isSubMDo, http.StatusBadRequest, "can not call ByteStream endpoint in an mdo request")
-			if isByteStream {
-				bs.Type = tlbx.req.Header.Get("Content-Type")
-				bs.Size, err = strconv.ParseInt(tlbx.req.Header.Get("Content-Length"), 10, 64)
+			s, isStream := args.(*Stream)
+			tlbx.ReturnMsgIf(isStream && tlbx.isSubMDo, http.StatusBadRequest, "can not call stream endpoint in an mdo request")
+			if isStream {
+				s.Type = tlbx.req.Header.Get("Content-Type")
+				s.Size, err = strconv.ParseInt(tlbx.req.Header.Get("Content-Length"), 10, 64)
 				PanicOn(err)
-				bs.Name = tlbx.req.Header.Get("Content-Name")
-				bs.Stream = tlbx.req.Body
-				args = bs
+				s.Name = tlbx.req.Header.Get("Content-Name")
+				contentID := tlbx.req.Header.Get("Content-Id")
+				if contentID != "" {
+					s.ID = MustParseID(contentID)
+				}
+				s.Content = tlbx.req.Body
+				args = s
 			} else {
 				getJsonArgs(tlbx, args)
 			}
 			// handle request
 			res := ep.Handler(tlbx, args)
 			// process response
-			if bs, ok := res.(*ByteStream); ok {
-				defer bs.Stream.Close()
-				tlbx.ReturnMsgIf(tlbx.isSubMDo, http.StatusBadRequest, "can not call ByteStream endpoint in an mdo request")
-				tlbx.resp.Header().Add("Content-Type", bs.Type)
-				tlbx.resp.Header().Add("Content-Length", Sprintf("%d", bs.Size))
-				tlbx.resp.Header().Add("Content-Name", Sprintf("%d", bs.Name))
-				if bs.IsDownload {
-					tlbx.resp.Header().Add("Content-Disposition", Sprintf(`attachment; filename="%s"`, bs.Name))
+			if s, ok := res.(*Stream); ok {
+				defer s.Content.Close()
+				tlbx.ReturnMsgIf(tlbx.isSubMDo, http.StatusBadRequest, "can not call stream endpoint in an mdo request")
+				tlbx.resp.Header().Add("Content-Type", s.Type)
+				tlbx.resp.Header().Add("Content-Length", Sprintf("%d", s.Size))
+				tlbx.resp.Header().Add("Content-Name", Sprintf("%s", s.Name))
+				tlbx.resp.Header().Add("Content-Id", Sprintf("%s", s.ID))
+				if s.IsDownload {
+					tlbx.resp.Header().Add("Content-Disposition", Sprintf(`attachment; filename="%s"`, s.Name))
 				}
 				tlbx.resp.WriteHeader(http.StatusOK)
-				_, err = io.Copy(tlbx.resp, bs.Stream)
+				_, err = io.Copy(tlbx.resp, s.Content)
 				PanicOn(err)
 			} else {
 				writeJsonOk(tlbx.resp, res)
@@ -598,6 +606,12 @@ func (s *session) IsAuthed() bool {
 }
 
 func (s *session) Me() ID {
+	if !s.IsAuthed() {
+		PanicOn(&returnMsg{
+			status: http.StatusUnauthorized,
+			msg:    http.StatusText(http.StatusUnauthorized),
+		})
+	}
 	return *s.me
 }
 
@@ -613,7 +627,7 @@ func (s *session) Login(me ID) {
 		"me":       me,
 		"authedOn": s.authedOn,
 	}
-	s.gorilla.Save(s.r, s.w)
+	PanicOn(s.gorilla.Save(s.r, s.w))
 }
 
 func (s *session) Logout() {
@@ -622,7 +636,7 @@ func (s *session) Logout() {
 	s.authedOn = time.Time{}
 	s.gorilla.Options.MaxAge = -1
 	s.gorilla.Values = map[interface{}]interface{}{}
-	s.gorilla.Save(s.r, s.w)
+	PanicOn(s.gorilla.Save(s.r, s.w))
 }
 
 type Endpoint struct {
@@ -635,21 +649,6 @@ type Endpoint struct {
 	GetExampleArgs     func() interface{}
 	GetExampleResponse func() interface{}
 	Handler            func(tlbx Toolbox, args interface{}) interface{}
-}
-
-type ByteStream struct {
-	Type       string        `json:"type"`
-	Name       string        `json:"name"`
-	Size       int64         `json:"size"`
-	IsDownload bool          `json:"-"`
-	Stream     io.ReadCloser `json:"-"`
-}
-
-func (bs *ByteStream) MarshalJSON() ([]byte, error) {
-	return json.Marshal(`body contains content bytes plus headers:
-"Content-Type": "mime_type",
-"Content-Length": bytes_count,
-"Content-Name": "name"`)
 }
 
 func ExampleID() ID {
@@ -775,6 +774,9 @@ func rateLimit(c *Config, tlbx *toolbox) {
 }
 
 func getJsonArgs(tlbx *toolbox, args interface{}) {
+	if args == nil {
+		return
+	}
 	argsStr := tlbx.req.URL.Query().Get("args")
 	argsBytes := []byte(argsStr)
 	if argsStr == "" {
@@ -786,4 +788,147 @@ func getJsonArgs(tlbx *toolbox, args interface{}) {
 		err := json.Unmarshal(argsBytes, args)
 		tlbx.ReturnMsgIf(err != nil, http.StatusBadRequest, "error unmarshalling json: %s", err)
 	}
+}
+
+// client stuff
+
+type Stream struct {
+	Type       string
+	Name       string
+	Size       int64
+	ID         ID
+	IsDownload bool
+	Content    io.ReadCloser
+}
+
+func (s *Stream) ToReq(method, url string) (*http.Request, error) {
+	r, err := http.NewRequest(method, url, s.Content)
+	if err != nil {
+		return nil, err
+	}
+	r.Header.Add("Content-Type", s.Type)
+	r.Header.Add("Content-Length", strconv.FormatInt(s.Size, 10))
+	r.Header.Add("Content-Name", s.Name)
+	r.Header.Add("Content-Id", s.ID.String())
+	if s.IsDownload {
+		r.Header.Add("Content-Disposition", Sprintf(`attachment; filename="%s"`, s.Name))
+	}
+	return r, nil
+}
+
+func (bs *Stream) MustToReq(method, url string) *http.Request {
+	r, err := bs.ToReq(method, url)
+	PanicOn(err)
+	return r
+}
+
+func (s *Stream) FromResp(r *http.Response) error {
+	size, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
+	if err != nil {
+		return err
+	}
+	var id ID
+	contentID := r.Header.Get("Content-Id")
+	if contentID != "" {
+		id = MustParseID(contentID)
+	}
+	*s = Stream{
+		Type:    r.Header.Get("Content-Type"),
+		Size:    size,
+		Name:    r.Header.Get("Content-Name"),
+		ID:      id,
+		Content: r.Body,
+	}
+	return nil
+}
+
+func (s *Stream) MustFromResp(r *http.Response) {
+	PanicOn(s.FromResp(r))
+}
+
+func (_ *Stream) MarshalJSON() ([]byte, error) {
+	return json.Marshal(`body contains content bytes plus headers:
+"Content-Type": "mime_type",
+"Content-Length": bytes_count,
+"Content-Name": "name"
+"Content-Id": "id_string"`)
+}
+
+type Client struct {
+	// protocol and host
+	baseHref string
+	http     *http.Client
+	cookies  map[string]string
+}
+
+func NewClient(baseHref string) *Client {
+	return &Client{
+		baseHref: baseHref,
+		http:     &http.Client{},
+		cookies:  map[string]string{},
+	}
+}
+
+func Call(c *Client, path string, args interface{}, res interface{}) error {
+	url := c.baseHref + path
+	method := http.MethodPut
+	var req *http.Request
+	var err error
+	if s, ok := args.(*Stream); ok {
+		req, err = s.ToReq(method, url)
+	} else if args != nil {
+		argsBytes, err := json.Marshal(args)
+		if err != nil {
+			return err
+		}
+		req, err = http.NewRequest(method, url, bytes.NewBuffer(argsBytes))
+	} else {
+		req, err = http.NewRequest(method, url, nil)
+	}
+	if err != nil {
+		return err
+	}
+	for name, value := range c.cookies {
+		req.AddCookie(&http.Cookie{
+			Name:  name,
+			Value: value,
+		})
+	}
+
+	httpRes, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	for _, cookie := range httpRes.Cookies() {
+		c.cookies[cookie.Name] = cookie.Value
+	}
+	if s, ok := res.(*Stream); ok {
+		err = s.FromResp(httpRes)
+		if err != nil {
+			return err
+		}
+		*res.(*Stream) = *s
+		return nil
+	}
+	defer httpRes.Body.Close()
+	if res == nil {
+		return nil
+	}
+	bs, err := ioutil.ReadAll(httpRes.Body)
+	if err != nil {
+		return err
+	}
+	if httpRes.StatusCode >= 400 {
+		var msg string
+		err = json.Unmarshal(bs, &msg)
+		if err != nil {
+			return err
+		}
+		return Errorf(msg)
+	}
+	return json.Unmarshal(bs, res)
+}
+
+func MustCall(c *Client, path string, args interface{}, res interface{}) {
+	PanicOn(Call(c, path, args, res))
 }
