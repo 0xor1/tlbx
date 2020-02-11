@@ -45,13 +45,10 @@ func NewLocalClient(dir string) LocalClient {
 	PanicOn(os.MkdirAll(dir, os.ModePerm))
 	info := map[string]objInfo{}
 	path := filepath.Join(dir, localStoreObjInfo)
-	_, err = os.Stat(path)
-	Println(path, err)
+	f, err := os.Open(path)
 	if os.IsNotExist(err) {
 		json.MustNew().ToFile(path, os.ModePerm)
 	} else {
-		PanicOn(err)
-		f, err := os.Open(path)
 		PanicOn(err)
 		json.MustUnmarshalReader(f, &info)
 	}
