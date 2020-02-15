@@ -1,4 +1,4 @@
-package authendpoints_test
+package autheps_test
 
 import (
 	"testing"

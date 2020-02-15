@@ -1,4 +1,4 @@
-package authendpoints
+package autheps
 
 import (
 	"bytes"
@@ -145,7 +145,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 				user.NewEmail = &args.NewEmail
 				user.ChangeEmailCode = &changeEmailCode
 				updateUser(serv, user)
-				sendConfirmChangeEmailEmail(serv, args.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{ID: me, Code: changeEmailCode})
+				sendConfirmChangeEmailEmail(serv, args.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: changeEmailCode})
 				return nil
 			},
 		},
@@ -168,7 +168,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 				serv := service.Get(tlbx)
 				me := tlbx.Session().Me()
 				user := getUser(serv, nil, &me)
-				sendConfirmChangeEmailEmail(serv, *user.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{ID: me, Code: *user.ChangeEmailCode})
+				sendConfirmChangeEmailEmail(serv, *user.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: *user.ChangeEmailCode})
 				return nil
 			},
 		},
@@ -183,7 +183,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 			},
 			GetExampleArgs: func() interface{} {
 				return &auth.ConfirmChangeEmail{
-					ID:   app.ExampleID(),
+					Me:   app.ExampleID(),
 					Code: "123abc",
 				}
 			},
@@ -193,7 +193,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.ConfirmChangeEmail)
 				serv := service.Get(tlbx)
-				user := getUser(serv, nil, &args.ID)
+				user := getUser(serv, nil, &args.Me)
 				tlbx.ReturnMsgIf(*user.ChangeEmailCode != args.Code, http.StatusBadRequest, "")
 				user.ChangeEmailCode = nil
 				user.Email = *user.NewEmail
@@ -423,12 +423,11 @@ func getUser(serv service.Layer, email *string, id *ID) *user {
 	}
 	row := serv.User().QueryRow(query, arg)
 	res := &user{}
-	if err := row.Scan(&res.ID, &res.Email, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn); err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		PanicOn(err)
+	err := row.Scan(&res.ID, &res.Email, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
+	if err == sql.ErrNoRows {
+		return nil
 	}
+	PanicOn(err)
 	return res
 }
 
@@ -449,12 +448,11 @@ type pwd struct {
 func getPwd(serv service.Layer, id ID) *pwd {
 	row := serv.Pwd().QueryRow(`SELECT id, salt, pwd, n, r, p FROM pwds WHERE id=?`, id)
 	res := &pwd{}
-	if err := row.Scan(&res.ID, &res.Salt, &res.Pwd, &res.N, &res.R, &res.P); err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		PanicOn(err)
+	err := row.Scan(&res.ID, &res.Salt, &res.Pwd, &res.N, &res.R, &res.P)
+	if err == sql.ErrNoRows {
+		return nil
 	}
+	PanicOn(err)
 	return res
 }
 

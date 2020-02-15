@@ -11,8 +11,13 @@ import (
 	"github.com/0xor1/wtf/pkg/store"
 	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/auth"
-	"github.com/0xor1/wtf/pkg/web/app/common/auth/authendpoints"
+	"github.com/0xor1/wtf/pkg/web/app/common/auth/autheps"
 	"github.com/0xor1/wtf/pkg/web/app/common/service"
+)
+
+var (
+	pwd         = "1aA$_t;3"
+	emailSuffix = "@test.localhost"
 )
 
 type Rig interface {
@@ -141,15 +146,14 @@ func New(eps []*app.Endpoint, onDelete func(ID)) Rig {
 	go app.Run(func(c *app.Config) {
 		c.ToolboxMware = service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store)
 		c.RateLimiterPool = r.cache
-		c.Endpoints = append(eps, authendpoints.New(onDelete, "test@test.localhost", "http://localhost:8080")...)
+		c.Endpoints = append(eps, autheps.New(onDelete, "test@test.localhost", "http://localhost:8080")...)
 	})
 
 	time.Sleep(20 * time.Millisecond)
-
-	r.ali = r.createUser("ali@test.localhost", "1aA$_t;3")
-	r.bob = r.createUser("bob@test.localhost", "1aA$_t;3")
-	r.cat = r.createUser("cat@test.localhost", "1aA$_t;3")
-	r.dan = r.createUser("dan@test.localhost", "1aA$_t;3")
+	r.ali = r.createUser("ali"+emailSuffix, pwd)
+	r.bob = r.createUser("bob"+emailSuffix, pwd)
+	r.cat = r.createUser("cat"+emailSuffix, pwd)
+	r.dan = r.createUser("dan"+emailSuffix, pwd)
 
 	return r
 }
@@ -175,19 +179,63 @@ func (r *rig) createUser(email, pwd string) *user {
 		Email: email,
 	}).MustDo(c)
 
-	var activateCode string
+	var code string
 	row := r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
-	PanicOn(row.Scan(&activateCode))
+	PanicOn(row.Scan(&code))
 
 	(&auth.Activate{
 		Email: email,
-		Code:  activateCode,
+		Code:  code,
 	}).MustDo(c)
 
 	id := (&auth.Login{
 		Email: email,
 		Pwd:   pwd,
 	}).MustDo(c).Me
+
+	(&auth.ChangeEmail{
+		NewEmail: "change" + emailSuffix,
+	}).MustDo(c)
+
+	(&auth.ResendChangeEmailLink{}).MustDo(c)
+
+	row = r.User().Primary().QueryRow(`SELECT changeEmailCode FROM users WHERE id=?`, id)
+	PanicOn(row.Scan(&code))
+
+	(&auth.ConfirmChangeEmail{
+		Me:   id,
+		Code: code,
+	}).MustDo(c)
+
+	(&auth.ChangeEmail{
+		NewEmail: email,
+	}).MustDo(c)
+
+	row = r.User().Primary().QueryRow(`SELECT changeEmailCode FROM users WHERE id=?`, id)
+	PanicOn(row.Scan(&code))
+
+	(&auth.ConfirmChangeEmail{
+		Me:   id,
+		Code: code,
+	}).MustDo(c)
+
+	newPwd := pwd + "123abc"
+	(&auth.SetPwd{
+		CurrentPwd:    pwd,
+		NewPwd:        newPwd,
+		ConfirmNewPwd: newPwd,
+	}).MustDo(c)
+
+	(&auth.Logout{}).MustDo(c)
+
+	(&auth.Login{
+		Email: email,
+		Pwd:   newPwd,
+	}).MustDo(c)
+
+	(&auth.ResetPwd{
+		Email: email,
+	}).MustDo(c)
 
 	return &user{
 		client: c,

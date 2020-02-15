@@ -87,7 +87,7 @@ func (a *ResendChangeEmailLink) MustDo(c *app.Client) {
 }
 
 type ConfirmChangeEmail struct {
-	ID   ID     `json:"id"`
+	Me   ID     `json:"me"`
 	Code string `json:"code"`
 }
 

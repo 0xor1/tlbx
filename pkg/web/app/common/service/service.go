@@ -75,7 +75,7 @@ func (d *service) Store() store.Client {
 type SqlClient interface {
 	Base() isql.ReplicaSet
 	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (isql.Rows, error)
+	Query(rowsFn func(isql.Rows), query string, args ...interface{}) error
 	QueryRow(query string, args ...interface{}) isql.Row
 }
 
@@ -93,8 +93,15 @@ func (w *sqlWrapper) Exec(query string, args ...interface{}) (res sql.Result, er
 	return
 }
 
-func (w *sqlWrapper) Query(query string, args ...interface{}) (rows isql.Rows, err error) {
-	w.do(func(q string) { rows, err = w.sql.RandSlave().QueryContext(w.tlbx.Ctx(), q, args...) }, query)
+func (w *sqlWrapper) Query(rowsFn func(isql.Rows), query string, args ...interface{}) (err error) {
+	w.do(func(q string) {
+		var rows isql.Rows
+		rows, err = w.sql.RandSlave().QueryContext(w.tlbx.Ctx(), q, args...)
+		if rows != nil {
+			defer rows.Close()
+			rowsFn(rows)
+		}
+	}, query)
 	return
 }
 

@@ -152,7 +152,7 @@ func Run(configs ...func(*Config)) {
 		// recover from errors
 		defer func() {
 			if e := ToError(recover()); e != nil {
-				if err, ok := e.Value().(*returnMsg); ok {
+				if err, ok := e.Value().(*httpErrMsg); ok {
 					writeJson(tlbx.resp, err.status, err.msg)
 				} else {
 					tlbx.log.ErrorOn(e)
@@ -500,7 +500,7 @@ func (t *toolbox) ReturnMsgIf(condition bool, status int, format string, args ..
 		format = http.StatusText(status)
 	}
 	if condition {
-		PanicOn(&returnMsg{
+		PanicOn(&httpErrMsg{
 			status: status,
 			msg:    Sprintf(format, args...),
 		})
@@ -519,13 +519,13 @@ func (t *toolbox) Set(key, value interface{}) {
 	t.store[key] = value
 }
 
-type returnMsg struct {
+type httpErrMsg struct {
 	status int
 	msg    string
 }
 
-func (e *returnMsg) Error() string {
-	return Sprintf("returning error status: %d, body: %s", e.status, e.msg)
+func (e *httpErrMsg) Error() string {
+	return Sprintf("status: %d, message: %s", e.status, e.msg)
 }
 
 func writeJsonOk(w http.ResponseWriter, body interface{}) {
@@ -607,7 +607,7 @@ func (s *session) IsAuthed() bool {
 
 func (s *session) Me() ID {
 	if !s.IsAuthed() {
-		PanicOn(&returnMsg{
+		PanicOn(&httpErrMsg{
 			status: http.StatusUnauthorized,
 			msg:    http.StatusText(http.StatusUnauthorized),
 		})
@@ -911,20 +911,22 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 		return nil
 	}
 	defer httpRes.Body.Close()
-	if res == nil {
-		return nil
-	}
 	bs, err := ioutil.ReadAll(httpRes.Body)
 	if err != nil {
 		return err
 	}
 	if httpRes.StatusCode >= 400 {
-		var msg string
-		err = json.Unmarshal(bs, &msg)
+		msg := &httpErrMsg{
+			status: httpRes.StatusCode,
+		}
+		err = json.Unmarshal(bs, &msg.msg)
 		if err != nil {
 			return err
 		}
-		return Errorf(msg)
+		return msg
+	}
+	if res == nil {
+		return nil
 	}
 	return json.Unmarshal(bs, res)
 }
