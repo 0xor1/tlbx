@@ -1,7 +1,7 @@
-WTF
+wtf
 ===
 
-#### Fmt & Test
+#### fmt & test
 ```
 ./bin/pre
 ```
