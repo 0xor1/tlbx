@@ -3,6 +3,7 @@ package autheps
 import (
 	"bytes"
 	"database/sql"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -49,9 +50,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					tlbx.ReturnMsgIf(ok && mySqlErr.Number == 1062, http.StatusBadRequest, "email already registered")
-					if !ok {
-						PanicOn(err)
-					}
+					PanicOn(err)
 				}
 				setPwd(tlbx, id, args.Pwd, args.ConfirmPwd)
 				sendActivateEmail(serv, args.Email, fromEmail, baseHref, &auth.Activate{Email: args.Email, Code: activateCode})
@@ -227,7 +226,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 					now := Now()
 					if user.LastPwdResetOn != nil {
 						mustWaitDur := (10 * time.Minute) - Now().Sub(*user.LastPwdResetOn)
-						tlbx.ReturnMsgIf(mustWaitDur > 0, http.StatusBadRequest, "must wait %d seconds before reseting pwd again", mustWaitDur.Seconds())
+						tlbx.ReturnMsgIf(mustWaitDur > 0, http.StatusBadRequest, "must wait %d seconds before reseting pwd again", int64(math.Ceil(mustWaitDur.Seconds())))
 					}
 					newPwd := `$aA1` + crypt.UrlSafeString(12)
 					setPwd(tlbx, user.ID, newPwd, newPwd)

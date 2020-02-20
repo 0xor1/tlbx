@@ -152,8 +152,8 @@ func Run(configs ...func(*Config)) {
 		// recover from errors
 		defer func() {
 			if e := ToError(recover()); e != nil {
-				if err, ok := e.Value().(*httpErrMsg); ok {
-					writeJson(tlbx.resp, err.status, err.msg)
+				if err, ok := e.Value().(*ErrMsg); ok {
+					writeJson(tlbx.resp, err.Status, err.Msg)
 				} else {
 					tlbx.log.ErrorOn(e)
 					writeJson(tlbx.resp, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -500,9 +500,9 @@ func (t *toolbox) ReturnMsgIf(condition bool, status int, format string, args ..
 		format = http.StatusText(status)
 	}
 	if condition {
-		PanicOn(&httpErrMsg{
-			status: status,
-			msg:    Sprintf(format, args...),
+		PanicOn(&ErrMsg{
+			Status: status,
+			Msg:    Sprintf(format, args...),
 		})
 	}
 }
@@ -519,13 +519,13 @@ func (t *toolbox) Set(key, value interface{}) {
 	t.store[key] = value
 }
 
-type httpErrMsg struct {
-	status int
-	msg    string
+type ErrMsg struct {
+	Status int    `json:"status"`
+	Msg    string `json:"message"`
 }
 
-func (e *httpErrMsg) Error() string {
-	return Sprintf("status: %d, message: %s", e.status, e.msg)
+func (e *ErrMsg) Error() string {
+	return Sprintf("status: %d, message: %s", e.Status, e.Msg)
 }
 
 func writeJsonOk(w http.ResponseWriter, body interface{}) {
@@ -607,9 +607,9 @@ func (s *session) IsAuthed() bool {
 
 func (s *session) Me() ID {
 	if !s.IsAuthed() {
-		PanicOn(&httpErrMsg{
-			status: http.StatusUnauthorized,
-			msg:    http.StatusText(http.StatusUnauthorized),
+		PanicOn(&ErrMsg{
+			Status: http.StatusUnauthorized,
+			Msg:    http.StatusText(http.StatusUnauthorized),
 		})
 	}
 	return *s.me
@@ -916,10 +916,10 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 		return err
 	}
 	if httpRes.StatusCode >= 400 {
-		msg := &httpErrMsg{
-			status: httpRes.StatusCode,
+		msg := &ErrMsg{
+			Status: httpRes.StatusCode,
 		}
-		err = json.Unmarshal(bs, &msg.msg)
+		err = json.Unmarshal(bs, &msg.Msg)
 		if err != nil {
 			return err
 		}
