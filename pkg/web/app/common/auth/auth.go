@@ -137,14 +137,16 @@ func (a *SetPwd) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
-type Delete struct{}
+type Delete struct {
+	Pwd string `json:"pwd"`
+}
 
 func (_ *Delete) Path() string {
 	return "/api/me/delete"
 }
 
 func (a *Delete) Do(c *app.Client) error {
-	return app.Call(c, a.Path(), nil, nil)
+	return app.Call(c, a.Path(), a, nil)
 }
 
 func (a *Delete) MustDo(c *app.Client) {

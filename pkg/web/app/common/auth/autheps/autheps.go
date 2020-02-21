@@ -273,18 +273,23 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return nil
+				return &auth.Delete{}
 			},
 			GetExampleArgs: func() interface{} {
-				return nil
+				return &auth.Delete{
+					Pwd: "J03-8l0-Gg5-Pwd",
+				}
 			},
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+				args := a.(*auth.Delete)
 				serv := service.Get(tlbx)
 				me := tlbx.Session().Me()
 				tlbx.Session().Logout()
+				pwd := getPwd(serv, me)
+				tlbx.ReturnMsgIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), http.StatusBadRequest, "incorrect pwd")
 				_, err := serv.User().Exec(`DELETE FROM users WHERE id=?`, me)
 				PanicOn(err)
 				_, err = serv.Pwd().Exec(`DELETE FROM pwds WHERE id=?`, me)

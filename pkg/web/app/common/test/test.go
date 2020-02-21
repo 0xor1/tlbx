@@ -1,8 +1,6 @@
 package test
 
 import (
-	"regexp"
-	"testing"
 	"time"
 
 	. "github.com/0xor1/wtf/pkg/core"
@@ -15,7 +13,6 @@ import (
 	"github.com/0xor1/wtf/pkg/web/app/common/auth"
 	"github.com/0xor1/wtf/pkg/web/app/common/auth/autheps"
 	"github.com/0xor1/wtf/pkg/web/app/common/service"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -78,7 +75,6 @@ type rig struct {
 	bob   *user
 	cat   *user
 	dan   *user
-	t     *testing.T
 	log   log.Log
 	cache iredis.Pool
 	user  isql.ReplicaSet
@@ -136,10 +132,9 @@ func NewClient() *app.Client {
 	return app.NewClient(baseHref)
 }
 
-func NewRig(t *testing.T, eps []*app.Endpoint, onDelete func(ID)) Rig {
+func NewRig(eps []*app.Endpoint, onDelete func(ID)) Rig {
 	l := log.New()
 	r := &rig{
-		t:     t,
 		log:   l,
 		cache: iredis.CreatePool("localhost:6379"),
 		email: email.NewLocalClient(l),
@@ -171,33 +166,27 @@ func NewRig(t *testing.T, eps []*app.Endpoint, onDelete func(ID)) Rig {
 
 func (r *rig) CleanUp() {
 	r.Store().MustDeleteStore()
-	del := &auth.Delete{}
-	del.MustDo(r.Ali().Client())
-	del.MustDo(r.Bob().Client())
-	del.MustDo(r.Cat().Client())
-	del.MustDo(r.Dan().Client())
+	(&auth.Delete{
+		Pwd: r.Ali().Pwd(),
+	}).MustDo(r.Ali().Client())
+	(&auth.Delete{
+		Pwd: r.Bob().Pwd(),
+	}).MustDo(r.Bob().Client())
+	(&auth.Delete{
+		Pwd: r.Cat().Pwd(),
+	}).MustDo(r.Cat().Client())
+	(&auth.Delete{
+		Pwd: r.Dan().Pwd(),
+	}).MustDo(r.Dan().Client())
 }
 
 func (r *rig) createUser(email, pwd string) *user {
-	a := assert.New(r.t)
 	c := NewClient()
 
 	(&auth.Register{
 		Email:      email,
 		Pwd:        pwd,
 		ConfirmPwd: pwd,
-	}).MustDo(c)
-
-	// check existing email err
-	err := (&auth.Register{
-		Email:      email,
-		Pwd:        pwd,
-		ConfirmPwd: pwd,
-	}).Do(c)
-	a.Equal(&app.ErrMsg{Status: 400, Msg: "email already registered"}, err)
-
-	(&auth.ResendActivateLink{
-		Email: email,
 	}).MustDo(c)
 
 	var code string
@@ -209,65 +198,10 @@ func (r *rig) createUser(email, pwd string) *user {
 		Code:  code,
 	}).MustDo(c)
 
-	// check return ealry path
-	(&auth.ResendActivateLink{
-		Email: email,
-	}).MustDo(c)
-
 	id := (&auth.Login{
 		Email: email,
 		Pwd:   pwd,
 	}).MustDo(c).Me
-
-	(&auth.ChangeEmail{
-		NewEmail: "change@test.localhost",
-	}).MustDo(c)
-
-	(&auth.ResendChangeEmailLink{}).MustDo(c)
-
-	row = r.User().Primary().QueryRow(`SELECT changeEmailCode FROM users WHERE id=?`, id)
-	PanicOn(row.Scan(&code))
-
-	(&auth.ConfirmChangeEmail{
-		Me:   id,
-		Code: code,
-	}).MustDo(c)
-
-	(&auth.ChangeEmail{
-		NewEmail: email,
-	}).MustDo(c)
-
-	row = r.User().Primary().QueryRow(`SELECT changeEmailCode FROM users WHERE id=?`, id)
-	PanicOn(row.Scan(&code))
-
-	(&auth.ConfirmChangeEmail{
-		Me:   id,
-		Code: code,
-	}).MustDo(c)
-
-	newPwd := pwd + "123abc"
-	(&auth.SetPwd{
-		CurrentPwd:    pwd,
-		NewPwd:        newPwd,
-		ConfirmNewPwd: newPwd,
-	}).MustDo(c)
-
-	(&auth.Logout{}).MustDo(c)
-
-	(&auth.Login{
-		Email: email,
-		Pwd:   newPwd,
-	}).MustDo(c)
-
-	(&auth.ResetPwd{
-		Email: email,
-	}).MustDo(c)
-
-	err = (&auth.ResetPwd{
-		Email: email,
-	}).Do(c)
-	a.Equal(400, err.(*app.ErrMsg).Status)
-	a.True(regexp.MustCompile(`must wait [1-9][0-9]{2} seconds before reseting pwd again`).MatchString(err.(*app.ErrMsg).Msg))
 
 	return &user{
 		client: c,
