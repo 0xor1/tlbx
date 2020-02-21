@@ -330,6 +330,10 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 				emailOrPwdMismatch(user == nil)
 				pwd := getPwd(serv, user.ID)
 				emailOrPwdMismatch(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)))
+				// if encryption params have changed re encrypt on successful login
+				if len(pwd.Salt) != scryptSaltLen || len(pwd.Pwd) != scryptKeyLen || pwd.N != scryptN || pwd.R != scryptR || pwd.P != scryptP {
+					setPwd(tlbx, user.ID, args.Pwd, args.Pwd)
+				}
 				tlbx.Session().Login(user.ID)
 				return &auth.LoginRes{
 					Me: user.ID,
