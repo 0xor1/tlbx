@@ -1,2 +1,3 @@
 #!/bin/bash
-go run cmd/demo/main.go
+cd cmd/demo
+go run main.go

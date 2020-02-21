@@ -191,3 +191,23 @@ func (a *Logout) Do(c *app.Client) error {
 func (a *Logout) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
+
+type Get struct{}
+
+type GetRes LoginRes
+
+func (_ *Get) Path() string {
+	return "/api/me/get"
+}
+
+func (a *Get) Do(c *app.Client) (*GetRes, error) {
+	res := &GetRes{}
+	err := app.Call(c, a.Path(), nil, res)
+	return res, err
+}
+
+func (a *Get) MustDo(c *app.Client) *GetRes {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}

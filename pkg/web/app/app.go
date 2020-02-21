@@ -417,11 +417,15 @@ type reqStats struct {
 }
 
 func (r *reqStats) String() string {
+	basic := Sprintf("%dms\t%d\t%s\t%s", r.Milli, r.Status, r.Method, r.Path)
+	if len(r.Queries) == 0 {
+		return basic
+	}
 	queries := make([]string, 0, len(r.Queries))
 	for _, q := range r.Queries {
 		queries = append(queries, Sprintf("%dms\t%s", q.Milli, q.Query))
 	}
-	return Sprintf("%dms\t%d\t%s\t%s\n%s", r.Milli, r.Status, r.Method, r.Path, strings.Join(queries, "\n"))
+	return Sprintf("%s\n%s", basic, strings.Join(queries, "\n"))
 }
 
 type responseWrapper struct {

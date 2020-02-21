@@ -356,6 +356,29 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 				return nil
 			},
 		},
+		{
+			Description:  "get",
+			Path:         (&auth.Get{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return nil
+			},
+			GetExampleArgs: func() interface{} {
+				return nil
+			},
+			GetExampleResponse: func() interface{} {
+				return &auth.GetRes{
+					Me: app.ExampleID(),
+				}
+			},
+			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+				return &auth.GetRes{
+					Me: tlbx.Session().Me(),
+				}
+			},
+		},
 	}
 }
 

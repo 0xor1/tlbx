@@ -22,11 +22,12 @@ func main() {
 	data, err := isql.NewReplicaSet("data:C0-Mm-0n-Da-Ta@tcp(localhost:3306)/data?parseTime=true")
 	PanicOn(err)
 	email := email.NewLocalClient(l)
-	store := store.NewLocalClient(".")
+	store := store.NewLocalClient("tmpStoreDir")
+	defer store.MustDeleteStore()
 	app.Run(func(c *app.Config) {
 		c.Log = l
 		c.ToolboxMware = service.Mware(cache, user, pwd, data, email, store)
 		c.RateLimiterPool = cache
-		c.Endpoints = autheps.New(nil, "local@host.test", "http://localhost:8080")
+		c.Endpoints = autheps.New(nil, "test@test.localhost", "http://localhost:8080")
 	})
 }

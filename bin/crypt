@@ -1,2 +1,3 @@
 #!/bin/bash
-go run cmd/crypt/main.go
+cd cmd/crypt
+go run main.go

@@ -119,6 +119,7 @@ func TestEverything(t *testing.T) {
 		Email: email,
 		Pwd:   pwd,
 	}).MustDo(c).Me
+	a.Equal(id, (&auth.Get{}).MustDo(c).Me)
 
 	(&auth.ResetPwd{
 		Email: email,
