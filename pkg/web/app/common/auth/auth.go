@@ -12,7 +12,7 @@ type Register struct {
 }
 
 func (_ *Register) Path() string {
-	return "/api/me/register"
+	return "/me/register"
 }
 
 func (a *Register) Do(c *app.Client) error {
@@ -28,7 +28,7 @@ type ResendActivateLink struct {
 }
 
 func (_ *ResendActivateLink) Path() string {
-	return "/api/me/resendActivateLink"
+	return "/me/resendActivateLink"
 }
 
 func (a *ResendActivateLink) Do(c *app.Client) error {
@@ -45,7 +45,7 @@ type Activate struct {
 }
 
 func (_ *Activate) Path() string {
-	return "/api/me/activate"
+	return "/me/activate"
 }
 
 func (a *Activate) Do(c *app.Client) error {
@@ -61,7 +61,7 @@ type ChangeEmail struct {
 }
 
 func (_ *ChangeEmail) Path() string {
-	return "/api/me/changeEmail"
+	return "/me/changeEmail"
 }
 
 func (a *ChangeEmail) Do(c *app.Client) error {
@@ -75,7 +75,7 @@ func (a *ChangeEmail) MustDo(c *app.Client) {
 type ResendChangeEmailLink struct{}
 
 func (_ *ResendChangeEmailLink) Path() string {
-	return "/api/me/resendChangeEmailLink"
+	return "/me/resendChangeEmailLink"
 }
 
 func (a *ResendChangeEmailLink) Do(c *app.Client) error {
@@ -92,7 +92,7 @@ type ConfirmChangeEmail struct {
 }
 
 func (_ *ConfirmChangeEmail) Path() string {
-	return "/api/me/confirmChangeEmail"
+	return "/me/confirmChangeEmail"
 }
 
 func (a *ConfirmChangeEmail) Do(c *app.Client) error {
@@ -108,7 +108,7 @@ type ResetPwd struct {
 }
 
 func (_ *ResetPwd) Path() string {
-	return "/api/me/resetPwd"
+	return "/me/resetPwd"
 }
 
 func (a *ResetPwd) Do(c *app.Client) error {
@@ -126,7 +126,7 @@ type SetPwd struct {
 }
 
 func (_ *SetPwd) Path() string {
-	return "/api/me/setPwd"
+	return "/me/setPwd"
 }
 
 func (a *SetPwd) Do(c *app.Client) error {
@@ -142,7 +142,7 @@ type Delete struct {
 }
 
 func (_ *Delete) Path() string {
-	return "/api/me/delete"
+	return "/me/delete"
 }
 
 func (a *Delete) Do(c *app.Client) error {
@@ -163,7 +163,7 @@ type LoginRes struct {
 }
 
 func (_ *Login) Path() string {
-	return "/api/me/login"
+	return "/me/login"
 }
 
 func (a *Login) Do(c *app.Client) (*LoginRes, error) {
@@ -181,7 +181,7 @@ func (a *Login) MustDo(c *app.Client) *LoginRes {
 type Logout struct{}
 
 func (_ *Logout) Path() string {
-	return "/api/me/logout"
+	return "/me/logout"
 }
 
 func (a *Logout) Do(c *app.Client) error {
@@ -197,7 +197,7 @@ type Get struct{}
 type GetRes LoginRes
 
 func (_ *Get) Path() string {
-	return "/api/me/get"
+	return "/me/get"
 }
 
 func (a *Get) Do(c *app.Client) (*GetRes, error) {

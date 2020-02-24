@@ -28,6 +28,10 @@ const (
 	KB int64 = 1000
 	MB int64 = 1000000
 	GB int64 = 1000000000
+
+	apiPath  = "/api"
+	docsPath = apiPath + "/docs"
+	mdoPath  = apiPath + "/mdo"
 )
 
 type Config struct {
@@ -40,9 +44,6 @@ type Config struct {
 	RateLimiterPool      iredis.Pool
 	MDoMax               int
 	MDoMaxBodyBytes      int64
-	IsStaticReq          func(*http.Request) bool
-	IsDocsReq            func(*http.Request) bool
-	IsMDoReq             func(*http.Request) bool
 	ToolboxMware         func(Toolbox)
 	Name                 string
 	Description          string
@@ -87,6 +88,8 @@ func Run(configs ...func(*Config)) {
 	fileServer := http.FileServer(http.Dir(staticFileDir))
 	// endpoints
 	router := map[string]*Endpoint{}
+	router[docsPath] = nil
+	router[mdoPath] = nil
 	docs := &endpointsDocs{
 		Name:        c.Name,
 		Description: c.Description,
@@ -101,6 +104,7 @@ func Run(configs ...func(*Config)) {
 			"endpoint: %q, missing GetExampleArgs", ep.Path)
 		PanicIf(ep.GetExampleResponse == nil,
 			"endpoint: %q, missing GetExampleResponse", ep.Path)
+		ep.Path = apiPath + ep.Path
 		path := strings.ToLower(ep.Path)
 		_, exists := router[path]
 		PanicIf(exists, "duplicate endpoint path: %q", path)
@@ -117,6 +121,8 @@ func Run(configs ...func(*Config)) {
 			})
 		}
 	}
+	delete(router, docsPath)
+	delete(router, mdoPath)
 	docsBytes := json.MustMarshal(docs)
 	// Handle requests!
 	var root http.HandlerFunc
@@ -191,24 +197,25 @@ func Run(configs ...func(*Config)) {
 		}
 		// rate limiter
 		rateLimit(c, tlbx)
-		// endpoint docs
-		if c.IsDocsReq(tlbx.req) {
-			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
-			return
-		}
+		lPath := strings.ToLower(tlbx.req.URL.Path)
 		// serve static file
-		if tlbx.req.Method == http.MethodGet && c.IsStaticReq(tlbx.req) {
+		if tlbx.req.Method == http.MethodGet && !strings.HasPrefix(lPath, apiPath+"/") {
 			fileServer.ServeHTTP(tlbx.resp, tlbx.req)
 			return
 		}
 		// lower path now we have passed static file server
-		tlbx.req.URL.Path = strings.ToLower(tlbx.req.URL.Path)
+		tlbx.req.URL.Path = lPath
+		// endpoint docs
+		if lPath == docsPath {
+			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
+			return
+		}
 		// toolbox mware
 		if c.ToolboxMware != nil {
 			c.ToolboxMware(tlbx)
 		}
 		// do mdo
-		if c.IsMDoReq(tlbx.req) {
+		if lPath == mdoPath {
 			if c.MDoMaxBodyBytes > 0 {
 				tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, c.MDoMaxBodyBytes)
 			}
@@ -223,9 +230,9 @@ func Run(configs ...func(*Config)) {
 					return func() {
 						argsBytes, err := json.Marshal(mdoReq.Args)
 						PanicOn(err)
-						subReq, err := http.NewRequest(http.MethodPut, mdoReq.Path+"?isSubMDo=true", bytes.NewReader(argsBytes))
+						subReq, err := http.NewRequest(http.MethodPut, strings.ToLower(mdoReq.Path)+"?isSubMDo=true", bytes.NewReader(argsBytes))
 						PanicOn(err)
-						PanicIf(c.IsMDoReq(subReq), "can't have mdo request inside an mdo request")
+						PanicIf(subReq.URL.Path == mdoPath, "can't have mdo request inside an mdo request")
 						for _, c := range tlbx.req.Cookies() {
 							subReq.AddCookie(c)
 						}
@@ -350,21 +357,12 @@ func config(configs ...func(*Config)) *Config {
 		RateLimiterPool:      nil,
 		MDoMax:               20,
 		MDoMaxBodyBytes:      MB,
-		IsStaticReq: func(r *http.Request) bool {
-			return !strings.HasPrefix(strings.ToLower(r.URL.Path), "/api/")
-		},
-		IsDocsReq: func(r *http.Request) bool {
-			return r.URL.Path == "/api/docs"
-		},
-		IsMDoReq: func(r *http.Request) bool {
-			return r.URL.Path == "/api/mdo"
-		},
-		Name:        "Web App",
-		Description: "A web app",
+		Name:                 "Web App",
+		Description:          "A web app",
 		Endpoints: []*Endpoint{
 			{
 				Description:  "A test endpoint to echo back the args",
-				Path:         "/api/test/echo",
+				Path:         "/test/echo",
 				Timeout:      100,
 				MaxBodyBytes: MB,
 				IsPrivate:    false,
@@ -874,7 +872,7 @@ func NewClient(baseHref string) *Client {
 }
 
 func Call(c *Client, path string, args interface{}, res interface{}) error {
-	url := c.baseHref + path
+	url := c.baseHref + apiPath + path
 	method := http.MethodPut
 	var req *http.Request
 	var err error
