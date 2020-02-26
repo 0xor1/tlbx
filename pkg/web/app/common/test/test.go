@@ -142,11 +142,11 @@ func NewRig(eps []*app.Endpoint, onDelete func(ID)) Rig {
 	}
 
 	var err error
-	r.user, err = isql.NewReplicaSet("users:C0-Mm-0n-U5-3r5@tcp(localhost:3306)/users?parseTime=true")
+	r.user, err = isql.NewReplicaSet("users:C0-Mm-0n-U5-3r5@tcp(localhost:3306)/users?parseTime=true&loc=UTC&multiStatements=true")
 	PanicOn(err)
-	r.pwd, err = isql.NewReplicaSet("pwds:C0-Mm-0n-Pwd5@tcp(localhost:3306)/pwds?parseTime=true")
+	r.pwd, err = isql.NewReplicaSet("pwds:C0-Mm-0n-Pwd5@tcp(localhost:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true")
 	PanicOn(err)
-	r.data, err = isql.NewReplicaSet("data:C0-Mm-0n-Da-Ta@tcp(localhost:3306)/data?parseTime=true")
+	r.data, err = isql.NewReplicaSet("data:C0-Mm-0n-Da-Ta@tcp(localhost:3306)/data?parseTime=true&loc=UTC&multiStatements=true")
 	PanicOn(err)
 
 	go app.Run(func(c *app.Config) {
