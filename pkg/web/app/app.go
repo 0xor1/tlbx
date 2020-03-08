@@ -448,6 +448,7 @@ func (r *responseWrapper) WriteHeader(status int) {
 }
 
 type Toolbox interface {
+	Me() ID
 	Session() Session
 	Ctx() context.Context
 	NewID() ID
@@ -470,6 +471,10 @@ type toolbox struct {
 	queryStats    []*QueryStats
 	storeMtx      *sync.RWMutex
 	store         map[interface{}]interface{}
+}
+
+func (t *toolbox) Me() ID {
+	return t.Session().Me()
 }
 
 func (t *toolbox) Session() Session {
@@ -659,6 +664,12 @@ func ExampleID() ID {
 	return id
 }
 
+func ExampleTime() time.Time {
+	t, err := time.Parse("2006-01-02 15:04:05 +0000 UTC", "2020-03-03 17:00:00 +0000 UTC")
+	PanicOn(err)
+	return t
+}
+
 type endpointsDocs struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description"`
@@ -779,9 +790,8 @@ func getJsonArgs(tlbx *toolbox, args interface{}) {
 	if args == nil {
 		return
 	}
-	argsStr := tlbx.req.URL.Query().Get("args")
-	argsBytes := []byte(argsStr)
-	if argsStr == "" {
+	argsBytes := []byte(tlbx.req.URL.Query().Get("args"))
+	if len(argsBytes) == 0 {
 		var err error
 		argsBytes, err = ioutil.ReadAll(tlbx.req.Body)
 		checkErrForMaxBytes(tlbx, err)

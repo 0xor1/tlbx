@@ -12,8 +12,8 @@ type sort string
 
 const (
 	SortName      sort = "name"
-	SortCreatedOn sort = "createdon"
-	SortItemCount sort = "itemcount"
+	SortCreatedOn sort = "createdOn"
+	SortItemCount sort = "itemCount"
 )
 
 type List struct {
@@ -69,10 +69,10 @@ type GetSet struct {
 	CreatedOnBefore *time.Time `json:"createdOnBefore,omitempty"`
 	ItemCountOver   *int       `json:"itemCountOver,omitempty"`
 	ItemCountUnder  *int       `json:"itemCountunder,omitempty"`
-	Sort            *sort      `json:"sort,omitempty"`
-	Asc             *bool      `json:"asc,omitempty"`
+	Sort            sort       `json:"sort,omitempty"`
+	Asc             bool       `json:"asc,omitempty"`
 	After           *ID        `json:"after,omitempty"`
-	Limit           *int       `json:"limit,omitempty"`
+	Limit           int        `json:"limit,omitempty"`
 }
 
 type GetSetRes struct {
@@ -105,16 +105,12 @@ func (_ *Update) Path() string {
 	return "/list/update"
 }
 
-func (a *Update) Do(c *app.Client) (*List, error) {
-	res := &List{}
-	err := app.Call(c, a.Path(), a, res)
-	return res, err
+func (a *Update) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
 }
 
-func (a *Update) MustDo(c *app.Client) *List {
-	res, err := a.Do(c)
-	PanicOn(err)
-	return res
+func (a *Update) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
 }
 
 type Delete struct {
@@ -130,5 +126,21 @@ func (a *Delete) Do(c *app.Client) error {
 }
 
 func (a *Delete) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
+
+type DeleteSet struct {
+	IDs []ID `json:"ids"`
+}
+
+func (_ *DeleteSet) Path() string {
+	return "/list/deleteSet"
+}
+
+func (a *DeleteSet) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *DeleteSet) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }

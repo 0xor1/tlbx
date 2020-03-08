@@ -12,7 +12,7 @@ CREATE TABLE users (
 	activateCode VARCHAR(250) NULL,
 	changeEmailCode VARCHAR(250) NULL,
 	lastPwdResetOn DATETIME NULL,
-    PRIMARY KEY name (email),
+    PRIMARY KEY email (email),
     UNIQUE INDEX id (id)
 );
 

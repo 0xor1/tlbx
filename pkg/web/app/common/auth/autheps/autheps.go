@@ -15,6 +15,7 @@ import (
 	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/auth"
 	"github.com/0xor1/wtf/pkg/web/app/common/service"
+	"github.com/0xor1/wtf/pkg/web/app/common/validate"
 	"github.com/go-sql-driver/mysql"
 )
 
@@ -42,7 +43,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				tlbx.ReturnMsgIf(tlbx.Session().IsAuthed(), http.StatusBadRequest, "already logged in")
 				args := a.(*auth.Register)
-				validateStr("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
+				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
 				activateCode := crypt.UrlSafeString(250)
 				id := tlbx.NewID()
 				serv := service.Get(tlbx)
@@ -134,9 +135,9 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.ChangeEmail)
-				validateStr("email", args.NewEmail, tlbx, 0, emailMaxLen, emailRegex)
+				validate.Str("email", args.NewEmail, tlbx, 0, emailMaxLen, emailRegex)
 				serv := service.Get(tlbx)
-				me := tlbx.Session().Me()
+				me := tlbx.Me()
 				changeEmailCode := crypt.UrlSafeString(250)
 				existingUser := getUser(serv, &args.NewEmail, nil)
 				tlbx.ReturnMsgIf(existingUser != nil, http.StatusBadRequest, "email already registered")
@@ -165,7 +166,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 			},
 			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
 				serv := service.Get(tlbx)
-				me := tlbx.Session().Me()
+				me := tlbx.Me()
 				user := getUser(serv, nil, &me)
 				sendConfirmChangeEmailEmail(serv, *user.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: *user.ChangeEmailCode})
 				return nil
@@ -259,7 +260,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.SetPwd)
 				serv := service.Get(tlbx)
-				me := tlbx.Session().Me()
+				me := tlbx.Me()
 				pwd := getPwd(serv, me)
 				tlbx.ReturnMsgIf(!bytes.Equal(crypt.ScryptKey([]byte(args.CurrentPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), http.StatusBadRequest, "current pwd does not match")
 				setPwd(tlbx, me, args.NewPwd, args.ConfirmNewPwd)
@@ -286,7 +287,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.Delete)
 				serv := service.Get(tlbx)
-				me := tlbx.Session().Me()
+				me := tlbx.Me()
 				tlbx.Session().Logout()
 				pwd := getPwd(serv, me)
 				tlbx.ReturnMsgIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), http.StatusBadRequest, "incorrect pwd")
@@ -379,7 +380,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 			},
 			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
 				return &auth.GetRes{
-					Me: tlbx.Session().Me(),
+					Me: tlbx.Me(),
 				}
 			},
 		},
@@ -403,14 +404,6 @@ var (
 	scryptSaltLen = 256
 	scryptKeyLen  = 256
 )
-
-func validateStr(name, str string, tlbx app.Toolbox, minLen, maxLen int, regexs ...*regexp.Regexp) {
-	tlbx.ReturnMsgIf(minLen > 0 && StrLen(str) < minLen, http.StatusBadRequest, "%s does not satisfy min len %d", name, minLen)
-	tlbx.ReturnMsgIf(maxLen > 0 && StrLen(str) > maxLen, http.StatusBadRequest, "%s does not satisfy max len %d", name, maxLen)
-	for _, re := range regexs {
-		tlbx.ReturnMsgIf(!re.MatchString(str), http.StatusBadRequest, "%s does not satisfy regexp %s", name, re)
-	}
-}
 
 func sendActivateEmail(serv service.Layer, sendTo, from, baseHref string, args *auth.Activate) {
 	bs, err := json.Marshal(args)
@@ -489,7 +482,7 @@ func getPwd(serv service.Layer, id ID) *pwd {
 
 func setPwd(tlbx app.Toolbox, id ID, pwd, confirmPwd string) {
 	tlbx.ReturnMsgIf(pwd != confirmPwd, http.StatusBadRequest, "pwds do not match")
-	validateStr("pwd", pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
+	validate.Str("pwd", pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
 	serv := service.Get(tlbx)
 	salt := crypt.Bytes(scryptSaltLen)
 	pwdBs := crypt.ScryptKey([]byte(pwd), salt, scryptN, scryptR, scryptP, scryptKeyLen)
