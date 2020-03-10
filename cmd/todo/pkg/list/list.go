@@ -64,14 +64,15 @@ func (a *Get) MustDo(c *app.Client) *List {
 }
 
 type GetSet struct {
+	IDs             *[]ID      `json:"ids,omitempty"`
 	NameStartsWith  *string    `json:"nameStartsWith,omitempty"`
 	CreatedOnAfter  *time.Time `json:"createdOnAfter,omitempty"`
 	CreatedOnBefore *time.Time `json:"createdOnBefore,omitempty"`
 	ItemCountOver   *int       `json:"itemCountOver,omitempty"`
 	ItemCountUnder  *int       `json:"itemCountunder,omitempty"`
+	After           *ID        `json:"after,omitempty"`
 	Sort            sort       `json:"sort,omitempty"`
 	Asc             bool       `json:"asc,omitempty"`
-	After           *ID        `json:"after,omitempty"`
 	Limit           int        `json:"limit,omitempty"`
 }
 
@@ -114,7 +115,7 @@ func (a *Update) MustDo(c *app.Client) {
 }
 
 type Delete struct {
-	ID ID `json:"id"`
+	IDs []ID `json:"ids"`
 }
 
 func (_ *Delete) Path() string {
@@ -126,21 +127,5 @@ func (a *Delete) Do(c *app.Client) error {
 }
 
 func (a *Delete) MustDo(c *app.Client) {
-	PanicOn(a.Do(c))
-}
-
-type DeleteSet struct {
-	IDs []ID `json:"ids"`
-}
-
-func (_ *DeleteSet) Path() string {
-	return "/list/deleteSet"
-}
-
-func (a *DeleteSet) Do(c *app.Client) error {
-	return app.Call(c, a.Path(), a, nil)
-}
-
-func (a *DeleteSet) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }

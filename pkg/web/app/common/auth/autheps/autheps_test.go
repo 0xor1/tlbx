@@ -12,7 +12,7 @@ import (
 )
 
 func TestEverything(t *testing.T) {
-	r := test.NewRig(nil, func(id ID) {})
+	r := test.NewRig(nil, func(tlbx app.Toolbox, id ID) {})
 	defer r.CleanUp()
 
 	a := assert.New(t)

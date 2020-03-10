@@ -24,7 +24,7 @@ CREATE TABLE items (
     name VARCHAR(100) NOT NULL,
     createdOn DATETIME(3) NOT NULL,
     nextItem BINARY(16) NULL,
-    PRIMARY KEY createdOn (user, list, id)
+    PRIMARY KEY id (user, list, id)
 );
 
 DROP USER IF EXISTS 'data'@'%';

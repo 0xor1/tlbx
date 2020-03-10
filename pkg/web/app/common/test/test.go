@@ -132,7 +132,7 @@ func NewClient() *app.Client {
 	return app.NewClient(baseHref)
 }
 
-func NewRig(eps []*app.Endpoint, onDelete func(ID)) Rig {
+func NewRig(eps []*app.Endpoint, onDelete func(app.Toolbox, ID)) Rig {
 	l := log.New()
 	r := &rig{
 		log:   l,

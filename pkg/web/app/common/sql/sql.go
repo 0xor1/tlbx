@@ -24,6 +24,14 @@ func Asc(asc bool) string {
 	return ` DESC`
 }
 
+func GtLtSymbol(asc bool) string {
+	if asc {
+		return ">"
+	} else {
+		return "<"
+	}
+}
+
 func Limit(l, max int) int {
 	switch {
 	case l < 1:

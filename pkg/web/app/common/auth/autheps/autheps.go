@@ -19,7 +19,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
+func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endpoint {
 	return []*app.Endpoint{
 		{
 			Description:  "register a new account (requires email link)",
@@ -296,7 +296,7 @@ func New(onDelete func(ID), fromEmail, baseHref string) []*app.Endpoint {
 				_, err = serv.Pwd().Exec(`DELETE FROM pwds WHERE id=?`, me)
 				PanicOn(err)
 				if onDelete != nil {
-					onDelete(me)
+					onDelete(tlbx, me)
 				}
 				return nil
 			},
