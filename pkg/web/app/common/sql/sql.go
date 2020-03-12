@@ -2,9 +2,11 @@ package sql
 
 import (
 	"database/sql"
+	"net/http"
+	"strings"
+
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/web/app"
-	"net/http"
 )
 
 func ReturnNotFoundOrPanic(err error) {
@@ -53,4 +55,15 @@ func OrderLimit(field string, asc bool, l, max int) string {
 
 func OrderLimitMax100(field string, asc bool, l int) string {
 	return Sprintf(` ORDER BY %s %s LIMIT %d`, field, Asc(asc), LimitMax100(l))
+}
+
+func InCondition(and bool, field string, setLen int) string {
+	if setLen <= 0 {
+		return ""
+	}
+	op := "AND"
+	if !and {
+		op = "OR"
+	}
+	return Sprintf(` %s %s IN (?%s)`, op, field, strings.Repeat(`,?`, setLen-1))
 }

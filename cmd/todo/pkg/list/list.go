@@ -64,7 +64,7 @@ func (a *Get) MustDo(c *app.Client) *List {
 }
 
 type GetSet struct {
-	IDs             *[]ID      `json:"ids,omitempty"`
+	IDs             IDs        `json:"ids,omitempty"`
 	NameStartsWith  *string    `json:"nameStartsWith,omitempty"`
 	CreatedOnAfter  *time.Time `json:"createdOnAfter,omitempty"`
 	CreatedOnBefore *time.Time `json:"createdOnBefore,omitempty"`
@@ -115,7 +115,7 @@ func (a *Update) MustDo(c *app.Client) {
 }
 
 type Delete struct {
-	IDs []ID `json:"ids"`
+	IDs IDs `json:"ids"`
 }
 
 func (_ *Delete) Path() string {

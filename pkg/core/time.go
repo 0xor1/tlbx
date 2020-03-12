@@ -6,6 +6,10 @@ func Now() time.Time {
 	return time.Now().UTC()
 }
 
+func NowMilli() time.Time {
+	return time.Now().UTC().Round(time.Millisecond)
+}
+
 func NowUnixNano() int64 {
 	return Now().UnixNano()
 }

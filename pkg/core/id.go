@@ -131,3 +131,13 @@ func (id ID) Copy() ID {
 	}
 	return ID(copy)
 }
+
+type IDs []ID
+
+func (ids IDs) ToIs() []interface{} {
+	res := make([]interface{}, 0, len(ids))
+	for _, id := range ids {
+		res = append(res, id)
+	}
+	return res
+}

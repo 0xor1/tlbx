@@ -15,3 +15,7 @@ func Str(name, str string, tlbx app.Toolbox, minLen, maxLen int, regexs ...*rege
 		tlbx.ReturnMsgIf(!re.MatchString(str), http.StatusBadRequest, "%s does not satisfy regexp %s", name, re)
 	}
 }
+
+func MaxIDs(tlbx app.Toolbox, name string, ids []ID, max int) {
+	tlbx.ReturnMsgIf(len(ids) > max, http.StatusBadRequest, "%s must not contain more than %d ids", name, max)
+}

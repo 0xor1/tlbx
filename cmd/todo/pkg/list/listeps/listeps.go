@@ -40,7 +40,7 @@ var (
 				serv := service.Get(tlbx)
 				res := &list.List{
 					ID:        tlbx.NewID(),
-					CreatedOn: Now(),
+					CreatedOn: NowMilli(),
 					Name:      args.Name,
 					ItemCount: 0,
 				}
@@ -118,6 +118,7 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*list.GetSet)
+				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 				tlbx.ReturnMsgIf(
 					args.CreatedOnAfter != nil &&
 						args.CreatedOnBefore != nil &&
@@ -137,31 +138,35 @@ var (
 				query := bytes.NewBufferString(`SELECT id, createdOn, name, itemCount FROM lists WHERE user=?`)
 				queryArgs := make([]interface{}, 0, 10)
 				queryArgs = append(queryArgs, me)
-				if args.NameStartsWith != nil && *args.NameStartsWith != "" {
-					query.WriteString(` AND name LIKE ?`)
-					queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
+				if len(args.IDs) > 0 {
+
+				} else {
+					if args.NameStartsWith != nil && *args.NameStartsWith != "" {
+						query.WriteString(` AND name LIKE ?`)
+						queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
+					}
+					if args.CreatedOnAfter != nil {
+						query.WriteString(` AND createdOn > ?`)
+						queryArgs = append(queryArgs, *args.CreatedOnAfter)
+					}
+					if args.CreatedOnBefore != nil {
+						query.WriteString(` AND createdOn < ?`)
+						queryArgs = append(queryArgs, *args.CreatedOnBefore)
+					}
+					if args.ItemCountOver != nil {
+						query.WriteString(` AND itemCount > ?`)
+						queryArgs = append(queryArgs, *args.ItemCountOver)
+					}
+					if args.ItemCountUnder != nil {
+						query.WriteString(` AND itemCount < ?`)
+						queryArgs = append(queryArgs, *args.ItemCountUnder)
+					}
+					if args.After != nil {
+						query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE user=? AND id=?) AND id > ?`, args.Sort, sql.GtLtSymbol(args.Asc), args.Sort))
+						queryArgs = append(queryArgs, me, *args.After, *args.After)
+					}
+					query.WriteString(Sprintf(` ORDER BY %s %s, id LIMIT %d`, args.Sort, sql.Asc(args.Asc), args.Limit))
 				}
-				if args.CreatedOnAfter != nil {
-					query.WriteString(` AND createdOn > ?`)
-					queryArgs = append(queryArgs, *args.CreatedOnAfter)
-				}
-				if args.CreatedOnBefore != nil {
-					query.WriteString(` AND createdOn < ?`)
-					queryArgs = append(queryArgs, *args.CreatedOnBefore)
-				}
-				if args.ItemCountOver != nil {
-					query.WriteString(` AND itemCount > ?`)
-					queryArgs = append(queryArgs, *args.ItemCountOver)
-				}
-				if args.ItemCountUnder != nil {
-					query.WriteString(` AND itemCount < ?`)
-					queryArgs = append(queryArgs, *args.ItemCountUnder)
-				}
-				if args.After != nil {
-					query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE user=? AND id=?) AND id > ?`, args.Sort, sql.GtLtSymbol(args.Asc), args.Sort))
-					queryArgs = append(queryArgs, me, *args.After, *args.After)
-				}
-				query.WriteString(Sprintf(` ORDER BY %s %s, id LIMIT %d`, args.Sort, sql.Asc(args.Asc), args.Limit))
 				serv.Data().Query(func(rows isql.Rows) {
 					for rows.Next() {
 						if len(res.Lists) == args.Limit {
@@ -195,10 +200,12 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*list.Delete)
-				if len(args.IDs) == 0 {
+				idsLen := len(args.IDs)
+				if idsLen == 0 {
 					return nil
 				}
-				tlbx.ReturnMsgIf(len(args.IDs) > 100, http.StatusBadRequest, "may not delete attempt to delete over 100 lists at a time")
+				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+				tlbx.ReturnMsgIf(idsLen > 100, http.StatusBadRequest, "may not delete attempt to delete over 100 lists at a time")
 				me := tlbx.Me()
 				serv := service.Get(tlbx)
 				tx, err := serv.Data().Base().Primary().Begin()
@@ -206,18 +213,12 @@ var (
 					defer tx.Rollback()
 				}
 				PanicOn(err)
-				query := bytes.NewBufferString(`DELETE FROM %s WHERE user=? AND %s IN (?`)
-				queryArgs := make([]interface{}, 0, len(args.IDs)+1)
-				queryArgs = append(queryArgs, me, args.IDs[0])
-				for _, id := range args.IDs[1:] {
-					query.WriteString(`,?`)
-					queryArgs = append(queryArgs, id)
-				}
-				query.WriteString(`)`)
-				qryStr := query.String()
-				_, err = serv.Data().Exec(Sprintf(qryStr, "lists", "id"), queryArgs...)
+				queryArgs := make([]interface{}, 0, idsLen+1)
+				queryArgs = append(queryArgs, me)
+				queryArgs = append(queryArgs, args.IDs.ToIs()...)
+				_, err = serv.Data().Exec(`DELETE FROM lists WHERE user=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
 				PanicOn(err)
-				_, err = serv.Data().Exec(Sprintf(qryStr, "items", "list"), queryArgs...)
+				_, err = serv.Data().Exec(`DELETE FROM items WHERE user=?`+sql.InCondition(true, "list", idsLen), queryArgs...)
 				PanicOn(err)
 				PanicOn(tx.Commit())
 				return nil
@@ -237,7 +238,7 @@ var (
 func OnDelete(tlbx app.Toolbox, me ID) {
 	serv := service.Get(tlbx)
 	tx, err := serv.Data().Base().Primary().Begin()
-	if err != nil {
+	if tx != nil {
 		defer tx.Rollback()
 	}
 	PanicOn(err)
