@@ -26,9 +26,9 @@ func Mware(cache iredis.Pool, user, pwd, data isql.ReplicaSet, email email.Clien
 	return func(tlbx app.Toolbox) {
 		tlbx.Set(tlbxKey{}, &service{
 			cache: &redisPoolWrapper{tlbx: tlbx, pool: cache},
-			user:  &sqlWrapper{tlbx: tlbx, sql: user},
-			pwd:   &sqlWrapper{tlbx: tlbx, sql: pwd},
-			data:  &sqlWrapper{tlbx: tlbx, sql: data},
+			user:  &sqlClient{tlbx: tlbx, sql: user},
+			pwd:   &sqlClient{tlbx: tlbx, sql: pwd},
+			data:  &sqlClient{tlbx: tlbx, sql: data},
 			email: email,
 			store: store,
 		})
@@ -41,9 +41,9 @@ func Get(tlbx app.Toolbox) Layer {
 
 type service struct {
 	cache *redisPoolWrapper
-	user  *sqlWrapper
-	pwd   *sqlWrapper
-	data  *sqlWrapper
+	user  *sqlClient
+	pwd   *sqlClient
+	data  *sqlClient
 	email email.Client
 	store store.Client
 }
@@ -74,29 +74,37 @@ func (d *service) Store() store.Client {
 
 type SqlClient interface {
 	Base() isql.ReplicaSet
+	Begin() Tx
+	SqlClientCore
+}
+
+type SqlClientCore interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(rowsFn func(isql.Rows), query string, args ...interface{}) error
 	QueryRow(query string, args ...interface{}) isql.Row
 }
 
-type sqlWrapper struct {
-	tlbx app.Toolbox
-	sql  isql.ReplicaSet
+type Tx interface {
+	SqlClientCore
+	Rollback()
+	Commit()
 }
 
-func (w *sqlWrapper) Base() isql.ReplicaSet {
-	return w.sql
+type tx struct {
+	tx        isql.Tx
+	tlbx      app.Toolbox
+	sqlClient *sqlClient
 }
 
-func (w *sqlWrapper) Exec(query string, args ...interface{}) (res sql.Result, err error) {
-	w.do(func(q string) { res, err = w.sql.Primary().ExecContext(w.tlbx.Ctx(), q, args...) }, query)
+func (t *tx) Exec(query string, args ...interface{}) (res sql.Result, err error) {
+	t.sqlClient.do(func(q string) { res, err = t.tx.ExecContext(t.tlbx.Ctx(), q, args...) }, query)
 	return
 }
 
-func (w *sqlWrapper) Query(rowsFn func(isql.Rows), query string, args ...interface{}) (err error) {
-	w.do(func(q string) {
+func (t *tx) Query(rowsFn func(isql.Rows), query string, args ...interface{}) (err error) {
+	t.sqlClient.do(func(q string) {
 		var rows isql.Rows
-		rows, err = w.sql.RandSlave().QueryContext(w.tlbx.Ctx(), q, args...)
+		rows, err = t.tx.QueryContext(t.tlbx.Ctx(), q, args...)
 		if rows != nil {
 			defer rows.Close()
 			rowsFn(rows)
@@ -105,16 +113,71 @@ func (w *sqlWrapper) Query(rowsFn func(isql.Rows), query string, args ...interfa
 	return
 }
 
-func (w *sqlWrapper) QueryRow(query string, args ...interface{}) (row isql.Row) {
-	w.do(func(q string) { row = w.sql.RandSlave().QueryRowContext(w.tlbx.Ctx(), q, args...) }, query)
+func (t *tx) QueryRow(query string, args ...interface{}) (row isql.Row) {
+	t.sqlClient.do(func(q string) { row = t.tx.QueryRowContext(t.tlbx.Ctx(), q, args...) }, query)
 	return
 }
 
-func (w *sqlWrapper) do(do func(string), query string) {
+func (t *tx) Rollback() {
+	t.sqlClient.do(func(q string) {
+		err := t.tx.Rollback()
+		if err != nil && err != sql.ErrTxDone {
+			PanicOn(err)
+		}
+	}, "ROLLBACK")
+}
+
+func (t *tx) Commit() {
+	t.sqlClient.do(func(q string) { PanicOn(t.tx.Commit()) }, "COMMIT")
+}
+
+type sqlClient struct {
+	tlbx app.Toolbox
+	sql  isql.ReplicaSet
+}
+
+func (c *sqlClient) Base() isql.ReplicaSet {
+	return c.sql
+}
+
+func (c *sqlClient) Begin() Tx {
+	t, err := c.sql.Primary().Begin()
+	PanicOn(err)
+	c.do(func(s string) {}, "START TRANSACTION")
+	return &tx{
+		tx:        t,
+		tlbx:      c.tlbx,
+		sqlClient: c,
+	}
+}
+
+func (c *sqlClient) Exec(query string, args ...interface{}) (res sql.Result, err error) {
+	c.do(func(q string) { res, err = c.sql.Primary().ExecContext(c.tlbx.Ctx(), q, args...) }, query)
+	return
+}
+
+func (c *sqlClient) Query(rowsFn func(isql.Rows), query string, args ...interface{}) (err error) {
+	c.do(func(q string) {
+		var rows isql.Rows
+		rows, err = c.sql.RandSlave().QueryContext(c.tlbx.Ctx(), q, args...)
+		if rows != nil {
+			defer rows.Close()
+			rowsFn(rows)
+		}
+	}, query)
+	return
+}
+
+func (c *sqlClient) QueryRow(query string, args ...interface{}) (row isql.Row) {
+	c.do(func(q string) { row = c.sql.RandSlave().QueryRowContext(c.tlbx.Ctx(), q, args...) }, query)
+	return
+}
+
+func (c *sqlClient) do(do func(string), query string) {
 	// no query should ever even come close to 1 second in execution time
 	start := NowUnixMilli()
 	do(`SET STATEMENT max_statement_time=1 FOR ` + query)
-	w.tlbx.LogQueryStats(&app.QueryStats{
+	c.tlbx.LogQueryStats(&app.QueryStats{
 		Milli: NowUnixMilli() - start,
 		Query: query,
 	})

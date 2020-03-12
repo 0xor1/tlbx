@@ -208,19 +208,14 @@ var (
 				tlbx.ReturnMsgIf(idsLen > 100, http.StatusBadRequest, "may not delete attempt to delete over 100 lists at a time")
 				me := tlbx.Me()
 				serv := service.Get(tlbx)
-				tx, err := serv.Data().Base().Primary().Begin()
-				if tx != nil {
-					defer tx.Rollback()
-				}
-				PanicOn(err)
 				queryArgs := make([]interface{}, 0, idsLen+1)
 				queryArgs = append(queryArgs, me)
 				queryArgs = append(queryArgs, args.IDs.ToIs()...)
-				_, err = serv.Data().Exec(`DELETE FROM lists WHERE user=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
-				PanicOn(err)
-				_, err = serv.Data().Exec(`DELETE FROM items WHERE user=?`+sql.InCondition(true, "list", idsLen), queryArgs...)
-				PanicOn(err)
-				PanicOn(tx.Commit())
+				tx := serv.Data().Begin()
+				defer tx.Rollback()
+				tx.Exec(`DELETE FROM lists WHERE user=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
+				tx.Exec(`DELETE FROM items WHERE user=?`+sql.InCondition(true, "list", idsLen), queryArgs...)
+				tx.Commit()
 				return nil
 			},
 		},
@@ -237,14 +232,9 @@ var (
 
 func OnDelete(tlbx app.Toolbox, me ID) {
 	serv := service.Get(tlbx)
-	tx, err := serv.Data().Base().Primary().Begin()
-	if tx != nil {
-		defer tx.Rollback()
-	}
-	PanicOn(err)
-	_, err = serv.Data().Exec(`DELETE FROM lists WHERE user=?`, me)
-	PanicOn(err)
-	_, err = serv.Data().Exec(`DELETE FROM items WHERE user=?`, me)
-	PanicOn(err)
-	PanicOn(tx.Commit())
+	tx := serv.Data().Begin()
+	defer tx.Rollback()
+	tx.Exec(`DELETE FROM lists WHERE user=?`, me)
+	tx.Exec(`DELETE FROM items WHERE user=?`, me)
+	tx.Commit()
 }
