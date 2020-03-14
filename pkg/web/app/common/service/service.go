@@ -94,6 +94,7 @@ type tx struct {
 	tx        isql.Tx
 	tlbx      app.Toolbox
 	sqlClient *sqlClient
+	done      bool
 }
 
 func (t *tx) Exec(query string, args ...interface{}) (res sql.Result, err error) {
@@ -119,16 +120,19 @@ func (t *tx) QueryRow(query string, args ...interface{}) (row isql.Row) {
 }
 
 func (t *tx) Rollback() {
-	t.sqlClient.do(func(q string) {
-		err := t.tx.Rollback()
-		if err != nil && err != sql.ErrTxDone {
-			PanicOn(err)
-		}
-	}, "ROLLBACK")
+	if !t.done {
+		t.sqlClient.do(func(q string) {
+			err := t.tx.Rollback()
+			if err != nil && err != sql.ErrTxDone {
+				PanicOn(err)
+			}
+			t.done = true
+		}, "ROLLBACK")
+	}
 }
 
 func (t *tx) Commit() {
-	t.sqlClient.do(func(q string) { PanicOn(t.tx.Commit()) }, "COMMIT")
+	t.sqlClient.do(func(q string) { PanicOn(t.tx.Commit()); t.done = true }, "COMMIT")
 }
 
 type sqlClient struct {

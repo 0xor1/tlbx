@@ -1,4 +1,4 @@
-package autheps_test
+package auth_test
 
 import (
 	"testing"
