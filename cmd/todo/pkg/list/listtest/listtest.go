@@ -2,10 +2,13 @@ package listtest
 
 import (
 	"testing"
+	"time"
 
 	"github.com/0xor1/wtf/cmd/todo/pkg/list"
 	"github.com/0xor1/wtf/cmd/todo/pkg/list/listeps"
 	. "github.com/0xor1/wtf/pkg/core"
+	"github.com/0xor1/wtf/pkg/ptr"
+	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,7 +33,12 @@ func Everything(t *testing.T) {
 	get := (&list.Get{
 		ID: testList1.ID,
 	}).MustDo(r.Ali().Client())
-	a.Equal(testList1, get)
+	a.Equal(testList1, get.List)
+
+	getNil := (&list.Get{
+		ID: app.ExampleID(),
+	}).MustDo(r.Ali().Client())
+	a.Nil(getNil.List)
 
 	getSet := (&list.GetSet{}).MustDo(r.Ali().Client())
 	a.Equal(testList1, getSet.Set[0])
@@ -38,9 +46,50 @@ func Everything(t *testing.T) {
 	a.False(getSet.More)
 
 	getSet = (&list.GetSet{
-		IDs:   IDs{testList2.ID, testList1.ID},
+		IDs: IDs{testList2.ID, testList1.ID},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList2, getSet.Set[0])
 	a.Equal(testList1, getSet.Set[1])
 	a.False(getSet.More)
+
+	getSet = (&list.GetSet{
+		NameStartsWith:  ptr.String("Test l"),
+		CreatedOnAfter:  ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnBefore: ptr.Time(Now()),
+		ItemCountOver:   ptr.Int(-1),
+		ItemCountUnder:  ptr.Int(1),
+		Asc:             ptr.Bool(false),
+		Limit:           ptr.Int(2),
+	}).MustDo(r.Ali().Client())
+	a.Equal(testList2, getSet.Set[0])
+	a.Equal(testList1, getSet.Set[1])
+	a.False(getSet.More)
+
+	getSet = (&list.GetSet{
+		NameStartsWith:  ptr.String("Test l"),
+		CreatedOnAfter:  ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnBefore: ptr.Time(Now()),
+		ItemCountOver:   ptr.Int(-1),
+		ItemCountUnder:  ptr.Int(1),
+		After:           ptr.ID(testList1.ID),
+		Asc:             ptr.Bool(true),
+		Limit:           ptr.Int(2),
+	}).MustDo(r.Ali().Client())
+	a.Equal(testList2, getSet.Set[0])
+	a.False(getSet.More)
+
+	getSet = (&list.GetSet{
+		NameStartsWith:  ptr.String("Test l"),
+		CreatedOnAfter:  ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnBefore: ptr.Time(Now()),
+		ItemCountOver:   ptr.Int(-1),
+		ItemCountUnder:  ptr.Int(1),
+		Asc:             ptr.Bool(true),
+		Limit:           ptr.Int(1),
+	}).MustDo(r.Ali().Client())
+	a.Equal(testList1, getSet.Set[0])
+	a.True(getSet.More)
+
+	(&list.Delete{}).MustDo(r.Ali().Client())
+	(&list.Delete{IDs: IDs{testList1.ID}}).MustDo(r.Ali().Client())
 }

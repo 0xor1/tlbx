@@ -36,10 +36,10 @@ func GtLtSymbol(asc bool) string {
 
 func Limit(l, max int) int {
 	switch {
-	case l < 1:
-		return 2 // 1 + 1 for "more": true/false detection
 	case l >= max:
 		return max + 1
+	case l < 1:
+		return 2 // 1 + 1 for "more": true/false detection
 	default:
 		return l + 1
 	}

@@ -47,17 +47,21 @@ type Get struct {
 	ID ID `json:"id"`
 }
 
+type GetRes struct {
+	List *List `json:"list"`
+}
+
 func (_ *Get) Path() string {
 	return "/list/get"
 }
 
-func (a *Get) Do(c *app.Client) (*List, error) {
-	res := &List{}
+func (a *Get) Do(c *app.Client) (*GetRes, error) {
+	res := &GetRes{}
 	err := app.Call(c, a.Path(), a, res)
 	return res, err
 }
 
-func (a *Get) MustDo(c *app.Client) *List {
+func (a *Get) MustDo(c *app.Client) *GetRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -72,8 +76,8 @@ type GetSet struct {
 	ItemCountUnder  *int       `json:"itemCountunder,omitempty"`
 	After           *ID        `json:"after,omitempty"`
 	Sort            sort       `json:"sort,omitempty"`
-	Asc             bool       `json:"asc,omitempty"`
-	Limit           int        `json:"limit,omitempty"`
+	Asc             *bool      `json:"asc,omitempty"`
+	Limit           *int       `json:"limit,omitempty"`
 }
 
 type GetSetRes struct {

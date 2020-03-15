@@ -1,5 +1,5 @@
 #!/bin/bash
 go fmt ./... && \
-go test -coverprofile=coverage.out ./... && \
+go test -p=1 -coverprofile=coverage.out ./... && \
 go tool cover -html=coverage.out && \
 rm coverage.out

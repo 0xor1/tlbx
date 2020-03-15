@@ -66,16 +66,18 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleList
+				return &list.GetRes{List: exampleList}
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				setRes := getSet(tlbx, &list.GetSet{
-					IDs: IDs{a.(*list.Get).ID},
+					IDs:   IDs{a.(*list.Get).ID},
+					Limit: ptr.Int(1),
 				})
+				res := &list.GetRes{}
 				if len(setRes.Set) == 1 {
-					return setRes.Set[0]
+					res.List = setRes.Set[0]
 				}
-				return nil
+				return res
 			},
 		},
 		{
@@ -87,8 +89,8 @@ var (
 			GetDefaultArgs: func() interface{} {
 				return &list.GetSet{
 					Sort:  list.SortCreatedOn,
-					Asc:   true,
-					Limit: 100,
+					Asc:   ptr.Bool(true),
+					Limit: ptr.Int(100),
 				}
 			},
 			GetExampleArgs: func() interface{} {
@@ -100,8 +102,8 @@ var (
 					ItemCountUnder:  ptr.Int(5),
 					After:           ptr.ID(app.ExampleID()),
 					Sort:            list.SortName,
-					Asc:             true,
-					Limit:           50,
+					Asc:             ptr.Bool(true),
+					Limit:           ptr.Int(50),
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -186,11 +188,11 @@ func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
 			args.ItemCountUnder != nil &&
 			*args.ItemCountOver >= *args.ItemCountUnder,
 		http.StatusBadRequest, "itemCountOver must not be greater than or equal to itemCountUnder")
-	args.Limit = sql.Limit(args.Limit, 100)
+	limit := sql.Limit(*args.Limit, 100)
 	me := tlbx.Me()
 	serv := service.Get(tlbx)
 	res := &list.GetSetRes{
-		Set: make([]*list.List, 0, args.Limit),
+		Set: make([]*list.List, 0, limit),
 	}
 	query := bytes.NewBufferString(`SELECT id, createdOn, name, itemCount FROM lists WHERE user=?`)
 	queryArgs := make([]interface{}, 0, 10)
@@ -223,14 +225,14 @@ func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
 			queryArgs = append(queryArgs, *args.ItemCountUnder)
 		}
 		if args.After != nil {
-			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE user=? AND id=?) AND id > ?`, args.Sort, sql.GtLtSymbol(args.Asc), args.Sort))
+			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM lists WHERE user=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, me, *args.After, *args.After)
 		}
-		query.WriteString(Sprintf(` ORDER BY %s %s, id LIMIT %d`, args.Sort, sql.Asc(args.Asc), args.Limit))
+		query.WriteString(Sprintf(` ORDER BY %s %s, id LIMIT %d`, args.Sort, sql.Asc(*args.Asc), limit))
 	}
 	serv.Data().Query(func(rows isql.Rows) {
 		for rows.Next() {
-			if len(args.IDs) == 0 && len(res.Set)+1 == args.Limit {
+			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
 				res.More = true
 				break
 			}
