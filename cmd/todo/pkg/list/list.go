@@ -77,8 +77,8 @@ type GetSet struct {
 }
 
 type GetSetRes struct {
-	Lists []*List `json:"lists"`
-	More  bool    `json:"bool"`
+	Set  []*List `json:"set"`
+	More bool    `json:"bool"`
 }
 
 func (_ *GetSet) Path() string {

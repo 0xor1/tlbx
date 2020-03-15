@@ -291,13 +291,13 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 				tlbx.Session().Logout()
 				pwd := getPwd(serv, me)
 				tlbx.ReturnMsgIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), http.StatusBadRequest, "incorrect pwd")
+				if onDelete != nil {
+					onDelete(tlbx, me)
+				}
 				_, err := serv.User().Exec(`DELETE FROM users WHERE id=?`, me)
 				PanicOn(err)
 				_, err = serv.Pwd().Exec(`DELETE FROM pwds WHERE id=?`, me)
 				PanicOn(err)
-				if onDelete != nil {
-					onDelete(tlbx, me)
-				}
 				return nil
 			},
 		},

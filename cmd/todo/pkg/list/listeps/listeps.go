@@ -69,17 +69,13 @@ var (
 				return exampleList
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
-				args := a.(*list.Get)
-				me := tlbx.Me()
-				serv := service.Get(tlbx)
-				res := &list.List{
-					ID: args.ID,
+				setRes := getSet(tlbx, &list.GetSet{
+					IDs: IDs{a.(*list.Get).ID},
+				})
+				if len(setRes.Set) == 1 {
+					return setRes.Set[0]
 				}
-				row := serv.Data().QueryRow(
-					`SELECT createdOn, name, itemCount FROM lists WHERE user=? AND id=?`,
-					me, res.ID)
-				sql.ReturnNotFoundOrPanic(row.Scan(&res.CreatedOn, &res.Name, &res.ItemCount))
-				return res
+				return nil
 			},
 		},
 		{
@@ -110,75 +106,14 @@ var (
 			},
 			GetExampleResponse: func() interface{} {
 				return &list.GetSetRes{
-					Lists: []*list.List{
+					Set: []*list.List{
 						exampleList,
 					},
 					More: true,
 				}
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
-				args := a.(*list.GetSet)
-				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
-				tlbx.ReturnMsgIf(
-					args.CreatedOnAfter != nil &&
-						args.CreatedOnBefore != nil &&
-						args.CreatedOnAfter.After(*args.CreatedOnBefore),
-					http.StatusBadRequest, "createdOnAfter must be before createdOnBefore")
-				tlbx.ReturnMsgIf(
-					args.ItemCountOver != nil &&
-						args.ItemCountUnder != nil &&
-						*args.ItemCountOver >= *args.ItemCountUnder,
-					http.StatusBadRequest, "itemCountOver must not be greater than or equal to itemCountUnder")
-				args.Limit = sql.Limit(args.Limit, 100)
-				me := tlbx.Me()
-				serv := service.Get(tlbx)
-				res := &list.GetSetRes{
-					Lists: make([]*list.List, 0, args.Limit),
-				}
-				query := bytes.NewBufferString(`SELECT id, createdOn, name, itemCount FROM lists WHERE user=?`)
-				queryArgs := make([]interface{}, 0, 10)
-				queryArgs = append(queryArgs, me)
-				if len(args.IDs) > 0 {
-
-				} else {
-					if args.NameStartsWith != nil && *args.NameStartsWith != "" {
-						query.WriteString(` AND name LIKE ?`)
-						queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
-					}
-					if args.CreatedOnAfter != nil {
-						query.WriteString(` AND createdOn > ?`)
-						queryArgs = append(queryArgs, *args.CreatedOnAfter)
-					}
-					if args.CreatedOnBefore != nil {
-						query.WriteString(` AND createdOn < ?`)
-						queryArgs = append(queryArgs, *args.CreatedOnBefore)
-					}
-					if args.ItemCountOver != nil {
-						query.WriteString(` AND itemCount > ?`)
-						queryArgs = append(queryArgs, *args.ItemCountOver)
-					}
-					if args.ItemCountUnder != nil {
-						query.WriteString(` AND itemCount < ?`)
-						queryArgs = append(queryArgs, *args.ItemCountUnder)
-					}
-					if args.After != nil {
-						query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE user=? AND id=?) AND id > ?`, args.Sort, sql.GtLtSymbol(args.Asc), args.Sort))
-						queryArgs = append(queryArgs, me, *args.After, *args.After)
-					}
-					query.WriteString(Sprintf(` ORDER BY %s %s, id LIMIT %d`, args.Sort, sql.Asc(args.Asc), args.Limit))
-				}
-				serv.Data().Query(func(rows isql.Rows) {
-					for rows.Next() {
-						if len(res.Lists) == args.Limit {
-							res.More = true
-							break
-						}
-						l := &list.List{}
-						PanicOn(rows.Scan(&l.ID, &l.CreatedOn, &l.Name, &l.ItemCount))
-						res.Lists = append(res.Lists, l)
-					}
-				}, query.String(), queryArgs...)
-				return res
+				return getSet(tlbx, a.(*list.GetSet))
 			},
 		},
 		{
@@ -196,7 +131,7 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleList
+				return nil
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*list.Delete)
@@ -237,4 +172,72 @@ func OnDelete(tlbx app.Toolbox, me ID) {
 	tx.Exec(`DELETE FROM lists WHERE user=?`, me)
 	tx.Exec(`DELETE FROM items WHERE user=?`, me)
 	tx.Commit()
+}
+
+func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
+	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+	tlbx.ReturnMsgIf(
+		args.CreatedOnAfter != nil &&
+			args.CreatedOnBefore != nil &&
+			args.CreatedOnAfter.After(*args.CreatedOnBefore),
+		http.StatusBadRequest, "createdOnAfter must be before createdOnBefore")
+	tlbx.ReturnMsgIf(
+		args.ItemCountOver != nil &&
+			args.ItemCountUnder != nil &&
+			*args.ItemCountOver >= *args.ItemCountUnder,
+		http.StatusBadRequest, "itemCountOver must not be greater than or equal to itemCountUnder")
+	args.Limit = sql.Limit(args.Limit, 100)
+	me := tlbx.Me()
+	serv := service.Get(tlbx)
+	res := &list.GetSetRes{
+		Set: make([]*list.List, 0, args.Limit),
+	}
+	query := bytes.NewBufferString(`SELECT id, createdOn, name, itemCount FROM lists WHERE user=?`)
+	queryArgs := make([]interface{}, 0, 10)
+	queryArgs = append(queryArgs, me)
+	idsLen := len(args.IDs)
+	if idsLen > 0 {
+		query.WriteString(sql.InCondition(true, `id`, idsLen))
+		query.WriteString(sql.OrderByField(`id`, idsLen))
+		queryArgs = append(queryArgs, args.IDs.ToIs()...)
+		queryArgs = append(queryArgs, args.IDs.ToIs()...)
+	} else {
+		if args.NameStartsWith != nil && *args.NameStartsWith != "" {
+			query.WriteString(` AND name LIKE ?`)
+			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
+		}
+		if args.CreatedOnAfter != nil {
+			query.WriteString(` AND createdOn > ?`)
+			queryArgs = append(queryArgs, *args.CreatedOnAfter)
+		}
+		if args.CreatedOnBefore != nil {
+			query.WriteString(` AND createdOn < ?`)
+			queryArgs = append(queryArgs, *args.CreatedOnBefore)
+		}
+		if args.ItemCountOver != nil {
+			query.WriteString(` AND itemCount > ?`)
+			queryArgs = append(queryArgs, *args.ItemCountOver)
+		}
+		if args.ItemCountUnder != nil {
+			query.WriteString(` AND itemCount < ?`)
+			queryArgs = append(queryArgs, *args.ItemCountUnder)
+		}
+		if args.After != nil {
+			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE user=? AND id=?) AND id > ?`, args.Sort, sql.GtLtSymbol(args.Asc), args.Sort))
+			queryArgs = append(queryArgs, me, *args.After, *args.After)
+		}
+		query.WriteString(Sprintf(` ORDER BY %s %s, id LIMIT %d`, args.Sort, sql.Asc(args.Asc), args.Limit))
+	}
+	serv.Data().Query(func(rows isql.Rows) {
+		for rows.Next() {
+			if len(args.IDs) == 0 && len(res.Set)+1 == args.Limit {
+				res.More = true
+				break
+			}
+			l := &list.List{}
+			PanicOn(rows.Scan(&l.ID, &l.CreatedOn, &l.Name, &l.ItemCount))
+			res.Set = append(res.Set, l)
+		}
+	}, query.String(), queryArgs...)
+	return res
 }

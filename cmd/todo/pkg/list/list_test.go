@@ -1,4 +1,4 @@
-package listeps_test
+package list_test
 
 import (
 	"testing"

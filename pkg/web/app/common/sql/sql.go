@@ -38,10 +38,10 @@ func Limit(l, max int) int {
 	switch {
 	case l < 1:
 		return 2 // 1 + 1 for "more": true/false detection
-	case l > max:
+	case l >= max:
 		return max + 1
 	default:
-		return 1 + 1
+		return l + 1
 	}
 }
 
@@ -59,11 +59,18 @@ func OrderLimitMax100(field string, asc bool, l int) string {
 
 func InCondition(and bool, field string, setLen int) string {
 	if setLen <= 0 {
-		return ""
+		return ``
 	}
-	op := "AND"
+	op := `AND`
 	if !and {
-		op = "OR"
+		op = `OR`
 	}
 	return Sprintf(` %s %s IN (?%s)`, op, field, strings.Repeat(`,?`, setLen-1))
+}
+
+func OrderByField(field string, setLen int) string {
+	if setLen <= 0 {
+		return ``
+	}
+	return Sprintf(` ORDER BY FIELD (%s,?%s)`, field, strings.Repeat(`,?`, setLen-1))
 }
