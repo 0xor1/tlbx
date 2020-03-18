@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -938,6 +939,11 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 		return msg
 	}
 	if res == nil {
+		return nil
+	}
+	if len(bs) == 0 || string(bs) == "null" {
+		v := reflect.ValueOf(res)
+		v.Elem().Set(reflect.Zero(v.Elem().Type()))
 		return nil
 	}
 	return json.Unmarshal(bs, res)

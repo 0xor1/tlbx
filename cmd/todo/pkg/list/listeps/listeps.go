@@ -6,6 +6,7 @@ import (
 
 	"github.com/0xor1/wtf/cmd/todo/pkg/list"
 	. "github.com/0xor1/wtf/pkg/core"
+	"github.com/0xor1/wtf/pkg/field"
 	"github.com/0xor1/wtf/pkg/isql"
 	"github.com/0xor1/wtf/pkg/ptr"
 	"github.com/0xor1/wtf/pkg/web/app"
@@ -66,18 +67,17 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return &list.GetRes{List: exampleList}
+				return exampleList
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				setRes := getSet(tlbx, &list.GetSet{
 					IDs:   IDs{a.(*list.Get).ID},
 					Limit: ptr.Int(1),
 				})
-				res := &list.GetRes{}
 				if len(setRes.Set) == 1 {
-					res.List = setRes.Set[0]
+					return setRes.Set[0]
 				}
-				return res
+				return nil
 			},
 		},
 		{
@@ -116,6 +116,40 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				return getSet(tlbx, a.(*list.GetSet))
+			},
+		},
+		{
+			Description:  "Update a list",
+			Path:         (&list.Update{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &list.Update{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &list.Update{
+					ID:   app.ExampleID(),
+					Name: field.String{Val: "New List Name"},
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return exampleList
+			},
+			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+				args := a.(*list.Update)
+				validate.Str("name", args.Name.Val, tlbx, nameMinLen, nameMaxLen)
+				getSetRes := getSet(tlbx, &list.GetSet{
+					IDs:   IDs{args.ID},
+					Limit: ptr.Int(1),
+				})
+				tlbx.ReturnMsgIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
+				list := getSetRes.Set[0]
+				list.Name = args.Name.Val
+				serv := service.Get(tlbx)
+				_, err := serv.Data().Exec(`UPDATE lists SET name=? WHERE user=? AND id=?`, list.Name, tlbx.Me(), list.ID)
+				PanicOn(err)
+				return list
 			},
 		},
 		{

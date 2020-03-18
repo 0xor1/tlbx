@@ -33,7 +33,7 @@ func (_ *Create) Path() string {
 
 func (a *Create) Do(c *app.Client) (*List, error) {
 	res := &List{}
-	err := app.Call(c, a.Path(), a, res)
+	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
@@ -47,21 +47,17 @@ type Get struct {
 	ID ID `json:"id"`
 }
 
-type GetRes struct {
-	List *List `json:"list"`
-}
-
 func (_ *Get) Path() string {
 	return "/list/get"
 }
 
-func (a *Get) Do(c *app.Client) (*GetRes, error) {
-	res := &GetRes{}
-	err := app.Call(c, a.Path(), a, res)
+func (a *Get) Do(c *app.Client) (*List, error) {
+	res := &List{}
+	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Get) MustDo(c *app.Client) *GetRes {
+func (a *Get) MustDo(c *app.Client) *List {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -91,7 +87,7 @@ func (_ *GetSet) Path() string {
 
 func (a *GetSet) Do(c *app.Client) (*GetSetRes, error) {
 	res := &GetSetRes{}
-	err := app.Call(c, a.Path(), a, res)
+	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
@@ -110,12 +106,16 @@ func (_ *Update) Path() string {
 	return "/list/update"
 }
 
-func (a *Update) Do(c *app.Client) error {
-	return app.Call(c, a.Path(), a, nil)
+func (a *Update) Do(c *app.Client) (*List, error) {
+	res := &List{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
 }
 
-func (a *Update) MustDo(c *app.Client) {
-	PanicOn(a.Do(c))
+func (a *Update) MustDo(c *app.Client) *List {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
 }
 
 type Delete struct {

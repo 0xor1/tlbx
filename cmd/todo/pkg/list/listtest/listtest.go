@@ -7,6 +7,7 @@ import (
 	"github.com/0xor1/wtf/cmd/todo/pkg/list"
 	"github.com/0xor1/wtf/cmd/todo/pkg/list/listeps"
 	. "github.com/0xor1/wtf/pkg/core"
+	"github.com/0xor1/wtf/pkg/field"
 	"github.com/0xor1/wtf/pkg/ptr"
 	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/test"
@@ -33,12 +34,12 @@ func Everything(t *testing.T) {
 	get := (&list.Get{
 		ID: testList1.ID,
 	}).MustDo(r.Ali().Client())
-	a.Equal(testList1, get.List)
+	a.Equal(testList1, get)
 
 	getNil := (&list.Get{
 		ID: app.ExampleID(),
 	}).MustDo(r.Ali().Client())
-	a.Nil(getNil.List)
+	a.Nil(getNil)
 
 	getSet := (&list.GetSet{}).MustDo(r.Ali().Client())
 	a.Equal(testList1, getSet.Set[0])
@@ -89,6 +90,14 @@ func Everything(t *testing.T) {
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList1, getSet.Set[0])
 	a.True(getSet.More)
+
+	newName := "New Name"
+	updatedList := (&list.Update{
+		ID:   testList1.ID,
+		Name: field.String{Val: newName},
+	}).MustDo(r.Ali().Client())
+	testList1.Name = newName
+	a.Equal(testList1, updatedList)
 
 	(&list.Delete{}).MustDo(r.Ali().Client())
 	(&list.Delete{IDs: IDs{testList1.ID}}).MustDo(r.Ali().Client())

@@ -168,7 +168,7 @@ func (_ *Login) Path() string {
 
 func (a *Login) Do(c *app.Client) (*LoginRes, error) {
 	res := &LoginRes{}
-	err := app.Call(c, a.Path(), a, res)
+	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
@@ -202,7 +202,7 @@ func (_ *Get) Path() string {
 
 func (a *Get) Do(c *app.Client) (*GetRes, error) {
 	res := &GetRes{}
-	err := app.Call(c, a.Path(), nil, res)
+	err := app.Call(c, a.Path(), nil, &res)
 	return res, err
 }
 
