@@ -40,14 +40,15 @@ var (
 				me := tlbx.Me()
 				serv := service.Get(tlbx)
 				res := &list.List{
-					ID:        tlbx.NewID(),
-					CreatedOn: NowMilli(),
-					Name:      args.Name,
-					ItemCount: 0,
+					ID:                 tlbx.NewID(),
+					CreatedOn:          NowMilli(),
+					Name:               args.Name,
+					TodoItemCount:      0,
+					CompletedItemCount: 0,
 				}
 				_, err := serv.Data().Exec(
-					`INSERT INTO lists (user, id, createdOn, name, itemCount, firstItem) VALUES (?, ?, ?, ?, ?, ?)`,
-					me, res.ID, res.CreatedOn, res.Name, res.ItemCount, nil)
+					`INSERT INTO lists (user, id, createdOn, name, todoItemCount, completedItemCount) VALUES (?, ?, ?, ?, ?, ?)`,
+					me, res.ID, res.CreatedOn, res.Name, res.TodoItemCount, res.CompletedItemCount)
 				PanicOn(err)
 				return res
 			},
@@ -95,15 +96,17 @@ var (
 			},
 			GetExampleArgs: func() interface{} {
 				return &list.GetSet{
-					NameStartsWith:  ptr.String("My L"),
-					CreatedOnAfter:  ptr.Time(app.ExampleTime()),
-					CreatedOnBefore: ptr.Time(app.ExampleTime()),
-					ItemCountOver:   ptr.Int(2),
-					ItemCountUnder:  ptr.Int(5),
-					After:           ptr.ID(app.ExampleID()),
-					Sort:            list.SortName,
-					Asc:             ptr.Bool(true),
-					Limit:           ptr.Int(50),
+					NameStartsWith:        ptr.String("My L"),
+					CreatedOnMin:          ptr.Time(app.ExampleTime()),
+					CreatedOnMax:          ptr.Time(app.ExampleTime()),
+					TodoItemCountMin:      ptr.Int(2),
+					TodoItemCountMax:      ptr.Int(5),
+					CompletedItemCountMin: ptr.Int(3),
+					CompletedItemCountMax: ptr.Int(4),
+					After:                 ptr.ID(app.ExampleID()),
+					Sort:                  list.SortName,
+					Asc:                   ptr.Bool(true),
+					Limit:                 ptr.Int(50),
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -194,10 +197,11 @@ var (
 	nameMinLen  = 1
 	nameMaxLen  = 100
 	exampleList = &list.List{
-		ID:        app.ExampleID(),
-		Name:      "My List",
-		CreatedOn: app.ExampleTime(),
-		ItemCount: 3,
+		ID:                 app.ExampleID(),
+		Name:               "My List",
+		CreatedOn:          app.ExampleTime(),
+		TodoItemCount:      3,
+		CompletedItemCount: 4,
 	}
 )
 
@@ -213,22 +217,27 @@ func OnDelete(tlbx app.Toolbox, me ID) {
 func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	tlbx.ReturnMsgIf(
-		args.CreatedOnAfter != nil &&
-			args.CreatedOnBefore != nil &&
-			args.CreatedOnAfter.After(*args.CreatedOnBefore),
-		http.StatusBadRequest, "createdOnAfter must be before createdOnBefore")
+		args.CreatedOnMin != nil &&
+			args.CreatedOnMax != nil &&
+			args.CreatedOnMin.After(*args.CreatedOnMax),
+		http.StatusBadRequest, "createdOnMin must be before createdOnMax")
 	tlbx.ReturnMsgIf(
-		args.ItemCountOver != nil &&
-			args.ItemCountUnder != nil &&
-			*args.ItemCountOver >= *args.ItemCountUnder,
-		http.StatusBadRequest, "itemCountOver must not be greater than or equal to itemCountUnder")
+		args.TodoItemCountMin != nil &&
+			args.TodoItemCountMax != nil &&
+			*args.TodoItemCountMin > *args.TodoItemCountMax,
+		http.StatusBadRequest, "todoItemCountMin must not be greater than todoItemCountMax")
+	tlbx.ReturnMsgIf(
+		args.CompletedItemCountMin != nil &&
+			args.CompletedItemCountMax != nil &&
+			*args.CompletedItemCountMin > *args.CompletedItemCountMax,
+		http.StatusBadRequest, "completedItemCountMin must not be greater than completedItemCountMax")
 	limit := sql.Limit(*args.Limit, 100)
 	me := tlbx.Me()
 	serv := service.Get(tlbx)
 	res := &list.GetSetRes{
 		Set: make([]*list.List, 0, limit),
 	}
-	query := bytes.NewBufferString(`SELECT id, createdOn, name, itemCount FROM lists WHERE user=?`)
+	query := bytes.NewBufferString(`SELECT id, createdOn, name, todoItemCount, completedItemCount FROM lists WHERE user=?`)
 	queryArgs := make([]interface{}, 0, 10)
 	queryArgs = append(queryArgs, me)
 	idsLen := len(args.IDs)
@@ -242,25 +251,38 @@ func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
 			query.WriteString(` AND name LIKE ?`)
 			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
 		}
-		if args.CreatedOnAfter != nil {
+		if args.CreatedOnMin != nil {
 			query.WriteString(` AND createdOn > ?`)
-			queryArgs = append(queryArgs, *args.CreatedOnAfter)
+			queryArgs = append(queryArgs, *args.CreatedOnMin)
 		}
-		if args.CreatedOnBefore != nil {
+		if args.CreatedOnMax != nil {
 			query.WriteString(` AND createdOn < ?`)
-			queryArgs = append(queryArgs, *args.CreatedOnBefore)
+			queryArgs = append(queryArgs, *args.CreatedOnMax)
 		}
-		if args.ItemCountOver != nil {
-			query.WriteString(` AND itemCount > ?`)
-			queryArgs = append(queryArgs, *args.ItemCountOver)
+		if args.TodoItemCountMin != nil {
+			query.WriteString(` AND todoItemCount >= ?`)
+			queryArgs = append(queryArgs, *args.TodoItemCountMin)
 		}
-		if args.ItemCountUnder != nil {
-			query.WriteString(` AND itemCount < ?`)
-			queryArgs = append(queryArgs, *args.ItemCountUnder)
+		if args.TodoItemCountMax != nil {
+			query.WriteString(` AND todoItemCount <= ?`)
+			queryArgs = append(queryArgs, *args.TodoItemCountMax)
+		}
+		if args.CompletedItemCountMin != nil {
+			query.WriteString(` AND completedItemCount >= ?`)
+			queryArgs = append(queryArgs, *args.CompletedItemCountMin)
+		}
+		if args.CompletedItemCountMax != nil {
+			query.WriteString(` AND completedItemCount <= ?`)
+			queryArgs = append(queryArgs, *args.CompletedItemCountMax)
 		}
 		if args.After != nil {
 			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM lists WHERE user=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, me, *args.After, *args.After)
+			if args.Sort == list.SortTodoItemCount || args.Sort == list.SortCompletedItemCount {
+				query.WriteString(Sprintf(` AND createdOn %s (SELECT createdOn FROM lists WHERE user=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
+				queryArgs = append(queryArgs, me, *args.After)
+
+			}
 		}
 		query.WriteString(Sprintf(` ORDER BY %s %s, id LIMIT %d`, args.Sort, sql.Asc(*args.Asc), limit))
 	}
@@ -271,7 +293,7 @@ func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
 				break
 			}
 			l := &list.List{}
-			PanicOn(rows.Scan(&l.ID, &l.CreatedOn, &l.Name, &l.ItemCount))
+			PanicOn(rows.Scan(&l.ID, &l.CreatedOn, &l.Name, &l.TodoItemCount, &l.CompletedItemCount))
 			res.Set = append(res.Set, l)
 		}
 	}, query.String(), queryArgs...)

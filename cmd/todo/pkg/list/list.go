@@ -11,16 +11,18 @@ import (
 type sort string
 
 const (
-	SortName      sort = "name"
-	SortCreatedOn sort = "createdOn"
-	SortItemCount sort = "itemCount"
+	SortName               sort = "name"
+	SortCreatedOn          sort = "createdOn"
+	SortTodoItemCount      sort = "todoItemCount"
+	SortCompletedItemCount sort = "completedItemCount"
 )
 
 type List struct {
-	ID        ID        `json:"id"`
-	Name      string    `json:"name"`
-	CreatedOn time.Time `json:"createdOn"`
-	ItemCount int       `json:"itemCount"`
+	ID                 ID        `json:"id"`
+	Name               string    `json:"name"`
+	CreatedOn          time.Time `json:"createdOn"`
+	TodoItemCount      int       `json:"todoItemCount"`
+	CompletedItemCount int       `json:"completedItemCount"`
 }
 
 type Create struct {
@@ -64,16 +66,18 @@ func (a *Get) MustDo(c *app.Client) *List {
 }
 
 type GetSet struct {
-	IDs             IDs        `json:"ids,omitempty"`
-	NameStartsWith  *string    `json:"nameStartsWith,omitempty"`
-	CreatedOnAfter  *time.Time `json:"createdOnAfter,omitempty"`
-	CreatedOnBefore *time.Time `json:"createdOnBefore,omitempty"`
-	ItemCountOver   *int       `json:"itemCountOver,omitempty"`
-	ItemCountUnder  *int       `json:"itemCountunder,omitempty"`
-	After           *ID        `json:"after,omitempty"`
-	Sort            sort       `json:"sort,omitempty"`
-	Asc             *bool      `json:"asc,omitempty"`
-	Limit           *int       `json:"limit,omitempty"`
+	IDs                   IDs        `json:"ids,omitempty"`
+	NameStartsWith        *string    `json:"nameStartsWith,omitempty"`
+	CreatedOnMin          *time.Time `json:"createdOnAfter,omitempty"`
+	CreatedOnMax          *time.Time `json:"createdOnBefore,omitempty"`
+	TodoItemCountMin      *int       `json:"todoItemCountMin,omitempty"`
+	TodoItemCountMax      *int       `json:"todoItemCountMax,omitempty"`
+	CompletedItemCountMin *int       `json:"completedItemCountMin,omitempty"`
+	CompletedItemCountMax *int       `json:"completedItemCountMax,omitempty"`
+	After                 *ID        `json:"after,omitempty"`
+	Sort                  sort       `json:"sort,omitempty"`
+	Asc                   *bool      `json:"asc,omitempty"`
+	Limit                 *int       `json:"limit,omitempty"`
 }
 
 type GetSetRes struct {

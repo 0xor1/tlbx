@@ -5,7 +5,7 @@ USE data;
 DROP TABLE IF EXISTS data;
 CREATE TABLE data (
     id BINARY(16) NOT NULL,
-    PRIMARY KEY name (id)
+    PRIMARY KEY id (id)
 );
 
 DROP USER IF EXISTS 'data'@'%';

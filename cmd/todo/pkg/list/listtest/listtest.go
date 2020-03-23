@@ -54,39 +54,46 @@ func Everything(t *testing.T) {
 	a.False(getSet.More)
 
 	getSet = (&list.GetSet{
-		NameStartsWith:  ptr.String("Test l"),
-		CreatedOnAfter:  ptr.Time(Now().Add(-5 * time.Second)),
-		CreatedOnBefore: ptr.Time(Now()),
-		ItemCountOver:   ptr.Int(-1),
-		ItemCountUnder:  ptr.Int(1),
-		Asc:             ptr.Bool(false),
-		Limit:           ptr.Int(2),
+		NameStartsWith:        ptr.String("Test l"),
+		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnMax:          ptr.Time(Now()),
+		TodoItemCountMin:      ptr.Int(0),
+		TodoItemCountMax:      ptr.Int(1),
+		CompletedItemCountMin: ptr.Int(0),
+		CompletedItemCountMax: ptr.Int(1),
+		Asc:                   ptr.Bool(false),
+		Limit:                 ptr.Int(2),
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList2, getSet.Set[0])
 	a.Equal(testList1, getSet.Set[1])
 	a.False(getSet.More)
 
 	getSet = (&list.GetSet{
-		NameStartsWith:  ptr.String("Test l"),
-		CreatedOnAfter:  ptr.Time(Now().Add(-5 * time.Second)),
-		CreatedOnBefore: ptr.Time(Now()),
-		ItemCountOver:   ptr.Int(-1),
-		ItemCountUnder:  ptr.Int(1),
-		After:           ptr.ID(testList1.ID),
-		Asc:             ptr.Bool(true),
-		Limit:           ptr.Int(2),
+		NameStartsWith:        ptr.String("Test l"),
+		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnMax:          ptr.Time(Now()),
+		TodoItemCountMin:      ptr.Int(0),
+		TodoItemCountMax:      ptr.Int(1),
+		CompletedItemCountMin: ptr.Int(0),
+		CompletedItemCountMax: ptr.Int(1),
+		After:                 ptr.ID(testList1.ID),
+		Sort:                  list.SortTodoItemCount,
+		Asc:                   ptr.Bool(true),
+		Limit:                 ptr.Int(2),
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList2, getSet.Set[0])
 	a.False(getSet.More)
 
 	getSet = (&list.GetSet{
-		NameStartsWith:  ptr.String("Test l"),
-		CreatedOnAfter:  ptr.Time(Now().Add(-5 * time.Second)),
-		CreatedOnBefore: ptr.Time(Now()),
-		ItemCountOver:   ptr.Int(-1),
-		ItemCountUnder:  ptr.Int(1),
-		Asc:             ptr.Bool(true),
-		Limit:           ptr.Int(1),
+		NameStartsWith:        ptr.String("Test l"),
+		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnMax:          ptr.Time(Now()),
+		TodoItemCountMin:      ptr.Int(0),
+		TodoItemCountMax:      ptr.Int(1),
+		CompletedItemCountMin: ptr.Int(0),
+		CompletedItemCountMax: ptr.Int(1),
+		Asc:                   ptr.Bool(true),
+		Limit:                 ptr.Int(1),
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList1, getSet.Set[0])
 	a.True(getSet.More)
