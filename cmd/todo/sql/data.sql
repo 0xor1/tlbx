@@ -7,15 +7,15 @@ CREATE TABLE lists (
     user BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
     createdOn DATETIME(3) NOT NULL,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(250) NOT NULL,
     todoItemCount INT UNSIGNED NOT NULL,
     completedItemCount INT UNSIGNED NOT NULL,
     firstItem BINARY(16) NULL,
-    PRIMARY KEY createdOn (user, createdOn, id),
-    UNIQUE INDEX name (user, name, createdOn, id),
+    PRIMARY KEY createdOn (user, createdOn),
+    UNIQUE INDEX name (user, name, createdOn),
     UNIQUE INDEX id (user, id),
-    UNIQUE INDEX todoItemCount (user, todoItemCount, createdOn, id),
-    UNIQUE INDEX completedItemCount (user, completedItemCount, createdOn, id)
+    UNIQUE INDEX todoItemCount (user, todoItemCount, createdOn),
+    UNIQUE INDEX completedItemCount (user, completedItemCount, createdOn)
 );
 
 DROP TABLE IF EXISTS items;
@@ -23,11 +23,13 @@ CREATE TABLE items (
     user BINARY(16) NOT NULL,
     list BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
-    name VARCHAR(100) NOT NULL,
     createdOn DATETIME(3) NOT NULL,
+    name VARCHAR(250) NOT NULL,
     completedOn DATETIME(3) NOT NULL, -- not null, use go zero time for null
     nextItem BINARY(16) NULL,
-    PRIMARY KEY id (user, list, completedOn, id)
+    PRIMARY KEY createdOn (user, list, completedOn, createdOn),
+    UNIQUE INDEX name (user, list, completedOn, name, createdOn),
+    UNIQUE INDEX id (user, list, id)
 );
 
 DROP USER IF EXISTS 'data'@'%';

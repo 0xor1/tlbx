@@ -31,29 +31,29 @@ func Everything(t *testing.T) {
 	}).MustDo(r.Ali().Client())
 	a.Equal(name2, testList2.Name)
 
-	get := (&list.Get{
+	get := (&list.One{
 		ID: testList1.ID,
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList1, get)
 
-	getNil := (&list.Get{
+	getNil := (&list.One{
 		ID: app.ExampleID(),
 	}).MustDo(r.Ali().Client())
 	a.Nil(getNil)
 
-	getSet := (&list.GetSet{}).MustDo(r.Ali().Client())
+	getSet := (&list.Get{}).MustDo(r.Ali().Client())
 	a.Equal(testList1, getSet.Set[0])
 	a.Equal(testList2, getSet.Set[1])
 	a.False(getSet.More)
 
-	getSet = (&list.GetSet{
+	getSet = (&list.Get{
 		IDs: IDs{testList2.ID, testList1.ID},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList2, getSet.Set[0])
 	a.Equal(testList1, getSet.Set[1])
 	a.False(getSet.More)
 
-	getSet = (&list.GetSet{
+	getSet = (&list.Get{
 		NameStartsWith:        ptr.String("Test l"),
 		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax:          ptr.Time(Now()),
@@ -68,7 +68,7 @@ func Everything(t *testing.T) {
 	a.Equal(testList1, getSet.Set[1])
 	a.False(getSet.More)
 
-	getSet = (&list.GetSet{
+	getSet = (&list.Get{
 		NameStartsWith:        ptr.String("Test l"),
 		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax:          ptr.Time(Now()),
@@ -84,7 +84,7 @@ func Everything(t *testing.T) {
 	a.Equal(testList2, getSet.Set[0])
 	a.False(getSet.More)
 
-	getSet = (&list.GetSet{
+	getSet = (&list.Get{
 		NameStartsWith:        ptr.String("Test l"),
 		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax:          ptr.Time(Now()),

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/0xor1/wtf/cmd/todo/pkg/item/itemeps"
+	"github.com/0xor1/wtf/cmd/todo/pkg/list/listeps"
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/email"
 	"github.com/0xor1/wtf/pkg/iredis"
@@ -29,5 +31,7 @@ func main() {
 		c.ToolboxMware = service.Mware(cache, user, pwd, data, email, store)
 		c.RateLimiterPool = cache
 		c.Endpoints = autheps.New(nil, "test@test.localhost", "http://localhost:8080")
+		c.Endpoints = append(c.Endpoints, listeps.Eps...)
+		c.Endpoints = append(c.Endpoints, itemeps.Eps...)
 	})
 }

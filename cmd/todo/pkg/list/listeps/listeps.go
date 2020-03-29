@@ -54,48 +54,20 @@ var (
 			},
 		},
 		{
-			Description:  "Get a list",
+			Description:  "Get a list set",
 			Path:         (&list.Get{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &list.Get{}
-			},
-			GetExampleArgs: func() interface{} {
 				return &list.Get{
-					ID: app.ExampleID(),
-				}
-			},
-			GetExampleResponse: func() interface{} {
-				return exampleList
-			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
-				setRes := getSet(tlbx, &list.GetSet{
-					IDs:   IDs{a.(*list.Get).ID},
-					Limit: ptr.Int(1),
-				})
-				if len(setRes.Set) == 1 {
-					return setRes.Set[0]
-				}
-				return nil
-			},
-		},
-		{
-			Description:  "Get a list set",
-			Path:         (&list.GetSet{}).Path(),
-			Timeout:      500,
-			MaxBodyBytes: app.KB,
-			IsPrivate:    false,
-			GetDefaultArgs: func() interface{} {
-				return &list.GetSet{
 					Sort:  list.SortCreatedOn,
 					Asc:   ptr.Bool(true),
 					Limit: ptr.Int(100),
 				}
 			},
 			GetExampleArgs: func() interface{} {
-				return &list.GetSet{
+				return &list.Get{
 					NameStartsWith:        ptr.String("My L"),
 					CreatedOnMin:          ptr.Time(app.ExampleTime()),
 					CreatedOnMax:          ptr.Time(app.ExampleTime()),
@@ -110,7 +82,7 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return &list.GetSetRes{
+				return &list.GetRes{
 					Set: []*list.List{
 						exampleList,
 					},
@@ -118,7 +90,7 @@ var (
 				}
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
-				return getSet(tlbx, a.(*list.GetSet))
+				return getSet(tlbx, a.(*list.Get))
 			},
 		},
 		{
@@ -142,7 +114,7 @@ var (
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*list.Update)
 				validate.Str("name", args.Name.Val, tlbx, nameMinLen, nameMaxLen)
-				getSetRes := getSet(tlbx, &list.GetSet{
+				getSetRes := getSet(tlbx, &list.Get{
 					IDs:   IDs{args.ID},
 					Limit: ptr.Int(1),
 				})
@@ -179,7 +151,6 @@ var (
 					return nil
 				}
 				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
-				tlbx.ReturnMsgIf(idsLen > 100, http.StatusBadRequest, "may not delete attempt to delete over 100 lists at a time")
 				me := tlbx.Me()
 				serv := service.Get(tlbx)
 				queryArgs := make([]interface{}, 0, idsLen+1)
@@ -195,7 +166,7 @@ var (
 		},
 	}
 	nameMinLen  = 1
-	nameMaxLen  = 100
+	nameMaxLen  = 250
 	exampleList = &list.List{
 		ID:                 app.ExampleID(),
 		Name:               "My List",
@@ -214,7 +185,7 @@ func OnDelete(tlbx app.Toolbox, me ID) {
 	tx.Commit()
 }
 
-func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
+func getSet(tlbx app.Toolbox, args *list.Get) *list.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	tlbx.ReturnMsgIf(
 		args.CreatedOnMin != nil &&
@@ -234,7 +205,7 @@ func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
 	limit := sql.Limit(*args.Limit, 100)
 	me := tlbx.Me()
 	serv := service.Get(tlbx)
-	res := &list.GetSetRes{
+	res := &list.GetRes{
 		Set: make([]*list.List, 0, limit),
 	}
 	query := bytes.NewBufferString(`SELECT id, createdOn, name, todoItemCount, completedItemCount FROM lists WHERE user=?`)
@@ -247,16 +218,16 @@ func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
 		queryArgs = append(queryArgs, args.IDs.ToIs()...)
 		queryArgs = append(queryArgs, args.IDs.ToIs()...)
 	} else {
-		if args.NameStartsWith != nil && *args.NameStartsWith != "" {
+		if ptr.StringOr(args.NameStartsWith, "") != "" {
 			query.WriteString(` AND name LIKE ?`)
 			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
 		}
 		if args.CreatedOnMin != nil {
-			query.WriteString(` AND createdOn > ?`)
+			query.WriteString(` AND createdOn >= ?`)
 			queryArgs = append(queryArgs, *args.CreatedOnMin)
 		}
 		if args.CreatedOnMax != nil {
-			query.WriteString(` AND createdOn < ?`)
+			query.WriteString(` AND createdOn <= ?`)
 			queryArgs = append(queryArgs, *args.CreatedOnMax)
 		}
 		if args.TodoItemCountMin != nil {
@@ -278,13 +249,16 @@ func getSet(tlbx app.Toolbox, args *list.GetSet) *list.GetSetRes {
 		if args.After != nil {
 			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM lists WHERE user=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, me, *args.After, *args.After)
-			if args.Sort == list.SortTodoItemCount || args.Sort == list.SortCompletedItemCount {
+			if args.Sort != list.SortCreatedOn {
 				query.WriteString(Sprintf(` AND createdOn %s (SELECT createdOn FROM lists WHERE user=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
 				queryArgs = append(queryArgs, me, *args.After)
-
 			}
 		}
-		query.WriteString(Sprintf(` ORDER BY %s %s, id LIMIT %d`, args.Sort, sql.Asc(*args.Asc), limit))
+		createdOnSecondarySort := ""
+		if args.Sort != list.SortCreatedOn {
+			createdOnSecondarySort = ", createdOn"
+		}
+		query.WriteString(Sprintf(` ORDER BY %s%s %s, id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
 	}
 	serv.Data().Query(func(rows isql.Rows) {
 		for rows.Next() {

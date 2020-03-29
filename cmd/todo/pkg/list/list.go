@@ -45,27 +45,25 @@ func (a *Create) MustDo(c *app.Client) *List {
 	return res
 }
 
-type Get struct {
+type One struct {
 	ID ID `json:"id"`
 }
 
-func (_ *Get) Path() string {
-	return "/list/get"
+func (a *One) Do(c *app.Client) (*List, error) {
+	res, err := (&Get{IDs: IDs{a.ID}}).Do(c)
+	if res != nil && len(res.Set) == 1 {
+		return res.Set[0], err
+	}
+	return nil, err
 }
 
-func (a *Get) Do(c *app.Client) (*List, error) {
-	res := &List{}
-	err := app.Call(c, a.Path(), a, &res)
-	return res, err
-}
-
-func (a *Get) MustDo(c *app.Client) *List {
+func (a *One) MustDo(c *app.Client) *List {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
 }
 
-type GetSet struct {
+type Get struct {
 	IDs                   IDs        `json:"ids,omitempty"`
 	NameStartsWith        *string    `json:"nameStartsWith,omitempty"`
 	CreatedOnMin          *time.Time `json:"createdOnAfter,omitempty"`
@@ -80,22 +78,22 @@ type GetSet struct {
 	Limit                 *int       `json:"limit,omitempty"`
 }
 
-type GetSetRes struct {
+type GetRes struct {
 	Set  []*List `json:"set"`
 	More bool    `json:"bool"`
 }
 
-func (_ *GetSet) Path() string {
-	return "/list/getSet"
+func (_ *Get) Path() string {
+	return "/list/get"
 }
 
-func (a *GetSet) Do(c *app.Client) (*GetSetRes, error) {
-	res := &GetSetRes{}
+func (a *Get) Do(c *app.Client) (*GetRes, error) {
+	res := &GetRes{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *GetSet) MustDo(c *app.Client) *GetSetRes {
+func (a *Get) MustDo(c *app.Client) *GetRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
