@@ -113,4 +113,15 @@ func Test_GoGroup(t *testing.T) {
 	a.NotEmpty(e.Value().(Errors)[0].(*err).String())
 	a.NotEmpty(e.Value().(Errors)[0].(*err).Message())
 	a.NotEmpty(e.Value().(Errors)[0].(*err).StackTrace())
+
+	GoGroup()
+}
+
+func Test_Recover(t *testing.T) {
+	Recover(nil)
+}
+
+func Test_Exit(t *testing.T) {
+	Exit = func(i int) {}
+	ExitIf(true, "test")
 }

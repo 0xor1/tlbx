@@ -13,8 +13,30 @@ func TestStrLen(t *testing.T) {
 	a.Equal(9, StrLen(s))
 }
 
+func TestErrorf(t *testing.T) {
+	a := assert.New(t)
+	a.Equal(`1 1 "1"`, Errorf("1 %d %q", 1, "1").Error())
+	a.Equal(`1`, Errorf("1").Error())
+}
+
+func TestSprint(t *testing.T) {
+	a := assert.New(t)
+	a.Equal(`1`, Sprint("1"))
+}
+
 func TestSprintf(t *testing.T) {
 	a := assert.New(t)
 	a.Equal(`1 1 "1"`, Sprintf("1 %d %q", 1, "1"))
 	a.Equal(`1`, Sprintf("1"))
+}
+
+func TestSprintln(t *testing.T) {
+	a := assert.New(t)
+	a.Equal("1\n", Sprintln("1"))
+}
+
+func TestPrintFuncs(t *testing.T) {
+	Print("a")
+	Printf("a")
+	Println("a")
 }

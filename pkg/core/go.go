@@ -7,6 +7,10 @@ import (
 	"sync"
 )
 
+var (
+	Exit = os.Exit
+)
+
 type Error interface {
 	Error() string
 	String() string
@@ -81,9 +85,8 @@ func ToError(i interface{}) Error {
 }
 
 func ExitOn(i interface{}) {
-	if err := ToError(i); err != nil {
-		Println(i)
-		os.Exit(1)
+	if i != nil {
+		Exit(1)
 	}
 }
 

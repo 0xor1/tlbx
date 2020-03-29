@@ -47,7 +47,7 @@ func Test_ID(t *testing.T) {
 	a.Nil(err)
 	a.Equal(str1, str2)
 
-	id1.String()
+	MustParseID(id1.String())
 	id1.Copy()
 
 	err = id1.Scan([]byte{1})
@@ -58,4 +58,6 @@ func Test_ID(t *testing.T) {
 	val, err := id1.Value()
 	a.Nil(err)
 	a.NotNil(val)
+
+	a.Equal(1, len(IDs{id1}.ToIs()))
 }
