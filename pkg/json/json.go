@@ -52,7 +52,7 @@ func Unmarshal(data []byte, v interface{}) error {
 }
 
 func MustUnmarshal(data []byte, v interface{}) {
-	PanicOn(json.Unmarshal(data, v))
+	PanicOn(Unmarshal(data, v))
 }
 
 func UnmarshalReader(data io.Reader, v interface{}) error {

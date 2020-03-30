@@ -1,6 +1,7 @@
 package json
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,6 +11,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+func Test_Wrappers(t *testing.T) {
+	a := assert.New(t)
+	bs := MustMarshal(nil)
+	a.Equal("null", string(bs))
+	bs = MustMarshalIndent(nil, "", "    ")
+	a.Equal("null", string(bs))
+	var v interface{}
+	MustUnmarshal(bs, &v)
+	a.Nil(v)
+	MustUnmarshalReader(bytes.NewReader(bs), &v)
+	a.Nil(v)
+}
 
 func Test_SplitPath(t *testing.T) {
 	a := assert.New(t)
