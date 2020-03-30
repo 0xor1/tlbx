@@ -116,9 +116,6 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*item.Update)
-				if args.Name == nil && args.Complete == nil {
-					return nil
-				}
 				if args.Name != nil {
 					validate.Str("name", args.Name.Val, tlbx, nameMinLen, nameMaxLen)
 				}
@@ -129,6 +126,9 @@ var (
 				})
 				tlbx.ReturnMsgIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				item := getSetRes.Set[0]
+				if args.Name == nil && args.Complete == nil {
+					return item
+				}
 				if args.Name != nil {
 					item.Name = args.Name.Val
 				}
