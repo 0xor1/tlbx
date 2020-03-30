@@ -113,6 +113,6 @@ func Everything(t *testing.T) {
 	a.Equal(testItem1.Name, updatedItem.Name)
 	a.NotNil(updatedItem.CompletedOn)
 
-	(&item.Delete{}).MustDo(r.Ali().Client())
-	(&item.Delete{IDs: IDs{testItem1.ID}}).MustDo(r.Ali().Client())
+	(&item.Delete{List: testList1.ID}).MustDo(r.Ali().Client())
+	(&item.Delete{List: testList1.ID, IDs: IDs{testItem1.ID}}).MustDo(r.Ali().Client())
 }

@@ -29,6 +29,7 @@ var (
 			},
 			GetExampleArgs: func() interface{} {
 				return &item.Create{
+					List: app.ExampleID(),
 					Name: "My Item",
 				}
 			},
@@ -155,7 +156,8 @@ var (
 			},
 			GetExampleArgs: func() interface{} {
 				return &item.Delete{
-					IDs: []ID{app.ExampleID()},
+					List: app.ExampleID(),
+					IDs:  []ID{app.ExampleID()},
 				}
 			},
 			GetExampleResponse: func() interface{} {

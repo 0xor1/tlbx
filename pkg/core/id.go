@@ -77,6 +77,7 @@ func (id *ID) UnmarshalBinary(data []byte) error {
 		return e
 	}
 	*id = ID(*ulid)
+	PanicIfZeroID(*id)
 	return nil
 }
 
@@ -95,6 +96,7 @@ func (id *ID) UnmarshalText(data []byte) error {
 		return e
 	}
 	*id = ID(*ulid)
+	PanicIfZeroID(*id)
 	return nil
 }
 
@@ -140,4 +142,11 @@ func (ids IDs) ToIs() []interface{} {
 		res = append(res, id)
 	}
 	return res
+}
+
+func PanicIfZeroID(id ID) {
+	// I cant think of a good reason why a nil value would ever
+	// be the right thing to pass to an endpoint, it always means
+	// the users has forgotten to pass a value.
+	PanicIf(ID{}.Equal(id), "zero ID detected")
 }
