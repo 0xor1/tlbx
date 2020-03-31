@@ -105,7 +105,7 @@ var (
 			GetExampleArgs: func() interface{} {
 				return &list.Update{
 					ID:   app.ExampleID(),
-					Name: field.String{Val: "New List Name"},
+					Name: field.String{V: "New List Name"},
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -113,14 +113,14 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*list.Update)
-				validate.Str("name", args.Name.Val, tlbx, nameMinLen, nameMaxLen)
+				validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
 				getSetRes := getSet(tlbx, &list.Get{
 					IDs:   IDs{args.ID},
 					Limit: ptr.Int(1),
 				})
 				tlbx.ReturnMsgIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				list := getSetRes.Set[0]
-				list.Name = args.Name.Val
+				list.Name = args.Name.V
 				serv := service.Get(tlbx)
 				_, err := serv.Data().Exec(`UPDATE lists SET name=? WHERE user=? AND id=?`, list.Name, tlbx.Me(), list.ID)
 				PanicOn(err)

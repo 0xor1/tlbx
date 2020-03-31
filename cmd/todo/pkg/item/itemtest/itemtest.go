@@ -102,16 +102,56 @@ func Everything(t *testing.T) {
 	a.Equal(testItem1, get.Set[0])
 	a.True(get.More)
 
-	newName := "New Name"
-	updatedItem := (&item.Update{
+	rename := "Test item 1 rename"
+	updatedItem1 := (&item.Update{
 		List:     testList1.ID,
 		ID:       testItem1.ID,
-		Name:     &field.String{Val: newName},
-		Complete: &field.Bool{Val: true},
+		Name:     &field.String{V: rename},
+		Complete: &field.Bool{V: true},
 	}).MustDo(r.Ali().Client())
-	testItem1.Name = newName
-	a.Equal(testItem1.Name, updatedItem.Name)
-	a.NotNil(updatedItem.CompletedOn)
+	testItem1.Name = rename
+	a.Equal(testItem1.Name, updatedItem1.Name)
+	a.NotNil(updatedItem1.CompletedOn)
+
+	updatedItem2 := (&item.Update{
+		List:     testList1.ID,
+		ID:       testItem2.ID,
+		Complete: &field.Bool{V: true},
+	}).MustDo(r.Ali().Client())
+	a.NotNil(updatedItem2.CompletedOn)
+
+	get = (&item.Get{
+		List:      testList1.ID,
+		Completed: ptr.Bool(true),
+	}).MustDo(r.Ali().Client())
+	a.Equal(updatedItem1, get.Set[0])
+	a.Equal(updatedItem2, get.Set[1])
+	a.False(get.More)
+
+	get = (&item.Get{
+		List:           testList1.ID,
+		Completed:      ptr.Bool(true),
+		CompletedOnMin: updatedItem1.CompletedOn,
+		CompletedOnMax: updatedItem1.CompletedOn,
+	}).MustDo(r.Ali().Client())
+	a.Equal(updatedItem1, get.Set[0])
+	a.Equal(1, len(get.Set))
+	a.False(get.More)
+
+	updatedItem1 = (&item.Update{
+		List: testList1.ID,
+		ID:   testItem1.ID,
+	}).MustDo(r.Ali().Client())
+	a.Equal(testItem1.Name, updatedItem1.Name)
+	a.NotNil(updatedItem1.CompletedOn)
+
+	updatedItem1 = (&item.Update{
+		List:     testList1.ID,
+		ID:       testItem1.ID,
+		Complete: &field.Bool{V: false},
+	}).MustDo(r.Ali().Client())
+	a.Equal(testItem1.Name, updatedItem1.Name)
+	a.Nil(updatedItem1.CompletedOn)
 
 	(&item.Delete{List: testList1.ID}).MustDo(r.Ali().Client())
 	(&item.Delete{List: testList1.ID, IDs: IDs{testItem1.ID}}).MustDo(r.Ali().Client())

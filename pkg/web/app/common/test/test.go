@@ -152,6 +152,7 @@ func NewRig(eps []*app.Endpoint, onDelete func(app.Toolbox, ID)) Rig {
 	go app.Run(func(c *app.Config) {
 		c.ToolboxMware = service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store)
 		c.RateLimiterPool = r.cache
+		c.RateLimitPerMinute = 99999 // when running batch tests 120 rate limit is easily exceeded
 		c.Endpoints = append(eps, autheps.New(onDelete, "test@test.localhost", "http://localhost:8080")...)
 	})
 

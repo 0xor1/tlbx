@@ -1,134 +1,135 @@
 package field
 
 import (
-	. "github.com/0xor1/wtf/pkg/core"
 	"time"
+
+	. "github.com/0xor1/wtf/pkg/core"
 )
 
 type Id struct {
-	Val ID `json:"val"`
+	V ID `json:"v"`
 }
 
 type IdPtr struct {
-	Val *ID `json:"val"`
+	V *ID `json:"v"`
 }
 
 type Bool struct {
-	Val bool `json:"val"`
+	V bool `json:"v"`
 }
 
 type BoolPtr struct {
-	Val *bool `json:"val"`
+	V *bool `json:"v"`
 }
 
 type String struct {
-	Val string `json:"val"`
+	V string `json:"v"`
 }
 
 type StringPtr struct {
-	Val *string `json:"val"`
+	V *string `json:"v"`
 }
 
 type Time struct {
-	Val time.Time `json:"val"`
+	V time.Time `json:"v"`
 }
 
 type TimePtr struct {
-	Val *time.Time `json:"val"`
+	V *time.Time `json:"v"`
 }
 
 type Int struct {
-	Val int `json:"val"`
+	V int `json:"v"`
 }
 
 type IntPtr struct {
-	Val *int `json:"val"`
+	V *int `json:"v"`
 }
 
 type Int8 struct {
-	Val int8 `json:"val"`
+	V int8 `json:"v"`
 }
 
 type Int8Ptr struct {
-	Val *int8 `json:"val"`
+	V *int8 `json:"v"`
 }
 
 type Int16 struct {
-	Val int16 `json:"val"`
+	V int16 `json:"v"`
 }
 
 type Int16Ptr struct {
-	Val *int16 `json:"val"`
+	V *int16 `json:"v"`
 }
 
 type Int32 struct {
-	Val int32 `json:"val"`
+	V int32 `json:"v"`
 }
 
 type Int32Ptr struct {
-	Val *int32 `json:"val"`
+	V *int32 `json:"v"`
 }
 
 type Int64 struct {
-	Val int64 `json:"val"`
+	V int64 `json:"v"`
 }
 
 type Int64Ptr struct {
-	Val *int64 `json:"val"`
+	V *int64 `json:"v"`
 }
 
 type UInt struct {
-	Val uint `json:"val"`
+	V uint `json:"v"`
 }
 
 type UIntPtr struct {
-	Val *uint `json:"val"`
+	V *uint `json:"v"`
 }
 
 type UInt8 struct {
-	Val uint8 `json:"val"`
+	V uint8 `json:"v"`
 }
 
 type UInt8Ptr struct {
-	Val *uint8 `json:"val"`
+	V *uint8 `json:"v"`
 }
 
 type UInt16 struct {
-	Val uint16 `json:"val"`
+	V uint16 `json:"v"`
 }
 
 type UInt16Ptr struct {
-	Val *uint16 `json:"val"`
+	V *uint16 `json:"v"`
 }
 
 type UInt32 struct {
-	Val uint32 `json:"val"`
+	V uint32 `json:"v"`
 }
 
 type UInt32Ptr struct {
-	Val *uint32 `json:"val"`
+	V *uint32 `json:"v"`
 }
 
 type UInt64 struct {
-	Val uint64 `json:"val"`
+	V uint64 `json:"v"`
 }
 
 type UInt64Ptr struct {
-	Val *uint64 `json:"val"`
+	V *uint64 `json:"v"`
 }
 
 type Float32 struct {
-	Val float32 `json:"val"`
+	V float32 `json:"v"`
 }
 
 type Float32Ptr struct {
-	Val *float32 `json:"val"`
+	V *float32 `json:"v"`
 }
 
 type Float64 struct {
-	Val float64 `json:"val"`
+	V float64 `json:"v"`
 }
 
 type Float64Ptr struct {
-	Val *float64 `json:"val"`
+	V *float64 `json:"v"`
 }

@@ -107,8 +107,8 @@ var (
 				return &item.Update{
 					List:     app.ExampleID(),
 					ID:       app.ExampleID(),
-					Name:     &field.String{Val: "New Item Name"},
-					Complete: &field.Bool{Val: true},
+					Name:     &field.String{V: "New Item Name"},
+					Complete: &field.Bool{V: true},
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -117,7 +117,7 @@ var (
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*item.Update)
 				if args.Name != nil {
-					validate.Str("name", args.Name.Val, tlbx, nameMinLen, nameMaxLen)
+					validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
 				}
 				getSetRes := getSet(tlbx, &item.Get{
 					List:  args.List,
@@ -130,17 +130,17 @@ var (
 					return item
 				}
 				if args.Name != nil {
-					item.Name = args.Name.Val
+					item.Name = args.Name.V
 				}
 				if args.Complete != nil {
-					if args.Complete.Val {
+					if args.Complete.V {
 						item.CompletedOn = ptr.Time(NowMilli())
 					} else {
 						item.CompletedOn = nil
 					}
 				}
 				serv := service.Get(tlbx)
-				_, err := serv.Data().Exec(`UPDATE items SET name=?, completedOn=? WHERE user=? AND list=? AND id=?`, item.Name, item.CompletedOn, tlbx.Me(), args.List, item.ID)
+				_, err := serv.Data().Exec(`UPDATE items SET name=?, completedOn=? WHERE user=? AND list=? AND id=?`, item.Name, ptr.TimeOr(item.CompletedOn, time.Time{}), tlbx.Me(), args.List, item.ID)
 				PanicOn(err)
 				return item
 			},

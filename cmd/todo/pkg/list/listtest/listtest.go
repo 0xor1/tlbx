@@ -101,7 +101,7 @@ func Everything(t *testing.T) {
 	newName := "New Name"
 	updatedList := (&list.Update{
 		ID:   testList1.ID,
-		Name: field.String{Val: newName},
+		Name: field.String{V: newName},
 	}).MustDo(r.Ali().Client())
 	testList1.Name = newName
 	a.Equal(testList1, updatedList)
