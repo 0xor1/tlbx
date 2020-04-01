@@ -12,6 +12,7 @@ import (
 	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/auth"
 	"github.com/0xor1/wtf/pkg/web/app/common/auth/autheps"
+	"github.com/0xor1/wtf/pkg/web/app/common/config"
 	"github.com/0xor1/wtf/pkg/web/app/common/service"
 )
 
@@ -133,21 +134,16 @@ func NewClient() *app.Client {
 }
 
 func NewRig(eps []*app.Endpoint, onDelete func(app.Toolbox, ID)) Rig {
-	l := log.New()
+	c := config.Get()
 	r := &rig{
-		log:   l,
-		cache: iredis.CreatePool("localhost:6379"),
-		email: email.NewLocalClient(l),
-		store: store.NewLocalClient("tmpTestStore"),
+		log:   c.Log,
+		cache: c.Cache,
+		email: c.Email,
+		store: c.Store.(store.LocalClient),
+		user:  c.User,
+		pwd:   c.Pwd,
+		data:  c.Data,
 	}
-
-	var err error
-	r.user, err = isql.NewReplicaSet("users:C0-Mm-0n-U5-3r5@tcp(localhost:3306)/users?parseTime=true&loc=UTC&multiStatements=true")
-	PanicOn(err)
-	r.pwd, err = isql.NewReplicaSet("pwds:C0-Mm-0n-Pwd5@tcp(localhost:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true")
-	PanicOn(err)
-	r.data, err = isql.NewReplicaSet("data:C0-Mm-0n-Da-Ta@tcp(localhost:3306)/data?parseTime=true&loc=UTC&multiStatements=true")
-	PanicOn(err)
 
 	go app.Run(func(c *app.Config) {
 		c.ToolboxMware = service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store)

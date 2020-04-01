@@ -14,13 +14,13 @@ type config struct {
 	fileValues *json.Json
 }
 
-func New(file string) *config {
+func New(file ...string) *config {
 	ret := &config{
 		defaults:   json.MustNew(),
 		fileValues: json.MustNew(),
 	}
-	if file != "" {
-		ret.fileValues = json.MustFromFile(file)
+	if len(file) > 0 && file[0] != "" {
+		ret.fileValues = json.MustFromFile(file[0])
 	}
 	return ret
 }
