@@ -67,7 +67,7 @@ func main() {
 	log.Info("starting at clockin: %s", clockin)
 	clockout := clockin.Add((8 * time.Hour) + (30 * time.Minute))
 
-	for clockout.Before(time.Now()) {
+	for clockout.Before(Now()) {
 		if !(clockin.Weekday() == time.Saturday || clockin.Weekday() == time.Sunday) {
 			clockinToUse := clockin
 			clockoutToUse := clockout

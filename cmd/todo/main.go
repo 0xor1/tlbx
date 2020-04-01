@@ -27,6 +27,8 @@ func main() {
 	store := store.NewLocalClient("tmpStoreDir")
 	defer store.MustDeleteStore()
 	app.Run(func(c *app.Config) {
+		c.Name = "Todo"
+		c.Description = "A simple Todo list application, create multiple lists with many items which can be marked complete or uncomplete"
 		c.Log = l
 		c.ToolboxMware = service.Mware(cache, user, pwd, data, email, store)
 		c.RateLimiterPool = cache

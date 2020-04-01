@@ -680,7 +680,7 @@ type endpointsDocs struct {
 type endpointDoc struct {
 	Description     string      `json:"description"`
 	Path            string      `json:"path"`
-	Timeout         int64       `json:"timeoutmilli"`
+	Timeout         int64       `json:"timeoutMilli"`
 	MaxBodyBytes    int64       `json:"maxBodyBytes"`
 	ArgsTypes       interface{} `json:"argsTypes"`
 	DefaultArgs     interface{} `json:"defaultArgs"`
