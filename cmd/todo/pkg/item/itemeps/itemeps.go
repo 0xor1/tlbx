@@ -46,10 +46,13 @@ var (
 					CreatedOn: NowMilli(),
 					Name:      args.Name,
 				}
-				_, err := serv.Data().Exec(
-					`INSERT INTO items (user, list, id, createdOn, name, completedOn) VALUES (?, ?, ?, ?, ?, ?)`,
-					me, args.List, res.ID, res.CreatedOn, res.Name, time.Time{})
+				tx := serv.Data().Begin()
+				defer tx.Rollback()
+				_, err := tx.Exec(`INSERT INTO items (user, list, id, createdOn, name, completedOn) VALUES (?, ?, ?, ?, ?, ?)`, me, args.List, res.ID, res.CreatedOn, res.Name, time.Time{})
 				PanicOn(err)
+				_, err = tx.Exec(`UPDATE lists SET todoItemCount = todoItemCount + 1 WHERE user=? AND id=?`, me, args.List)
+				PanicOn(err)
+				tx.Commit()
 				return res
 			},
 		},
@@ -119,6 +122,7 @@ var (
 				if args.Name != nil {
 					validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
 				}
+				me := tlbx.Me()
 				getSetRes := getSet(tlbx, &item.Get{
 					List:  args.List,
 					IDs:   IDs{args.ID},
@@ -126,22 +130,39 @@ var (
 				})
 				tlbx.ReturnMsgIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				item := getSetRes.Set[0]
-				if args.Name == nil && args.Complete == nil {
-					return item
-				}
-				if args.Name != nil {
+				changeMade := false
+				todoItemCountOp := ""
+				completedItemCountOp := ""
+				if args.Name != nil && item.Name != args.Name.V {
 					item.Name = args.Name.V
+					changeMade = true
 				}
-				if args.Complete != nil {
+				if args.Complete != nil &&
+					((args.Complete.V && item.CompletedOn == nil) ||
+						(!args.Complete.V && item.CompletedOn != nil)) {
 					if args.Complete.V {
 						item.CompletedOn = ptr.Time(NowMilli())
+						todoItemCountOp = "-"
+						completedItemCountOp = "+"
 					} else {
 						item.CompletedOn = nil
+						todoItemCountOp = "+"
+						completedItemCountOp = "-"
 					}
+					changeMade = true
 				}
-				serv := service.Get(tlbx)
-				_, err := serv.Data().Exec(`UPDATE items SET name=?, completedOn=? WHERE user=? AND list=? AND id=?`, item.Name, ptr.TimeOr(item.CompletedOn, time.Time{}), tlbx.Me(), args.List, item.ID)
-				PanicOn(err)
+				if changeMade {
+					serv := service.Get(tlbx)
+					tx := serv.Data().Begin()
+					defer tx.Rollback()
+					_, err := tx.Exec(`UPDATE items SET name=?, completedOn=? WHERE user=? AND list=? AND id=?`, item.Name, ptr.TimeOr(item.CompletedOn, time.Time{}), me, args.List, item.ID)
+					PanicOn(err)
+					if todoItemCountOp != "" {
+						_, err := tx.Exec(Sprintf(`UPDATE lists SET todoItemCount = todoItemCount %s 1, completedItemCount = completedItemCount %s 1 WHERE user=? AND id=?`, todoItemCountOp, completedItemCountOp), me, args.List)
+						PanicOn(err)
+					}
+					tx.Commit()
+				}
 				return item
 			},
 		},
@@ -175,7 +196,13 @@ var (
 				queryArgs := make([]interface{}, 0, idsLen+2)
 				queryArgs = append(queryArgs, me, args.List)
 				queryArgs = append(queryArgs, args.IDs.ToIs()...)
-				serv.Data().Exec(`DELETE FROM items WHERE user=? AND list=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
+				tx := serv.Data().Begin()
+				defer tx.Rollback()
+				_, err := serv.Data().Exec(`DELETE FROM items WHERE user=? AND list=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
+				PanicOn(err)
+				_, err = serv.Data().Exec(`UPDATE lists SET todoItemCount = (SELECT COUNT(id) FROM items WHERE user=? AND list=? AND completedOn=?) AND todoItemCount = (SELECT COUNT(id) FROM items WHERE user=? AND list=? AND completedOn<>?) WHERE user=? AND id=?`, me, args.List, time.Time{}, me, args.List, time.Time{}, me, args.List)
+				PanicOn(err)
+				tx.Commit()
 				return nil
 			},
 		},

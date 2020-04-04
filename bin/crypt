@@ -1,3 +1,2 @@
 #!/bin/bash
-cd cmd/crypt
-go run main.go
+go run cmd/crypt/main.go $@

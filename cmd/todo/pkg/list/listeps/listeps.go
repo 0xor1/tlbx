@@ -158,8 +158,10 @@ var (
 				queryArgs = append(queryArgs, args.IDs.ToIs()...)
 				tx := serv.Data().Begin()
 				defer tx.Rollback()
-				tx.Exec(`DELETE FROM lists WHERE user=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
-				tx.Exec(`DELETE FROM items WHERE user=?`+sql.InCondition(true, "list", idsLen), queryArgs...)
+				_, err := tx.Exec(`DELETE FROM lists WHERE user=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(`DELETE FROM items WHERE user=?`+sql.InCondition(true, "list", idsLen), queryArgs...)
+				PanicOn(err)
 				tx.Commit()
 				return nil
 			},
@@ -180,8 +182,10 @@ func OnDelete(tlbx app.Toolbox, me ID) {
 	serv := service.Get(tlbx)
 	tx := serv.Data().Begin()
 	defer tx.Rollback()
-	tx.Exec(`DELETE FROM lists WHERE user=?`, me)
-	tx.Exec(`DELETE FROM items WHERE user=?`, me)
+	_, err := tx.Exec(`DELETE FROM lists WHERE user=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM items WHERE user=?`, me)
+	PanicOn(err)
 	tx.Commit()
 }
 
