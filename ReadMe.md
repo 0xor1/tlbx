@@ -10,7 +10,7 @@ wtf
 ## structure
 
 * `/pkg` - reusable packages
-* `/bin` - utilo scripts to run/build/test
+* `/bin` - util scripts to run/build/test
 * `/cmd` - executable go programs
 * `/common` - common clientside ui commponents and sql db schemas
 
