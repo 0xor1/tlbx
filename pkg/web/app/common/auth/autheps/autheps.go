@@ -326,6 +326,8 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 					tlbx.ReturnMsgIf(condition, http.StatusNotFound, "email and/or pwd are not valid")
 				}
 				args := a.(*auth.Login)
+				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
+				validate.Str("pwd", args.Pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
 				serv := service.Get(tlbx)
 				user := getUser(serv, &args.Email, nil)
 				emailOrPwdMismatch(user == nil)

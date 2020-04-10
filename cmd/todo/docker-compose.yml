@@ -1,0 +1,19 @@
+version: '3.7'
+services:
+
+  wtf-sql-todo:
+    container_name: wtf-sql-todo
+    build:
+      context: ../../.
+      dockerfile: cmd/todo/sql.dockerfile
+    image: wtf-sql-todo
+    environment:
+      MYSQL_ROOT_PASSWORD: dev
+    ports:
+    - "3306:3306"
+
+  wtf-redis-todo:
+    container_name: wtf-redis-todo
+    image: redis:5.0.8-alpine
+    ports:
+    - "6379:6379"
