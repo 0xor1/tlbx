@@ -7,10 +7,11 @@ let newApi = (isMDoApi) => {
   let mDoSent = false
   let awaitingMDoList = []
   let doReq = (path, args) => {
+    path = '/api'+path
     if (!isMDoApi || (isMDoApi && mDoSending && !mDoSent)) {
       return axios({
         method: 'put',
-        url: '/api'+path,
+        url: path,
         data: args
       }).then((res) => {
         return res.data
@@ -79,7 +80,7 @@ let newApi = (isMDoApi) => {
           mDoSent = true
           for (let i = 0, l = awaitingMDoList.length; i < l; i++) {
             let key = '' + i
-            if (res[key].code === 200) {
+            if (res[key].status === 200) {
               awaitingMDoList[i].resolve(res[key].body)
             } else {
               awaitingMDoList[i].reject(res[key])

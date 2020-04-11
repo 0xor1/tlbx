@@ -4,6 +4,7 @@ import init from '../views/init.vue'
 import register from '../views/register.vue'
 import login from '../views/login.vue'
 import lists from '../views/lists.vue'
+import list from '../views/list.vue'
 
 vue.use(vueRouter)
 
@@ -27,6 +28,11 @@ const routes = [
     path: '/lists',
     name: 'lists',
     component: lists
+  },
+  {
+    path: '/list/:id',
+    name: 'list',
+    component: list
   }
 ]
 
