@@ -1,4 +1,4 @@
 #!/bin/bash
 gnome-terminal -- docker-compose -f cmd/$1/docker-compose.yml up
 gnome-terminal -- go run cmd/$1/main.go ${@:2}
-gnome-terminal -- npm --prefix cmd/$1/client run serve
+gnome-terminal -- /bin/bash -c "npm --prefix cmd/$1/client i; npm --prefix cmd/$1/client run serve; exec bash"

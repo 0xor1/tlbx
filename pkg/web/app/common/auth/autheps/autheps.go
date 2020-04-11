@@ -410,14 +410,14 @@ var (
 func sendActivateEmail(serv service.Layer, sendTo, from, baseHref string, args *auth.Activate) {
 	bs, err := json.Marshal(args)
 	PanicOn(err)
-	link := baseHref + args.Path() + `?args=` + url.QueryEscape(string(bs))
+	link := baseHref + app.ApiPathPrefix + args.Path() + `?args=` + url.QueryEscape(string(bs))
 	serv.Email().MustSend([]string{sendTo}, from, "Activate", `<a href="`+link+`">Activate</a>`, `Activate `+link)
 }
 
 func sendConfirmChangeEmailEmail(serv service.Layer, sendTo, from, baseHref string, args *auth.ConfirmChangeEmail) {
 	bs, err := json.Marshal(args)
 	PanicOn(err)
-	link := baseHref + args.Path() + `?args=` + url.QueryEscape(string(bs))
+	link := baseHref + app.ApiPathPrefix + args.Path() + `?args=` + url.QueryEscape(string(bs))
 	serv.Email().MustSend([]string{sendTo}, from, "Confirm change email", `<a href="`+link+`">Confirm change email</a>`, `Confirm change email `+link)
 }
 

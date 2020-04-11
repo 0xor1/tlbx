@@ -12,12 +12,17 @@ import (
 
 func main() {
 	config := config.Get()
-	if localStore, ok := config.Store.(store.LocalClient); ok {
-		defer localStore.MustDeleteStore()
+	if config.IsLocal {
+		defer config.Store.(store.LocalClient).MustDeleteStore()
 	}
 	app.Run(func(c *app.Config) {
 		c.Name = "Todo"
 		c.Description = "A simple Todo list application, create multiple lists with many items which can be marked complete or uncomplete"
+		if config.IsLocal {
+			c.SessionSecure = false
+		}
+		c.SessionAuthKey64s = config.SessionAuthKey64s
+		c.SessionEncrKey32s = config.SessionEncrKey32s
 		c.Log = config.Log
 		c.ToolboxMware = service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store)
 		c.RateLimiterPool = config.Cache

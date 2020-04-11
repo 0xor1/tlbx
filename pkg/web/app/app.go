@@ -15,7 +15,6 @@ import (
 	"time"
 
 	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/crypt"
 	"github.com/0xor1/wtf/pkg/iredis"
 	"github.com/0xor1/wtf/pkg/json"
 	"github.com/0xor1/wtf/pkg/log"
@@ -30,56 +29,57 @@ const (
 	MB int64 = 1000000
 	GB int64 = 1000000000
 
-	apiPath  = "/api"
-	docsPath = apiPath + "/docs"
-	mdoPath  = apiPath + "/mdo"
+	ApiPathPrefix = "/api"
+	docsPath      = ApiPathPrefix + "/docs"
+	mdoPath       = ApiPathPrefix + "/mdo"
 )
 
 type Config struct {
-	Log                  log.Log
-	Version              string
-	StaticDir            string
-	Session              SessionConfig
+	Log       log.Log
+	Version   string
+	StaticDir string
+	// session
+	SessionAuthKey64s [][]byte
+	SessionEncrKey32s [][]byte
+	SessionName       string
+	SessionPath       string
+	SessionDomain     string
+	SessionMaxAge     int
+	SessionSecure     bool
+	SessionHttpOnly   bool
+	SessionSameSite   http.SameSite
+	// ratelimit
 	RateLimitPerMinute   int
 	RateLimitExitOnError bool
 	RateLimiterPool      iredis.Pool
-	MDoMax               int
-	MDoMaxBodyBytes      int64
-	ToolboxMware         func(Toolbox)
-	Name                 string
-	Description          string
-	Endpoints            []*Endpoint
-	Serve                func(http.HandlerFunc)
-}
-
-type SessionConfig struct {
-	AuthKey64s [][]byte
-	EncrKey32s [][]byte
-	Name       string
-	Path       string
-	Domain     string
-	MaxAge     int
-	Secure     bool
-	HttpOnly   bool
-	SameSite   http.SameSite
+	// mdo
+	MDoMax          int
+	MDoMaxBodyBytes int64
+	// tlbx
+	ToolboxMware func(Toolbox)
+	// docs
+	Name        string
+	Description string
+	Endpoints   []*Endpoint
+	Serve       func(http.HandlerFunc)
 }
 
 func Run(configs ...func(*Config)) {
 	c := config(configs...)
 	// init session store
-	sessionAuthEncrKeyPairs := make([][]byte, 0, len(c.Session.AuthKey64s)*2)
-	for i := range c.Session.AuthKey64s {
-		PanicIf(len(c.Session.AuthKey64s[i]) != 64, "authKey64s length is not 64")
-		PanicIf(len(c.Session.EncrKey32s[i]) != 32, "encrKey32s length is not 32")
-		sessionAuthEncrKeyPairs = append(sessionAuthEncrKeyPairs, c.Session.AuthKey64s[i], c.Session.EncrKey32s[i])
+	sessionAuthEncrKeyPairs := make([][]byte, 0, len(c.SessionAuthKey64s)*2)
+	for i := range c.SessionAuthKey64s {
+		PanicIf(len(c.SessionAuthKey64s[i]) != 64, "authKey64s length is not 64")
+		PanicIf(len(c.SessionEncrKey32s[i]) != 32, "encrKey32s length is not 32")
+		sessionAuthEncrKeyPairs = append(sessionAuthEncrKeyPairs, c.SessionAuthKey64s[i], c.SessionEncrKey32s[i])
 	}
 	sessionStore := sessions.NewCookieStore(sessionAuthEncrKeyPairs...)
-	sessionStore.Options.Path = c.Session.Path
-	sessionStore.Options.Domain = c.Session.Domain
-	sessionStore.Options.MaxAge = c.Session.MaxAge
-	sessionStore.Options.Secure = c.Session.Secure
-	sessionStore.Options.HttpOnly = c.Session.HttpOnly
-	sessionStore.Options.SameSite = c.Session.SameSite
+	sessionStore.Options.Path = c.SessionPath
+	sessionStore.Options.Domain = c.SessionDomain
+	sessionStore.Options.MaxAge = c.SessionMaxAge
+	sessionStore.Options.Secure = c.SessionSecure
+	sessionStore.Options.HttpOnly = c.SessionHttpOnly
+	sessionStore.Options.SameSite = c.SessionSameSite
 	// register types for sessionCookie
 	gob.Register(NewIDGen().MustNew())
 	gob.Register(time.Time{})
@@ -105,7 +105,7 @@ func Run(configs ...func(*Config)) {
 			"endpoint: %q, missing GetExampleArgs", ep.Path)
 		PanicIf(ep.GetExampleResponse == nil,
 			"endpoint: %q, missing GetExampleResponse", ep.Path)
-		ep.Path = apiPath + ep.Path
+		ep.Path = ApiPathPrefix + ep.Path
 		path := strings.ToLower(ep.Path)
 		_, exists := router[path]
 		PanicIf(exists, "duplicate endpoint path: %q", path)
@@ -177,7 +177,7 @@ func Run(configs ...func(*Config)) {
 		method := tlbx.req.Method
 		tlbx.ReturnMsgIf(method != http.MethodGet && method != http.MethodPut, http.StatusMethodNotAllowed, "only GET and PUT methods are accepted")
 		// session
-		gses, err := sessionStore.Get(tlbx.req, c.Session.Name)
+		gses, err := sessionStore.Get(tlbx.req, c.SessionName)
 		PanicOn(err)
 		tlbx.session = &session{
 			r:       tlbx.req,
@@ -200,7 +200,7 @@ func Run(configs ...func(*Config)) {
 		rateLimit(c, tlbx)
 		lPath := strings.ToLower(tlbx.req.URL.Path)
 		// serve static file
-		if tlbx.req.Method == http.MethodGet && !strings.HasPrefix(lPath, apiPath+"/") {
+		if tlbx.req.Method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefix+"/") {
 			fileServer.ServeHTTP(tlbx.resp, tlbx.req)
 			return
 		}
@@ -339,20 +339,18 @@ func Run(configs ...func(*Config)) {
 func config(configs ...func(*Config)) *Config {
 	l := log.New()
 	c := &Config{
-		Log:       l,
-		Version:   "dev",
-		StaticDir: ".",
-		Session: SessionConfig{
-			AuthKey64s: [][]byte{crypt.Bytes(64)},
-			EncrKey32s: [][]byte{crypt.Bytes(32)},
-			Name:       "s",
-			Path:       "",
-			Domain:     "",
-			MaxAge:     0,
-			Secure:     true,
-			HttpOnly:   true,
-			SameSite:   http.SameSiteDefaultMode,
-		},
+		Log:                  l,
+		Version:              "dev",
+		StaticDir:            ".",
+		SessionAuthKey64s:    [][]byte{},
+		SessionEncrKey32s:    [][]byte{},
+		SessionName:          "s",
+		SessionPath:          "/",
+		SessionDomain:        "",
+		SessionMaxAge:        0,
+		SessionSecure:        false,
+		SessionHttpOnly:      true,
+		SessionSameSite:      http.SameSiteDefaultMode,
 		RateLimitPerMinute:   120,
 		RateLimitExitOnError: false,
 		RateLimiterPool:      nil,
@@ -883,7 +881,7 @@ func NewClient(baseHref string) *Client {
 }
 
 func Call(c *Client, path string, args interface{}, res interface{}) error {
-	url := c.baseHref + apiPath + path
+	url := c.baseHref + ApiPathPrefix + path
 	method := http.MethodPut
 	var req *http.Request
 	var err error

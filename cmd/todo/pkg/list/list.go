@@ -80,7 +80,7 @@ type Get struct {
 
 type GetRes struct {
 	Set  []*List `json:"set"`
-	More bool    `json:"bool"`
+	More bool    `json:"more"`
 }
 
 func (_ *Get) Path() string {
