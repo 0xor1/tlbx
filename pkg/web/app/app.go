@@ -156,11 +156,13 @@ func Run(configs ...func(*Config)) {
 				Queries: tlbx.queryStats,
 			})
 		}()
-		// recover from errors
+		// recover from errors / redirects
 		defer func() {
 			if e := ToError(recover()); e != nil {
 				if err, ok := e.Value().(*ErrMsg); ok {
 					writeJson(tlbx.resp, err.Status, err.Msg)
+				} else if redirect, ok := e.Value().(*redirect); ok {
+					http.Redirect(tlbx.resp, tlbx.req, redirect.url, redirect.status)
 				} else {
 					tlbx.log.ErrorOn(e)
 					writeJson(tlbx.resp, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -453,6 +455,7 @@ type Toolbox interface {
 	NewID() ID
 	Log() log.Log
 	LogQueryStats(*QueryStats)
+	Redirect(status int, url string)
 	ReturnMsgIf(condition bool, status int, format string, args ...interface{})
 	// add any extra arbitrary stuff with these
 	Get(key interface{}) interface{}
@@ -501,6 +504,13 @@ func (t *toolbox) LogQueryStats(qs *QueryStats) {
 	t.queryStats = append(t.queryStats, qs)
 }
 
+func (t *toolbox) Redirect(status int, url string) {
+	PanicOn(&redirect{
+		status: status,
+		url:    url,
+	})
+}
+
 func (t *toolbox) ReturnMsgIf(condition bool, status int, format string, args ...interface{}) {
 	if format == "" {
 		format = http.StatusText(status)
@@ -523,6 +533,11 @@ func (t *toolbox) Set(key, value interface{}) {
 	t.storeMtx.Lock()
 	defer t.storeMtx.Unlock()
 	t.store[key] = value
+}
+
+type redirect struct {
+	status int    `json:"status"`
+	url    string `json:"url"`
 }
 
 type ErrMsg struct {

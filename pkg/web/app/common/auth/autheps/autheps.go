@@ -113,6 +113,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 				user.ActivatedOn = &now
 				user.ActivateCode = nil
 				updateUser(serv, user)
+				tlbx.Redirect(http.StatusFound, "/")
 				return nil
 			},
 		},
