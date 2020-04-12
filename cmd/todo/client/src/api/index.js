@@ -156,8 +156,8 @@ let newApi = (isMDoApi) => {
           return null
         })
       },
-      get: (ids, nameStartsWith, createdOnMin, createdOnMax, todoItemCountMin, todoItemCountMax, completedItemCountMin, completedItemCountMax, after, sort, asc, limit) => {
-        return doReq('/list/get', {ids, nameStartsWith, createdOnMin, createdOnMax, todoItemCountMin, todoItemCountMax, completedItemCountMin, completedItemCountMax, after, sort, asc, limit})
+      get: (args) => {
+        return doReq('/list/get', args)
       },
       update: (id, name) => {
         return doReq('/list/update', {id, name: {v: name}})
