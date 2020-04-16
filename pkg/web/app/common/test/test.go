@@ -149,6 +149,8 @@ func NewRig(eps []*app.Endpoint, onDelete func(app.Toolbox, ID)) Rig {
 		c.ToolboxMware = service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store)
 		c.RateLimiterPool = r.cache
 		c.RateLimitPerMinute = 1000000 // when running batch tests 120 rate limit is easily exceeded
+		c.SessionAuthKey64s = baseConfig.SessionAuthKey64s
+		c.SessionEncrKey32s = baseConfig.SessionEncrKey32s
 		c.Endpoints = append(eps, autheps.New(onDelete, baseConfig.FromEmail, baseConfig.BaseHref)...)
 	})
 
