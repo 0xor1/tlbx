@@ -1,5 +1,5 @@
 <template>
-  <div></div>
+  <p>checking session status</p>
 </template>
 
 <script>
@@ -9,10 +9,8 @@
     name: 'init',
     data () {
       api.me.get().then(() => {
-        console.log("active session")
         router.push('/lists')
       }).catch(() => {
-        console.log("missing session")
         router.push('/login')
       })
       return {}

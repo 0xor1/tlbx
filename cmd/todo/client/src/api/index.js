@@ -178,8 +178,8 @@ let newApi = (isMDoApi) => {
           return null
         })
       },
-      get: (list, ids, nameStartsWith, createdOnMin, createdOnMax, completed, completedOnMin, completedOnMax, after, sort, asc, limit) => {
-        return doReq('/item/get', {list, ids, nameStartsWith, createdOnMin, createdOnMax, completed, completedOnMin, completedOnMax, after, sort, asc, limit})
+      get: (args) => {
+        return doReq('/item/get', args)
       },
       update: (list, id, name, complete) => {
         let args = {

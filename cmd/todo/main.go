@@ -26,7 +26,7 @@ func main() {
 		c.Log = config.Log
 		c.ToolboxMware = service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store)
 		c.RateLimiterPool = config.Cache
-		c.Endpoints = autheps.New(nil, "test@test.localhost", "http://localhost:8080")
+		c.Endpoints = autheps.New(nil, config.FromEmail, config.BaseHref)
 		c.Endpoints = append(c.Endpoints, listeps.Eps...)
 		c.Endpoints = append(c.Endpoints, itemeps.Eps...)
 	})

@@ -14,6 +14,8 @@ import (
 
 type Config struct {
 	IsLocal           bool
+	FromEmail         string
+	BaseHref          string
 	SessionAuthKey64s [][]byte
 	SessionEncrKey32s [][]byte
 	Log               log.Log
@@ -29,6 +31,8 @@ func Get(file ...string) *Config {
 	res := &Config{}
 	c := config.New(file...)
 	c.SetDefault("isLocal", true)
+	c.SetDefault("fromEmail", "test@test.localhost")
+	c.SetDefault("baseHref", "http://localhost:8081")
 	c.SetDefault("log.type", "local")
 	c.SetDefault("email.type", "local")
 	c.SetDefault("store.type", "local")
@@ -74,6 +78,9 @@ func Get(file ...string) *Config {
 			PanicIf(true, "unsupported store type %s", c.GetString("store.type"))
 		}
 	}
+
+	res.FromEmail = c.GetString("fromEmail")
+	res.BaseHref = c.GetString("baseHref")
 
 	authKey64s := c.GetStringSlice("sessionAuthKey64s")
 	encrKey32s := c.GetStringSlice("sessionEncrKey32s")
