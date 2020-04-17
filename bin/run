@@ -1,4 +1,5 @@
 #!/bin/bash
-gnome-terminal -- docker-compose -f cmd/$1/docker-compose.yml up
-gnome-terminal -- go run cmd/$1/main.go ${@:2}
-gnome-terminal -- /bin/bash -c "npm --prefix cmd/$1/client i; npm --prefix cmd/$1/client run serve; exec bash"
+tmux \
+new-session -swtf-$1 "go run cmd/$1/main.go ${@:2}" \; \
+split-window -v "/bin/bash -c \"npm --prefix cmd/$1/client i; npm --prefix cmd/$1/client run serve; exec bash\"" \; \
+split-window -h "docker-compose -f cmd/$1/docker-compose.yml up" \; \
