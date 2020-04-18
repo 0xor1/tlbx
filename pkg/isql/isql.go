@@ -82,7 +82,11 @@ type DBCore interface {
 
 type ReplicaSet interface {
 	Primary() DB
+	Slaves() []DB
 	RandSlave() DB
+	SetConnMaxLifetime(d time.Duration)
+	SetMaxIdleConns(n int)
+	SetMaxOpenConns(n int)
 }
 
 func NewRow(row *sql.Row) Row {
@@ -281,11 +285,35 @@ func (r *replicaSet) Primary() DB {
 	return r.primary
 }
 
+func (r *replicaSet) Slaves() []DB {
+	return r.slaves
+}
+
 func (r *replicaSet) RandSlave() DB {
 	if len(r.slaves) > 0 {
 		return r.slaves[rand.Intn(len(r.slaves))]
 	} else {
 		return r.primary
+	}
+}
+func (r *replicaSet) SetConnMaxLifetime(d time.Duration) {
+	r.primary.SetConnMaxLifetime(d)
+	for _, slave := range r.slaves {
+		slave.SetConnMaxLifetime(d)
+	}
+}
+
+func (r *replicaSet) SetMaxIdleConns(n int) {
+	r.primary.SetMaxIdleConns(n)
+	for _, slave := range r.slaves {
+		slave.SetMaxIdleConns(n)
+	}
+}
+
+func (r *replicaSet) SetMaxOpenConns(n int) {
+	r.primary.SetMaxOpenConns(n)
+	for _, slave := range r.slaves {
+		slave.SetMaxOpenConns(n)
 	}
 }
 

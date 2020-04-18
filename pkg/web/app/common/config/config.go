@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/base64"
+	"time"
 
 	"github.com/0xor1/wtf/pkg/config"
 	. "github.com/0xor1/wtf/pkg/core"
@@ -53,6 +54,9 @@ func Get(file ...string) *Config {
 	c.SetDefault("pwd.slaves", []string{})
 	c.SetDefault("data.primary", "data:C0-Mm-0n-Da-Ta@tcp(localhost:3306)/data?parseTime=true&loc=UTC&multiStatements=true")
 	c.SetDefault("data.slaves", []string{})
+	c.SetDefault("sql.connMaxLifetime", 5*time.Second)
+	c.SetDefault("sql.maxIdleConns", 100)
+	c.SetDefault("sql.maxOpenConns", 100)
 
 	if c.GetBool("isLocal") {
 		res.IsLocal = true
@@ -97,13 +101,28 @@ func Get(file ...string) *Config {
 
 	res.Cache = iredis.CreatePool(c.GetString("cache"))
 
+	sqlMaxLifetime := c.GetDuration("sql.connMaxLifetime")
+	sqlMaxIdleConns := c.GetInt("sql.maxIdleConns")
+	sqlMaxOpenConns := c.GetInt("sql.maxOpenConns")
+
 	var err error
 	res.User, err = isql.NewReplicaSet(c.GetString("user.primary"), c.GetStringSlice("user.slaves")...)
 	PanicOn(err)
+	res.User.SetConnMaxLifetime(sqlMaxLifetime)
+	res.User.SetMaxIdleConns(sqlMaxIdleConns)
+	res.User.SetMaxOpenConns(sqlMaxOpenConns)
+
 	res.Pwd, err = isql.NewReplicaSet(c.GetString("pwd.primary"), c.GetStringSlice("pwd.slaves")...)
 	PanicOn(err)
+	res.Pwd.SetConnMaxLifetime(sqlMaxLifetime)
+	res.Pwd.SetMaxIdleConns(sqlMaxIdleConns)
+	res.Pwd.SetMaxOpenConns(sqlMaxOpenConns)
+
 	res.Data, err = isql.NewReplicaSet(c.GetString("data.primary"), c.GetStringSlice("data.slaves")...)
 	PanicOn(err)
+	res.Data.SetConnMaxLifetime(sqlMaxLifetime)
+	res.Data.SetMaxIdleConns(sqlMaxIdleConns)
+	res.Data.SetMaxOpenConns(sqlMaxOpenConns)
 
 	return res
 }
