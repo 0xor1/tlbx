@@ -1,0 +1,19 @@
+version: '3.7'
+services:
+
+  wtf-sql-pandemic:
+    container_name: wtf-sql-pandemic
+    build:
+      context: ../../.
+      dockerfile: cmd/pandemic/sql.dockerfile
+    image: wtf-sql-pandemic
+    environment:
+      MYSQL_ROOT_PASSWORD: dev
+    ports:
+    - "3306:3306"
+
+  wtf-redis-pandemic:
+    container_name: wtf-redis-pandemic
+    image: redis:5.0.8-alpine
+    ports:
+    - "6379:6379"
