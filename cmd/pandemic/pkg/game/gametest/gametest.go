@@ -12,7 +12,7 @@ import (
 
 func Everything(t *testing.T) {
 	a := assert.New(t)
-	r := test.NewRig(gameeps.Eps, gameeps.OnDelete)
+	r := test.NewRig(gameeps.Eps, nil)
 	defer r.CleanUp()
 
 	newGame := (&game.Create{

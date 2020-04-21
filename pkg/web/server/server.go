@@ -11,6 +11,7 @@ import (
 
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/log"
+	"github.com/0xor1/wtf/pkg/web/server/autocertcache"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -85,7 +86,7 @@ func config(configs ...func(c *Config)) *Config {
 		CertReadTimeout:       50 * time.Millisecond,
 		CertReadHeaderTimeout: 50 * time.Millisecond,
 		CertWriteTimeout:      50 * time.Millisecond,
-		CertCache:             autocert.DirCache("acme_certs"),
+		CertCache:             autocertcache.Dir("acme_certs"),
 		Handler: func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotImplemented)
 			w.Write([]byte(http.StatusText(http.StatusNotImplemented)))

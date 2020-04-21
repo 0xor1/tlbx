@@ -155,9 +155,11 @@ var (
 					serv := service.Get(tlbx)
 					tx := serv.Data().Begin()
 					defer tx.Rollback()
-					_, err := tx.Exec(`UPDATE items SET name=?, completedOn=? WHERE user=? AND list=? AND id=?`, item.Name, ptr.TimeOr(item.CompletedOn, time.Time{}), me, args.List, item.ID)
+					sqlRes, err := tx.Exec(`UPDATE items SET name=?, completedOn=? WHERE user=? AND list=? AND id=?`, item.Name, ptr.TimeOr(item.CompletedOn, time.Time{}), me, args.List, item.ID)
 					PanicOn(err)
-					if todoItemCountOp != "" {
+					rowsEffected, err := sqlRes.RowsAffected()
+					PanicOn(err)
+					if rowsEffected == 1 && todoItemCountOp != "" {
 						_, err := tx.Exec(Sprintf(`UPDATE lists SET todoItemCount = todoItemCount %s 1, completedItemCount = completedItemCount %s 1 WHERE user=? AND id=?`, todoItemCountOp, completedItemCountOp), me, args.List)
 						PanicOn(err)
 					}
