@@ -23,7 +23,7 @@
           {{ item.name }}
         </td>
         <td v-else>
-          <input :ref='"edit_" + item.id' @keydown.esc="toggleEditTools(false, item)" @keydown.enter="update(item)" @click.stop v-model="item.newName" placeholder="new name">
+          <input :ref="'edit_' + item.id" @keydown.esc="toggleEditTools(item)" @keydown.enter="update(item)" @click.stop v-model="item.newName" placeholder="new name">
           <button @click.stop="update(item)">update</button>
         </td>
         <td class="count">
@@ -32,7 +32,7 @@
         <td class="action" @click.stop="complete(item, index)">
           <img src="@/assets/tick.svg">
         </td>
-        <td class="action" @click.stop="toggleEditTools(true, item)">
+        <td class="action" @click.stop="toggleEditTools(item)">
           <img src="@/assets/edit.svg">
         </td>
         <td class="action" @click.stop="trash(item, index)">
@@ -62,6 +62,7 @@
         createName: "",
         list: {},
         items: [],
+        currentEditItem: null,
         err: null,
         more: false
       }
@@ -80,20 +81,28 @@
           this.items.splice(index, 1)
         })
       },
-      toggleEditTools: function(show, item){
-        item.showEditTools = show
+      toggleEditTools: function(item){
+        item.showEditTools = !item.showEditTools
         item.newName = item.name
-        if (show) {
+        if (this.currentEditItem !== null && this.currentEditItem !== item) {
+          this.currentEditItem.showEditTools = false
+        }
+        this.$forceUpdate()
+        if (item.showEditTools) {
+          this.currentEditItem = item
           this.$nextTick(()=>{
-            console.log(this.$refs, item.id)
             this.$refs["edit_"+item.id][0].focus()
           })
         }
       },
       update: function(item){
         item.showEditTools = false
+        this.currentEditItem = null
+        this.$forceUpdate()
         let oldName = item.name
         let newName = item.newName
+        this.currentEditItem = null
+        this.$forceUpdate()
         if (oldName === newName) {
           return
         }

@@ -25,7 +25,7 @@
           {{ list.name }}
         </td>
         <td v-else>
-          <input :ref='"edit_" + list.id' @keydown.esc="toggleEditTools(false, list)" @keydown.enter="update(list)" @click.stop v-model="list.newName" placeholder="new name">
+          <input :ref='"edit_" + list.id' @keydown.esc="toggleEditTools(list)" @keydown.enter="update(list)" @click.stop v-model="list.newName" placeholder="new name">
           <button @click.stop="update(list)">update</button>
         </td>
         <td class="count">
@@ -34,7 +34,7 @@
         <td class="count">
           {{ list.completedItemCount }}
         </td>
-        <td class="action" @click.stop="toggleEditTools(true, list)">
+        <td class="action" @click.stop="toggleEditTools(list)">
           <img src="@/assets/edit.svg">
         </td>
         <td class="action" @click.stop="trash(list, index)">
@@ -63,6 +63,7 @@
         loading: true,
         createName: "",
         lists: [],
+        currentEditItem: null,
         err: null,
         more: false
       }
@@ -79,10 +80,15 @@
           this.lists.splice(index, 1)
         })
       },
-      toggleEditTools: function(show, list){
-        list.showEditTools = show
+      toggleEditTools: function(list){
+        list.showEditTools = !list.showEditTools
         list.newName = list.name
-        if (show) {
+        if (this.currentEditItem !== null && this.currentEditItem !== list) {
+          this.currentEditItem.showEditTools = false
+        }
+        this.$forceUpdate()
+        if (list.showEditTools) {
+          this.currentEditItem = list
           this.$nextTick(()=>{
             this.$refs["edit_"+list.id][0].focus()
           })
@@ -92,6 +98,8 @@
         list.showEditTools = false
         let oldName = list.name
         let newName = list.newName
+        this.currentEditItem = null
+        this.$forceUpdate()
         if (oldName === newName) {
           return
         }
