@@ -10,7 +10,6 @@ CREATE TABLE lists (
     name VARCHAR(250) NOT NULL,
     todoItemCount INT UNSIGNED NOT NULL,
     completedItemCount INT UNSIGNED NOT NULL,
-    firstItem BINARY(16) NULL,
     PRIMARY KEY createdOn (user, createdOn),
     UNIQUE INDEX name (user, name, createdOn),
     UNIQUE INDEX id (user, id),
@@ -26,7 +25,6 @@ CREATE TABLE items (
     createdOn DATETIME(3) NOT NULL,
     name VARCHAR(250) NOT NULL,
     completedOn DATETIME(3) NOT NULL, -- not null, use go zero time for null
-    nextItem BINARY(16) NULL,
     PRIMARY KEY createdOn (user, list, completedOn, createdOn),
     UNIQUE INDEX name (user, list, completedOn, name, createdOn),
     UNIQUE INDEX id (user, list, id)
