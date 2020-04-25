@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0xor1/wtf/cmd/todo/pkg/config"
 	"github.com/0xor1/wtf/cmd/todo/pkg/list"
 	"github.com/0xor1/wtf/cmd/todo/pkg/list/listeps"
 	. "github.com/0xor1/wtf/pkg/core"
@@ -16,7 +17,7 @@ import (
 
 func Everything(t *testing.T) {
 	a := assert.New(t)
-	r := test.NewRig(listeps.Eps, listeps.OnDelete)
+	r := test.NewRig(config.Get(), listeps.Eps, listeps.OnDelete)
 	defer r.CleanUp()
 
 	name1 := "Test list 1"

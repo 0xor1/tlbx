@@ -28,8 +28,7 @@ type Config struct {
 	Data              isql.ReplicaSet
 }
 
-func Get(file ...string) *Config {
-	res := &Config{}
+func GetBase(file ...string) *config.Config {
 	c := config.New(file...)
 	c.SetDefault("isLocal", true)
 	c.SetDefault("fromEmail", "test@test.localhost")
@@ -57,6 +56,12 @@ func Get(file ...string) *Config {
 	c.SetDefault("sql.connMaxLifetime", 5*time.Second)
 	c.SetDefault("sql.maxIdleConns", 100)
 	c.SetDefault("sql.maxOpenConns", 100)
+
+	return c
+}
+
+func GetProcessed(c *config.Config) *Config {
+	res := &Config{}
 
 	if c.GetBool("isLocal") {
 		res.IsLocal = true

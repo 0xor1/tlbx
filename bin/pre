@@ -1,5 +1,12 @@
 #!/bin/bash
 go fmt ./... && \
+docker ps --format '{{.Names}}' | grep "^wtf-" | awk '{print $1}' | xargs -I {} docker stop {} && \
+docker-compose -f common/docker/docker-compose.yml up -d && \
+# arbitrary wait for docker-compose sql container to startup, 
+# init and start accepting connections, find a better way to
+# do this.
+sleep 30s && \
 go test -p=1 -coverprofile=coverage.out ./... && \
 go tool cover -html=coverage.out && \
-rm coverage.out
+rm coverage.out && \
+docker-compose -f common/docker/docker-compose.yml down

@@ -1,6 +1,6 @@
-DROP DATABASE IF EXISTS data;
-CREATE DATABASE data;
-USE data;
+DROP DATABASE IF EXISTS data_pandemic;
+CREATE DATABASE data_pandemic;
+USE data_pandemic;
 
 DROP TABLE IF EXISTS games;
 CREATE TABLE games (
@@ -18,10 +18,10 @@ CREATE TABLE players (
     PRIMARY KEY id (id)
 );
 
-DROP USER IF EXISTS 'data'@'%';
-CREATE USER 'data'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
-GRANT SELECT ON data.* TO 'data'@'%';
-GRANT INSERT ON data.* TO 'data'@'%';
-GRANT UPDATE ON data.* TO 'data'@'%';
-GRANT DELETE ON data.* TO 'data'@'%';
-GRANT EXECUTE ON data.* TO 'data'@'%';
+DROP USER IF EXISTS 'data_pandemic'@'%';
+CREATE USER 'data_pandemic'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
+GRANT SELECT ON data_pandemic.* TO 'data_pandemic'@'%';
+GRANT INSERT ON data_pandemic.* TO 'data_pandemic'@'%';
+GRANT UPDATE ON data_pandemic.* TO 'data_pandemic'@'%';
+GRANT DELETE ON data_pandemic.* TO 'data_pandemic'@'%';
+GRANT EXECUTE ON data_pandemic.* TO 'data_pandemic'@'%';

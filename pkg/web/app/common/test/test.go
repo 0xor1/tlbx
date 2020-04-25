@@ -133,25 +133,24 @@ func NewClient() *app.Client {
 	return app.NewClient(baseHref)
 }
 
-func NewRig(eps []*app.Endpoint, onDelete func(app.Toolbox, ID)) Rig {
-	baseConfig := config.Get()
+func NewRig(config *config.Config, eps []*app.Endpoint, onDelete func(app.Toolbox, ID)) Rig {
 	r := &rig{
-		log:   baseConfig.Log,
-		cache: baseConfig.Cache,
-		email: baseConfig.Email,
-		store: baseConfig.Store.(store.LocalClient),
-		user:  baseConfig.User,
-		pwd:   baseConfig.Pwd,
-		data:  baseConfig.Data,
+		log:   config.Log,
+		cache: config.Cache,
+		email: config.Email,
+		store: config.Store.(store.LocalClient),
+		user:  config.User,
+		pwd:   config.Pwd,
+		data:  config.Data,
 	}
 
 	go app.Run(func(c *app.Config) {
 		c.ToolboxMware = service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store)
 		c.RateLimiterPool = r.cache
 		c.RateLimitPerMinute = 1000000 // when running batch tests 120 rate limit is easily exceeded
-		c.SessionAuthKey64s = baseConfig.SessionAuthKey64s
-		c.SessionEncrKey32s = baseConfig.SessionEncrKey32s
-		c.Endpoints = append(eps, autheps.New(onDelete, baseConfig.FromEmail, baseConfig.BaseHref)...)
+		c.SessionAuthKey64s = config.SessionAuthKey64s
+		c.SessionEncrKey32s = config.SessionEncrKey32s
+		c.Endpoints = append(eps, autheps.New(onDelete, config.FromEmail, config.BaseHref)...)
 	})
 
 	time.Sleep(20 * time.Millisecond)

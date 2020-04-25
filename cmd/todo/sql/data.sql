@@ -1,6 +1,6 @@
-DROP DATABASE IF EXISTS data;
-CREATE DATABASE data;
-USE data;
+DROP DATABASE IF EXISTS data_todo;
+CREATE DATABASE data_todo;
+USE data_todo;
 
 DROP TABLE IF EXISTS lists;
 CREATE TABLE lists (
@@ -30,10 +30,10 @@ CREATE TABLE items (
     UNIQUE INDEX id (user, list, id)
 );
 
-DROP USER IF EXISTS 'data'@'%';
-CREATE USER 'data'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
-GRANT SELECT ON data.* TO 'data'@'%';
-GRANT INSERT ON data.* TO 'data'@'%';
-GRANT UPDATE ON data.* TO 'data'@'%';
-GRANT DELETE ON data.* TO 'data'@'%';
-GRANT EXECUTE ON data.* TO 'data'@'%';
+DROP USER IF EXISTS 'data_todo'@'%';
+CREATE USER 'data_todo'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
+GRANT SELECT ON data_todo.* TO 'data_todo'@'%';
+GRANT INSERT ON data_todo.* TO 'data_todo'@'%';
+GRANT UPDATE ON data_todo.* TO 'data_todo'@'%';
+GRANT DELETE ON data_todo.* TO 'data_todo'@'%';
+GRANT EXECUTE ON data_todo.* TO 'data_todo'@'%';

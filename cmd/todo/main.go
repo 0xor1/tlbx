@@ -1,12 +1,12 @@
 package main
 
 import (
+	"github.com/0xor1/wtf/cmd/todo/pkg/config"
 	"github.com/0xor1/wtf/cmd/todo/pkg/item/itemeps"
 	"github.com/0xor1/wtf/cmd/todo/pkg/list/listeps"
 	"github.com/0xor1/wtf/pkg/store"
 	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/auth/autheps"
-	"github.com/0xor1/wtf/pkg/web/app/common/config"
 	"github.com/0xor1/wtf/pkg/web/app/common/service"
 )
 

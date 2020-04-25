@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/0xor1/wtf/cmd/pandemic/pkg/config"
 	"github.com/0xor1/wtf/cmd/pandemic/pkg/game/gameeps"
 	"github.com/0xor1/wtf/pkg/store"
 	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/common/config"
 	"github.com/0xor1/wtf/pkg/web/app/common/service"
 )
 
