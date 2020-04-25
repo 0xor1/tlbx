@@ -19,4 +19,5 @@ func Everything(t *testing.T) {
 		Name: "new game",
 	}).MustDo(r.Ali().Client())
 	a.NotNil(newGame)
+	NewIDGen()
 }
