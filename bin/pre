@@ -2,9 +2,10 @@
 go fmt ./... && \
 docker ps --format '{{.Names}}' | grep "^wtf-" | awk '{print $1}' | xargs -I {} docker stop {} && \
 docker-compose -f common/docker/docker-compose.yml up -d && \
-# arbitrary wait for docker-compose sql container to startup, 
-# init and start accepting connections, find a better way to
-# do this.
+echo "waiting 30 seconds for mariadb" && \
+echo "to start accepting connections :(" && \
+echo "figure out a way of detecting when" && \
+echo "mariadb is accepting connections :)" && \
 sleep 30s && \
 go test -p=1 -coverprofile=coverage.out ./... && \
 go tool cover -html=coverage.out && \

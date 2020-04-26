@@ -1,7 +1,8 @@
 <template>
   <div class="root">
     <div v-if="!loading" class="header">
-      <a @click.stop.prevent="logout" href="">logout</a>
+      <p><a @click.stop.prevent="logout" href="">logout</a></p>
+      <p><a @click.stop.prevent="gotoLists" href="">my lists</a></p>
       <h1>{{list.name}}</h1>
       <p>todo:{{list.todoItemCount}} complete:{{list.completedItemCount}}</p>
       <input @keydown.enter="create" v-model="createName" placeholder="new item">
@@ -157,6 +158,9 @@
         api.me.logout().then(()=>{
           router.push('/login')
         })
+      },
+      gotoLists: function(){
+        router.push('/lists')
       }
     }
   }
