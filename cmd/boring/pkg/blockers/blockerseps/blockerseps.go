@@ -1,7 +1,7 @@
-package gameeps
+package blockerseps
 
 import (
-	"github.com/0xor1/wtf/cmd/pandemic/pkg/game"
+	"github.com/0xor1/wtf/cmd/boring/pkg/blockers"
 	"github.com/0xor1/wtf/pkg/web/app"
 )
 
@@ -9,15 +9,15 @@ var (
 	Eps = []*app.Endpoint{
 		{
 			Description:  "Create a new game",
-			Path:         (&game.Create{}).Path(),
+			Path:         (&blockers.Create{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &game.Create{}
+				return &blockers.Create{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &game.Create{
+				return &blockers.Create{
 					Name: "My Game",
 				}
 			},
@@ -25,7 +25,7 @@ var (
 				return nil
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
-				args := a.(*game.Create)
+				args := a.(*blockers.Create)
 				return args
 			},
 		},

@@ -1,7 +1,7 @@
 todo
 ====
 
-a simple todo list web application
+a simple todo list web application to act as a demo of the wtf web pkgs and patterns.
 
 ## run
 
