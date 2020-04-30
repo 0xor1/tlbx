@@ -16,7 +16,7 @@ func Everything(t *testing.T) {
 	r := test.NewRig(config.Get(), blockerseps.Eps, nil)
 	defer r.CleanUp()
 
-	newGame := (&blockers.Create{
+	newGame := (&blockers.New{
 		Name: "new game",
 	}).MustDo(r.Ali().Client())
 	a.NotNil(newGame)
