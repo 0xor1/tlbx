@@ -113,7 +113,7 @@ type Game struct {
 	Started       bool              `json:"started"`
 	Players       []ID              `json:"players"`
 	PieceSetsIdxs []map[uint8]uint8 `json:"pieceSetsIdxs"`
-	TurnIdx       int               `json:"turnIdx"`
+	TurnIdx       uint8             `json:"turnIdx"`
 	Board         []uint8           `json:"board"`
 }
 
@@ -174,8 +174,9 @@ func (a *Start) MustDo(c *app.Client) *Game {
 }
 
 type TakeTurn struct {
-	PieceIdx       int             `json:"pieceIdx"`
-	Position       int             `json:"position"`
+	Pass           bool            `json:"pass"`
+	PieceIdx       uint8           `json:"pieceIdx"`
+	Position       uint8           `json:"position"`
 	Transformation *Transformation `json:"transformation"`
 }
 
