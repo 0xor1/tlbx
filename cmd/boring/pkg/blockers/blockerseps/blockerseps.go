@@ -29,21 +29,20 @@ var (
 					Players:       []ID{app.ExampleID(), app.ExampleID()},
 					PieceSetsIdxs: initPieceSetsIdxs(),
 					TurnIdx:       0,
-					Board:         make([]int, 400),
+					Board:         make([]uint8, 400),
 				}
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
-				args := a.(*blockers.New)
-				return args
+			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+				return map[string]string{"yolo": "nolo"}
 			},
 		},
 	}
 )
 
-func initPieceSetsIdxs() []map[uint8]uint8 {
-	pieceSets := make([]map[uint8]uint8, 0, 4)
+func initPieceSetsIdxs() []map[uint8]Bit {
+	pieceSets := make([]map[uint8]Bit, 0, 4)
 	for i := 0; i < 4; i++ {
-		pieceSets = append(pieceSets, map[uint8]uint8{
+		pieceSets = append(pieceSets, map[uint8]Bit{
 			1:  1,
 			2:  1,
 			3:  1,
