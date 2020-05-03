@@ -107,14 +107,14 @@ type Transformation struct {
 }
 
 type Game struct {
-	ID            ID              `json:"id"`
-	CreatedOn     time.Time       `json:"createdOn"`
-	UpdatedOn     time.Time       `json:"updatedOn"`
-	Started       bool            `json:"started"`
-	Players       []ID            `json:"players"`
-	PieceSetsIdxs []map[uint8]Bit `json:"pieceSetsIdxs"`
-	TurnIdx       uint8           `json:"turnIdx"`
-	Board         []uint8         `json:"board"`
+	ID        ID        `json:"id"`
+	CreatedOn time.Time `json:"createdOn"`
+	UpdatedOn time.Time `json:"updatedOn"`
+	Started   bool      `json:"started"`
+	Players   []ID      `json:"players"`
+	PieceSets Bits      `json:"pieceSets"`
+	TurnIdx   uint8     `json:"turnIdx"`
+	Board     Pbits     `json:"board"`
 }
 
 type New struct{}

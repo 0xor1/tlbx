@@ -1,5 +1,6 @@
 #!/bin/bash
 go fmt ./... && \
+docker-compose -f common/docker/docker-compose.yml down && \
 docker ps --format '{{.Names}}' | grep "^wtf-" | awk '{print $1}' | xargs -I {} docker stop {} && \
 docker-compose -f common/docker/docker-compose.yml up -d && \
 echo "waiting 30 seconds for mariadb" && \

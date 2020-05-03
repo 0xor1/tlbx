@@ -22,50 +22,85 @@ var (
 			},
 			GetExampleResponse: func() interface{} {
 				return &blockers.Game{
-					ID:            app.ExampleID(),
-					CreatedOn:     app.ExampleTime(),
-					UpdatedOn:     app.ExampleTime(),
-					Started:       false,
-					Players:       []ID{app.ExampleID(), app.ExampleID()},
-					PieceSetsIdxs: initPieceSetsIdxs(),
-					TurnIdx:       0,
-					Board:         make([]uint8, 400),
+					ID:        app.ExampleID(),
+					CreatedOn: app.ExampleTime(),
+					UpdatedOn: app.ExampleTime(),
+					Started:   false,
+					Players:   []ID{app.ExampleID(), app.ExampleID()},
+					PieceSets: initPieceSets(),
+					TurnIdx:   0,
+					Board:     initBoard(),
 				}
 			},
 			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
-				return map[string]string{"yolo": "nolo"}
+				me := tlbx.Me()
+				//srv := service.Get(tlbx)
+				id := tlbx.NewID()
+				now := NowMilli()
+				game := &blockers.Game{
+					ID:        id,
+					CreatedOn: now,
+					UpdatedOn: now,
+					Started:   false,
+					Players:   []ID{me, me, me, me},
+					PieceSets: initPieceSets(),
+					TurnIdx:   0,
+					Board:     initBoard(),
+				}
+
+				return game
 			},
 		},
 	}
 )
 
-func initPieceSetsIdxs() []map[uint8]Bit {
-	pieceSets := make([]map[uint8]Bit, 0, 4)
-	for i := 0; i < 4; i++ {
-		pieceSets = append(pieceSets, map[uint8]Bit{
-			1:  1,
-			2:  1,
-			3:  1,
-			4:  1,
-			5:  1,
-			6:  1,
-			7:  1,
-			8:  1,
-			9:  1,
-			10: 1,
-			11: 1,
-			12: 1,
-			13: 1,
-			14: 1,
-			15: 1,
-			16: 1,
-			17: 1,
-			18: 1,
-			19: 1,
-			20: 1,
-			21: 1,
-		})
+func initPieceSets() Bits {
+	return Bits{
+		1, 1, 1, 1, // piece 0  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 1  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 2  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 3  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 4  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 5  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 6  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 7  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 8  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 9  -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 10 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 11 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 12 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 13 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 14 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 15 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 16 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 17 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 18 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 19 -> color 0, 1, 2, 3
+		1, 1, 1, 1, // piece 20 -> color 0, 1, 2, 3
 	}
+}
 
-	return pieceSets
+func initBoard() blockers.Pbits {
+	return blockers.Pbits{
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+		4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+	}
 }
