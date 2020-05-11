@@ -1,8 +1,7 @@
 package blockers
 
 import (
-	"time"
-
+	"github.com/0xor1/wtf/cmd/boring/pkg/game"
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/web/app"
 )
@@ -107,14 +106,13 @@ type Transformation struct {
 }
 
 type Game struct {
-	ID        ID        `json:"id"`
-	CreatedOn time.Time `json:"createdOn"`
-	UpdatedOn time.Time `json:"updatedOn"`
-	Started   bool      `json:"started"`
-	Players   []ID      `json:"players"`
-	PieceSets Bits      `json:"pieceSets"`
-	TurnIdx   uint8     `json:"turnIdx"`
-	Board     Pbits     `json:"board"`
+	game.Base
+	PieceSets Bits  `json:"pieceSets"`
+	Board     Pbits `json:"board"`
+}
+
+func (g *Game) GetBase() *game.Base {
+	return &g.Base
 }
 
 type New struct{}
@@ -175,6 +173,26 @@ func (a *Join) MustDo(c *app.Client) *Game {
 	return res
 }
 
+type SetTurnOrder struct {
+	Players []ID `json:"players"`
+}
+
+func (_ *SetTurnOrder) Path() string {
+	return "/blockers/setTurnOrder"
+}
+
+func (a *SetTurnOrder) Do(c *app.Client) (*Game, error) {
+	res := &Game{}
+	err := app.Call(c, a.Path(), nil, &res)
+	return res, err
+}
+
+func (a *SetTurnOrder) MustDo(c *app.Client) *Game {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
 type Start struct{}
 
 func (_ *Start) Path() string {
@@ -183,7 +201,7 @@ func (_ *Start) Path() string {
 
 func (a *Start) Do(c *app.Client) (*Game, error) {
 	res := &Game{}
-	err := app.Call(c, a.Path(), a, &res)
+	err := app.Call(c, a.Path(), nil, &res)
 	return res, err
 }
 

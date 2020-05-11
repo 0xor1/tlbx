@@ -36,11 +36,11 @@ func Test_Bit(t *testing.T) {
 	bs := Bits{0, 1, 1, 0}
 
 	bs.MarshalText()
-	bs.UnmarshalText([]byte(`0110`))
+	bs.UnmarshalText([]byte(`0101`))
 
 	bsBs, err := bs.MarshalText()
 	a.Nil(err)
-	a.Equal(`0110`, string(bsBs))
+	a.Equal(`0101`, string(bsBs))
 
 	a.Nil(bs.UnmarshalText([]byte(`0110`)))
 	_, err = Bits{0, 1, 2, 1, 0}.MarshalText()

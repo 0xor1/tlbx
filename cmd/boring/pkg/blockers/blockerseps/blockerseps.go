@@ -2,6 +2,7 @@ package blockerseps
 
 import (
 	"github.com/0xor1/wtf/cmd/boring/pkg/blockers"
+	"github.com/0xor1/wtf/cmd/boring/pkg/game"
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/web/app"
 )
@@ -36,11 +37,13 @@ var (
 func NewGame(id, me ID) *blockers.Game {
 	now := NowMilli()
 	return &blockers.Game{
-		ID:        id,
-		CreatedOn: now,
-		UpdatedOn: now,
-		Started:   false,
-		Players:   []ID{me},
+		Base: game.Base{
+			ID:        id,
+			UpdatedOn: now,
+			State:     0,
+			Players:   []ID{me},
+			TurnIdx:   0,
+		},
 		PieceSets: Bits{
 			1, 1, 1, 1, // piece 0  -> color 0, 1, 2, 3
 			1, 1, 1, 1, // piece 1  -> color 0, 1, 2, 3
@@ -64,7 +67,6 @@ func NewGame(id, me ID) *blockers.Game {
 			1, 1, 1, 1, // piece 19 -> color 0, 1, 2, 3
 			1, 1, 1, 1, // piece 20 -> color 0, 1, 2, 3
 		},
-		TurnIdx: 0,
 		Board: blockers.Pbits{
 			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
 			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,

@@ -40,13 +40,13 @@ var (
 				args := a.(*item.Create)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				me := tlbx.Me()
-				serv := service.Get(tlbx)
+				srv := service.Get(tlbx)
 				res := &item.Item{
 					ID:        tlbx.NewID(),
 					CreatedOn: NowMilli(),
 					Name:      args.Name,
 				}
-				tx := serv.Data().Begin()
+				tx := srv.Data().Begin()
 				defer tx.Rollback()
 				_, err := tx.Exec(`INSERT INTO items (user, list, id, createdOn, name, completedOn) VALUES (?, ?, ?, ?, ?, ?)`, me, args.List, res.ID, res.CreatedOn, res.Name, time.Time{})
 				PanicOn(err)
@@ -128,7 +128,7 @@ var (
 					IDs:   IDs{args.ID},
 					Limit: ptr.Int(1),
 				})
-				tlbx.ReturnMsgIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
+				tlbx.ExitIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				item := getSetRes.Set[0]
 				changeMade := false
 				todoItemCountOp := ""
@@ -152,8 +152,8 @@ var (
 					changeMade = true
 				}
 				if changeMade {
-					serv := service.Get(tlbx)
-					tx := serv.Data().Begin()
+					srv := service.Get(tlbx)
+					tx := srv.Data().Begin()
 					defer tx.Rollback()
 					sqlRes, err := tx.Exec(`UPDATE items SET name=?, completedOn=? WHERE user=? AND list=? AND id=?`, item.Name, ptr.TimeOr(item.CompletedOn, time.Time{}), me, args.List, item.ID)
 					PanicOn(err)
@@ -194,15 +194,15 @@ var (
 				}
 				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 				me := tlbx.Me()
-				serv := service.Get(tlbx)
+				srv := service.Get(tlbx)
 				queryArgs := make([]interface{}, 0, idsLen+2)
 				queryArgs = append(queryArgs, me, args.List)
 				queryArgs = append(queryArgs, args.IDs.ToIs()...)
-				tx := serv.Data().Begin()
+				tx := srv.Data().Begin()
 				defer tx.Rollback()
-				_, err := serv.Data().Exec(`DELETE FROM items WHERE user=? AND list=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
+				_, err := srv.Data().Exec(`DELETE FROM items WHERE user=? AND list=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
 				PanicOn(err)
-				_, err = serv.Data().Exec(`UPDATE lists SET todoItemCount = (SELECT COUNT(id) FROM items WHERE user=? AND list=? AND completedOn=?), completedItemCount = (SELECT COUNT(id) FROM items WHERE user=? AND list=? AND completedOn<>?) WHERE user=? AND id=?`, me, args.List, time.Time{}, me, args.List, time.Time{}, me, args.List)
+				_, err = srv.Data().Exec(`UPDATE lists SET todoItemCount = (SELECT COUNT(id) FROM items WHERE user=? AND list=? AND completedOn=?), completedItemCount = (SELECT COUNT(id) FROM items WHERE user=? AND list=? AND completedOn<>?) WHERE user=? AND id=?`, me, args.List, time.Time{}, me, args.List, time.Time{}, me, args.List)
 				PanicOn(err)
 				tx.Commit()
 				return nil
@@ -220,14 +220,14 @@ var (
 
 func getSet(tlbx app.Toolbox, args *item.Get) *item.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
-	tlbx.ReturnMsgIf(
+	tlbx.BadReqIf(
 		args.CreatedOnMin != nil &&
 			args.CreatedOnMax != nil &&
 			args.CreatedOnMin.After(*args.CreatedOnMax),
-		http.StatusBadRequest, "createdOnMin must be before createdOnMax")
+		"createdOnMin must be before createdOnMax")
 	limit := sql.Limit(*args.Limit, 100)
 	me := tlbx.Me()
-	serv := service.Get(tlbx)
+	srv := service.Get(tlbx)
 	res := &item.GetRes{
 		Set: make([]*item.Item, 0, limit),
 	}
@@ -282,7 +282,7 @@ func getSet(tlbx app.Toolbox, args *item.Get) *item.GetRes {
 		}
 		query.WriteString(Sprintf(` ORDER BY %s%s %s, id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
 	}
-	serv.Data().Query(func(rows isql.Rows) {
+	srv.Data().Query(func(rows isql.Rows) {
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
 				res.More = true

@@ -9,7 +9,7 @@ import (
 	"github.com/0xor1/wtf/pkg/web/app"
 )
 
-func ReturnNotFoundOrPanic(err error) {
+func ReturnNotFoundOrPanicOn(err error) {
 	if err != nil && err == sql.ErrNoRows {
 		PanicOn(&app.ErrMsg{
 			Status: http.StatusNotFound,

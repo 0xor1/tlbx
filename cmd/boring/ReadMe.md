@@ -1,7 +1,7 @@
 boring
 ========
 
-A web app to play multiplayer board games.
+A web app to turn based multiplayer games.
 
 ## run
 

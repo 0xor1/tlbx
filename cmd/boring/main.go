@@ -15,7 +15,7 @@ func main() {
 	}
 	app.Run(func(c *app.Config) {
 		c.Name = "boring"
-		c.Description = "A web app to play multiplayer board games"
+		c.Description = "a web app to play turn based multiplayer games"
 		if config.IsLocal {
 			c.SessionSecure = false
 		}

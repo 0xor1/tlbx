@@ -41,20 +41,20 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 				return nil
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
-				tlbx.ReturnMsgIf(tlbx.Session().IsAuthed(), http.StatusBadRequest, "already logged in")
+				tlbx.BadReqIf(tlbx.Session().IsAuthed(), "already logged in")
 				args := a.(*auth.Register)
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
 				activateCode := crypt.UrlSafeString(250)
 				id := tlbx.NewID()
-				serv := service.Get(tlbx)
-				_, err := serv.User().Exec("INSERT INTO users (id, email, registeredOn, activateCode) VALUES (?, ?, ?, ?)", id, args.Email, Now(), activateCode)
+				srv := service.Get(tlbx)
+				_, err := srv.User().Exec("INSERT INTO users (id, email, registeredOn, activateCode) VALUES (?, ?, ?, ?)", id, args.Email, Now(), activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
-					tlbx.ReturnMsgIf(ok && mySqlErr.Number == 1062, http.StatusBadRequest, "email already registered")
+					tlbx.BadReqIf(ok && mySqlErr.Number == 1062, "email already registered")
 					PanicOn(err)
 				}
 				setPwd(tlbx, id, args.Pwd, args.ConfirmPwd)
-				sendActivateEmail(serv, args.Email, fromEmail, baseHref, &auth.Activate{Email: args.Email, Code: activateCode})
+				sendActivateEmail(srv, args.Email, fromEmail, baseHref, &auth.Activate{Email: args.Email, Code: activateCode})
 				return nil
 			},
 		},
@@ -77,12 +77,12 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.ResendActivateLink)
-				serv := service.Get(tlbx)
-				user := getUser(serv, &args.Email, nil)
+				srv := service.Get(tlbx)
+				user := getUser(srv, &args.Email, nil)
 				if user == nil || user.ActivateCode == nil {
 					return nil
 				}
-				sendActivateEmail(serv, args.Email, fromEmail, baseHref, &auth.Activate{Email: args.Email, Code: *user.ActivateCode})
+				sendActivateEmail(srv, args.Email, fromEmail, baseHref, &auth.Activate{Email: args.Email, Code: *user.ActivateCode})
 				return nil
 			},
 		},
@@ -106,13 +106,13 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.Activate)
-				serv := service.Get(tlbx)
-				user := getUser(serv, &args.Email, nil)
-				tlbx.ReturnMsgIf(*user.ActivateCode != args.Code, http.StatusBadRequest, "")
+				srv := service.Get(tlbx)
+				user := getUser(srv, &args.Email, nil)
+				tlbx.BadReqIf(*user.ActivateCode != args.Code, "")
 				now := Now()
 				user.ActivatedOn = &now
 				user.ActivateCode = nil
-				updateUser(serv, user)
+				updateUser(srv, user)
 				tlbx.Redirect(http.StatusFound, "/")
 				return nil
 			},
@@ -137,16 +137,16 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.ChangeEmail)
 				validate.Str("email", args.NewEmail, tlbx, 0, emailMaxLen, emailRegex)
-				serv := service.Get(tlbx)
+				srv := service.Get(tlbx)
 				me := tlbx.Me()
 				changeEmailCode := crypt.UrlSafeString(250)
-				existingUser := getUser(serv, &args.NewEmail, nil)
-				tlbx.ReturnMsgIf(existingUser != nil, http.StatusBadRequest, "email already registered")
-				user := getUser(serv, nil, &me)
+				existingUser := getUser(srv, &args.NewEmail, nil)
+				tlbx.BadReqIf(existingUser != nil, "email already registered")
+				user := getUser(srv, nil, &me)
 				user.NewEmail = &args.NewEmail
 				user.ChangeEmailCode = &changeEmailCode
-				updateUser(serv, user)
-				sendConfirmChangeEmailEmail(serv, args.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: changeEmailCode})
+				updateUser(srv, user)
+				sendConfirmChangeEmailEmail(srv, args.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: changeEmailCode})
 				return nil
 			},
 		},
@@ -166,10 +166,10 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 				return nil
 			},
 			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
-				serv := service.Get(tlbx)
+				srv := service.Get(tlbx)
 				me := tlbx.Me()
-				user := getUser(serv, nil, &me)
-				sendConfirmChangeEmailEmail(serv, *user.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: *user.ChangeEmailCode})
+				user := getUser(srv, nil, &me)
+				sendConfirmChangeEmailEmail(srv, *user.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: *user.ChangeEmailCode})
 				return nil
 			},
 		},
@@ -193,13 +193,13 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.ConfirmChangeEmail)
-				serv := service.Get(tlbx)
-				user := getUser(serv, nil, &args.Me)
-				tlbx.ReturnMsgIf(*user.ChangeEmailCode != args.Code, http.StatusBadRequest, "")
+				srv := service.Get(tlbx)
+				user := getUser(srv, nil, &args.Me)
+				tlbx.BadReqIf(*user.ChangeEmailCode != args.Code, "")
 				user.ChangeEmailCode = nil
 				user.Email = *user.NewEmail
 				user.NewEmail = nil
-				updateUser(serv, user)
+				updateUser(srv, user)
 				return nil
 			},
 		},
@@ -222,19 +222,19 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.ResetPwd)
-				serv := service.Get(tlbx)
-				user := getUser(serv, &args.Email, nil)
+				srv := service.Get(tlbx)
+				user := getUser(srv, &args.Email, nil)
 				if user != nil {
 					now := Now()
 					if user.LastPwdResetOn != nil {
 						mustWaitDur := (10 * time.Minute) - Now().Sub(*user.LastPwdResetOn)
-						tlbx.ReturnMsgIf(mustWaitDur > 0, http.StatusBadRequest, "must wait %d seconds before reseting pwd again", int64(math.Ceil(mustWaitDur.Seconds())))
+						tlbx.BadReqIf(mustWaitDur > 0, "must wait %d seconds before reseting pwd again", int64(math.Ceil(mustWaitDur.Seconds())))
 					}
 					newPwd := `$aA1` + crypt.UrlSafeString(12)
 					setPwd(tlbx, user.ID, newPwd, newPwd)
-					sendResetPwdEmail(serv, args.Email, fromEmail, baseHref, newPwd)
+					sendResetPwdEmail(srv, args.Email, fromEmail, baseHref, newPwd)
 					user.LastPwdResetOn = &now
-					updateUser(serv, user)
+					updateUser(srv, user)
 				}
 				return nil
 			},
@@ -260,10 +260,10 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.SetPwd)
-				serv := service.Get(tlbx)
+				srv := service.Get(tlbx)
 				me := tlbx.Me()
-				pwd := getPwd(serv, me)
-				tlbx.ReturnMsgIf(!bytes.Equal(crypt.ScryptKey([]byte(args.CurrentPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), http.StatusBadRequest, "current pwd does not match")
+				pwd := getPwd(srv, me)
+				tlbx.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.CurrentPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
 				setPwd(tlbx, me, args.NewPwd, args.ConfirmNewPwd)
 				return nil
 			},
@@ -287,17 +287,17 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*auth.Delete)
-				serv := service.Get(tlbx)
+				srv := service.Get(tlbx)
 				me := tlbx.Me()
 				tlbx.Session().Logout()
-				pwd := getPwd(serv, me)
-				tlbx.ReturnMsgIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), http.StatusBadRequest, "incorrect pwd")
+				pwd := getPwd(srv, me)
+				tlbx.BadReqIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), "incorrect pwd")
 				if onDelete != nil {
 					onDelete(tlbx, me)
 				}
-				_, err := serv.User().Exec(`DELETE FROM users WHERE id=?`, me)
+				_, err := srv.User().Exec(`DELETE FROM users WHERE id=?`, me)
 				PanicOn(err)
-				_, err = serv.Pwd().Exec(`DELETE FROM pwds WHERE id=?`, me)
+				_, err = srv.Pwd().Exec(`DELETE FROM pwds WHERE id=?`, me)
 				PanicOn(err)
 				return nil
 			},
@@ -324,15 +324,15 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				emailOrPwdMismatch := func(condition bool) {
-					tlbx.ReturnMsgIf(condition, http.StatusNotFound, "email and/or pwd are not valid")
+					tlbx.ExitIf(condition, http.StatusNotFound, "email and/or pwd are not valid")
 				}
 				args := a.(*auth.Login)
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
 				validate.Str("pwd", args.Pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
-				serv := service.Get(tlbx)
-				user := getUser(serv, &args.Email, nil)
+				srv := service.Get(tlbx)
+				user := getUser(srv, &args.Email, nil)
 				emailOrPwdMismatch(user == nil)
-				pwd := getPwd(serv, user.ID)
+				pwd := getPwd(srv, user.ID)
 				emailOrPwdMismatch(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)))
 				// if encryption params have changed re encrypt on successful login
 				if len(pwd.Salt) != scryptSaltLen || len(pwd.Pwd) != scryptKeyLen || pwd.N != scryptN || pwd.R != scryptR || pwd.P != scryptP {
@@ -408,22 +408,22 @@ var (
 	scryptKeyLen  = 256
 )
 
-func sendActivateEmail(serv service.Layer, sendTo, from, baseHref string, args *auth.Activate) {
+func sendActivateEmail(srv service.Layer, sendTo, from, baseHref string, args *auth.Activate) {
 	bs, err := json.Marshal(args)
 	PanicOn(err)
 	link := baseHref + app.ApiPathPrefix + args.Path() + `?args=` + url.QueryEscape(string(bs))
-	serv.Email().MustSend([]string{sendTo}, from, "Activate", `<a href="`+link+`">Activate</a>`, `Activate `+link)
+	srv.Email().MustSend([]string{sendTo}, from, "Activate", `<a href="`+link+`">Activate</a>`, `Activate `+link)
 }
 
-func sendConfirmChangeEmailEmail(serv service.Layer, sendTo, from, baseHref string, args *auth.ConfirmChangeEmail) {
+func sendConfirmChangeEmailEmail(srv service.Layer, sendTo, from, baseHref string, args *auth.ConfirmChangeEmail) {
 	bs, err := json.Marshal(args)
 	PanicOn(err)
 	link := baseHref + app.ApiPathPrefix + args.Path() + `?args=` + url.QueryEscape(string(bs))
-	serv.Email().MustSend([]string{sendTo}, from, "Confirm change email", `<a href="`+link+`">Confirm change email</a>`, `Confirm change email `+link)
+	srv.Email().MustSend([]string{sendTo}, from, "Confirm change email", `<a href="`+link+`">Confirm change email</a>`, `Confirm change email `+link)
 }
 
-func sendResetPwdEmail(serv service.Layer, sendTo, from, baseHref, newPwd string) {
-	serv.Email().MustSend([]string{sendTo}, from, "Pwd Reset", `<p>New Pwd: `+newPwd+`</p>`, `New Pwd: `+newPwd)
+func sendResetPwdEmail(srv service.Layer, sendTo, from, baseHref, newPwd string) {
+	srv.Email().MustSend([]string{sendTo}, from, "Pwd Reset", `<p>New Pwd: `+newPwd+`</p>`, `New Pwd: `+newPwd)
 }
 
 type user struct {
@@ -437,7 +437,7 @@ type user struct {
 	LastPwdResetOn  *time.Time
 }
 
-func getUser(serv service.Layer, email *string, id *ID) *user {
+func getUser(srv service.Layer, email *string, id *ID) *user {
 	PanicIf(email == nil && id == nil, "one of email or id must not be nil")
 	query := `SELECT id, email, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn FROM users WHERE `
 	var arg interface{}
@@ -448,7 +448,7 @@ func getUser(serv service.Layer, email *string, id *ID) *user {
 		query += `id=?`
 		arg = *id
 	}
-	row := serv.User().QueryRow(query, arg)
+	row := srv.User().QueryRow(query, arg)
 	res := &user{}
 	err := row.Scan(&res.ID, &res.Email, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
 	if err == sql.ErrNoRows {
@@ -458,8 +458,8 @@ func getUser(serv service.Layer, email *string, id *ID) *user {
 	return res
 }
 
-func updateUser(serv service.Layer, user *user) {
-	_, err := serv.User().Exec(`UPDATE users SET email=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
+func updateUser(srv service.Layer, user *user) {
+	_, err := srv.User().Exec(`UPDATE users SET email=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
 	PanicOn(err)
 }
 
@@ -472,8 +472,8 @@ type pwd struct {
 	P    int
 }
 
-func getPwd(serv service.Layer, id ID) *pwd {
-	row := serv.Pwd().QueryRow(`SELECT id, salt, pwd, n, r, p FROM pwds WHERE id=?`, id)
+func getPwd(srv service.Layer, id ID) *pwd {
+	row := srv.Pwd().QueryRow(`SELECT id, salt, pwd, n, r, p FROM pwds WHERE id=?`, id)
 	res := &pwd{}
 	err := row.Scan(&res.ID, &res.Salt, &res.Pwd, &res.N, &res.R, &res.P)
 	if err == sql.ErrNoRows {
@@ -484,11 +484,11 @@ func getPwd(serv service.Layer, id ID) *pwd {
 }
 
 func setPwd(tlbx app.Toolbox, id ID, pwd, confirmPwd string) {
-	tlbx.ReturnMsgIf(pwd != confirmPwd, http.StatusBadRequest, "pwds do not match")
+	tlbx.BadReqIf(pwd != confirmPwd, "pwds do not match")
 	validate.Str("pwd", pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
-	serv := service.Get(tlbx)
+	srv := service.Get(tlbx)
 	salt := crypt.Bytes(scryptSaltLen)
 	pwdBs := crypt.ScryptKey([]byte(pwd), salt, scryptN, scryptR, scryptP, scryptKeyLen)
-	_, err := serv.Pwd().Exec(`INSERT INTO pwds (id, salt, pwd, n, r, p) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE salt=VALUE(salt), pwd=VALUE(pwd), n=VALUE(n), r=VALUE(r), p=VALUE(p)`, id, salt, pwdBs, scryptN, scryptR, scryptP)
+	_, err := srv.Pwd().Exec(`INSERT INTO pwds (id, salt, pwd, n, r, p) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE salt=VALUE(salt), pwd=VALUE(pwd), n=VALUE(n), r=VALUE(r), p=VALUE(p)`, id, salt, pwdBs, scryptN, scryptR, scryptP)
 	PanicOn(err)
 }

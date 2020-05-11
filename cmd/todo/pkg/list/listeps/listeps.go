@@ -38,7 +38,7 @@ var (
 				args := a.(*list.Create)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				me := tlbx.Me()
-				serv := service.Get(tlbx)
+				srv := service.Get(tlbx)
 				res := &list.List{
 					ID:                 tlbx.NewID(),
 					CreatedOn:          NowMilli(),
@@ -46,7 +46,7 @@ var (
 					TodoItemCount:      0,
 					CompletedItemCount: 0,
 				}
-				_, err := serv.Data().Exec(
+				_, err := srv.Data().Exec(
 					`INSERT INTO lists (user, id, createdOn, name, todoItemCount, completedItemCount) VALUES (?, ?, ?, ?, ?, ?)`,
 					me, res.ID, res.CreatedOn, res.Name, res.TodoItemCount, res.CompletedItemCount)
 				PanicOn(err)
@@ -118,11 +118,11 @@ var (
 					IDs:   IDs{args.ID},
 					Limit: ptr.Int(1),
 				})
-				tlbx.ReturnMsgIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
+				tlbx.ExitIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				list := getSetRes.Set[0]
 				list.Name = args.Name.V
-				serv := service.Get(tlbx)
-				_, err := serv.Data().Exec(`UPDATE lists SET name=? WHERE user=? AND id=?`, list.Name, tlbx.Me(), list.ID)
+				srv := service.Get(tlbx)
+				_, err := srv.Data().Exec(`UPDATE lists SET name=? WHERE user=? AND id=?`, list.Name, tlbx.Me(), list.ID)
 				PanicOn(err)
 				return list
 			},
@@ -152,11 +152,11 @@ var (
 				}
 				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 				me := tlbx.Me()
-				serv := service.Get(tlbx)
+				srv := service.Get(tlbx)
 				queryArgs := make([]interface{}, 0, idsLen+1)
 				queryArgs = append(queryArgs, me)
 				queryArgs = append(queryArgs, args.IDs.ToIs()...)
-				tx := serv.Data().Begin()
+				tx := srv.Data().Begin()
 				defer tx.Rollback()
 				_, err := tx.Exec(`DELETE FROM lists WHERE user=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
 				PanicOn(err)
@@ -179,8 +179,8 @@ var (
 )
 
 func OnDelete(tlbx app.Toolbox, me ID) {
-	serv := service.Get(tlbx)
-	tx := serv.Data().Begin()
+	srv := service.Get(tlbx)
+	tx := srv.Data().Begin()
 	defer tx.Rollback()
 	_, err := tx.Exec(`DELETE FROM lists WHERE user=?`, me)
 	PanicOn(err)
@@ -191,24 +191,24 @@ func OnDelete(tlbx app.Toolbox, me ID) {
 
 func getSet(tlbx app.Toolbox, args *list.Get) *list.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
-	tlbx.ReturnMsgIf(
+	tlbx.BadReqIf(
 		args.CreatedOnMin != nil &&
 			args.CreatedOnMax != nil &&
 			args.CreatedOnMin.After(*args.CreatedOnMax),
-		http.StatusBadRequest, "createdOnMin must be before createdOnMax")
-	tlbx.ReturnMsgIf(
+		"createdOnMin must be before createdOnMax")
+	tlbx.BadReqIf(
 		args.TodoItemCountMin != nil &&
 			args.TodoItemCountMax != nil &&
 			*args.TodoItemCountMin > *args.TodoItemCountMax,
-		http.StatusBadRequest, "todoItemCountMin must not be greater than todoItemCountMax")
-	tlbx.ReturnMsgIf(
+		"todoItemCountMin must not be greater than todoItemCountMax")
+	tlbx.BadReqIf(
 		args.CompletedItemCountMin != nil &&
 			args.CompletedItemCountMax != nil &&
 			*args.CompletedItemCountMin > *args.CompletedItemCountMax,
-		http.StatusBadRequest, "completedItemCountMin must not be greater than completedItemCountMax")
+		"completedItemCountMin must not be greater than completedItemCountMax")
 	limit := sql.Limit(*args.Limit, 100)
 	me := tlbx.Me()
-	serv := service.Get(tlbx)
+	srv := service.Get(tlbx)
 	res := &list.GetRes{
 		Set: make([]*list.List, 0, limit),
 	}
@@ -264,7 +264,7 @@ func getSet(tlbx app.Toolbox, args *list.Get) *list.GetRes {
 		}
 		query.WriteString(Sprintf(` ORDER BY %s%s %s, id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
 	}
-	serv.Data().Query(func(rows isql.Rows) {
+	srv.Data().Query(func(rows isql.Rows) {
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
 				res.More = true

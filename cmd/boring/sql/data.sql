@@ -5,17 +5,19 @@ USE data_boring;
 DROP TABLE IF EXISTS games;
 CREATE TABLE games (
     id BINARY(16) NOT NULL,
-    createdOn DATETIME(3) NOT NULL,
-    pwd VARCHAR(8) NOT NULL,
-    state VARBINARY(5000) NOT NULL,
-    PRIMARY KEY id (id)
+    updatedOn DATETIME(3) NOT NULL,
+    serialized VARBINARY(5000) NOT NULL,
+    PRIMARY KEY id (id),
+    UNIQUE INDEX updatedOn (updatedOn, id)
 );
 
 DROP TABLE IF EXISTS players;
 CREATE TABLE players (
     id BINARY(16) NOT NULL,
     game BINARY(16) NOT NULL,
-    PRIMARY KEY id (id)
+    PRIMARY KEY id (id),
+    UNIQUE INDEX game (game, id)
+    FOREIGN KEY (game) REFERENCES games (id) ON DELETE CASCADE
 );
 
 DROP USER IF EXISTS 'data_boring'@'%';

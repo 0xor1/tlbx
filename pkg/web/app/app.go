@@ -177,7 +177,7 @@ func Run(configs ...func(*Config)) {
 		tlbx.resp.Header().Set("X-Version", c.Version)
 		// check method
 		method := tlbx.req.Method
-		tlbx.ReturnMsgIf(method != http.MethodGet && method != http.MethodPut, http.StatusMethodNotAllowed, "only GET and PUT methods are accepted")
+		tlbx.ExitIf(method != http.MethodGet && method != http.MethodPut, http.StatusMethodNotAllowed, "only GET and PUT methods are accepted")
 		// session
 		gses, err := sessionStore.Get(tlbx.req, c.SessionName)
 		PanicOn(err)
@@ -224,7 +224,7 @@ func Run(configs ...func(*Config)) {
 			}
 			mDoReqs := map[string]*mDoReq{}
 			getJsonArgs(tlbx, &mDoReqs)
-			tlbx.ReturnMsgIf(len(mDoReqs) > c.MDoMax, http.StatusBadRequest, "too many mdo reqs, max reqs allowed: %d", c.MDoMax)
+			tlbx.BadReqIf(len(mDoReqs) > c.MDoMax, "too many mdo reqs, max reqs allowed: %d", c.MDoMax)
 			fullMDoResp := map[string]*mDoResp{}
 			fullMDoRespMtx := &sync.Mutex{}
 			does := make([]func(), 0, len(mDoReqs))
@@ -257,7 +257,7 @@ func Run(configs ...func(*Config)) {
 		}
 		// endpoints
 		ep, exists := router[tlbx.req.URL.Path]
-		tlbx.ReturnMsgIf(!exists, http.StatusNotFound, "")
+		tlbx.ExitIf(!exists, http.StatusNotFound, "")
 
 		if ep.MaxBodyBytes > 0 {
 			tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, ep.MaxBodyBytes)
@@ -276,12 +276,12 @@ func Run(configs ...func(*Config)) {
 			// validation check
 			if tlbx.isSubMDo {
 				_, ok := ep.GetExampleResponse().(*Stream)
-				tlbx.ReturnMsgIf(ok, http.StatusBadRequest, "can not call stream endpoint in an mdo request")
+				tlbx.BadReqIf(ok, "can not call stream endpoint in an mdo request")
 			}
 			// process args
 			args := ep.GetDefaultArgs()
 			s, isStream := args.(*Stream)
-			tlbx.ReturnMsgIf(isStream && tlbx.isSubMDo, http.StatusBadRequest, "can not call stream endpoint in an mdo request")
+			tlbx.BadReqIf(isStream && tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
 			if isStream {
 				s.Type = tlbx.req.Header.Get("Content-Type")
 				s.Size, err = strconv.ParseInt(tlbx.req.Header.Get("Content-Length"), 10, 64)
@@ -301,7 +301,7 @@ func Run(configs ...func(*Config)) {
 			// process response
 			if s, ok := res.(*Stream); ok {
 				defer s.Content.Close()
-				tlbx.ReturnMsgIf(tlbx.isSubMDo, http.StatusBadRequest, "can not call stream endpoint in an mdo request")
+				tlbx.BadReqIf(tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
 				tlbx.resp.Header().Add("Content-Type", s.Type)
 				tlbx.resp.Header().Add("Content-Length", Sprintf("%d", s.Size))
 				tlbx.resp.Header().Add("Content-Name", Sprintf("%s", s.Name))
@@ -456,7 +456,8 @@ type Toolbox interface {
 	Log() log.Log
 	LogQueryStats(*QueryStats)
 	Redirect(status int, url string)
-	ReturnMsgIf(condition bool, status int, format string, args ...interface{})
+	ExitIf(condition bool, status int, format string, args ...interface{})
+	BadReqIf(condition bool, format string, args ...interface{})
 	// add any extra arbitrary stuff with these
 	Get(key interface{}) interface{}
 	Set(key, value interface{})
@@ -511,7 +512,7 @@ func (t *toolbox) Redirect(status int, url string) {
 	})
 }
 
-func (t *toolbox) ReturnMsgIf(condition bool, status int, format string, args ...interface{}) {
+func (t *toolbox) ExitIf(condition bool, status int, format string, args ...interface{}) {
 	if format == "" {
 		format = http.StatusText(status)
 	}
@@ -521,6 +522,10 @@ func (t *toolbox) ReturnMsgIf(condition bool, status int, format string, args ..
 			Msg:    Sprintf(format, args...),
 		})
 	}
+}
+
+func (t *toolbox) BadReqIf(condition bool, format string, args ...interface{}) {
+	t.ExitIf(condition, http.StatusBadRequest, format, args...)
 }
 
 func (t *toolbox) Get(key interface{}) interface{} {
@@ -703,7 +708,7 @@ type endpointDoc struct {
 
 func checkErrForMaxBytes(tlbx *toolbox, err error) {
 	if err != nil {
-		tlbx.ReturnMsgIf(
+		tlbx.ExitIf(
 			err.Error() == "http: request body too large",
 			http.StatusRequestEntityTooLarge,
 			"request body too large")
@@ -734,7 +739,7 @@ func rateLimit(c *Config, tlbx *toolbox) {
 		tlbx.resp.Header().Add("X-Rate-Limit-Remaining", strconv.Itoa(remaining))
 		tlbx.resp.Header().Add("X-Rate-Limit-Reset", "60")
 
-		tlbx.ReturnMsgIf(remaining < 1, http.StatusTooManyRequests, "")
+		tlbx.ExitIf(remaining < 1, http.StatusTooManyRequests, "")
 	}()
 
 	// get key
@@ -812,7 +817,7 @@ func getJsonArgs(tlbx *toolbox, args interface{}) {
 	}
 	if len(argsBytes) > 0 {
 		err := json.Unmarshal(argsBytes, args)
-		tlbx.ReturnMsgIf(err != nil, http.StatusBadRequest, "error unmarshalling json: %s", err)
+		tlbx.BadReqIf(err != nil, "error unmarshalling json: %s", err)
 	}
 }
 
