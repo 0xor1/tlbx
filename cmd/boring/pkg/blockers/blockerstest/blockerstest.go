@@ -13,11 +13,12 @@ import (
 
 func Everything(t *testing.T) {
 	a := assert.New(t)
-	r := test.NewRig(config.Get(), blockerseps.Eps, nil)
+	r := test.NewRig(config.Get(), blockerseps.Eps, false, nil)
 	defer r.CleanUp()
 
+	ali := test.NewClient()
 	newGame := (&blockers.New{}).
-		MustDo(r.Ali().Client())
+		MustDo(ali)
 	a.NotNil(newGame)
 	NewIDGen()
 }

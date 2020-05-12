@@ -72,17 +72,18 @@ func (u *user) Pwd() string {
 }
 
 type rig struct {
-	ali   *user
-	bob   *user
-	cat   *user
-	dan   *user
-	log   log.Log
-	cache iredis.Pool
-	user  isql.ReplicaSet
-	pwd   isql.ReplicaSet
-	data  isql.ReplicaSet
-	email email.Client
-	store store.LocalClient
+	ali     *user
+	bob     *user
+	cat     *user
+	dan     *user
+	log     log.Log
+	cache   iredis.Pool
+	user    isql.ReplicaSet
+	pwd     isql.ReplicaSet
+	data    isql.ReplicaSet
+	email   email.Client
+	store   store.LocalClient
+	useAuth bool
 }
 
 func (r *rig) Log() log.Log {
@@ -133,49 +134,56 @@ func NewClient() *app.Client {
 	return app.NewClient(baseHref)
 }
 
-func NewRig(config *config.Config, eps []*app.Endpoint, onDelete func(app.Toolbox, ID)) Rig {
+func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onDelete func(app.Toolbox, ID)) Rig {
 	r := &rig{
-		log:   config.Log,
-		cache: config.Cache,
-		email: config.Email,
-		store: config.Store.(store.LocalClient),
-		user:  config.User,
-		pwd:   config.Pwd,
-		data:  config.Data,
+		log:     config.Log,
+		cache:   config.Cache,
+		email:   config.Email,
+		store:   config.Store.(store.LocalClient),
+		user:    config.User,
+		pwd:     config.Pwd,
+		data:    config.Data,
+		useAuth: useAuth,
 	}
 
+	if useAuth {
+		eps = append(eps, autheps.New(onDelete, config.FromEmail, config.BaseHref)...)
+	}
 	go app.Run(func(c *app.Config) {
 		c.ToolboxMware = service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store)
 		c.RateLimiterPool = r.cache
 		c.RateLimitPerMinute = 1000000 // when running batch tests 120 rate limit is easily exceeded
 		c.SessionAuthKey64s = config.SessionAuthKey64s
 		c.SessionEncrKey32s = config.SessionEncrKey32s
-		c.Endpoints = append(eps, autheps.New(onDelete, config.FromEmail, config.BaseHref)...)
+		c.Endpoints = eps
 	})
 
 	time.Sleep(20 * time.Millisecond)
-	r.ali = r.createUser("ali"+emailSuffix, pwd)
-	r.bob = r.createUser("bob"+emailSuffix, pwd)
-	r.cat = r.createUser("cat"+emailSuffix, pwd)
-	r.dan = r.createUser("dan"+emailSuffix, pwd)
-
+	if useAuth {
+		r.ali = r.createUser("ali"+emailSuffix, pwd)
+		r.bob = r.createUser("bob"+emailSuffix, pwd)
+		r.cat = r.createUser("cat"+emailSuffix, pwd)
+		r.dan = r.createUser("dan"+emailSuffix, pwd)
+	}
 	return r
 }
 
 func (r *rig) CleanUp() {
 	r.Store().MustDeleteStore()
-	(&auth.Delete{
-		Pwd: r.Ali().Pwd(),
-	}).MustDo(r.Ali().Client())
-	(&auth.Delete{
-		Pwd: r.Bob().Pwd(),
-	}).MustDo(r.Bob().Client())
-	(&auth.Delete{
-		Pwd: r.Cat().Pwd(),
-	}).MustDo(r.Cat().Client())
-	(&auth.Delete{
-		Pwd: r.Dan().Pwd(),
-	}).MustDo(r.Dan().Client())
+	if r.useAuth {
+		(&auth.Delete{
+			Pwd: r.Ali().Pwd(),
+		}).MustDo(r.Ali().Client())
+		(&auth.Delete{
+			Pwd: r.Bob().Pwd(),
+		}).MustDo(r.Bob().Client())
+		(&auth.Delete{
+			Pwd: r.Cat().Pwd(),
+		}).MustDo(r.Cat().Client())
+		(&auth.Delete{
+			Pwd: r.Dan().Pwd(),
+		}).MustDo(r.Dan().Client())
+	}
 }
 
 func (r *rig) createUser(email, pwd string) *user {

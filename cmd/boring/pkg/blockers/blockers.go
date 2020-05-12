@@ -133,28 +133,8 @@ func (a *New) MustDo(c *app.Client) *Game {
 	return res
 }
 
-type Get struct {
-	ID ID `json:"id"`
-}
-
-func (_ *Get) Path() string {
-	return "/blockers/get"
-}
-
-func (a *Get) Do(c *app.Client) (*Game, error) {
-	res := &Game{}
-	err := app.Call(c, a.Path(), a, &res)
-	return res, err
-}
-
-func (a *Get) MustDo(c *app.Client) *Game {
-	res, err := a.Do(c)
-	PanicOn(err)
-	return res
-}
-
 type Join struct {
-	ID ID `json:"id"`
+	Game ID `json:"game"`
 }
 
 func (_ *Join) Path() string {
@@ -173,27 +153,9 @@ func (a *Join) MustDo(c *app.Client) *Game {
 	return res
 }
 
-type SetTurnOrder struct {
-	Players []ID `json:"players"`
+type Start struct {
+	RandomizePlayerOrder bool `json:"randomizePlayerOrder"`
 }
-
-func (_ *SetTurnOrder) Path() string {
-	return "/blockers/setTurnOrder"
-}
-
-func (a *SetTurnOrder) Do(c *app.Client) (*Game, error) {
-	res := &Game{}
-	err := app.Call(c, a.Path(), nil, &res)
-	return res, err
-}
-
-func (a *SetTurnOrder) MustDo(c *app.Client) *Game {
-	res, err := a.Do(c)
-	PanicOn(err)
-	return res
-}
-
-type Start struct{}
 
 func (_ *Start) Path() string {
 	return "/blockers/start"
@@ -234,18 +196,36 @@ func (a *TakeTurn) MustDo(c *app.Client) *Game {
 	return res
 }
 
-type Delete struct {
-	ID ID `json:"id"`
+type Get struct {
+	Game ID `json:"game"`
 }
 
-func (_ *Delete) Path() string {
-	return "/blockers/delete"
+func (_ *Get) Path() string {
+	return "/blockers/get"
 }
 
-func (a *Delete) Do(c *app.Client) error {
+func (a *Get) Do(c *app.Client) (*Game, error) {
+	res := &Game{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *Get) MustDo(c *app.Client) *Game {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type Abandon struct{}
+
+func (_ *Abandon) Path() string {
+	return "/blockers/abandon"
+}
+
+func (a *Abandon) Do(c *app.Client) error {
 	return app.Call(c, a.Path(), a, nil)
 }
 
-func (a *Delete) MustDo(c *app.Client) {
+func (a *Abandon) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }

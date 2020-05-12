@@ -64,7 +64,7 @@ func (b *Base) Abandoned() bool {
 	return b.State == 3
 }
 
-func Create(tlbx app.Toolbox, game Game) {
+func New(tlbx app.Toolbox, game Game) {
 	base := game.GetBase()
 	PanicIf(base.Type == "", "game type must be set")
 	PanicIf(base.MinPlayers <= 0 || base.MinPlayers > base.MaxPlayers, "invalid min/max player values")
@@ -85,11 +85,11 @@ func Create(tlbx app.Toolbox, game Game) {
 	cacheSerializedGame(tlbx, id, serialized)
 }
 
-func Join(tlbx app.Toolbox, game ID, dst Game) {
+func Join(tlbx app.Toolbox, gameType string, game ID, dst Game) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
-	read(tlbx, tx, true, game, dst)
+	read(tlbx, tx, true, gameType, game, dst)
 	b := dst.GetBase()
 	tlbx.BadReqIf(!b.NotStarted(), "can't join a game that has already been started")
 	tlbx.BadReqIf(len(b.Players) >= b.MaxPlayers, "game is already at max player limit: %d", b.MaxPlayers)
@@ -107,11 +107,11 @@ func Join(tlbx app.Toolbox, game ID, dst Game) {
 	tx.Commit()
 }
 
-func Start(tlbx app.Toolbox, randomizePlayerOrder bool, dst Game) {
+func Start(tlbx app.Toolbox, randomizePlayerOrder bool, gameType string, dst Game) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
-	g := getUsersActiveGame(tlbx, tx, true, dst)
+	g := getUsersActiveGame(tlbx, tx, true, gameType, dst)
 	b := g.GetBase()
 	tlbx.BadReqIf(!b.NotStarted(), "can't start a game that has already been started")
 	tlbx.BadReqIf(len(b.Players) < b.MinPlayers, "game hasn't met minimum player count requirement: %d", b.MinPlayers)
@@ -134,7 +134,7 @@ func Start(tlbx app.Toolbox, randomizePlayerOrder bool, dst Game) {
 func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Game)) {
 	tx := service.Get(tlbx).Data().Begin()
 	defer tx.Rollback()
-	g := getUsersActiveGame(tlbx, tx, true, dst)
+	g := getUsersActiveGame(tlbx, tx, true, gameType, dst)
 	tlbx.BadReqIf(g == nil, "you are not in an active game")
 	b := g.GetBase()
 	tlbx.BadReqIf(b.Type != gameType, "types do not match, your active game: %s, expected game: %s", g.GetBase().Type, gameType)
@@ -144,11 +144,11 @@ func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Ga
 	update(tlbx, tx, g)
 }
 
-func Abandon(tlbx app.Toolbox, dst Game) {
+func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
-	g := getUsersActiveGame(tlbx, tx, true, dst)
+	g := getUsersActiveGame(tlbx, tx, true, gameType, dst)
 	if g != nil && g.GetBase().IsActive() {
 		g.GetBase().State = 3
 		update(tlbx, tx, dst)
@@ -156,14 +156,14 @@ func Abandon(tlbx app.Toolbox, dst Game) {
 	}
 }
 
-func Get(tlbx app.Toolbox, game ID, dst Game) {
+func Get(tlbx app.Toolbox, gameType string, game ID, dst Game) {
 	tx := service.Get(tlbx).Data().Begin()
 	defer tx.Rollback()
-	read(tlbx, tx, false, game, dst)
+	read(tlbx, tx, false, gameType, game, dst)
 	tx.Commit()
 }
 
-func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, game ID, dst Game) {
+func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, game ID, dst Game) {
 	serialized := make([]byte, 0, 5*app.KB)
 	if !forUpdate {
 		serialized = getSerializedGameFromCache(tlbx, game)
@@ -179,6 +179,7 @@ func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, game ID, dst Game) {
 		comsql.ReturnNotFoundOrPanicOn(row.Scan(&serialized))
 	}
 	json.MustUnmarshal(serialized, dst)
+	tlbx.BadReqIf(dst.GetBase().Type != gameType, "types do not match, your active game: %s, expected game: %s", dst.GetBase().Type, gameType)
 }
 
 func update(tlbx app.Toolbox, tx service.Tx, game Game) {
@@ -208,7 +209,7 @@ func DeleteOutdated(tlbx app.Toolbox) {
 	lastDeleteOutdatedCalledOn = Now()
 }
 
-func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, dst Game) Game {
+func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, dst Game) Game {
 	buf := make([]byte, 0, 5*app.KB)
 	ses := tlbx.Session()
 	if ses.IsAuthed() {
@@ -225,6 +226,7 @@ func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, dst Gam
 		}
 		if len(buf) > 0 {
 			json.MustUnmarshal(buf, dst)
+			tlbx.BadReqIf(forUpdate && dst.GetBase().Type != gameType, "types do not match, your active game: %s, expected game: %s", dst.GetBase().Type, gameType)
 			if dst.GetBase().IsActive() {
 				return dst
 			}
@@ -234,13 +236,15 @@ func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, dst Gam
 }
 
 func validateUserIsntInAnActiveGame(tlbx app.Toolbox, tx service.Tx, verb string) {
-	g := getUsersActiveGame(tlbx, tx, false, &Base{})
-	tlbx.BadReqIf(
-		g != nil && g.GetBase().IsActive(),
-		"can not %s a new game while you are still participating in an active game, id: %s, type: %s",
-		verb,
-		g.GetBase().ID,
-		g.GetBase().Type)
+	g := getUsersActiveGame(tlbx, tx, false, "", &Base{})
+	if g != nil {
+		tlbx.BadReqIf(
+			g.GetBase().IsActive(),
+			"can not %s a new game while you are still participating in an active game, id: %s, type: %s",
+			verb,
+			g.GetBase().ID,
+			g.GetBase().Type)
+	}
 }
 
 func cacheSerializedGame(tlbx app.Toolbox, id ID, serialized []byte) {

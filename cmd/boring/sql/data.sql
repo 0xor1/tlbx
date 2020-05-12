@@ -16,7 +16,7 @@ CREATE TABLE players (
     id BINARY(16) NOT NULL,
     game BINARY(16) NOT NULL,
     PRIMARY KEY id (id),
-    UNIQUE INDEX game (game, id)
+    UNIQUE INDEX game (game, id),
     FOREIGN KEY (game) REFERENCES games (id) ON DELETE CASCADE
 );
 
