@@ -159,12 +159,10 @@ func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onDelete f
 	})
 
 	time.Sleep(20 * time.Millisecond)
-	if useAuth {
-		r.ali = r.createUser("ali"+emailSuffix, pwd)
-		r.bob = r.createUser("bob"+emailSuffix, pwd)
-		r.cat = r.createUser("cat"+emailSuffix, pwd)
-		r.dan = r.createUser("dan"+emailSuffix, pwd)
-	}
+	r.ali = r.createUser("ali"+emailSuffix, pwd)
+	r.bob = r.createUser("bob"+emailSuffix, pwd)
+	r.cat = r.createUser("cat"+emailSuffix, pwd)
+	r.dan = r.createUser("dan"+emailSuffix, pwd)
 	return r
 }
 
@@ -188,31 +186,33 @@ func (r *rig) CleanUp() {
 
 func (r *rig) createUser(email, pwd string) *user {
 	c := NewClient()
+	if r.useAuth {
+		(&auth.Register{
+			Email:      email,
+			Pwd:        pwd,
+			ConfirmPwd: pwd,
+		}).MustDo(c)
 
-	(&auth.Register{
-		Email:      email,
-		Pwd:        pwd,
-		ConfirmPwd: pwd,
-	}).MustDo(c)
+		var code string
+		row := r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
+		PanicOn(row.Scan(&code))
 
-	var code string
-	row := r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
-	PanicOn(row.Scan(&code))
+		(&auth.Activate{
+			Email: email,
+			Code:  code,
+		}).MustDo(c)
 
-	(&auth.Activate{
-		Email: email,
-		Code:  code,
-	}).MustDo(c)
+		id := (&auth.Login{
+			Email: email,
+			Pwd:   pwd,
+		}).MustDo(c).Me
 
-	id := (&auth.Login{
-		Email: email,
-		Pwd:   pwd,
-	}).MustDo(c).Me
-
-	return &user{
-		client: c,
-		id:     id,
-		email:  email,
-		pwd:    pwd,
+		return &user{
+			client: c,
+			id:     id,
+			email:  email,
+			pwd:    pwd,
+		}
 	}
+	return &user{client: c}
 }
