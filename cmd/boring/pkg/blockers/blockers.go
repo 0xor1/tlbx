@@ -7,102 +7,113 @@ import (
 )
 
 var (
-	Pieces = []*piece{
+	pieces = []*piece{
 		// #
-		{BoundingBox: []uint8{1, 1}, Shape: []Bit{1}},
+		{BB: [2]uint8{1, 1}, Shape: []Bit{1}},
 
 		// ##
-		{BoundingBox: []uint8{2, 1}, Shape: []Bit{1, 1}},
+		{BB: [2]uint8{2, 1}, Shape: []Bit{1, 1}},
 
 		// ###
-		{BoundingBox: []uint8{3, 1}, Shape: []Bit{1, 1, 1}},
+		{BB: [2]uint8{3, 1}, Shape: []Bit{1, 1, 1}},
 
 		// #
 		// ##
-		{BoundingBox: []uint8{2, 2}, Shape: []Bit{1, 0, 1, 1}},
+		{BB: [2]uint8{2, 2}, Shape: []Bit{1, 0, 1, 1}},
 
 		// ####
-		{BoundingBox: []uint8{4, 1}, Shape: []Bit{1, 1, 1, 1}},
+		{BB: [2]uint8{4, 1}, Shape: []Bit{1, 1, 1, 1}},
 
 		// ##
 		// ##
-		{BoundingBox: []uint8{2, 2}, Shape: []Bit{1, 1, 1, 1}},
+		{BB: [2]uint8{2, 2}, Shape: []Bit{1, 1, 1, 1}},
 
 		//  #
 		// ###
-		{BoundingBox: []uint8{3, 2}, Shape: []Bit{0, 1, 0, 1, 1, 1}},
+		{BB: [2]uint8{3, 2}, Shape: []Bit{0, 1, 0, 1, 1, 1}},
 
 		//   #
 		// ###
-		{BoundingBox: []uint8{3, 2}, Shape: []Bit{0, 0, 1, 1, 1, 1}},
+		{BB: [2]uint8{3, 2}, Shape: []Bit{0, 0, 1, 1, 1, 1}},
 
 		//  ##
 		// ##
-		{BoundingBox: []uint8{3, 2}, Shape: []Bit{0, 1, 1, 1, 1, 0}},
+		{BB: [2]uint8{3, 2}, Shape: []Bit{0, 1, 1, 1, 1, 0}},
 
 		// #####
-		{BoundingBox: []uint8{5, 1}, Shape: []Bit{1, 1, 1, 1, 1}},
+		{BB: [2]uint8{5, 1}, Shape: []Bit{1, 1, 1, 1, 1}},
 
 		// ###
 		// ##
-		{BoundingBox: []uint8{3, 2}, Shape: []Bit{1, 1, 1, 1, 1, 0}},
+		{BB: [2]uint8{3, 2}, Shape: []Bit{1, 1, 1, 1, 1, 0}},
 
 		//  #
 		// ###
 		//  #
-		{BoundingBox: []uint8{3, 3}, Shape: []Bit{0, 1, 0, 1, 1, 1, 0, 1, 0}},
+		{BB: [2]uint8{3, 3}, Shape: []Bit{0, 1, 0, 1, 1, 1, 0, 1, 0}},
 
 		// #
 		// ###
 		//   #
-		{BoundingBox: []uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 1, 1, 0, 0, 1}},
+		{BB: [2]uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 1, 1, 0, 0, 1}},
 
 		//    #
 		// ####
-		{BoundingBox: []uint8{4, 2}, Shape: []Bit{0, 0, 0, 1, 1, 1, 1, 1}},
+		{BB: [2]uint8{4, 2}, Shape: []Bit{0, 0, 0, 1, 1, 1, 1, 1}},
 
 		//   #
 		// ####
-		{BoundingBox: []uint8{4, 2}, Shape: []Bit{0, 0, 1, 0, 1, 1, 1, 1}},
+		{BB: [2]uint8{4, 2}, Shape: []Bit{0, 0, 1, 0, 1, 1, 1, 1}},
 
 		// ###
 		//   ##
-		{BoundingBox: []uint8{4, 2}, Shape: []Bit{1, 1, 1, 0, 0, 0, 1, 1}},
+		{BB: [2]uint8{4, 2}, Shape: []Bit{1, 1, 1, 0, 0, 0, 1, 1}},
 
 		// #
 		// ###
 		//  #
-		{BoundingBox: []uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 1, 1, 0, 1, 0}},
+		{BB: [2]uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 1, 1, 0, 1, 0}},
 
 		// ###
 		// # #
-		{BoundingBox: []uint8{3, 2}, Shape: []Bit{1, 1, 1, 1, 0, 1}},
+		{BB: [2]uint8{3, 2}, Shape: []Bit{1, 1, 1, 1, 0, 1}},
 
 		// #
 		// ###
 		// #
-		{BoundingBox: []uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 1, 1, 1, 0, 0}},
+		{BB: [2]uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 1, 1, 1, 0, 0}},
 
 		// ##
 		//  ##
 		//   #
-		{BoundingBox: []uint8{3, 3}, Shape: []Bit{1, 1, 0, 0, 1, 1, 0, 0, 1}},
+		{BB: [2]uint8{3, 3}, Shape: []Bit{1, 1, 0, 0, 1, 1, 0, 0, 1}},
 
 		// #
 		// #
 		// ###
-		{BoundingBox: []uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 0, 0, 1, 1, 1}},
+		{BB: [2]uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 0, 0, 1, 1, 1}},
 	}
 )
 
-type piece struct {
-	BoundingBox []uint8 `json:"bb"`
-	Shape       []Bit   `json:"shape"`
+func PiecesCount() uint8 {
+	return uint8(len(pieces))
 }
 
-type Transformation struct {
-	Rotation int `json:"rotation"`
-	Flip     Bit `json:"flip"`
+// get a piece.
+func GetPiece(idx uint8) *piece {
+	p := pieces[idx]
+	cp := &piece{
+		BB:    [2]uint8{p.BB[0], p.BB[1]},
+		Shape: make([]Bit, 0, len(p.Shape)),
+	}
+	cp.Shape = append(cp.Shape, p.Shape...)
+	return cp
+}
+
+type piece struct {
+	// bounding box
+	BB    [2]uint8 `json:"bb"`
+	Shape []Bit    `json:"shape"`
 }
 
 type Game struct {
@@ -174,10 +185,11 @@ func (a *Start) MustDo(c *app.Client) *Game {
 }
 
 type TakeTurn struct {
-	Pass           bool            `json:"pass"`
-	PieceIdx       uint8           `json:"pieceIdx"`
-	Position       uint8           `json:"position"`
-	Transformation *Transformation `json:"transformation"`
+	Pass     bool   `json:"pass"`
+	PieceIdx uint8  `json:"pieceIdx"`
+	Position uint16 `json:"position"`
+	Rotation uint8  `json:"rotation"`
+	Flip     Bit    `json:"flip"`
 }
 
 func (_ *TakeTurn) Path() string {

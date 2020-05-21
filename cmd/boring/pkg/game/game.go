@@ -24,15 +24,14 @@ type Game interface {
 }
 
 type Base struct {
-	Type         string        `json:"type"`
-	ID           ID            `json:"id"`
-	UpdatedOn    time.Time     `json:"updatedOn"`
-	State        uint8         `json:"state"` // 0 not started, 1 started, 2 finished, 3 abandoned
-	MinPlayers   int           `json:"minPlayers"`
-	MaxPlayers   int           `json:"maxPlayers"`
-	Players      []ID          `json:"players"`
-	TurnIdx      int           `json:"turnIdx"`
-	TurnDuration time.Duration `json:"turnDuration"`
+	Type       string    `json:"type"`
+	ID         ID        `json:"id"`
+	UpdatedOn  time.Time `json:"updatedOn"`
+	State      uint8     `json:"state"` // 0 not started, 1 started, 2 finished, 3 abandoned
+	MinPlayers int       `json:"minPlayers"`
+	MaxPlayers int       `json:"maxPlayers"`
+	Players    []ID      `json:"players"`
+	TurnIdx    uint32    `json:"turnIdx"`
 }
 
 func (b *Base) GetBase() *Base {
@@ -40,8 +39,8 @@ func (b *Base) GetBase() *Base {
 }
 
 func (b *Base) IsMyTurn(tlbx app.Toolbox) bool {
-	return b.Started() && b.TurnDuration == 0 &&
-		b.Players[(b.TurnIdx%len(b.Players))].Equal(tlbx.Me())
+	return b.Started() &&
+		b.Players[(int(b.TurnIdx)%len(b.Players))].Equal(tlbx.Me())
 }
 
 func (b *Base) IsActive() bool {

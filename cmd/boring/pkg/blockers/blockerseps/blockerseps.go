@@ -7,9 +7,14 @@ import (
 	"github.com/0xor1/wtf/pkg/web/app"
 )
 
+const (
+	gameType       = "blockers"
+	boardDims      = uint16(20)
+	pieceSetsCount = uint8(4)
+)
+
 var (
-	gameType = "blockers"
-	Eps      = []*app.Endpoint{
+	Eps = []*app.Endpoint{
 		{
 			Description:  "Create a new game",
 			Path:         (&blockers.New{}).Path(),
@@ -100,9 +105,77 @@ var (
 				args := a.(*blockers.TakeTurn)
 				g := &blockers.Game{}
 				game.TakeTurn(tlbx, gameType, g, func(g game.Game) {
+					if args.Pass {
+						return
+					}
+
 					b := g.(*blockers.Game)
-					Println(b, args)
-					// TODO take turn
+					turnIdx := b.Base.TurnIdx
+
+					pieceSetIdx := uint8(turnIdx % uint32(pieceSetsCount))
+					tlbx.BadReqIf(
+						args.PieceIdx >= blockers.PiecesCount(),
+						"invalid pieceIdx value: %d, must be less than: %d", args.PieceIdx, blockers.PiecesCount())
+
+					tlbx.BadReqIf(
+						b.PieceSets[args.PieceIdx*pieceSetsCount+pieceSetIdx] == 0,
+						"invalid pieceIdx, you have already used that piece")
+
+					// get piece must return a copy so we arent updating the original values
+					piece := blockers.GetPiece(args.PieceIdx)
+
+					// flip the piece if directed to, can think of this as reversing each row
+					//
+					//	■■□   □■■
+					//  □■■ → ■■□
+					//	□□■   ■□□
+					//
+					if args.Flip.Bool() {
+						flippedShape := make(Bits, len(piece.Shape))
+						for y := uint8(0); y < piece.BB[1]; y++ {
+							for x := uint8(0); x < piece.BB[0]; x++ {
+								flippedShape[(y*piece.BB[0])+x] = piece.Shape[(y*piece.BB[0])+piece.BB[0]-1-x]
+							}
+						}
+						piece.Shape = flippedShape
+					}
+
+					// rotate clockwise 90 degrees * args.Rotation
+					//
+					// ■■□ → □■
+					// □■■   ■■
+					//       ■□
+					//
+					args.Rotation = args.Rotation % 4
+					for i := uint8(0); i < args.Rotation; i++ {
+						rotatedShape := make(Bits, len(piece.Shape))
+						for y := uint8(0); y < piece.BB[1]; y++ {
+							for x := uint8(0); x < piece.BB[0]; x++ {
+								rotatedShape[(x*piece.BB[1])+(piece.BB[1]-1-y)] = piece.Shape[(y*piece.BB[0])+x]
+							}
+						}
+						piece.Shape = rotatedShape
+						bb0 := piece.BB[0]
+						piece.BB[0] = piece.BB[1]
+						piece.BB[1] = bb0
+					}
+
+					// validate piece is contained by board
+					x, y := iToXY(args.Position)
+					tlbx.BadReqIf(
+						x+piece.BB[0] > uint8(boardDims) || y+piece.BB[1] > uint8(boardDims),
+						"piece/position/rotation combination is not contained on the board")
+
+					// if first piece, validate it is in the correct corner
+					// 0 → 1
+					// ↑   ↓
+					// 3 ← 2
+					if turnIdx < 4 {
+
+					}
+
+					// validate
+
 				})
 				return g
 			},
@@ -135,58 +208,32 @@ var (
 )
 
 func NewGame() *blockers.Game {
+	pieceSets := make(Bits, 0, blockers.PiecesCount()*pieceSetsCount)
+	for len(pieceSets) < cap(pieceSets) {
+		pieceSets = append(pieceSets, Bit(1))
+	}
+	board := make(blockers.Pbits, 0, boardDims*boardDims)
+	for len(pieceSets) < cap(pieceSets) {
+		board = append(board, blockers.Pbit(4))
+	}
 	return &blockers.Game{
 		Base: game.Base{
-			Type:         gameType,
-			MinPlayers:   2,
-			MaxPlayers:   4,
-			TurnIdx:      0,
-			TurnDuration: 0,
+			Type:       gameType,
+			MinPlayers: 2,
+			MaxPlayers: 4,
+			TurnIdx:    0,
 		},
-		PieceSets: Bits{
-			1, 1, 1, 1, // piece 0  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 1  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 2  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 3  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 4  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 5  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 6  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 7  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 8  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 9  -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 10 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 11 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 12 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 13 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 14 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 15 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 16 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 17 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 18 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 19 -> color 0, 1, 2, 3
-			1, 1, 1, 1, // piece 20 -> color 0, 1, 2, 3
-		},
-		Board: blockers.Pbits{
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-		},
+		PieceSets: pieceSets,
+		Board:     board,
 	}
+}
+
+func iToXY(i uint16) (x uint8, y uint8) {
+	x = uint8(i % boardDims)
+	y = uint8(i / boardDims)
+	return
+}
+
+func xyToI(x, y uint8) uint16 {
+	return boardDims*uint16(y) + uint16(x)
 }
