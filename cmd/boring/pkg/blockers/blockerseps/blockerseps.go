@@ -104,14 +104,14 @@ var (
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*blockers.TakeTurn)
 				g := &blockers.Game{}
-				game.TakeTurn(tlbx, gameType, g, func(g game.Game) {
-					game := g.(*blockers.Game)
-					turnIdx := game.Base.TurnIdx
+				game.TakeTurn(tlbx, gameType, g, func(a game.Game) {
+					g := a.(*blockers.Game)
+					turnIdx := g.Base.TurnIdx
 					pieceSetIdx := uint8(turnIdx % uint32(pieceSetsCount))
 					if args.End {
-						if !(pieceSetIdx == 3 && len(game.Players) == 3) {
+						if !(pieceSetIdx == 3 && len(g.Players) == 3) {
 							// end this players set except for last color in 3 player game
-							game.PieceSetsEnded[pieceSetIdx] = 1
+							g.PieceSetsEnded[pieceSetIdx] = 1
 						}
 					} else {
 						// validate pieceIdx is in valid range
@@ -121,7 +121,7 @@ var (
 
 						// validate piece is still available
 						tlbx.BadReqIf(
-							game.PieceSets[args.PieceIdx*pieceSetsCount+pieceSetIdx] == 0,
+							g.PieceSets[args.PieceIdx*pieceSetsCount+pieceSetIdx] == 0,
 							"invalid pieceIdx, that piece has already been used")
 
 						// get piece must return a copy so we arent updating the original values
@@ -185,7 +185,7 @@ var (
 									cellY := posY + pieceY
 									cellI := xyToI(cellX, cellY, boardDims)
 
-									tlbx.BadReqIf(game.Board[cellI] != 4, "cell already occupied")
+									tlbx.BadReqIf(g.Board[cellI] != 4, "cell already occupied")
 									insertIdxs = append(insertIdxs, cellI)
 
 									// check if this cell meets first corner constraint
@@ -211,9 +211,9 @@ var (
 											if loopBoardX >= 0 && loopBoardY >= 0 && loopBoardX < int(boardDims) && loopBoardY < int(boardDims) {
 												diagnonalTouchConMet = diagnonalTouchConMet ||
 													((offsetX != 0 || offsetY != 0) &&
-														game.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSetIdx))
+														g.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSetIdx))
 												tlbx.BadReqIf((offsetX == 0 || offsetY == 0) &&
-													game.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSetIdx),
+													g.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSetIdx),
 													"face to face constraint not met")
 											}
 										}
@@ -226,11 +226,11 @@ var (
 
 						// update the board with the new piece cells on it
 						for _, i := range insertIdxs {
-							game.Board[i] = blockers.Pbit(pieceSetIdx)
+							g.Board[i] = blockers.Pbit(pieceSetIdx)
 						}
 
 						// set this piece from this set as having been used.
-						game.PieceSets[args.PieceIdx*pieceSetsCount+pieceSetIdx] = 0
+						g.PieceSets[args.PieceIdx*pieceSetsCount+pieceSetIdx] = 0
 					}
 					// final section to check for finished game state and
 					// auto increment turnIdx passed any given up piece sets,
@@ -238,12 +238,12 @@ var (
 					pieceSetIdxsStillActive := make([]uint8, 0, pieceSetsCount)
 					for i := uint8(0); i < pieceSetsCount; i++ {
 						// dont consider last pieceSet in a 3 player game
-						if i == 3 && len(game.Players) == 3 {
+						if i == 3 && len(g.Players) == 3 {
 							continue
 						}
-						if game.PieceSetsEnded[i] == 0 {
+						if g.PieceSetsEnded[i] == 0 {
 							for j := uint8(0); j < blockers.PiecesCount(); j++ {
-								if game.PieceSets[j*pieceSetsCount+i] == 1 {
+								if g.PieceSets[j*pieceSetsCount+i] == 1 {
 									pieceSetIdxsStillActive = append(pieceSetIdxsStillActive, i)
 									break
 								}
@@ -251,14 +251,14 @@ var (
 						}
 					}
 					if len(pieceSetIdxsStillActive) == 0 {
-						game.State = 2
+						g.State = 2
 					} else {
 						// increment game.TurnIdx pass any ended piece sets
 						for i := uint8(1); i <= pieceSetsCount; i++ {
-							if game.PieceSetsEnded[(pieceSetIdx + i) % pieceSetsCount] == 0 {
+							if g.PieceSetsEnded[(pieceSetIdx+i)%pieceSetsCount] == 0 {
 								break
 							}
-							game.TurnIdx++
+							g.TurnIdx++
 						}
 					}
 				})
