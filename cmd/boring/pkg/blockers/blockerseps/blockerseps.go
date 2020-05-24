@@ -302,7 +302,7 @@ func NewGame() *blockers.Game {
 		pieceSets = append(pieceSets, Bit(1))
 	}
 	board := make(blockers.Pbits, 0, uint16(boardDims)*uint16(boardDims))
-	for len(pieceSets) < cap(pieceSets) {
+	for len(board) < cap(board) {
 		board = append(board, blockers.Pbit(pieceSetsCount))
 	}
 	return &blockers.Game{

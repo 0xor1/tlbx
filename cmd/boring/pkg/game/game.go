@@ -74,11 +74,11 @@ func New(tlbx app.Toolbox, game Game) {
 	PanicIf(base.Type == "", "game type must be set")
 	PanicIf(StrLen(base.Type) > gameTypeMaxLen, "game type len must be < %d", gameTypeMaxLen)
 	PanicIf(base.MinPlayers <= 0 || base.MinPlayers > base.MaxPlayers, "invalid min/max player values")
+	validateUserIsntInAnActiveGame(tlbx, "create")
 	base.UpdatedOn = NowMilli()
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
-	validateUserIsntInAnActiveGame(tlbx, tx, "create")
 	id := tlbx.NewID()
 	// assign new session id for a new game so no clashes with old finished games
 	tlbx.Session().Login(id)
@@ -92,6 +92,7 @@ func New(tlbx app.Toolbox, game Game) {
 }
 
 func Join(tlbx app.Toolbox, gameType string, game ID, dst Game) {
+	validateUserIsntInAnActiveGame(tlbx, "join")
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
@@ -99,7 +100,6 @@ func Join(tlbx app.Toolbox, gameType string, game ID, dst Game) {
 	b := dst.GetBase()
 	tlbx.BadReqIf(!b.NotStarted(), "can't join a game that has already been started")
 	tlbx.BadReqIf(len(b.Players) >= int(b.MaxPlayers), "game is already at max player limit: %d", b.MaxPlayers)
-	validateUserIsntInAnActiveGame(tlbx, tx, "join")
 	// assign new session id for a new game so no clashes with old finished games
 	newUserID := tlbx.NewID()
 	b.Players = append(b.Players, newUserID)
@@ -148,6 +148,7 @@ func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Ga
 	takeTurn(g)
 	b.TurnIdx++
 	update(tlbx, tx, g)
+	tx.Commit()
 }
 
 func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
@@ -192,7 +193,7 @@ func update(tlbx app.Toolbox, tx service.Tx, game Game) {
 	base := game.GetBase()
 	base.UpdatedOn = NowMilli()
 	serialized := json.MustMarshal(game)
-	tx.Exec(`UPDATE games Set updatedOn=? AND serialized=? WHERE id=?`, base.UpdatedOn, serialized, base.ID)
+	tx.Exec(`UPDATE games Set updatedOn=?, serialized=? WHERE id=?`, base.UpdatedOn, serialized, base.ID)
 	cacheSerializedGame(tlbx, base.ID, serialized)
 }
 
@@ -244,8 +245,8 @@ func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameTyp
 	return nil
 }
 
-func validateUserIsntInAnActiveGame(tlbx app.Toolbox, tx service.Tx, verb string) {
-	g := getUsersActiveGame(tlbx, tx, true, "", &Base{})
+func validateUserIsntInAnActiveGame(tlbx app.Toolbox, verb string) {
+	g := getUsersActiveGame(tlbx, nil, false, "", &Base{})
 	if g == nil {
 		return
 	}

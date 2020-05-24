@@ -8,86 +8,107 @@ import (
 
 var (
 	pieces = []*piece{
+		// 0
 		// #
 		{BB: [2]uint8{1, 1}, Shape: []Bit{1}},
 
+		// 1
 		// ##
 		{BB: [2]uint8{2, 1}, Shape: []Bit{1, 1}},
 
+		// 2
 		// ###
 		{BB: [2]uint8{3, 1}, Shape: []Bit{1, 1, 1}},
 
+		// 3
 		// #
 		// ##
 		{BB: [2]uint8{2, 2}, Shape: []Bit{1, 0, 1, 1}},
 
+		// 4
 		// ####
 		{BB: [2]uint8{4, 1}, Shape: []Bit{1, 1, 1, 1}},
 
+		// 5
 		// ##
 		// ##
 		{BB: [2]uint8{2, 2}, Shape: []Bit{1, 1, 1, 1}},
 
+		// 6
 		//  #
 		// ###
 		{BB: [2]uint8{3, 2}, Shape: []Bit{0, 1, 0, 1, 1, 1}},
 
+		// 7
 		//   #
 		// ###
 		{BB: [2]uint8{3, 2}, Shape: []Bit{0, 0, 1, 1, 1, 1}},
 
+		// 8
 		//  ##
 		// ##
 		{BB: [2]uint8{3, 2}, Shape: []Bit{0, 1, 1, 1, 1, 0}},
 
+		// 9
 		// #####
 		{BB: [2]uint8{5, 1}, Shape: []Bit{1, 1, 1, 1, 1}},
 
+		// 10
 		// ###
 		// ##
 		{BB: [2]uint8{3, 2}, Shape: []Bit{1, 1, 1, 1, 1, 0}},
 
+		// 11
 		//  #
 		// ###
 		//  #
 		{BB: [2]uint8{3, 3}, Shape: []Bit{0, 1, 0, 1, 1, 1, 0, 1, 0}},
 
+		// 12
 		// #
 		// ###
 		//   #
 		{BB: [2]uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 1, 1, 0, 0, 1}},
 
+		// 13
 		//    #
 		// ####
 		{BB: [2]uint8{4, 2}, Shape: []Bit{0, 0, 0, 1, 1, 1, 1, 1}},
 
+		// 14
 		//   #
 		// ####
 		{BB: [2]uint8{4, 2}, Shape: []Bit{0, 0, 1, 0, 1, 1, 1, 1}},
 
+		// 15
 		// ###
 		//   ##
 		{BB: [2]uint8{4, 2}, Shape: []Bit{1, 1, 1, 0, 0, 0, 1, 1}},
 
+		// 16
 		// #
 		// ###
 		//  #
 		{BB: [2]uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 1, 1, 0, 1, 0}},
 
+		// 17
 		// ###
 		// # #
 		{BB: [2]uint8{3, 2}, Shape: []Bit{1, 1, 1, 1, 0, 1}},
 
+		// 18
 		// #
 		// ###
 		// #
 		{BB: [2]uint8{3, 3}, Shape: []Bit{1, 0, 0, 1, 1, 1, 1, 0, 0}},
 
+		// 19
 		// ##
 		//  ##
 		//   #
 		{BB: [2]uint8{3, 3}, Shape: []Bit{1, 1, 0, 0, 1, 1, 0, 0, 1}},
 
+		// 20
 		// #
 		// #
 		// ###
@@ -128,7 +149,15 @@ func (g *Game) GetBase() *game.Base {
 }
 
 func (g *Game) IsMyTurn(tlbx app.Toolbox) bool {
-	return g.Base.IsMyTurn(tlbx) // TODO update for 3 player version :(
+	b := g.Base
+	if len(b.Players) == 3 {
+		playerIdx := int(b.TurnIdx) % 4
+		if playerIdx == 3 {
+			playerIdx = (((int(b.TurnIdx) + 1) / 4) - 1) % 4
+		}
+		return b.Players[playerIdx].Equal(tlbx.Me())
+	}
+	return b.IsMyTurn(tlbx)
 }
 
 type New struct{}

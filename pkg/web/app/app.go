@@ -947,6 +947,10 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 		return err
 	}
 	if httpRes.StatusCode >= 400 {
+		if res != nil {
+			v := reflect.ValueOf(res)
+			v.Elem().Set(reflect.Zero(v.Elem().Type()))
+		}
 		msg := &ErrMsg{
 			Status: httpRes.StatusCode,
 		}
