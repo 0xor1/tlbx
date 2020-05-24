@@ -214,7 +214,7 @@ var (
 														game.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSetIdx))
 												tlbx.BadReqIf((offsetX == 0 || offsetY == 0) &&
 													game.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSetIdx),
-													"pieces from the same set may only touch diagonally, not face to face")
+													"face to face constraint not met")
 											}
 										}
 									}
@@ -233,16 +233,16 @@ var (
 						game.PieceSets[args.PieceIdx*pieceSetsCount+pieceSetIdx] = 0
 					}
 					// final section to check for finished game state and
-					// auto increment turnIdx passed any ended pieceSets,
+					// auto increment turnIdx passed any given up piece sets,
 					// remember game.TakeTurn() will increment turnIdx again after this also.
 					pieceSetIdxsStillActive := make([]uint8, 0, pieceSetsCount)
 					for i := uint8(0); i < pieceSetsCount; i++ {
 						// dont consider last pieceSet in a 3 player game
 						if i == 3 && len(game.Players) == 3 {
-							break
+							continue
 						}
 						if game.PieceSetsEnded[i] == 0 {
-							for j := uint8(0); j < pieceSetsCount; j++ {
+							for j := uint8(0); j < blockers.PiecesCount(); j++ {
 								if game.PieceSets[j*pieceSetsCount+i] == 1 {
 									pieceSetIdxsStillActive = append(pieceSetIdxsStillActive, i)
 									break
@@ -252,9 +252,15 @@ var (
 					}
 					if len(pieceSetIdxsStillActive) == 0 {
 						game.State = 2
-						return
+					} else {
+						// increment game.TurnIdx pass any ended piece sets
+						for i := uint8(1); i <= pieceSetsCount; i++ {
+							if game.PieceSetsEnded[(pieceSetIdx + i) % pieceSetsCount] == 0 {
+								break
+							}
+							game.TurnIdx++
+						}
 					}
-					// TODO check whose turn is next incase someone has ended
 				})
 				return g
 			},
