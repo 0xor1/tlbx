@@ -7,11 +7,16 @@ import (
 	"time"
 
 	. "github.com/0xor1/wtf/pkg/core"
+	"github.com/0xor1/wtf/pkg/isql"
 	"github.com/0xor1/wtf/pkg/json"
 	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/service"
 	comsql "github.com/0xor1/wtf/pkg/web/app/common/sql"
 	"github.com/gomodule/redigo/redis"
+)
+
+const (
+	gameTypeMaxLen = 20
 )
 
 var (
@@ -21,6 +26,7 @@ var (
 
 type Game interface {
 	GetBase() *Base
+	IsMyTurn(app.Toolbox) bool
 }
 
 type Base struct {
@@ -28,8 +34,8 @@ type Base struct {
 	ID         ID        `json:"id"`
 	UpdatedOn  time.Time `json:"updatedOn"`
 	State      uint8     `json:"state"` // 0 not started, 1 started, 2 finished, 3 abandoned
-	MinPlayers int       `json:"minPlayers"`
-	MaxPlayers int       `json:"maxPlayers"`
+	MinPlayers uint8     `json:"minPlayers"`
+	MaxPlayers uint8     `json:"maxPlayers"`
 	Players    []ID      `json:"players"`
 	TurnIdx    uint32    `json:"turnIdx"`
 }
@@ -66,6 +72,7 @@ func (b *Base) Abandoned() bool {
 func New(tlbx app.Toolbox, game Game) {
 	base := game.GetBase()
 	PanicIf(base.Type == "", "game type must be set")
+	PanicIf(StrLen(base.Type) > gameTypeMaxLen, "game type len must be < %d", gameTypeMaxLen)
 	PanicIf(base.MinPlayers <= 0 || base.MinPlayers > base.MaxPlayers, "invalid min/max player values")
 	base.UpdatedOn = NowMilli()
 	srv := service.Get(tlbx)
@@ -91,30 +98,29 @@ func Join(tlbx app.Toolbox, gameType string, game ID, dst Game) {
 	read(tlbx, tx, true, gameType, game, dst)
 	b := dst.GetBase()
 	tlbx.BadReqIf(!b.NotStarted(), "can't join a game that has already been started")
-	tlbx.BadReqIf(len(b.Players) >= b.MaxPlayers, "game is already at max player limit: %d", b.MaxPlayers)
+	tlbx.BadReqIf(len(b.Players) >= int(b.MaxPlayers), "game is already at max player limit: %d", b.MaxPlayers)
 	validateUserIsntInAnActiveGame(tlbx, tx, "join")
 	// assign new session id for a new game so no clashes with old finished games
 	newUserID := tlbx.NewID()
 	b.Players = append(b.Players, newUserID)
-	if len(b.Players) == b.MaxPlayers {
-		// if max players are in then start the game immediately
-		b.State = 1
-	}
 	tlbx.Session().Login(newUserID)
 	tx.Exec(`INSERT INTO players (id, game) VALUES (?, ?)`, newUserID, b.ID)
 	update(tlbx, tx, dst)
 	tx.Commit()
 }
 
-func Start(tlbx app.Toolbox, randomizePlayerOrder bool, gameType string, dst Game) {
+func Start(tlbx app.Toolbox, randomizePlayerOrder bool, gameType string, dst Game, customSetup func(game Game)) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
 	g := getUsersActiveGame(tlbx, tx, true, gameType, dst)
 	b := g.GetBase()
 	tlbx.BadReqIf(!b.NotStarted(), "can't start a game that has already been started")
-	tlbx.BadReqIf(len(b.Players) < b.MinPlayers, "game hasn't met minimum player count requirement: %d", b.MinPlayers)
+	tlbx.BadReqIf(len(b.Players) < int(b.MinPlayers), "game hasn't met minimum player count requirement: %d", b.MinPlayers)
 	tlbx.BadReqIf(!b.ID.Equal(tlbx.Me()), "only the creator can start the game")
+	if customSetup != nil {
+		customSetup(dst)
+	}
 	b.State = 1
 	if randomizePlayerOrder {
 		reorderedPlayers := make([]ID, 0, len(b.Players))
@@ -137,7 +143,8 @@ func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Ga
 	tlbx.BadReqIf(g == nil, "you are not in an active game")
 	b := g.GetBase()
 	tlbx.BadReqIf(b.Type != gameType, "types do not match, your active game: %s, expected game: %s", g.GetBase().Type, gameType)
-	tlbx.BadReqIf(!b.IsMyTurn(tlbx), "it's not you're turn")
+	tlbx.BadReqIf(!b.Started(), "game isn't started")
+	tlbx.BadReqIf(!g.IsMyTurn(tlbx), "it's not you're turn")
 	takeTurn(g)
 	b.TurnIdx++
 	update(tlbx, tx, g)
@@ -148,7 +155,7 @@ func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
 	g := getUsersActiveGame(tlbx, tx, true, gameType, dst)
-	if g != nil && g.GetBase().IsActive() {
+	if g != nil {
 		g.GetBase().State = 3
 		update(tlbx, tx, dst)
 		tx.Commit()
@@ -156,29 +163,29 @@ func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
 }
 
 func Get(tlbx app.Toolbox, gameType string, game ID, dst Game) {
-	tx := service.Get(tlbx).Data().Begin()
-	defer tx.Rollback()
-	read(tlbx, tx, false, gameType, game, dst)
-	tx.Commit()
+	read(tlbx, nil, false, gameType, game, dst)
 }
 
 func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, game ID, dst Game) {
+	PanicIf(forUpdate && tx == nil, "tx required forUpdate get call")
+	PanicIf(!forUpdate && tx != nil, "tx must be nil if it is a not forUpdate get call")
 	serialized := make([]byte, 0, 5*app.KB)
 	if !forUpdate {
 		serialized = getSerializedGameFromCache(tlbx, game)
 	}
 	if len(serialized) == 0 {
-		var query string
-		if !forUpdate {
-			query = `SELECT serialized FROM games WHERE id=? FOR UPDATE`
+		query := `SELECT serialized FROM games WHERE id=?`
+		var row isql.Row
+		if forUpdate {
+			query += ` FOR UPDATE`
+			row = tx.QueryRow(query, game)
 		} else {
-			query = `SELECT serialized FROM games WHERE id=?`
+			row = service.Get(tlbx).Data().QueryRow(query, game)
 		}
-		row := service.Get(tlbx).Data().QueryRow(query, game)
 		comsql.ReturnNotFoundOrPanicOn(row.Scan(&serialized))
 	}
 	json.MustUnmarshal(serialized, dst)
-	tlbx.BadReqIf(dst.GetBase().Type != gameType, "types do not match, your active game: %s, expected game: %s", dst.GetBase().Type, gameType)
+	tlbx.BadReqIf(dst.GetBase().Type != gameType, "types do not match, got: %s, expected: %s", dst.GetBase().Type, gameType)
 }
 
 func update(tlbx app.Toolbox, tx service.Tx, game Game) {
@@ -209,16 +216,19 @@ func DeleteOutdated(tlbx app.Toolbox) {
 }
 
 func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, dst Game) Game {
+	PanicIf(forUpdate && tx == nil, "tx required forUpdate get call")
+	PanicIf(!forUpdate && tx != nil, "tx must be nil if it is a not forUpdate get call")
 	buf := make([]byte, 0, 5*app.KB)
 	ses := tlbx.Session()
 	if ses.IsAuthed() {
-		var query string
-		if !forUpdate {
-			query = `SELECT g.serialized FROM games g INNER JOIN players p ON p.game=g.id WHERE p.id=? FOR UPDATE`
+		query := `SELECT g.serialized FROM games g INNER JOIN players p ON p.game=g.id WHERE p.id=?`
+		var row isql.Row
+		if forUpdate {
+			query += ` FOR UPDATE`
+			row = tx.QueryRow(query, ses.Me())
 		} else {
-			query = `SELECT g.serialized FROM games g INNER JOIN players p ON p.game=g.id WHERE p.id=?`
+			row = service.Get(tlbx).Data().QueryRow(query, ses.Me())
 		}
-		row := tx.QueryRow(query, ses.Me())
 		err := row.Scan(&buf)
 		if err != nil && err != sql.ErrNoRows {
 			PanicOn(err)
@@ -236,14 +246,12 @@ func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameTyp
 
 func validateUserIsntInAnActiveGame(tlbx app.Toolbox, tx service.Tx, verb string) {
 	g := getUsersActiveGame(tlbx, tx, false, "", &Base{})
-	if g != nil {
-		tlbx.BadReqIf(
-			g.GetBase().IsActive(),
-			"can not %s a new game while you are still participating in an active game, id: %s, type: %s",
-			verb,
-			g.GetBase().ID,
-			g.GetBase().Type)
-	}
+	tlbx.BadReqIf(
+		g != nil,
+		"can not %s a new game while you are still participating in an active game, id: %s, type: %s",
+		verb,
+		g.GetBase().ID,
+		g.GetBase().Type)
 }
 
 func cacheSerializedGame(tlbx app.Toolbox, id ID, serialized []byte) {

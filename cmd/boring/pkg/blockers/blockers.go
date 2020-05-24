@@ -118,12 +118,17 @@ type piece struct {
 
 type Game struct {
 	game.Base
-	PieceSets Bits  `json:"pieceSets"`
-	Board     Pbits `json:"board"`
+	PieceSetsEnded Bits  `json:"pieceSetsEnded"`
+	PieceSets      Bits  `json:"pieceSets"`
+	Board          Pbits `json:"board"`
 }
 
 func (g *Game) GetBase() *game.Base {
 	return &g.Base
+}
+
+func (g *Game) IsMyTurn(tlbx app.Toolbox) bool {
+	return g.Base.IsMyTurn(tlbx) // TODO update for 3 player version :(
 }
 
 type New struct{}
@@ -185,7 +190,7 @@ func (a *Start) MustDo(c *app.Client) *Game {
 }
 
 type TakeTurn struct {
-	Pass     bool   `json:"pass"`
+	End      bool   `json:"end"`
 	PieceIdx uint8  `json:"pieceIdx"`
 	Position uint16 `json:"position"`
 	Rotation uint8  `json:"rotation"`
