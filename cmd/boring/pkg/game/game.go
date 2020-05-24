@@ -245,9 +245,12 @@ func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameTyp
 }
 
 func validateUserIsntInAnActiveGame(tlbx app.Toolbox, tx service.Tx, verb string) {
-	g := getUsersActiveGame(tlbx, tx, false, "", &Base{})
+	g := getUsersActiveGame(tlbx, tx, true, "", &Base{})
+	if g == nil {
+		return
+	}
 	tlbx.BadReqIf(
-		g != nil,
+		true,
 		"can not %s a new game while you are still participating in an active game, id: %s, type: %s",
 		verb,
 		g.GetBase().ID,

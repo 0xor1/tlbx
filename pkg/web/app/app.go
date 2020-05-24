@@ -541,8 +541,8 @@ func (t *toolbox) Set(key, value interface{}) {
 }
 
 type redirect struct {
-	status int    `json:"status"`
-	url    string `json:"url"`
+	status int
+	url    string
 }
 
 type ErrMsg struct {

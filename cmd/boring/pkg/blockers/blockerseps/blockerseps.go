@@ -307,6 +307,7 @@ func NewGame() *blockers.Game {
 	}
 	return &blockers.Game{
 		Base: game.Base{
+			Type:       gameType,
 			MinPlayers: 2,
 			MaxPlayers: pieceSetsCount,
 			TurnIdx:    0,
