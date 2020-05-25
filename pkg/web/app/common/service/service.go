@@ -253,6 +253,6 @@ func (w *redisConnWrapper) do(do func(string, ...interface{}), cmd string, args 
 	do(cmd, args...)
 	w.tlbx.LogQueryStats(&app.QueryStats{
 		Milli: NowUnixMilli() - start,
-		Query: Sprint(append([]interface{}{cmd, " "}, args...)...),
+		Query: Sprint(append([]interface{}{cmd, " ", args[0], " ..."})...),
 	})
 }

@@ -108,7 +108,7 @@ var (
 					g := a.(*blockers.Game)
 					turnIdx := g.Base.TurnIdx
 					pieceSetIdx := uint8(turnIdx % uint32(pieceSetsCount))
-					if args.End {
+					if args.End.Bool() {
 						if !(pieceSetIdx == 3 && len(g.Players) == 3) {
 							// end this players set except for last color in 3 player game
 							g.PieceSetsEnded[pieceSetIdx] = 1
@@ -121,7 +121,7 @@ var (
 
 						// validate piece is still available
 						tlbx.BadReqIf(
-							g.PieceSets[args.PieceIdx*pieceSetsCount+pieceSetIdx] == 0,
+							g.PieceSets[pieceSetIdx*blockers.PiecesCount()+args.PieceIdx] == 0,
 							"invalid pieceIdx, that piece has already been used")
 
 						// get piece must return a copy so we arent updating the original values
@@ -192,6 +192,7 @@ var (
 									// 0 → 1
 									// ↑   ↓
 									// 3 ← 2
+
 									firstCornerConMet = firstCornerConMet ||
 										(pieceSetIdx == 0 && cellX == 0 && cellY == 0) ||
 										(pieceSetIdx == 1 && cellX == boardDims-1 && cellY == 0) ||
@@ -230,7 +231,7 @@ var (
 						}
 
 						// set this piece from this set as having been used.
-						g.PieceSets[args.PieceIdx*pieceSetsCount+pieceSetIdx] = 0
+						g.PieceSets[pieceSetIdx*blockers.PiecesCount()+args.PieceIdx] = 0
 					}
 					// final section to check for finished game state and
 					// auto increment turnIdx passed any given up piece sets,
@@ -243,7 +244,7 @@ var (
 						}
 						if g.PieceSetsEnded[i] == 0 {
 							for j := uint8(0); j < blockers.PiecesCount(); j++ {
-								if g.PieceSets[j*pieceSetsCount+i] == 1 {
+								if g.PieceSets[i*blockers.PiecesCount()+j] == 1 {
 									pieceSetIdxsStillActive = append(pieceSetIdxsStillActive, i)
 									break
 								}

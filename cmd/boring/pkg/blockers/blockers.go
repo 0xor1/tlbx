@@ -219,7 +219,7 @@ func (a *Start) MustDo(c *app.Client) *Game {
 }
 
 type TakeTurn struct {
-	End      bool   `json:"end"`
+	End      Bit    `json:"end"`
 	PieceIdx uint8  `json:"pieceIdx"`
 	Position uint16 `json:"position"`
 	Rotation uint8  `json:"rotation"`

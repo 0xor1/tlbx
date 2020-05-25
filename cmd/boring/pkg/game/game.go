@@ -144,7 +144,7 @@ func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Ga
 	b := g.GetBase()
 	tlbx.BadReqIf(b.Type != gameType, "types do not match, your active game: %s, expected game: %s", g.GetBase().Type, gameType)
 	tlbx.BadReqIf(!b.Started(), "game isn't started")
-	tlbx.BadReqIf(!g.IsMyTurn(tlbx), "it's not you're turn")
+	tlbx.BadReqIf(!g.IsMyTurn(tlbx), "it's not your turn")
 	takeTurn(g)
 	b.TurnIdx++
 	update(tlbx, tx, g)
