@@ -151,9 +151,9 @@ func (g *Game) GetBase() *game.Base {
 func (g *Game) IsMyTurn(tlbx app.Toolbox) bool {
 	b := g.Base
 	if len(b.Players) == 3 {
-		playerIdx := int(b.TurnIdx) % 4
+		playerIdx := int(b.Turn) % 4
 		if playerIdx == 3 {
-			playerIdx = (((int(b.TurnIdx) + 1) / 4) - 1) % 4
+			playerIdx = (((int(b.Turn) + 1) / 4) - 1) % 4
 		}
 		return b.Players[playerIdx].Equal(tlbx.Me())
 	}
@@ -220,7 +220,7 @@ func (a *Start) MustDo(c *app.Client) *Game {
 
 type TakeTurn struct {
 	End      Bit    `json:"end"`
-	PieceIdx uint8  `json:"pieceIdx"`
+	Piece    uint8  `json:"piece"`
 	Position uint16 `json:"position"`
 	Rotation uint8  `json:"rotation"`
 	Flip     Bit    `json:"flip"`

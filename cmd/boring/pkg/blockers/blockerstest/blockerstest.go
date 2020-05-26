@@ -16,150 +16,192 @@ func Everything(t *testing.T) {
 	a := assert.New(t)
 	r := test.NewRig(config.Get(), blockerseps.Eps, false, nil)
 	defer r.CleanUp()
+
+	play2PGame(a, r)
+	play3PGame(a, r)
+	play4PGame(a, r)
+}
+
+func play2PGame(a *assert.Assertions, r test.Rig) {
 	var err error
 
 	// ali creates a new game
-	aliGame := (&blockers.New{}).
+	g := (&blockers.New{}).
 		MustDo(r.Ali().Client())
-	a.NotNil(aliGame)
+	a.NotNil(g)
 
 	// bob joins ali's game
-	bobGame := (&blockers.Join{Game: aliGame.ID}).
+	g = (&blockers.Join{Game: g.ID}).
 		MustDo(r.Bob().Client())
-	a.NotNil(bobGame)
+	a.NotNil(g)
 
 	// ali starts the game
-	aliGame = (&blockers.Start{}).
+	g = (&blockers.Start{}).
 		MustDo(r.Ali().Client())
-	a.NotNil(aliGame)
+	a.NotNil(g)
 
-	// ali attempts her first turn missing her first corner cell
-	aliGame, err = (&blockers.TakeTurn{
-		PieceIdx: 0,
+	// ali 1:1 - invalid -missing her first corner cell
+	g, err = (&blockers.TakeTurn{
+		Piece:    0,
 		Position: 1,
 	}).Do(r.Ali().Client())
-	a.Nil(aliGame)
+	a.Nil(g)
 	a.Regexp("first corner constraint not met", err)
 
-	// ali takes a valid first turn with her first color
-	aliGame = (&blockers.TakeTurn{
-		PieceIdx: 0,
+	// ali 1:1 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    0,
 		Position: 0,
 	}).MustDo(r.Ali().Client())
-	a.NotNil(aliGame)
+	a.NotNil(g)
 
-	// bob takes a valid first turn with his first color
-	bobGame = (&blockers.TakeTurn{
-		PieceIdx: 16,
+	// bob 1:1 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    16,
 		Position: 17,
 		Rotation: 1,
 	}).MustDo(r.Bob().Client())
-	a.NotNil(bobGame)
+	a.NotNil(g)
 
-	// ali takes a valid first turn with her second color
-	aliGame = (&blockers.TakeTurn{
-		PieceIdx: 10,
+	// ali 1:2 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    10,
 		Position: 377,
 		Flip:     1,
 	}).MustDo(r.Ali().Client())
-	a.NotNil(aliGame)
+	a.NotNil(g)
 
-	// bob takes a valid first turn with his second color
-	bobGame = (&blockers.TakeTurn{
-		PieceIdx: 15,
+	// bob 1:2 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    15,
 		Position: 360,
 		Flip:     1,
 	}).MustDo(r.Bob().Client())
-	a.NotNil(bobGame)
+	a.NotNil(g)
 
-	// ali attempts an invalid second turn with her first color
-	// trying to reuse an already placed piece
-	aliGame, err = (&blockers.TakeTurn{
-		PieceIdx: 0,
+	// ali 2:1 - invalid - reuse an already placed piece
+	g, err = (&blockers.TakeTurn{
+		Piece:    0,
 		Position: 21,
 	}).Do(r.Ali().Client())
-	a.Nil(aliGame)
-	a.Regexp("invalid pieceIdx, that piece has already been used", err)
+	a.Nil(g)
+	a.Regexp("invalid piece, that piece has already been used", err)
 
-	// ali attempts an invalid second turn with her first color
-	// trying to place outside the board boundaries
-	aliGame, err = (&blockers.TakeTurn{
-		PieceIdx: 1,
+	// ali 2:1 - invalid - place outside the board boundaries
+	g, err = (&blockers.TakeTurn{
+		Piece:    1,
 		Position: 19,
 	}).Do(r.Ali().Client())
-	a.Nil(aliGame)
+	a.Nil(g)
 	a.Regexp("piece/position/rotation combination is not contained on the board", err)
 
-	// ali attempts an invalid second turn with her first color
-	// trying to place on top of her existing piece
-	aliGame, err = (&blockers.TakeTurn{
-		PieceIdx: 1,
+	// ali 2:1 - invalid - place on top of existing piece
+	g, err = (&blockers.TakeTurn{
+		Piece:    1,
 		Position: 0,
 	}).Do(r.Ali().Client())
-	a.Nil(aliGame)
+	a.Nil(g)
 	a.Regexp("cell already occupied", err)
 
-	// ali attempts an invalid second turn with her first color
-	// trying to place face touching pieces
-	aliGame, err = (&blockers.TakeTurn{
-		PieceIdx: 1,
+	// ali 2:1 - invalid - faces touching
+	g, err = (&blockers.TakeTurn{
+		Piece:    1,
 		Position: 20,
 	}).Do(r.Ali().Client())
-	a.Nil(aliGame)
+	a.Nil(g)
 	a.Regexp("face to face constraint not met", err)
 
-	// ali attempts an invalid second turn with her first color
-	// trying to place without touching diagonals
-	aliGame, err = (&blockers.TakeTurn{
-		PieceIdx: 1,
+	// ali 2:1 - invalid - no touching diagonals
+	g, err = (&blockers.TakeTurn{
+		Piece:    1,
 		Position: 22,
 	}).Do(r.Ali().Client())
-	a.Nil(aliGame)
+	a.Nil(g)
 	a.Regexp("diagonal touch constraint not met", err)
 
-	// ali takes a valid second turn with her first color
-	aliGame = (&blockers.TakeTurn{
-		PieceIdx: 1,
+	// ali 2:1 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    1,
 		Position: 21,
 	}).MustDo(r.Ali().Client())
-	a.NotNil(aliGame)
+	a.NotNil(g)
 
-	// bob takes a valid second turn with his first color
-	bobGame = (&blockers.TakeTurn{
-		PieceIdx: 20,
+	// bob 2:1 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    20,
 		Position: 14,
 	}).MustDo(r.Bob().Client())
-	a.NotNil(bobGame)
+	a.NotNil(g)
 
-	// bob attempts an invalid turn when it is not his go
-	bobGame, err = (&blockers.TakeTurn{
-		PieceIdx: 20,
+	// bob 2:2 - invalid - not his turn
+	g, err = (&blockers.TakeTurn{
+		Piece:    20,
 		Position: 14,
 	}).Do(r.Bob().Client())
-	a.Nil(bobGame)
+	a.Nil(g)
 	a.Regexp("it's not your turn", err)
 
-	// ali takes a valid second turn with her second color
-	aliGame = (&blockers.TakeTurn{
-		PieceIdx: 20,
+	// ali 2:2 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    20,
 		Position: 354,
 	}).MustDo(r.Ali().Client())
-	a.NotNil(aliGame)
+	a.NotNil(g)
 
-	// bob takes a valid second turn with his second color
-	bobGame = (&blockers.TakeTurn{
-		PieceIdx: 19,
+	// bob 2:2 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    19,
 		Position: 300,
 		Rotation: 3,
 	}).MustDo(r.Bob().Client())
-	a.NotNil(bobGame)
+	a.NotNil(g)
 
-	printGame(bobGame)
+	// ali 3:1 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    17,
+		Position: 3,
+		Rotation: 1,
+	}).MustDo(r.Ali().Client())
+	a.NotNil(g)
+
+	// bob 3:1 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    19,
+		Position: 77,
+		Rotation: 1,
+	}).MustDo(r.Bob().Client())
+	a.NotNil(g)
+
+	// ali 3:2 - valid
+	g = (&blockers.TakeTurn{
+		Piece:    19,
+		Position: 316,
+		Flip:     1,
+	}).MustDo(r.Ali().Client())
+	a.NotNil(g)
+
+	// bob 3:2 - valid
+	// g = (&blockers.TakeTurn{
+	// 	Piece:    20,
+	// 	Position: 316,
+	// 	Flip:     1,
+	// }).MustDo(r.Bob().Client())
+	// a.NotNil(g)
+
+	printGame(g)
+}
+
+func play3PGame(a *assert.Assertions, r test.Rig) {
+
+}
+
+func play4PGame(a *assert.Assertions, r test.Rig) {
+
 }
 
 func printGame(g *blockers.Game) {
 	Println()
-	Println("turnIdx", g.TurnIdx, "state", g.State, "ended", g.PieceSetsEnded)
+	Println("turn", g.Turn, "state", g.State, "ended", g.PieceSetsEnded)
 	Println()
 	printPieceSets(g)
 	Println()
@@ -194,7 +236,15 @@ func printPieceSets(g *blockers.Game) {
 
 func printBoard(g *blockers.Game) {
 	for y := 0; y < 20; y++ {
-		row := ""
+		rowStart := 20 * y
+		row := "%d "
+		if rowStart < 100 {
+			row += " "
+		}
+		if rowStart < 10 {
+			row += " "
+		}
+		row = Sprintf(row, rowStart)
 		for x := 0; x < 20; x++ {
 			color := aurora.White
 			switch g.Board[20*y+x] {
@@ -208,8 +258,8 @@ func printBoard(g *blockers.Game) {
 				color = aurora.Yellow
 			}
 			row += aurora.Sprintf(color(`■ `))
-
 		}
+		row += Sprintf(" %d", 20*(y+1)-1)
 		Println(row)
 	}
 }

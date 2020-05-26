@@ -106,27 +106,27 @@ var (
 				g := &blockers.Game{}
 				game.TakeTurn(tlbx, gameType, g, func(a game.Game) {
 					g := a.(*blockers.Game)
-					turnIdx := g.Base.TurnIdx
-					pieceSetIdx := uint8(turnIdx % uint32(pieceSetsCount))
+					turn := g.Base.Turn
+					pieceSet := uint8(turn % uint32(pieceSetsCount))
 					if args.End.Bool() {
-						if !(pieceSetIdx == 3 && len(g.Players) == 3) {
+						if !(pieceSet == 3 && len(g.Players) == 3) {
 							// end this players set except for last color in 3 player game
-							g.PieceSetsEnded[pieceSetIdx] = 1
+							g.PieceSetsEnded[pieceSet] = 1
 						}
 					} else {
-						// validate pieceIdx is in valid range
+						// validate piece is in valid range
 						tlbx.BadReqIf(
-							args.PieceIdx >= blockers.PiecesCount(),
-							"invalid pieceIdx value: %d, must be less than: %d", args.PieceIdx, blockers.PiecesCount())
+							args.Piece >= blockers.PiecesCount(),
+							"invalid piece value: %d, must be less than: %d", args.Piece, blockers.PiecesCount())
 
 						// validate piece is still available
 						tlbx.BadReqIf(
-							g.PieceSets[pieceSetIdx*blockers.PiecesCount()+args.PieceIdx] == 0,
-							"invalid pieceIdx, that piece has already been used")
+							g.PieceSets[pieceSet*blockers.PiecesCount()+args.Piece] == 0,
+							"invalid piece, that piece has already been used")
 
 						// get piece must return a copy so we arent updating the original values
 						// when flipping/rotating
-						piece := blockers.GetPiece(args.PieceIdx)
+						piece := blockers.GetPiece(args.Piece)
 
 						// flip the piece if directed to, can think of this as reversing each row
 						//
@@ -172,9 +172,9 @@ var (
 
 						// validate placement con(straints) met, firstCorner, diagonalTouch, sideTouch
 						// firstCornerCon only needs to be met on first turns of each piece set
-						firstCornerConMet := turnIdx >= uint32(pieceSetsCount)
+						firstCornerConMet := turn >= uint32(pieceSetsCount)
 						// diagonalTouchCon doesnt need to be met on first turn of each piece set
-						diagnonalTouchConMet := turnIdx < uint32(pieceSetsCount)
+						diagnonalTouchConMet := turn < uint32(pieceSetsCount)
 						// board cell indexes to be inserted into by this placement
 						insertIdxs := make([]uint16, 0, 5) // 5 because that's the largest piece by active cell count
 						posX, posY := iToXY(args.Position, boardDims, boardDims)
@@ -194,10 +194,10 @@ var (
 									// 3 ← 2
 
 									firstCornerConMet = firstCornerConMet ||
-										(pieceSetIdx == 0 && cellX == 0 && cellY == 0) ||
-										(pieceSetIdx == 1 && cellX == boardDims-1 && cellY == 0) ||
-										(pieceSetIdx == 2 && cellX == boardDims-1 && cellY == boardDims-1) ||
-										(pieceSetIdx == 3 && cellX == 0 && cellY == boardDims-1)
+										(pieceSet == 0 && cellX == 0 && cellY == 0) ||
+										(pieceSet == 1 && cellX == boardDims-1 && cellY == 0) ||
+										(pieceSet == 2 && cellX == boardDims-1 && cellY == boardDims-1) ||
+										(pieceSet == 3 && cellX == 0 && cellY == boardDims-1)
 
 									// loop through surrounding cells to check for diagonal and side touches
 									for offsetY := -1; offsetY < 2; offsetY++ {
@@ -212,9 +212,9 @@ var (
 											if loopBoardX >= 0 && loopBoardY >= 0 && loopBoardX < int(boardDims) && loopBoardY < int(boardDims) {
 												diagnonalTouchConMet = diagnonalTouchConMet ||
 													((offsetX != 0 || offsetY != 0) &&
-														g.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSetIdx))
+														g.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSet))
 												tlbx.BadReqIf((offsetX == 0 || offsetY == 0) &&
-													g.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSetIdx),
+													g.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSet),
 													"face to face constraint not met")
 											}
 										}
@@ -227,39 +227,44 @@ var (
 
 						// update the board with the new piece cells on it
 						for _, i := range insertIdxs {
-							g.Board[i] = blockers.Pbit(pieceSetIdx)
+							g.Board[i] = blockers.Pbit(pieceSet)
 						}
 
 						// set this piece from this set as having been used.
-						g.PieceSets[pieceSetIdx*blockers.PiecesCount()+args.PieceIdx] = 0
+						g.PieceSets[pieceSet*blockers.PiecesCount()+args.Piece] = 0
 					}
 					// final section to check for finished game state and
 					// auto increment turnIdx passed any given up piece sets,
 					// remember game.TakeTurn() will increment turnIdx again after this also.
-					pieceSetIdxsStillActive := make([]uint8, 0, pieceSetsCount)
-					for i := uint8(0); i < pieceSetsCount; i++ {
+					pieceSetsStillActive := make([]uint8, 0, pieceSetsCount)
+					for j := uint8(0); j < pieceSetsCount; j++ {
 						// dont consider last pieceSet in a 3 player game
-						if i == 3 && len(g.Players) == 3 {
+						if j == 3 && len(g.Players) == 3 {
 							continue
 						}
-						if g.PieceSetsEnded[i] == 0 {
-							for j := uint8(0); j < blockers.PiecesCount(); j++ {
-								if g.PieceSets[i*blockers.PiecesCount()+j] == 1 {
-									pieceSetIdxsStillActive = append(pieceSetIdxsStillActive, i)
+						if g.PieceSetsEnded[j] == 0 {
+							for i := uint8(0); i < blockers.PiecesCount(); i++ {
+								if g.PieceSets[blockers.PiecesCount()*j+i] == 1 {
+									pieceSetsStillActive = append(pieceSetsStillActive, j)
 									break
+								}
+								if i+1 == blockers.PiecesCount() {
+									// if we've processed the last piece of this set
+									// the whole set has been placed so this set is ended
+									g.PieceSetsEnded[j] = 1
 								}
 							}
 						}
 					}
-					if len(pieceSetIdxsStillActive) == 0 {
+					if len(pieceSetsStillActive) == 0 {
 						g.State = 2
 					} else {
 						// increment game.TurnIdx pass any ended piece sets
 						for i := uint8(1); i <= pieceSetsCount; i++ {
-							if g.PieceSetsEnded[(pieceSetIdx+i)%pieceSetsCount] == 0 {
+							if g.PieceSetsEnded[(pieceSet+i)%pieceSetsCount] == 0 {
 								break
 							}
-							g.TurnIdx++
+							g.Turn++
 						}
 					}
 				})
@@ -311,7 +316,7 @@ func NewGame() *blockers.Game {
 			Type:       gameType,
 			MinPlayers: 2,
 			MaxPlayers: pieceSetsCount,
-			TurnIdx:    0,
+			Turn:       0,
 		},
 		PieceSetsEnded: pieceSetsEnded,
 		PieceSets:      pieceSets,

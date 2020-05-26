@@ -37,7 +37,7 @@ type Base struct {
 	MinPlayers uint8     `json:"minPlayers"`
 	MaxPlayers uint8     `json:"maxPlayers"`
 	Players    []ID      `json:"players"`
-	TurnIdx    uint32    `json:"turnIdx"`
+	Turn       uint32    `json:"turn"`
 }
 
 func (b *Base) GetBase() *Base {
@@ -46,7 +46,7 @@ func (b *Base) GetBase() *Base {
 
 func (b *Base) IsMyTurn(tlbx app.Toolbox) bool {
 	return b.Started() &&
-		b.Players[(int(b.TurnIdx)%len(b.Players))].Equal(tlbx.Me())
+		b.Players[(int(b.Turn)%len(b.Players))].Equal(tlbx.Me())
 }
 
 func (b *Base) IsActive() bool {
@@ -146,7 +146,7 @@ func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Ga
 	tlbx.BadReqIf(!b.Started(), "game isn't started")
 	tlbx.BadReqIf(!g.IsMyTurn(tlbx), "it's not your turn")
 	takeTurn(g)
-	b.TurnIdx++
+	b.Turn++
 	update(tlbx, tx, g)
 	tx.Commit()
 }
