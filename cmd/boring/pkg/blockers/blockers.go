@@ -148,16 +148,16 @@ func (g *Game) GetBase() *game.Base {
 	return &g.Base
 }
 
-func (g *Game) IsMyTurn(tlbx app.Toolbox) bool {
+func (g *Game) IsMyTurn(me ID) bool {
 	b := g.Base
 	if len(b.Players) == 3 {
 		playerIdx := int(b.Turn) % 4
 		if playerIdx == 3 {
-			playerIdx = (((int(b.Turn) + 1) / 4) - 1) % 4
+			playerIdx = (((int(b.Turn) + 1) / 4) - 1) % 3
 		}
-		return b.Players[playerIdx].Equal(tlbx.Me())
+		return b.Players[playerIdx].Equal(me)
 	}
-	return b.IsMyTurn(tlbx)
+	return b.IsMyTurn(me)
 }
 
 type New struct{}

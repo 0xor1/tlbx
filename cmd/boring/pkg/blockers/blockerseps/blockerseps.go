@@ -185,7 +185,7 @@ var (
 									cellY := posY + pieceY
 									cellI := xyToI(cellX, cellY, boardDims)
 
-									tlbx.BadReqIf(g.Board[cellI] != 4, "cell already occupied")
+									tlbx.BadReqIf(g.Board[cellI] != 4, "cell %d already occupied", cellI)
 									insertIdxs = append(insertIdxs, cellI)
 
 									// check if this cell meets first corner constraint
@@ -210,12 +210,13 @@ var (
 											loopBoardY := int(cellY) + offsetY
 											// check coord is actually on the board
 											if loopBoardX >= 0 && loopBoardY >= 0 && loopBoardX < int(boardDims) && loopBoardY < int(boardDims) {
+												loopI := xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)
 												diagnonalTouchConMet = diagnonalTouchConMet ||
 													((offsetX != 0 || offsetY != 0) &&
-														g.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSet))
+														g.Board[loopI] == blockers.Pbit(pieceSet))
 												tlbx.BadReqIf((offsetX == 0 || offsetY == 0) &&
-													g.Board[xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)] == blockers.Pbit(pieceSet),
-													"face to face constraint not met")
+													g.Board[loopI] == blockers.Pbit(pieceSet),
+													"face to face constraint not met, cell %d", loopI)
 											}
 										}
 									}

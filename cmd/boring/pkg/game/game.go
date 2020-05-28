@@ -26,10 +26,11 @@ var (
 
 type Game interface {
 	GetBase() *Base
-	IsMyTurn(app.Toolbox) bool
+	IsMyTurn(ID) bool
 }
 
 type Base struct {
+	MyID       *ID       `json:"myId"`
 	Type       string    `json:"type"`
 	ID         ID        `json:"id"`
 	UpdatedOn  time.Time `json:"updatedOn"`
@@ -44,9 +45,9 @@ func (b *Base) GetBase() *Base {
 	return b
 }
 
-func (b *Base) IsMyTurn(tlbx app.Toolbox) bool {
+func (b *Base) IsMyTurn(me ID) bool {
 	return b.Started() &&
-		b.Players[(int(b.Turn)%len(b.Players))].Equal(tlbx.Me())
+		b.Players[(int(b.Turn)%len(b.Players))].Equal(me)
 }
 
 func (b *Base) IsActive() bool {
@@ -144,7 +145,7 @@ func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Ga
 	b := g.GetBase()
 	tlbx.BadReqIf(b.Type != gameType, "types do not match, your active game: %s, expected game: %s", g.GetBase().Type, gameType)
 	tlbx.BadReqIf(!b.Started(), "game isn't started")
-	tlbx.BadReqIf(!g.IsMyTurn(tlbx), "it's not your turn")
+	tlbx.BadReqIf(!g.IsMyTurn(tlbx.Me()), "it's not your turn")
 	takeTurn(g)
 	b.Turn++
 	update(tlbx, tx, g)
@@ -187,6 +188,12 @@ func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, game
 	}
 	json.MustUnmarshal(serialized, dst)
 	tlbx.BadReqIf(dst.GetBase().Type != gameType, "types do not match, got: %s, expected: %s", dst.GetBase().Type, gameType)
+	if tlbx.Session().IsAuthed() {
+		me := tlbx.Me()
+		dst.GetBase().MyID = &me
+	} else {
+		dst.GetBase().MyID = nil
+	}
 }
 
 func update(tlbx app.Toolbox, tx service.Tx, game Game) {

@@ -7,6 +7,7 @@ import (
 	"github.com/0xor1/wtf/cmd/boring/pkg/blockers/blockerseps"
 	"github.com/0xor1/wtf/cmd/boring/pkg/config"
 	. "github.com/0xor1/wtf/pkg/core"
+	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/test"
 	"github.com/logrusorgru/aurora"
 	"github.com/stretchr/testify/assert"
@@ -17,176 +18,491 @@ func Everything(t *testing.T) {
 	r := test.NewRig(config.Get(), blockerseps.Eps, false, nil)
 	defer r.CleanUp()
 
-	play2PGame(a, r)
-	play3PGame(a, r)
-	play4PGame(a, r)
+	playGame(a, []*app.Client{
+		r.Ali().Client(),
+		r.Bob().Client(),
+	})
+	playGame(a, []*app.Client{
+		r.Ali().Client(),
+		r.Bob().Client(),
+		r.Cat().Client(),
+	})
+	playGame(a, []*app.Client{
+		r.Ali().Client(),
+		r.Bob().Client(),
+		r.Cat().Client(),
+		r.Dan().Client(),
+	})
 }
 
-func play2PGame(a *assert.Assertions, r test.Rig) {
+func playGame(a *assert.Assertions, players []*app.Client) {
 	var err error
+	var nilG *blockers.Game
+	var g *blockers.Game
+	player := func(wrong ...bool) *app.Client {
+		var p *app.Client
+		for i := range players {
+			if g.IsMyTurn(g.Players[i]) == (len(wrong) == 0) {
+				p = players[i]
+				break
+			}
+		}
+		return p
+	}
 
-	// ali creates a new game
-	g := (&blockers.New{}).
-		MustDo(r.Ali().Client())
+	// p1 creates a new game
+	g = (&blockers.New{}).
+		MustDo(players[0])
 	a.NotNil(g)
 
-	// bob joins ali's game
-	g = (&blockers.Join{Game: g.ID}).
-		MustDo(r.Bob().Client())
-	a.NotNil(g)
+	// p1 fails to starts the game
+	nilG, err = (&blockers.Start{}).
+		Do(players[0])
+	a.Nil(nilG)
+	a.Regexp("game hasn't met minimum player count requirement: 2", err)
 
-	// ali starts the game
+	// p2-4 joins p1s game
+	for _, p := range players[1:] {
+		g = (&blockers.Join{Game: g.ID}).
+			MustDo(p)
+		a.NotNil(g)
+	}
+
+	// p2 fails to starts the game
+	nilG, err = (&blockers.Start{}).
+		Do(players[1])
+	a.Nil(nilG)
+	a.Regexp("only the creator can start the game", err)
+
+	// p1 starts the game
 	g = (&blockers.Start{}).
-		MustDo(r.Ali().Client())
+		MustDo(players[0])
 	a.NotNil(g)
 
-	// ali 1:1 - invalid -missing her first corner cell
-	g, err = (&blockers.TakeTurn{
+	// p1 fails to starts the game again
+	nilG, err = (&blockers.Start{}).
+		Do(players[0])
+	a.Nil(nilG)
+	a.Regexp("can't start a game that has already been started", err)
+
+	// invalid - missing first corner cell
+	nilG, err = (&blockers.TakeTurn{
 		Piece:    0,
 		Position: 1,
-	}).Do(r.Ali().Client())
-	a.Nil(g)
+	}).Do(player())
+	a.Nil(nilG)
 	a.Regexp("first corner constraint not met", err)
 
-	// ali 1:1 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    0,
 		Position: 0,
-	}).MustDo(r.Ali().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// bob 1:1 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    16,
 		Position: 17,
 		Rotation: 1,
-	}).MustDo(r.Bob().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// ali 1:2 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    10,
 		Position: 377,
 		Flip:     1,
-	}).MustDo(r.Ali().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// bob 1:2 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    15,
 		Position: 360,
 		Flip:     1,
-	}).MustDo(r.Bob().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// ali 2:1 - invalid - reuse an already placed piece
-	g, err = (&blockers.TakeTurn{
+	// invalid - reuse an already placed piece
+	nilG, err = (&blockers.TakeTurn{
 		Piece:    0,
 		Position: 21,
-	}).Do(r.Ali().Client())
-	a.Nil(g)
+	}).Do(player())
+	a.Nil(nilG)
 	a.Regexp("invalid piece, that piece has already been used", err)
 
-	// ali 2:1 - invalid - place outside the board boundaries
-	g, err = (&blockers.TakeTurn{
+	// invalid - place outside the board boundaries
+	nilG, err = (&blockers.TakeTurn{
 		Piece:    1,
 		Position: 19,
-	}).Do(r.Ali().Client())
-	a.Nil(g)
+	}).Do(player())
+	a.Nil(nilG)
 	a.Regexp("piece/position/rotation combination is not contained on the board", err)
 
-	// ali 2:1 - invalid - place on top of existing piece
-	g, err = (&blockers.TakeTurn{
+	// invalid - place on top of existing piece
+	nilG, err = (&blockers.TakeTurn{
 		Piece:    1,
 		Position: 0,
-	}).Do(r.Ali().Client())
-	a.Nil(g)
-	a.Regexp("cell already occupied", err)
+	}).Do(player())
+	a.Nil(nilG)
+	a.Regexp("cell [0-9]+ already occupied", err)
 
-	// ali 2:1 - invalid - faces touching
-	g, err = (&blockers.TakeTurn{
+	// invalid - faces touching
+	nilG, err = (&blockers.TakeTurn{
 		Piece:    1,
 		Position: 20,
-	}).Do(r.Ali().Client())
-	a.Nil(g)
-	a.Regexp("face to face constraint not met", err)
+	}).Do(player())
+	a.Nil(nilG)
+	a.Regexp("face to face constraint not met, cell 0", err)
 
-	// ali 2:1 - invalid - no touching diagonals
-	g, err = (&blockers.TakeTurn{
+	// invalid - no touching diagonals
+	nilG, err = (&blockers.TakeTurn{
 		Piece:    1,
 		Position: 22,
-	}).Do(r.Ali().Client())
-	a.Nil(g)
+	}).Do(player())
+	a.Nil(nilG)
 	a.Regexp("diagonal touch constraint not met", err)
 
-	// ali 2:1 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    1,
 		Position: 21,
-	}).MustDo(r.Ali().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// bob 2:1 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    20,
 		Position: 14,
-	}).MustDo(r.Bob().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// bob 2:2 - invalid - not his turn
-	g, err = (&blockers.TakeTurn{
+	// invalid - not their turn
+	nilG, err = (&blockers.TakeTurn{
 		Piece:    20,
 		Position: 14,
-	}).Do(r.Bob().Client())
-	a.Nil(g)
+	}).Do(player(false))
+	a.Nil(nilG)
 	a.Regexp("it's not your turn", err)
 
-	// ali 2:2 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    20,
 		Position: 354,
-	}).MustDo(r.Ali().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// bob 2:2 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    19,
 		Position: 300,
 		Rotation: 3,
-	}).MustDo(r.Bob().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// ali 3:1 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    17,
 		Position: 3,
 		Rotation: 1,
-	}).MustDo(r.Ali().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// bob 3:1 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    19,
 		Position: 77,
 		Rotation: 1,
-	}).MustDo(r.Bob().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// ali 3:2 - valid
+	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    19,
 		Position: 316,
 		Flip:     1,
-	}).MustDo(r.Ali().Client())
+	}).MustDo(player())
 	a.NotNil(g)
 
-	// bob 3:2 - valid
-	// g = (&blockers.TakeTurn{
-	// 	Piece:    20,
-	// 	Position: 316,
-	// 	Flip:     1,
-	// }).MustDo(r.Bob().Client())
-	// a.NotNil(g)
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    20,
+		Position: 240,
+		Rotation: 1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    20,
+		Position: 40,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    18,
+		Position: 73,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    18,
+		Position: 293,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    18,
+		Position: 303,
+		Flip:     1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    19,
+		Position: 103,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    17,
+		Position: 134,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    17,
+		Position: 250,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    17,
+		Position: 203,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    18,
+		Position: 166,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    15,
+		Position: 129,
+		Rotation: 2,
+		Flip:     1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    16,
+		Position: 188,
+		Rotation: 1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    7,
+		Position: 206,
+		Rotation: 3,
+		Flip:     1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    16,
+		Position: 121,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    14,
+		Position: 176,
+		Rotation: 3,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    15,
+		Position: 108,
+		Rotation: 3,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    3,
+		Position: 248,
+		Rotation: 3,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    7,
+		Position: 181,
+		Rotation: 1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    4,
+		Position: 256,
+		Rotation: 1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    11,
+		Position: 151,
+		Rotation: 2,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    6,
+		Position: 270,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    6,
+		Position: 223,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    12,
+		Position: 334,
+		Rotation: 1,
+		Flip:     1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    14,
+		Position: 233,
+		Flip:     1,
+		Rotation: 2,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    10,
+		Position: 273,
+		Flip:     1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    5,
+		Position: 266,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    10,
+		Position: 337,
+		Rotation: 2,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// end
+	g = (&blockers.TakeTurn{
+		End: 1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    8,
+		Position: 210,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    2,
+		Position: 106,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    7,
+		Position: 258,
+		Rotation: 3,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// pieceSet 1 ended so should
+	// skip straight to pieceSet 2.
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    16,
+		Position: 173,
+		Rotation: 1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// end
+	g = (&blockers.TakeTurn{
+		End: 1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// end
+	g = (&blockers.TakeTurn{
+		End: 1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    1,
+		Position: 133,
+		Rotation: 1,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// valid
+	g = (&blockers.TakeTurn{
+		Piece:    2,
+		Position: 114,
+	}).MustDo(player())
+	a.NotNil(g)
+
+	// end
+	g = (&blockers.TakeTurn{
+		End: 1,
+	}).MustDo(player())
+	a.NotNil(g)
 
 	printGame(g)
 }
