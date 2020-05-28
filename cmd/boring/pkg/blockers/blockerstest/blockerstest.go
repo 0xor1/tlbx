@@ -18,24 +18,27 @@ func Everything(t *testing.T) {
 	r := test.NewRig(config.Get(), blockerseps.Eps, false, nil)
 	defer r.CleanUp()
 
-	playGame(a, []*app.Client{
+	g2 := playGame(a, []*app.Client{
 		r.Ali().Client(),
 		r.Bob().Client(),
 	})
-	playGame(a, []*app.Client{
+	g3 := playGame(a, []*app.Client{
 		r.Ali().Client(),
 		r.Bob().Client(),
 		r.Cat().Client(),
 	})
-	playGame(a, []*app.Client{
+	g4 := playGame(a, []*app.Client{
 		r.Ali().Client(),
 		r.Bob().Client(),
 		r.Cat().Client(),
 		r.Dan().Client(),
 	})
+	printGame(g2)
+	printGame(g3)
+	printGame(g4)
 }
 
-func playGame(a *assert.Assertions, players []*app.Client) {
+func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	var err error
 	var nilG *blockers.Game
 	var g *blockers.Game
@@ -477,24 +480,17 @@ func playGame(a *assert.Assertions, players []*app.Client) {
 	}).MustDo(player())
 	a.NotNil(g)
 
-	// end
-	g = (&blockers.TakeTurn{
-		End: 1,
-	}).MustDo(player())
-	a.NotNil(g)
-
 	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    1,
-		Position: 133,
-		Rotation: 1,
+		Position: 158,
 	}).MustDo(player())
 	a.NotNil(g)
 
 	// valid
 	g = (&blockers.TakeTurn{
-		Piece:    2,
-		Position: 114,
+		Piece:    0,
+		Position: 182,
 	}).MustDo(player())
 	a.NotNil(g)
 
@@ -504,15 +500,26 @@ func playGame(a *assert.Assertions, players []*app.Client) {
 	}).MustDo(player())
 	a.NotNil(g)
 
-	printGame(g)
-}
+	turn := uint32(50)
+	if len(players) != 3 {
+		// end last piece idx
+		g = (&blockers.TakeTurn{
+			End: 1,
+		}).MustDo(player())
+		a.NotNil(g)
+		turn = 52
+	}
 
-func play3PGame(a *assert.Assertions, r test.Rig) {
+	// get
+	g = (&blockers.Get{
+		Game: g.ID,
+	}).MustDo(players[0])
+	a.NotNil(g)
 
-}
+	a.Equal(uint8(2), g.State)
+	a.Equal(turn, g.Turn)
 
-func play4PGame(a *assert.Assertions, r test.Rig) {
-
+	return g
 }
 
 func printGame(g *blockers.Game) {
