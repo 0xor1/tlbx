@@ -5,10 +5,11 @@ USE data_boring;
 DROP TABLE IF EXISTS games;
 CREATE TABLE games (
     id BINARY(16) NOT NULL,
+    type VARCHAR(20) NOT NULL,
     updatedOn DATETIME(3) NOT NULL,
     serialized VARBINARY(5000) NOT NULL,
-    PRIMARY KEY id (id),
-    UNIQUE INDEX updatedOn (updatedOn, id)
+    PRIMARY KEY id (id, type),
+    UNIQUE INDEX updatedOn (updatedOn, id, type)
 );
 
 DROP TABLE IF EXISTS players;

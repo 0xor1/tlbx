@@ -11,6 +11,7 @@ const (
 	gameType       = "blockers"
 	boardDims      = uint8(20)
 	pieceSetsCount = uint8(4)
+	minPlayers     = uint8(2)
 )
 
 var (
@@ -32,7 +33,7 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
 				g := NewGame()
-				game.New(tlbx, g)
+				game.New(tlbx, gameType, g)
 				return g
 			},
 		},
@@ -56,7 +57,7 @@ var (
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*blockers.Join)
 				g := &blockers.Game{}
-				game.Join(tlbx, gameType, args.Game, g)
+				game.Join(tlbx, pieceSetsCount, gameType, args.Game, g)
 				return g
 			},
 		},
@@ -82,7 +83,7 @@ var (
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*blockers.Start)
 				g := &blockers.Game{}
-				game.Start(tlbx, args.RandomizePlayerOrder, gameType, g, nil)
+				game.Start(tlbx, minPlayers, args.RandomizePlayerOrder, gameType, g, nil)
 				return g
 			},
 		},
@@ -313,12 +314,7 @@ func NewGame() *blockers.Game {
 		board = append(board, blockers.Pbit(pieceSetsCount))
 	}
 	return &blockers.Game{
-		Base: game.Base{
-			Type:       gameType,
-			MinPlayers: 2,
-			MaxPlayers: pieceSetsCount,
-			Turn:       0,
-		},
+		Base:           game.Base{},
 		PieceSetsEnded: pieceSetsEnded,
 		PieceSets:      pieceSets,
 		Board:          board,

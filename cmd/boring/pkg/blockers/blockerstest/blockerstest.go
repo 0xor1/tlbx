@@ -43,9 +43,20 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	var nilG *blockers.Game
 	var g *blockers.Game
 	player := func(wrong ...bool) *app.Client {
-		var p *app.Client
+		fns := make([]func(), len(players))
+		gs := make([]*blockers.Game, len(players))
 		for i := range players {
-			if g.IsMyTurn(g.Players[i]) == (len(wrong) == 0) {
+			// closure on i
+			ci := i
+			fns[ci] = func() {
+				gs[ci] = (&blockers.Get{Game: g.ID}).
+					MustDo(players[ci])
+			}
+		}
+		PanicOn(GoGroup(fns...))
+		var p *app.Client
+		for i := range gs {
+			if gs[i].IsMyTurn() == (len(wrong) == 0) {
 				p = players[i]
 				break
 			}

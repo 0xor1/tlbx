@@ -148,16 +148,16 @@ func (g *Game) GetBase() *game.Base {
 	return &g.Base
 }
 
-func (g *Game) IsMyTurn(me ID) bool {
+func (g *Game) IsMyTurn() bool {
 	b := g.Base
 	if len(b.Players) == 3 {
 		playerIdx := int(b.Turn) % 4
 		if playerIdx == 3 {
 			playerIdx = (((int(b.Turn) + 1) / 4) - 1) % 3
 		}
-		return b.Players[playerIdx].Equal(me)
+		return b.Players[playerIdx].Equal(*g.MyID)
 	}
-	return b.IsMyTurn(me)
+	return b.IsMyTurn()
 }
 
 type New struct{}
