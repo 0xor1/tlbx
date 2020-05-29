@@ -40,8 +40,7 @@ func Everything(t *testing.T) {
 
 func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	var err error
-	var nilG *blockers.Game
-	var g *blockers.Game
+	var id ID
 	player := func(wrong ...bool) *app.Client {
 		fns := make([]func(), len(players))
 		gs := make([]*blockers.Game, len(players))
@@ -49,7 +48,7 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 			// closure on i
 			ci := i
 			fns[ci] = func() {
-				gs[ci] = (&blockers.Get{Game: g.ID}).
+				gs[ci] = (&blockers.Get{Game: id}).
 					MustDo(players[ci])
 			}
 		}
@@ -65,27 +64,28 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	}
 
 	// p1 creates a new game
-	g = (&blockers.New{}).
+	g := (&blockers.New{}).
 		MustDo(players[0])
 	a.NotNil(g)
+	id = g.ID
 
 	// p1 fails to starts the game
-	nilG, err = (&blockers.Start{}).
+	g, err = (&blockers.Start{}).
 		Do(players[0])
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("game hasn't met minimum player count requirement: 2", err)
 
 	// p2-4 joins p1s game
 	for _, p := range players[1:] {
-		g = (&blockers.Join{Game: g.ID}).
+		g = (&blockers.Join{Game: id}).
 			MustDo(p)
 		a.NotNil(g)
 	}
 
 	// p2 fails to starts the game
-	nilG, err = (&blockers.Start{}).
+	g, err = (&blockers.Start{}).
 		Do(players[1])
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("only the creator can start the game", err)
 
 	// p1 starts the game
@@ -94,17 +94,17 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	a.NotNil(g)
 
 	// p1 fails to starts the game again
-	nilG, err = (&blockers.Start{}).
+	g, err = (&blockers.Start{}).
 		Do(players[0])
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("can't start a game that has already been started", err)
 
 	// invalid - missing first corner cell
-	nilG, err = (&blockers.TakeTurn{
+	g, err = (&blockers.TakeTurn{
 		Piece:    0,
 		Position: 1,
 	}).Do(player())
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("first corner constraint not met", err)
 
 	// valid
@@ -139,43 +139,43 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	a.NotNil(g)
 
 	// invalid - reuse an already placed piece
-	nilG, err = (&blockers.TakeTurn{
+	g, err = (&blockers.TakeTurn{
 		Piece:    0,
 		Position: 21,
 	}).Do(player())
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("invalid piece, that piece has already been used", err)
 
 	// invalid - place outside the board boundaries
-	nilG, err = (&blockers.TakeTurn{
+	g, err = (&blockers.TakeTurn{
 		Piece:    1,
 		Position: 19,
 	}).Do(player())
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("piece/position/rotation combination is not contained on the board", err)
 
 	// invalid - place on top of existing piece
-	nilG, err = (&blockers.TakeTurn{
+	g, err = (&blockers.TakeTurn{
 		Piece:    1,
 		Position: 0,
 	}).Do(player())
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("cell [0-9]+ already occupied", err)
 
 	// invalid - faces touching
-	nilG, err = (&blockers.TakeTurn{
+	g, err = (&blockers.TakeTurn{
 		Piece:    1,
 		Position: 20,
 	}).Do(player())
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("face to face constraint not met, cell 0", err)
 
 	// invalid - no touching diagonals
-	nilG, err = (&blockers.TakeTurn{
+	g, err = (&blockers.TakeTurn{
 		Piece:    1,
 		Position: 22,
 	}).Do(player())
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("diagonal touch constraint not met", err)
 
 	// valid
@@ -193,11 +193,11 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	a.NotNil(g)
 
 	// invalid - not their turn
-	nilG, err = (&blockers.TakeTurn{
+	g, err = (&blockers.TakeTurn{
 		Piece:    20,
 		Position: 14,
 	}).Do(player(false))
-	a.Nil(nilG)
+	a.Nil(g)
 	a.Regexp("it's not your turn", err)
 
 	// valid
