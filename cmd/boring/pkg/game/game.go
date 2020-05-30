@@ -66,26 +66,43 @@ func (b *Base) Abandoned() bool {
 	return b.State == 3
 }
 
+func (b *Base) setMyID(tlbx app.Toolbox) {
+	// only set myId on active games
+	if b.IsActive() && tlbx.Session().IsAuthed() {
+		me := tlbx.Me()
+		// loop through players only setting myId
+		// if they're an active player in this game
+		for _, p := range b.Players {
+			if p.Equal(me) {
+				b.MyID = &me
+				return
+			}
+		}
+	}
+	// otherwise set it to nil
+	b.MyID = nil
+}
+
 func New(tlbx app.Toolbox, gameType string, game Game) {
-	base := game.GetBase()
+	b := game.GetBase()
 	PanicIf(gameType == "", "gameType must be set")
 	PanicIf(StrLen(gameType) > gameTypeMaxLen, "gameType len must be < %d", gameTypeMaxLen)
 	validateUserIsntInAnActiveGame(tlbx, "create")
-	base.UpdatedOn = NowMilli()
+	b.UpdatedOn = NowMilli()
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
 	id := tlbx.NewID()
 	// assign new session id for a new game so no clashes with old finished games
 	tlbx.Session().Login(id)
-	base.ID = id
-	base.Players = []ID{id}
+	b.ID = id
+	b.Players = []ID{id}
 	serialized := json.MustMarshal(game)
-	tx.Exec(`INSERT INTO games (id, type, updatedOn, serialized) VALUES (?, ?, ?, ?)`, base.ID, gameType, base.UpdatedOn, serialized)
+	tx.Exec(`INSERT INTO games (id, type, updatedOn, serialized) VALUES (?, ?, ?, ?)`, b.ID, gameType, b.UpdatedOn, serialized)
 	tx.Exec(`INSERT INTO players (id, game) VALUES (?, ?)`, id, id)
 	tx.Commit()
-	base.MyID = &id
 	cacheSerializedGame(tlbx, gameType, id, serialized)
+	b.setMyID(tlbx)
 }
 
 func Join(tlbx app.Toolbox, maxPlayers uint8, gameType string, game ID, dst Game) {
@@ -104,7 +121,7 @@ func Join(tlbx app.Toolbox, maxPlayers uint8, gameType string, game ID, dst Game
 	tx.Exec(`INSERT INTO players (id, game) VALUES (?, ?)`, newUserID, b.ID)
 	update(tlbx, tx, gameType, dst)
 	tx.Commit()
-	b.MyID = &newUserID
+	b.setMyID(tlbx)
 }
 
 func Start(tlbx app.Toolbox, minPlayers uint8, randomizePlayerOrder bool, gameType string, dst Game, customSetup func(game Game)) {
@@ -132,8 +149,7 @@ func Start(tlbx app.Toolbox, minPlayers uint8, randomizePlayerOrder bool, gameTy
 	}
 	update(tlbx, tx, gameType, dst)
 	tx.Commit()
-	me := tlbx.Me()
-	b.MyID = &me
+	b.setMyID(tlbx)
 }
 
 func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Game)) {
@@ -148,8 +164,7 @@ func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Ga
 	b.Turn++
 	update(tlbx, tx, gameType, g)
 	tx.Commit()
-	me := tlbx.Me()
-	b.MyID = &me
+	b.setMyID(tlbx)
 }
 
 func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
@@ -162,8 +177,7 @@ func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
 		update(tlbx, tx, gameType, g)
 		tx.Commit()
 	}
-	me := tlbx.Me()
-	g.GetBase().MyID = &me
+	g.GetBase().setMyID(tlbx)
 }
 
 func Get(tlbx app.Toolbox, gameType string, game ID, dst Game) {
@@ -194,12 +208,7 @@ func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, game
 	}
 	json.MustUnmarshal(serialized, dst)
 	tlbx.BadReqIf(gotType != gameType, "types do not match, got: %s, expected: %s", gotType, gameType)
-	if tlbx.Session().IsAuthed() {
-		me := tlbx.Me()
-		dst.GetBase().MyID = &me
-	} else {
-		dst.GetBase().MyID = nil
-	}
+	dst.GetBase().setMyID(tlbx)
 }
 
 func update(tlbx app.Toolbox, tx service.Tx, gameType string, game Game) {
@@ -254,8 +263,7 @@ func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameTyp
 		if len(buf) > 0 {
 			json.MustUnmarshal(buf, dst)
 			tlbx.BadReqIf(forUpdate && gotType != gameType, "types do not match, your active game: %s, expected game: %s", gotType, gameType)
-			me := tlbx.Me()
-			dst.GetBase().MyID = &me
+			dst.GetBase().setMyID(tlbx)
 			if dst.GetBase().IsActive() {
 				return dst, gotType
 			}
