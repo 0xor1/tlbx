@@ -258,7 +258,7 @@ func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameTyp
 		// the type check. This is only for
 		// validating if a user is in an active game
 		if gameType == "" && !forUpdate {
-			gotType = ""
+			gameType = gotType
 		}
 		if len(buf) > 0 {
 			json.MustUnmarshal(buf, dst)
@@ -299,3 +299,59 @@ func getSerializedGameFromCache(tlbx app.Toolbox, gameType string, id ID) []byte
 	tlbx.Log().ErrorOn(err)
 	return serialized
 }
+
+type Active struct{}
+type ActiveInfo struct {
+	Type string `json:"type"`
+	ID   ID     `json:"id"`
+}
+
+func (_ *Active) Path() string {
+	return "/game/active"
+}
+
+func (a *Active) Do(c *app.Client) (*ActiveInfo, error) {
+	res := &ActiveInfo{}
+	err := app.Call(c, a.Path(), nil, &res)
+	return res, err
+}
+
+func (a *Active) MustDo(c *app.Client) *ActiveInfo {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+var (
+	Eps = []*app.Endpoint{
+		{
+			Description:  "Get your active game info",
+			Path:         (&Active{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return nil
+			},
+			GetExampleArgs: func() interface{} {
+				return nil
+			},
+			GetExampleResponse: func() interface{} {
+				return &ActiveInfo{
+					Type: "a_game_type",
+					ID:   app.ExampleID(),
+				}
+			},
+			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+				g, gameType := getUsersActiveGame(tlbx, nil, false, "", &Base{})
+				if g == nil {
+					return nil
+				}
+				return &ActiveInfo{
+					Type: gameType,
+					ID:   g.GetBase().ID,
+				}
+			},
+		},
+	}
+)

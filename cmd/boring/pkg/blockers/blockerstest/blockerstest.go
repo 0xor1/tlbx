@@ -16,7 +16,7 @@ import (
 
 func Everything(t *testing.T) {
 	a := assert.New(t)
-	r := test.NewRig(config.Get(), blockerseps.Eps, false, nil)
+	r := test.NewRig(config.Get(), append(game.Eps, blockerseps.Eps...), false, nil)
 	defer r.CleanUp()
 
 	g2 := playGame(a, []*app.Client{
@@ -84,11 +84,22 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 		return p
 	}
 
+	// test no active game
+	active := (&game.Active{}).
+		MustDo(players[0])
+	a.Nil(active)
+
 	// p1 creates a new game
 	g := (&blockers.New{}).
 		MustDo(players[0])
 	a.NotNil(g)
 	id = g.ID
+
+	// test active game
+	active = (&game.Active{}).
+		MustDo(players[0])
+	a.Equal("blockers", active.Type)
+	a.Equal(id, active.ID)
 
 	// p1 fails to create another new game
 	g, err = (&blockers.New{}).
