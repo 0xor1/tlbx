@@ -6,6 +6,7 @@ import (
 	"github.com/0xor1/wtf/cmd/boring/pkg/blockers"
 	"github.com/0xor1/wtf/cmd/boring/pkg/blockers/blockerseps"
 	"github.com/0xor1/wtf/cmd/boring/pkg/config"
+	"github.com/0xor1/wtf/cmd/boring/pkg/game"
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/test"
@@ -36,6 +37,26 @@ func Everything(t *testing.T) {
 	printGame(g2)
 	printGame(g3)
 	printGame(g4)
+
+	// test abondon
+	// p1 creates a new game
+	g := (&blockers.New{}).
+		MustDo(r.Ali().Client())
+	a.NotNil(g)
+
+	// p1 abandons the game
+	(&blockers.Abandon{}).
+		MustDo(r.Ali().Client())
+
+	g = (&blockers.Get{
+		Game: g.ID,
+	}).MustDo(r.Ali().Client())
+	a.False(g.Finished())
+	a.True(g.Abandoned())
+
+	game.DeleteOutdated(func(query string, args ...interface{}) {
+		r.Data().Primary().Exec(query, args...)
+	}, 0, 0)
 }
 
 func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
@@ -69,6 +90,12 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	a.NotNil(g)
 	id = g.ID
 
+	// p1 fails to create another new game
+	g, err = (&blockers.New{}).
+		Do(players[0])
+	a.Nil(g)
+	a.Regexp("can not create a new game while you are still participating in an active game, id: ", err)
+
 	// p1 fails to starts the game
 	g, err = (&blockers.Start{}).
 		Do(players[0])
@@ -89,8 +116,9 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	a.Regexp("only the creator can start the game", err)
 
 	// p1 starts the game
-	g = (&blockers.Start{}).
-		MustDo(players[0])
+	g = (&blockers.Start{
+		RandomizePlayerOrder: true,
+	}).MustDo(players[0])
 	a.NotNil(g)
 
 	// p1 fails to starts the game again

@@ -297,6 +297,26 @@ var (
 				return g
 			},
 		},
+		{
+			Description:  "Abandon your active game",
+			Path:         (&blockers.Abandon{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return nil
+			},
+			GetExampleArgs: func() interface{} {
+				return nil
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+				game.Abandon(tlbx, gameType, &blockers.Game{})
+				return nil
+			},
+		},
 	}
 )
 

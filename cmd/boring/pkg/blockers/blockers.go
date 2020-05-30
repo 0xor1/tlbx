@@ -208,7 +208,7 @@ func (_ *Start) Path() string {
 
 func (a *Start) Do(c *app.Client) (*Game, error) {
 	res := &Game{}
-	err := app.Call(c, a.Path(), nil, &res)
+	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
@@ -269,7 +269,7 @@ func (_ *Abandon) Path() string {
 }
 
 func (a *Abandon) Do(c *app.Client) error {
-	return app.Call(c, a.Path(), a, nil)
+	return app.Call(c, a.Path(), nil, nil)
 }
 
 func (a *Abandon) MustDo(c *app.Client) {

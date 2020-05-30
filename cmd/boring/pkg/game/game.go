@@ -122,7 +122,7 @@ func Start(tlbx app.Toolbox, minPlayers uint8, randomizePlayerOrder bool, gameTy
 	b.State = 1
 	if randomizePlayerOrder {
 		reorderedPlayers := make([]ID, 0, len(b.Players))
-		for i := int32(len(b.Players)); i >= 0; i-- {
+		for i := int32(len(b.Players)); i > 0; i-- {
 			j := rand.Int31n(i)
 			reorderedPlayers = append(reorderedPlayers, b.Players[j])
 			b.Players[j] = b.Players[len(b.Players)-1]
@@ -157,9 +157,9 @@ func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
 	g, _ := getUsersActiveGame(tlbx, tx, true, gameType, dst)
-	if g != nil {
+	if g != nil && g.GetBase().IsActive() {
 		g.GetBase().State = 3
-		update(tlbx, tx, gameType, dst)
+		update(tlbx, tx, gameType, g)
 		tx.Commit()
 	}
 	me := tlbx.Me()
@@ -211,7 +211,7 @@ func update(tlbx app.Toolbox, tx service.Tx, gameType string, game Game) {
 	cacheSerializedGame(tlbx, gameType, base.ID, serialized)
 }
 
-func DeleteOutdated(sql service.SqlClientCore, delay time.Duration, expire time.Duration) {
+func DeleteOutdated(exec func(query string, args ...interface{}), delay time.Duration, expire time.Duration) {
 	lastDeleteOutdatedCalledOnMtx.RLock()
 	lastCalledOn := lastDeleteOutdatedCalledOn
 	lastDeleteOutdatedCalledOnMtx.RUnlock()
@@ -219,7 +219,7 @@ func DeleteOutdated(sql service.SqlClientCore, delay time.Duration, expire time.
 		return
 	}
 	// relies on foreign key ON DELETE CASCADE to delete players rows
-	sql.Exec(`DELETE FROM games WHERE updatedOn<?`, NowMilli().Add(-1*expire))
+	exec(`DELETE FROM games WHERE updatedOn<?`, NowMilli().Add(-1*expire))
 	lastDeleteOutdatedCalledOnMtx.Lock()
 	defer lastDeleteOutdatedCalledOnMtx.Unlock()
 	lastDeleteOutdatedCalledOn = Now()
