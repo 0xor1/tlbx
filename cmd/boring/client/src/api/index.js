@@ -116,8 +116,8 @@ let newApi = (isMDoApi) => {
       start: (randomizePlayerOrder) => {
         return doReq('/blockers/start', {randomizePlayerOrder})
       },
-      takeTurn: (end, piece, position, flip, rotation) => {
-        return doReq('/blockers/takeTurn', {end, piece, position, flip, rotation})
+      takeTurn: (piece, position, flip, rotation, end) => {
+        return doReq('/blockers/takeTurn', {piece, position, flip, rotation, end})
       },
       get: (game) => {
         return doReq('/blockers/get', {game})

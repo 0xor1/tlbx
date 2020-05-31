@@ -9,7 +9,7 @@
     <div v-if="game != null && game.board != null">
       <table class=board>
         <tr v-for="(_, y) in boardDims" :key="y">
-          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="game.board[y*20+x]"></td>
+          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="'p'+game.board[y*20+x]"></td>
         </tr>
       </table>
     </div>
@@ -23,6 +23,7 @@
     name: 'blockers',
     data: function() {
       this.get()
+      window.x_api = api
       return {
         gameType: "blockers",
         boardDims: 20,
@@ -85,6 +86,18 @@
     background: #222;
     width: 2pc;
     height: 2pc;
+    &.p0 {
+      background: red;
+    }
+    &.p1 {
+      background: green;
+    }
+    &.p2 {
+      background: blue;
+    }
+    &.p3 {
+      background: yellow;
+    }
   }
 }
 </style>
