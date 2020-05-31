@@ -177,7 +177,6 @@ func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
 		update(tlbx, tx, gameType, g)
 		tx.Commit()
 	}
-	g.GetBase().setMyID(tlbx)
 }
 
 func Get(tlbx app.Toolbox, gameType string, game ID, dst Game) {

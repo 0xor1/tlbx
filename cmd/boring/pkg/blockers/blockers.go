@@ -222,8 +222,8 @@ type TakeTurn struct {
 	End      Bit    `json:"end"`
 	Piece    uint8  `json:"piece"`
 	Position uint16 `json:"position"`
-	Rotation uint8  `json:"rotation"`
 	Flip     Bit    `json:"flip"`
+	Rotation uint8  `json:"rotation"`
 }
 
 func (_ *TakeTurn) Path() string {
