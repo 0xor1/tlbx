@@ -13,6 +13,11 @@ let newApi = (isMDoApi) => {
         data: args
       }).then((res) => {
         return res.data
+      }).catch((err) => {
+        throw {
+          status: err.response.status,
+          body: err.response.data
+        }
       })
     } else if (isMDoApi && !mDoSending && !mDoSent) {
       let awaitingMDoObj = {

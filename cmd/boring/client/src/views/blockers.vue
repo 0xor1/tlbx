@@ -3,13 +3,13 @@
     <div v-if="loading">
       loading...
     </div>
-    <div v-else-if="err.length > 0">
-      {{err}}
+    <div v-if="errors.length > 0">
+      <p v-for="(error, index) in errors" :key="index">{{error}}</p>
     </div>
-    <div v-else>
-      <table>
-        <tr v-for="y in 20" :key="y-1">
-          <td v-for="x in 20" :key="x-1">{{x-1}}</td>
+    <div v-if="game != null && game.board != null">
+      <table class=board>
+        <tr v-for="(_, y) in boardDims" :key="y">
+          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="game.board[y*20+x]"></td>
         </tr>
       </table>
     </div>
@@ -22,35 +22,69 @@
   export default {
     name: 'blockers',
     data: function() {
-      var data = {
+      this.get()
+      return {
+        gameType: "blockers",
+        boardDims: 20,
+        pieceSetsCount: 4,
+        minPlayers: 2,
         loading: true,
-        err: "",
+        errors: [],
         game: {}
       }
-      let id = router.currentRoute.params.id
-      let promise = null
-      if (id === 'new') {
-        promise = api.blockers.new().then((game)=>{
-          data.game = game
-          router.push('/blockers/'+data.game.id)
-        })
-      } else {
-        promise = api.blockers.get(id).then((game)=>{
-          data.game = game
-        })
-      }
-      promise.catch((err)=>{
-        data.err = err.response.data
-      }).finally(()=>{
-        data.loading = false
-      })
-      return data
     },
     methods: {
+      get: function(){
+        let id = router.currentRoute.params.id
+        let promise = null
+        let mapi = api
+        if (id === 'new') {
+          mapi = api.newMDoApi()
+          mapi.game.active().then((info)=>{
+            if (info != null) {
+              router.push('/'+info.type+'/'+info.id)
+              this.get()
+            }
+          }).catch((error)=>{
+            this.errors.push(error.body)
+          })
+          mapi.blockers.new().then((game)=>{
+            this.game = game
+            router.push('/'+this.gameType+'/'+this.game.id)
+          }).catch((error)=>{
+            this.errors.push(error.body)
+          })
+          promise = mapi.sendMDo()
+        } else {
+          promise = api.blockers.get(id).then((game)=>{
+            this.game = game
+          }).catch((error)=>{
+            this.errors.push(error.body)
+          })
+        }
+        promise.catch((err)=>{
+          console.log(err)
+          this.errors.push(err)
+        }).finally(()=>{
+          this.loading = false
+        })
+      },
+      xyToi: function(x, y, xDim){
+        return xDim*y + x
+      }
     }
   }
 </script>
 
 <style lang="scss">
-
+.board{
+  border-collapse: collapse;
+  border: 1px solid black;
+  .cell{
+    border: 1px solid black;
+    background: #222;
+    width: 2pc;
+    height: 2pc;
+  }
+}
 </style>

@@ -295,7 +295,9 @@ func getSerializedGameFromCache(tlbx app.Toolbox, gameType string, id ID) []byte
 	cnn := service.Get(tlbx).Cache().Get()
 	defer cnn.Close()
 	serialized, err := redis.Bytes(cnn.Do("GET", gameType+id.String()))
-	tlbx.Log().ErrorOn(err)
+	if err != nil && err != redis.ErrNil {
+		tlbx.Log().ErrorOn(err)
+	}
 	return serialized
 }
 
