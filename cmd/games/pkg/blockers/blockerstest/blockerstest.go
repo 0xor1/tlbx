@@ -3,10 +3,10 @@ package blockerstest
 import (
 	"testing"
 
-	"github.com/0xor1/wtf/cmd/boring/pkg/blockers"
-	"github.com/0xor1/wtf/cmd/boring/pkg/blockers/blockerseps"
-	"github.com/0xor1/wtf/cmd/boring/pkg/config"
-	"github.com/0xor1/wtf/cmd/boring/pkg/game"
+	"github.com/0xor1/wtf/cmd/games/pkg/blockers"
+	"github.com/0xor1/wtf/cmd/games/pkg/blockers/blockerseps"
+	"github.com/0xor1/wtf/cmd/games/pkg/config"
+	"github.com/0xor1/wtf/cmd/games/pkg/game"
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/test"

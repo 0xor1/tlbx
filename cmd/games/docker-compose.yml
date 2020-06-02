@@ -1,19 +1,19 @@
 version: '3.7'
 services:
 
-  wtf-sql-boring:
-    container_name: wtf-sql-boring
+  wtf-sql-games:
+    container_name: wtf-sql-games
     build:
       context: ../../.
-      dockerfile: cmd/boring/sql.dockerfile
-    image: wtf-sql-boring
+      dockerfile: cmd/games/sql.dockerfile
+    image: wtf-sql-games
     environment:
       MYSQL_ROOT_PASSWORD: dev
     ports:
     - "3306:3306"
 
-  wtf-redis-boring:
-    container_name: wtf-redis-boring
+  wtf-redis-games:
+    container_name: wtf-redis-games
     image: redis:5.0.8-alpine
     ports:
     - "6379:6379"

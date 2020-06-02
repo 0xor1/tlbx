@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/0xor1/wtf/cmd/boring/pkg/blockers/blockerseps"
-	"github.com/0xor1/wtf/cmd/boring/pkg/config"
-	"github.com/0xor1/wtf/cmd/boring/pkg/game"
+	"github.com/0xor1/wtf/cmd/games/pkg/blockers/blockerseps"
+	"github.com/0xor1/wtf/cmd/games/pkg/config"
+	"github.com/0xor1/wtf/cmd/games/pkg/game"
 	"github.com/0xor1/wtf/pkg/store"
 	"github.com/0xor1/wtf/pkg/web/app"
 	"github.com/0xor1/wtf/pkg/web/app/common/service"
@@ -15,7 +15,7 @@ func main() {
 		defer config.Store.(store.LocalClient).MustDeleteStore()
 	}
 	app.Run(func(c *app.Config) {
-		c.Name = "boring"
+		c.Name = "games"
 		c.Description = "a web app to play turn based multiplayer games"
 		if config.IsLocal {
 			c.SessionSecure = false

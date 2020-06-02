@@ -1,7 +1,7 @@
 package blockers
 
 import (
-	"github.com/0xor1/wtf/cmd/boring/pkg/game"
+	"github.com/0xor1/wtf/cmd/games/pkg/game"
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/web/app"
 )

@@ -1,6 +1,6 @@
-DROP DATABASE IF EXISTS data_boring;
-CREATE DATABASE data_boring;
-USE data_boring;
+DROP DATABASE IF EXISTS data_games;
+CREATE DATABASE data_games;
+USE data_games;
 
 DROP TABLE IF EXISTS games;
 CREATE TABLE games (
@@ -21,10 +21,10 @@ CREATE TABLE players (
     FOREIGN KEY (game) REFERENCES games (id) ON DELETE CASCADE
 );
 
-DROP USER IF EXISTS 'data_boring'@'%';
-CREATE USER 'data_boring'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
-GRANT SELECT ON data_boring.* TO 'data_boring'@'%';
-GRANT INSERT ON data_boring.* TO 'data_boring'@'%';
-GRANT UPDATE ON data_boring.* TO 'data_boring'@'%';
-GRANT DELETE ON data_boring.* TO 'data_boring'@'%';
-GRANT EXECUTE ON data_boring.* TO 'data_boring'@'%';
+DROP USER IF EXISTS 'data_games'@'%';
+CREATE USER 'data_games'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
+GRANT SELECT ON data_games.* TO 'data_games'@'%';
+GRANT INSERT ON data_games.* TO 'data_games'@'%';
+GRANT UPDATE ON data_games.* TO 'data_games'@'%';
+GRANT DELETE ON data_games.* TO 'data_games'@'%';
+GRANT EXECUTE ON data_games.* TO 'data_games'@'%';
