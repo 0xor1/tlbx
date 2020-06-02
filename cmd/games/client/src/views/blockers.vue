@@ -204,11 +204,6 @@
         let p = this.pieces[piece]
         return p.shape[this.xyToI(x, y, p.bb[0])]
       }
-    },
-    watch: {
-      pieces: {
-        deep: true
-      }
     }
   }
 </script>
