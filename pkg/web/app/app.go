@@ -34,6 +34,8 @@ const (
 	mdoPath       = ApiPathPrefix + "/mdo"
 )
 
+type mdoRootTlbxCtxKey struct{}
+
 type Config struct {
 	Log       log.Log
 	Version   string
@@ -185,6 +187,7 @@ func Run(configs ...func(*Config)) {
 			r:       tlbx.req,
 			w:       tlbx.resp,
 			gorilla: gses,
+			mtx:     &sync.RWMutex{},
 		}
 		if !tlbx.session.gorilla.IsNew {
 			i, ok := tlbx.session.gorilla.Values["me"]
@@ -236,6 +239,10 @@ func Run(configs ...func(*Config)) {
 						subReq, err := http.NewRequest(http.MethodPut, strings.ToLower(mdoReq.Path)+"?isSubMDo=true", bytes.NewReader(argsBytes))
 						PanicOn(err)
 						PanicIf(subReq.URL.Path == mdoPath, "can't have mdo request inside an mdo request")
+						// thread tlbx through ctx back on itself so a subMDoReq tlbx can get its
+						// root tlbx so calls to tlbx.Session.Login() effect the root requests
+						// cookies
+						subReq = subReq.WithContext(context.WithValue(subReq.Context(), mdoRootTlbxCtxKey{}, tlbx))
 						for _, c := range tlbx.req.Cookies() {
 							subReq.AddCookie(c)
 						}
@@ -263,6 +270,7 @@ func Run(configs ...func(*Config)) {
 			tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, ep.MaxBodyBytes)
 		}
 
+		// timeout
 		ctx := tlbx.req.Context()
 		cancel := func() {}
 		timeout := time.Duration(ep.Timeout) * time.Millisecond
@@ -329,7 +337,7 @@ func Run(configs ...func(*Config)) {
 			case <-ctx.Done():
 				return
 			case <-time.After(timeout):
-				writeJson(tlbx.resp, http.StatusServiceUnavailable, "")
+				tlbx.ExitIf(true, http.StatusServiceUnavailable, "")
 			}
 		} else {
 			do()
@@ -625,14 +633,19 @@ type session struct {
 	me       *ID
 	authedOn time.Time
 	gorilla  *sessions.Session
+	mtx      *sync.RWMutex
 }
 
 func (s *session) IsAuthed() bool {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
 	return s.isAuthed
 }
 
 func (s *session) Me() ID {
-	if !s.IsAuthed() {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	if !s.isAuthed {
 		PanicOn(&ErrMsg{
 			Status: http.StatusUnauthorized,
 			Msg:    http.StatusText(http.StatusUnauthorized),
@@ -642,10 +655,22 @@ func (s *session) Me() ID {
 }
 
 func (s *session) AuthedOn() time.Time {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
 	return s.authedOn
 }
 
 func (s *session) Login(me ID) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	if isSubMDo(s.r) {
+		// get root tlbx from ctx to login on root
+		rootTlbxI := s.r.Context().Value(mdoRootTlbxCtxKey{})
+
+		PanicIf(rootTlbxI == nil, "isSubMDo but rootTlbx is nil in req ctx")
+		rootTlbx := rootTlbxI.(*toolbox)
+		rootTlbx.session.Login(me)
+	}
 	s.isAuthed = true
 	s.me = &me
 	s.authedOn = Now()
@@ -657,6 +682,15 @@ func (s *session) Login(me ID) {
 }
 
 func (s *session) Logout() {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	if isSubMDo(s.r) {
+		// get root tlbx from ctx to login on root
+		rootTlbxI := s.r.Context().Value(mdoRootTlbxCtxKey{})
+		PanicIf(rootTlbxI == nil, "isSubMDo but rootTlbx is nil in req ctx")
+		rootTlbx := rootTlbxI.(*toolbox)
+		rootTlbx.session.Logout()
+	}
 	s.isAuthed = false
 	s.me = nil
 	s.authedOn = time.Time{}
