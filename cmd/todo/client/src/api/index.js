@@ -62,13 +62,19 @@ let newApi = (isMDoApi) => {
           resolve()
         }
       }
+      let mdoErrors = []
+      mdoErrors.isMDoErrors = true
       let mDoComplete = false
       let mDoCompleterFunc
-      mDoCompleterFunc = (resolve) => {
+      mDoCompleterFunc = (resolve, reject) => {
         if (mDoComplete) {
-          resolve()
+          if (mdoErrors.length === 0) {
+            resolve()
+          } else {
+            reject(mdoErrors)
+          }
         } else {
-          setTimeout(mDoCompleterFunc, 0, resolve)
+          setTimeout(mDoCompleterFunc, 0, resolve, reject)
         }
       }
       new Promise(asyncIndividualPromisesReady).then(() => {
@@ -81,24 +87,24 @@ let newApi = (isMDoApi) => {
           }
         }
         doReq('/mdo', mDoObj).then((res) => {
-          mDoSending = false
-          mDoSent = true
           for (let i = 0, l = awaitingMDoList.length; i < l; i++) {
             let key = '' + i
             if (res[key].status === 200) {
               awaitingMDoList[i].resolve(res[key].body)
             } else {
+              mdoErrors.push(res[key])
               awaitingMDoList[i].reject(res[key])
             }
           }
-          mDoComplete = true
         }).catch((error) => {
+          mdoErrors.push(error)
+          for (let i = 0, il = awaitingMDoList.length; i < il; i++) {
+            awaitingMDoList[i].reject(error)
+          }
+        }).finally(()=>{
           mDoComplete = true
           mDoSending = false
           mDoSent = true
-          for (let i = 0, l = awaitingMDoList.length; i < l; i++) {
-            awaitingMDoList[i].reject(error)
-          }
         })
       })
       return new Promise(mDoCompleterFunc)

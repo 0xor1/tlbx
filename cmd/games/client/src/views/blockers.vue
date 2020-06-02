@@ -160,26 +160,25 @@
               router.push('/'+info.type+'/'+info.id)
               this.get()
             }
-          }).catch((error)=>{
-            this.errors.push(error.body)
           })
           mapi.blockers.new().then((game)=>{
             this.game = game
             router.push('/'+this.gameType+'/'+this.game.id)
-          }).catch((error)=>{
-            this.errors.push(error.body)
           })
           promise = mapi.sendMDo()
         } else {
           promise = api.blockers.get(id).then((game)=>{
             this.game = game
-          }).catch((error)=>{
-            this.errors.push(error.body)
           })
         }
-        promise.catch((err)=>{
-          console.log(err)
-          this.errors.push(err)
+        promise.catch((error)=>{
+          if (error.isMDoErrors === true) {
+            for (let i = 0, l = error.length; i < l; i++) {
+              this.errors.push(error[i])
+            }
+          } else {
+            this.errors.push(error)
+          }
         }).finally(()=>{
           this.loading = false
         })
