@@ -9,13 +9,18 @@
     <div v-if="game != null && game.board != null">
       <table class=board>
         <tr v-for="(_, y) in boardDims" :key="y">
-          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="'p'+game.board[y*20+x]">{{xyToi(x, y, boardDims)}}</td>
+          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="'p'+boardCell(x, y)"></td>
         </tr>
       </table>
       <table class="piece-sets">
          <tr v-for="(_, piece) in pieces.length" :key="piece">
           <td v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet" class="piece" :class="'p'+pieceSet">
-            todo
+            <table class=piece>
+              <tr v-for="(_, y) in pieces[piece].bb[1]" :key="y">
+                <td v-for="(_, x) in pieces[piece].bb[0]" :key="x" 
+                  class="cell" :class="['p'+pieceSet, pieceCell(piece, x, y)===1? 'active' :'dead' ]">{{pieceCell(piece, x, y)}}</td>
+              </tr>
+            </table>
           </td>
         </tr>
       </table>
@@ -83,7 +88,7 @@
 
           // 9
           // #####
-          {BB: [5, 1], shape: [1, 1, 1, 1, 1]},
+          {bb: [5, 1], shape: [1, 1, 1, 1, 1]},
 
           // 10
           // ###
@@ -183,8 +188,26 @@
           this.loading = false
         })
       },
-      xyToi: function(x, y, xDim){
+      xyToI: function(x, y, xDim){
         return xDim*y + x
+      },
+      iToXY: function(i, xDim, yDim){
+        return {
+          x: i % xDim,
+          y: Math.floor(i / yDim)
+        }
+      },
+      boardCell: function(x, y){
+        return this.game[this.xyToI(x, y, this.boardDims)]
+      },
+      pieceCell: function(piece, x, y){
+        let p = this.pieces[piece]
+        return p.shape[this.xyToI(x, y, p.bb[0])]
+      }
+    },
+    watch: {
+      pieces: {
+        deep: true
       }
     }
   }
