@@ -337,7 +337,7 @@ func Run(configs ...func(*Config)) {
 			case <-ctx.Done():
 				return
 			case <-time.After(timeout):
-				tlbx.ExitIf(true, http.StatusServiceUnavailable, "")
+				tlbx.ExitIf(true, http.StatusServiceUnavailable, "processing request has exceeded endpoint timeout: %dms", ep.Timeout)
 			}
 		} else {
 			do()
