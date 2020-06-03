@@ -216,7 +216,6 @@
         return this.game.board[this.xyToI(x, y, this.boardDims)]
       },
       startCellStyleInfo: function(x, y) {
-        console.log(this.boardCell(x, y))
         if (this.boardCell(x, y) === '4') {
           // only apply start cell styles to start cells
           // with no pieces over the top of them.
