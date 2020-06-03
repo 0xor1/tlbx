@@ -56,9 +56,7 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*blockers.Join)
-				g := &blockers.Game{}
-				game.Join(tlbx, pieceSetsCount, gameType, args.Game, g)
-				return g
+				return game.Join(tlbx, pieceSetsCount, gameType, args.Game, &blockers.Game{})
 			},
 		},
 		{
@@ -82,9 +80,7 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*blockers.Start)
-				g := &blockers.Game{}
-				game.Start(tlbx, minPlayers, args.RandomizePlayerOrder, gameType, g, nil)
-				return g
+				return game.Start(tlbx, minPlayers, args.RandomizePlayerOrder, gameType, &blockers.Game{}, nil)
 			},
 		},
 		{
@@ -104,8 +100,7 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*blockers.TakeTurn)
-				g := &blockers.Game{}
-				game.TakeTurn(tlbx, gameType, g, func(a game.Game) {
+				return game.TakeTurn(tlbx, gameType, &blockers.Game{}, func(a game.Game) {
 					g := a.(*blockers.Game)
 					turn := g.Base.Turn
 					pieceSet := uint8(turn % uint32(pieceSetsCount))
@@ -270,7 +265,6 @@ var (
 						}
 					}
 				})
-				return g
 			},
 		},
 		{
@@ -292,9 +286,7 @@ var (
 			},
 			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
 				args := a.(*blockers.Get)
-				g := &blockers.Game{}
-				game.Get(tlbx, gameType, args.Game, g)
-				return g
+				return game.Get(tlbx, gameType, args.Game, args.UpdatedAfter, &blockers.Game{})
 			},
 		},
 		{

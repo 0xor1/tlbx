@@ -153,6 +153,13 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 	}).MustDo(player())
 	a.NotNil(g)
 
+	// valid get with no change
+	g = (&blockers.Get{
+		Game:         g.ID,
+		UpdatedAfter: &g.UpdatedOn,
+	}).MustDo(player())
+	a.Nil(g)
+
 	// valid
 	g = (&blockers.TakeTurn{
 		Piece:    16,

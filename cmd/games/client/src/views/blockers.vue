@@ -172,8 +172,20 @@
           })
           promise = mapi.sendMDo()
         } else {
-          promise = api.blockers.get(id).then((game)=>{
+          let updatedAfter = null
+          if (this.game != null && this.game.updatedOn != null) {
+            updatedAfter = this.game.updatedOn
+          }
+          promise = api.blockers.get(id, updatedAfter).then((game)=>{
+            if (game == null) {
+              // if we asked for data only after updatedAfter
+              // null will be returned if there's no updated state.
+              return
+            }
             this.game = game
+            if (game.state === 0 && game.myId == null) {
+              api.blockers.join(game.id)
+            }
           })
         }
         promise.catch((error)=>{
@@ -187,7 +199,7 @@
         }).finally(()=>{
           this.loading = false
           if (this.gameIsActive()) {
-            setTimeout(this.get, 2000)
+            setTimeout(this.get, 5000)
           }
         })
       },

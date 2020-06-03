@@ -125,8 +125,8 @@ let newApi = (isMDoApi) => {
       takeTurn: (piece, position, flip, rotation, end) => {
         return doReq('/blockers/takeTurn', {piece, position, flip, rotation, end})
       },
-      get: (game) => {
-        return doReq('/blockers/get', {game})
+      get: (game, updatedAfter) => {
+        return doReq('/blockers/get', {game, updatedAfter})
       },
       abandon: () => {
         return doReq('/blockers/abandon')

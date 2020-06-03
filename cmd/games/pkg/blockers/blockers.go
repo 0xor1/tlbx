@@ -1,6 +1,8 @@
 package blockers
 
 import (
+	"time"
+
 	"github.com/0xor1/wtf/cmd/games/pkg/game"
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/web/app"
@@ -243,7 +245,8 @@ func (a *TakeTurn) MustDo(c *app.Client) *Game {
 }
 
 type Get struct {
-	Game ID `json:"game"`
+	Game         ID         `json:"game"`
+	UpdatedAfter *time.Time `json:"updatedAfter,omitempty"`
 }
 
 func (_ *Get) Path() string {

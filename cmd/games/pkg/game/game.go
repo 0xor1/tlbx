@@ -105,13 +105,13 @@ func New(tlbx app.Toolbox, gameType string, game Game) {
 	b.setMyID(tlbx)
 }
 
-func Join(tlbx app.Toolbox, maxPlayers uint8, gameType string, game ID, dst Game) {
+func Join(tlbx app.Toolbox, maxPlayers uint8, gameType string, game ID, dst Game) Game {
 	validateUserIsntInAnActiveGame(tlbx, "join")
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
-	read(tlbx, tx, true, gameType, game, dst)
-	b := dst.GetBase()
+	g := read(tlbx, tx, true, gameType, game, nil, dst)
+	b := g.GetBase()
 	tlbx.BadReqIf(!b.NotStarted(), "can't join a game that has already been started")
 	tlbx.BadReqIf(len(b.Players) >= int(maxPlayers), "game is already at max player limit: %d", maxPlayers)
 	// assign new session id for a new game so no clashes with old finished games
@@ -119,12 +119,13 @@ func Join(tlbx app.Toolbox, maxPlayers uint8, gameType string, game ID, dst Game
 	b.Players = append(b.Players, newUserID)
 	tlbx.Session().Login(newUserID)
 	tx.Exec(`INSERT INTO players (id, game) VALUES (?, ?)`, newUserID, b.ID)
-	update(tlbx, tx, gameType, dst)
+	update(tlbx, tx, gameType, g)
 	tx.Commit()
 	b.setMyID(tlbx)
+	return g
 }
 
-func Start(tlbx app.Toolbox, minPlayers uint8, randomizePlayerOrder bool, gameType string, dst Game, customSetup func(game Game)) {
+func Start(tlbx app.Toolbox, minPlayers uint8, randomizePlayerOrder bool, gameType string, dst Game, customSetup func(game Game)) Game {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
@@ -134,7 +135,7 @@ func Start(tlbx app.Toolbox, minPlayers uint8, randomizePlayerOrder bool, gameTy
 	tlbx.BadReqIf(len(b.Players) < int(minPlayers), "game hasn't met minimum player count requirement: %d", minPlayers)
 	tlbx.BadReqIf(!b.ID.Equal(tlbx.Me()), "only the creator can start the game")
 	if customSetup != nil {
-		customSetup(dst)
+		customSetup(g)
 	}
 	b.State = 1
 	if randomizePlayerOrder {
@@ -147,12 +148,13 @@ func Start(tlbx app.Toolbox, minPlayers uint8, randomizePlayerOrder bool, gameTy
 		}
 		b.Players = reorderedPlayers
 	}
-	update(tlbx, tx, gameType, dst)
+	update(tlbx, tx, gameType, g)
 	tx.Commit()
 	b.setMyID(tlbx)
+	return g
 }
 
-func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Game)) {
+func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Game)) Game {
 	tx := service.Get(tlbx).Data().Begin()
 	defer tx.Rollback()
 	g, _ := getUsersActiveGame(tlbx, tx, true, gameType, dst)
@@ -165,6 +167,7 @@ func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Ga
 	update(tlbx, tx, gameType, g)
 	tx.Commit()
 	b.setMyID(tlbx)
+	return g
 }
 
 func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
@@ -179,12 +182,13 @@ func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
 	}
 }
 
-func Get(tlbx app.Toolbox, gameType string, game ID, dst Game) {
-	read(tlbx, nil, false, gameType, game, dst)
+func Get(tlbx app.Toolbox, gameType string, game ID, updatedAfter *time.Time, dst Game) Game {
+	return read(tlbx, nil, false, gameType, game, updatedAfter, dst)
 }
 
-func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, game ID, dst Game) {
+func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, game ID, updatedAfter *time.Time, dst Game) Game {
 	PanicIf(forUpdate && tx == nil, "tx required forUpdate get call")
+	PanicIf(forUpdate && updatedAfter != nil, "updatedAfter should not be passed on forUpdate calls")
 	PanicIf(!forUpdate && tx != nil, "tx must be nil if it is a not forUpdate get call")
 	serialized := make([]byte, 0, 5*app.KB)
 	if !forUpdate {
@@ -207,7 +211,11 @@ func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, game
 	}
 	json.MustUnmarshal(serialized, dst)
 	tlbx.BadReqIf(gotType != gameType, "types do not match, got: %s, expected: %s", gotType, gameType)
+	if updatedAfter != nil && !dst.GetBase().UpdatedOn.After(*updatedAfter) {
+		return nil
+	}
 	dst.GetBase().setMyID(tlbx)
+	return dst
 }
 
 func update(tlbx app.Toolbox, tx service.Tx, gameType string, game Game) {
