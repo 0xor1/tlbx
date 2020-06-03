@@ -186,6 +186,9 @@
           }
         }).finally(()=>{
           this.loading = false
+          if (this.gameIsActive()) {
+            setTimeout(this.get, 2000)
+          }
         })
       },
       xyToI: function(x, y, xDim){
@@ -203,6 +206,12 @@
       pieceCell: function(piece, x, y){
         let p = this.pieces[piece]
         return p.shape[this.xyToI(x, y, p.bb[0])]
+      },
+      gameState: function(){
+        return this.game.state
+      },
+      gameIsActive: function(){
+        return this.gameState() === 0 || this.gameState() === 1
       }
     }
   }
