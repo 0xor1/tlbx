@@ -9,7 +9,7 @@
     <div v-if="game != null && game.board != null">
       <table class=board>
         <tr v-for="(_, y) in boardDims" :key="y">
-          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="'p'+boardCell(x, y)"></td>
+          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="['p'+boardCell(x, y), startCellStyleInfo(x, y).is?'p'+startCellStyleInfo(x, y).pieceSet+'start':'']"></td>
         </tr>
       </table>
       <table class="piece-sets">
@@ -213,7 +213,24 @@
         }
       },
       boardCell: function(x, y){
-        return this.game[this.xyToI(x, y, this.boardDims)]
+        return this.game.board[this.xyToI(x, y, this.boardDims)]
+      },
+      startCellStyleInfo: function(x, y) {
+        console.log(this.boardCell(x, y))
+        if (this.boardCell(x, y) === '4') {
+          // only apply start cell styles to start cells
+          // with no pieces over the top of them.
+          if (x === 0 && y === 0) {
+            return {is: true, pieceSet: 0}
+          } else if (x === this.boardDims - 1 && y === 0) {
+            return {is: true, pieceSet: 1}
+          } else if (x === this.boardDims - 1 && y === this.boardDims - 1) {
+            return {is: true, pieceSet: 2}
+          } else if (x === 0 && y === this.boardDims - 1) {
+            return {is: true, pieceSet: 3}
+          }
+        }
+        return {is: false, pieceSet: null}
       },
       pieceCell: function(piece, x, y){
         let p = this.pieces[piece]
@@ -238,16 +255,52 @@
     width: 2pc;
     height: 2pc;
     &.p0 {
-      background: red;
+      background: #f00;
     }
     &.p1 {
-      background: green;
+      background: #0f0;
     }
     &.p2 {
-      background: blue;
+      background: #00f;
     }
     &.p3 {
-      background: yellow;
+      background: #ff0;
+    }
+    &.p0start {
+      background: repeating-linear-gradient(
+        45deg,
+        #300,
+        #300 5px,
+        #500 5px,
+        #500 10px
+      );
+    }
+    &.p1start {
+      background: repeating-linear-gradient(
+        45deg,
+        #030,
+        #030 5px,
+        #050 5px,
+        #050 10px
+      );
+    }
+    &.p2start {
+      background: repeating-linear-gradient(
+        45deg,
+        #003,
+        #003 5px,
+        #005 5px,
+        #005 10px
+      );
+    }
+    &.p3start {
+      background: repeating-linear-gradient(
+        45deg,
+        #330,
+        #330 5px,
+        #550 5px,
+        #550 10px
+      );
     }
   }
 }
