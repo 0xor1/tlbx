@@ -42,6 +42,7 @@
         pieceSetsCount: 4,
         minPlayers: 2,
         loading: true,
+        joining: false,
         errors: [],
         game: {},
         pieces: [
@@ -183,8 +184,16 @@
               return
             }
             this.game = game
-            if (game.state === 0 && game.myId == null) {
-              api.blockers.join(game.id)
+            if (game.state === 0 && game.myId == null && game.players.length < 4) {
+              this.joining = true
+              api.blockers.join(game.id).then((game)=>{
+                this.game = game
+                this.loading = false
+                this.joining = false
+                if (this.gameIsActive()) {
+                  setTimeout(this.get, 5000)
+                }
+              })
             }
           })
         }
@@ -197,9 +206,11 @@
             this.errors.push(error)
           }
         }).finally(()=>{
-          this.loading = false
-          if (this.gameIsActive()) {
-            setTimeout(this.get, 5000)
+          if (!this.joining) {
+            this.loading = false
+            if (this.gameIsActive()) {
+              setTimeout(this.get, 5000)
+            }
           }
         })
       },
