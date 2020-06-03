@@ -14,11 +14,11 @@
       </table>
       <table class="piece-sets">
          <tr v-for="(_, piece) in pieces.length" :key="piece">
-          <td v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet" class="piece" :class="'p'+pieceSet">
-            <table class=piece>
+          <td v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet">
+            <table class="piece" :class="'p'+pieceSet">
               <tr v-for="(_, y) in pieces[piece].bb[1]" :key="y">
                 <td v-for="(_, x) in pieces[piece].bb[0]" :key="x" 
-                  class="cell" :class="['p'+pieceSet, pieceCell(piece, x, y)===1? 'active' :'dead' ]">{{pieceCell(piece, x, y)}}</td>
+                  class="cell" :class="[pieceCell(piece, x, y)===1? 'p'+pieceSet :'' ]"></td>
               </tr>
             </table>
           </td>
@@ -209,12 +209,11 @@
 </script>
 
 <style lang="scss">
-.board{
+.board, .piece{
   border-collapse: collapse;
   border: 1px solid black;
   .cell{
     border: 1px solid black;
-    background: #222;
     width: 2pc;
     height: 2pc;
     &.p0 {
@@ -231,4 +230,12 @@
     }
   }
 }
+.board .cell {
+  background: #222;
+}
+.piece{
+  cursor: pointer;
+  margin: 1pc;
+}
+
 </style>
