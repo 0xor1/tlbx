@@ -6,7 +6,7 @@
     <div v-if="errors.length > 0">
       <p v-for="(error, index) in errors" :key="index">{{error}}</p>
     </div>
-    <div v-if="game != null && game.board != null">
+    <div v-if="game != null && game.board != null" class="game">
       <table class=board>
         <tr v-for="(_, y) in boardDims" :key="y">
           <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="['p'+boardCell(x, y), startCellStyleInfo(x, y).is?'p'+startCellStyleInfo(x, y).pieceSet+'start':'']"></td>
@@ -27,6 +27,9 @@
           </td>
         </tr>
       </table>
+      <div class="abandon">
+          <button v-if="gameIsActive() && game.myId != null" @click.stop.prevent="abandon">Abandon</button>
+      </div>
     </div>
   </div>
 </template>
@@ -259,18 +262,20 @@
         api.blockers.start(false).then((game)=>{
           this.game = game
         })
+      },
+      abandon: function(){
+        api.blockers.abandon()
       }
     }
   }
 </script>
 
 <style scoped lang="scss">
-.board{
+.game > *{
   margin: 1pc;
 }
 .board, .piece{
   border-collapse: collapse;
-  border: 1px solid black;
   .cell{
     border: 1px solid black;
     width: 2pc;
@@ -328,9 +333,6 @@
 .board .cell {
   background: #222;
 }
-.info-and-controls{
-  margin: 1pc;
-}
 .piece{
   margin: 0.5pc;
   cursor: pointer;
@@ -338,7 +340,6 @@
 .piece-sets {
   border-collapse: collapse;
   border: 1px solid white;
-  margin: 1pc;
   td, th {
     border-right: 1px solid white;
   }
