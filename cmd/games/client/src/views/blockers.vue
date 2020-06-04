@@ -264,7 +264,9 @@
         })
       },
       abandon: function(){
-        api.blockers.abandon()
+        if (window.confirm("Do you really want to abandon this game?!?!")) {
+          api.blockers.abandon()
+        }
       }
     }
   }
@@ -342,6 +344,17 @@
   border: 1px solid white;
   td, th {
     border-right: 1px solid white;
+  }
+}
+.abandon{
+  button{
+    background: #500;
+    &:hover {
+        background-color: #700;
+    }
+    &:active {
+        background-color: #500;
+    }
   }
 }
 </style>
