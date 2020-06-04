@@ -12,6 +12,9 @@
           <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="['p'+boardCell(x, y), startCellStyleInfo(x, y).is?'p'+startCellStyleInfo(x, y).pieceSet+'start':'']"></td>
         </tr>
       </table>
+      <div class="info-and-controls">
+          <button v-if="game.state === 0 && game.id === game.myId && game.players.length >= 2" @click.stop.prevent="start">Start</button>
+      </div>
       <table class="piece-sets">
          <tr v-for="(_, piece) in pieces.length" :key="piece">
           <td v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet">
@@ -251,12 +254,20 @@
       },
       gameIsActive: function(){
         return this.gameState() === 0 || this.gameState() === 1
+      },
+      start: function(){
+        api.blockers.start(false).then((game)=>{
+          this.game = game
+        })
       }
     }
   }
 </script>
 
-<style lang="scss">
+<style scoped lang="scss">
+.board{
+  margin: 1pc;
+}
 .board, .piece{
   border-collapse: collapse;
   border: 1px solid black;
@@ -317,9 +328,19 @@
 .board .cell {
   background: #222;
 }
-.piece{
-  cursor: pointer;
+.info-and-controls{
   margin: 1pc;
 }
-
+.piece{
+  margin: 0.5pc;
+  cursor: pointer;
+}
+.piece-sets {
+  border-collapse: collapse;
+  border: 1px solid white;
+  margin: 1pc;
+  td, th {
+    border-right: 1px solid white;
+  }
+}
 </style>
