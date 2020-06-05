@@ -9,19 +9,50 @@
     <div v-if="game != null && game.board != null" class="game">
       <table class=board>
         <tr v-for="(_, y) in boardDims" :key="y">
-          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="['p'+boardCell(x, y), startCellStyleInfo(x, y).is?'p'+startCellStyleInfo(x, y).pieceSet+'start':'']"></td>
+          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="['p'+boardCell(x, y), startCellStyleInfo(x, y).is?'p'+startCellStyleInfo(x, y).pieceSet+'start':'']">{{xyToI(x, y, boardDims)}}</td>
         </tr>
       </table>
       <div class="info-and-controls">
-          <button v-if="game.state === 0 && game.id === game.myId && game.players.length >= 2" @click.stop.prevent="start">Start</button>
+        <p v-if="gameIsActive() && game.myId == null">
+          Obeserving game, enjoy the show :)
+        </p>
+        <div v-if="game.state === 0">
+          <p>
+            players: {{game.players.length}}
+          </p>
+          <p v-if="game.id !== game.myId">
+            Waiting for more players or creator to start the game.
+          </p>
+          <p v-if="game.id === game.myId">
+            Send this link to a friend <br> {{link()}}
+          </p>
+          <button v-if="game.id === game.myId && game.players.length >= 2" @click.stop.prevent="start">Start</button>
+        </div>
+        <div v-if="game.state === 1">
+          <p>
+            turn: {{game.turn + 1}}
+          </p>
+          <p :class="'piece-set-'+turnPieceSetIdx()">
+            P{{turnPlayerIdx()+1}}s turn<span v-if="game.myId === game.players[turnPlayerIdx()]">. That's you!</span>
+          </p>
+        </div>
+        <p v-if="game.state === 2">
+          Game is finished
+        </p>
+        <p v-if="game.state === 3">
+          This game was abandoned! shame! shame! shame!
+        </p>
+        <p v-if="game.state === 1 || game.state === 2">
+          // todo print player scores
+        </p>
       </div>
       <table class="piece-sets">
          <tr v-for="(_, piece) in pieces.length" :key="piece">
           <td v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet">
-            <table class="piece" :class="'p'+pieceSet">
+            <table class="piece" :class="'p'+pieceSet" v-if="game.pieceSets[(pieces.length*pieceSet)+piece] === '1'">
               <tr v-for="(_, y) in pieces[piece].bb[1]" :key="y">
                 <td v-for="(_, x) in pieces[piece].bb[0]" :key="x" 
-                  class="cell" :class="[pieceCell(piece, x, y)===1? 'p'+pieceSet :'' ]"></td>
+                  class="cell" :class="[pieceCell(piece, x, y)===1? 'p'+pieceSet :'' ]">{{piece}}</td>
               </tr>
             </table>
           </td>
@@ -40,16 +71,16 @@
   export default {
     name: 'blockers',
     data: function() {
-      this.get()
-      window.x_api = api
+      window.x_api = api // todo delete this line
       return {
         gameType: "blockers",
         boardDims: 20,
         pieceSetsCount: 4,
         minPlayers: 2,
         loading: true,
-        joining: false,
+        myActiveGameRequested: false,
         errors: [],
+        myActiveGame: {},
         game: {},
         pieces: [
           // 0
@@ -161,47 +192,55 @@
       }
     },
     methods: {
+      new: function(){
+        this.loading = true
+        this.myActiveGameRequested = false
+        this.errors = []
+        this.myActiveGame = {}
+        this.game = {}
+        router.push('/'+this.gameType+'/new')
+        this.get()
+      },
+      link: function(){
+        return window.location.href
+      },
       get: function(){
+        clearTimeout(this.getTimeoutId)
         let id = router.currentRoute.params.id
-        let promise = null
         let mapi = api
-        if (id === 'new') {
+        let isMDoReq = false
+        let promise = null
+        if (!this.myActiveGameRequested) {
+          isMDoReq = true
           mapi = api.newMDoApi()
+          this.myActiveGameRequested = true
           mapi.game.active().then((info)=>{
             if (info != null) {
-              router.push('/'+info.type+'/'+info.id)
-              this.get()
+              this.myActiveGame = info
             }
           })
-          mapi.blockers.new().then((game)=>{
+        }
+        if (id === 'new') {
+          promise = mapi.blockers.new().then((game)=>{
             this.game = game
             router.push('/'+this.gameType+'/'+this.game.id)
           })
-          promise = mapi.sendMDo()
         } else {
           let updatedAfter = null
           if (this.game != null && this.game.updatedOn != null) {
             updatedAfter = this.game.updatedOn
           }
-          promise = api.blockers.get(id, updatedAfter).then((game)=>{
+          promise = mapi.blockers.get(id, updatedAfter).then((game)=>{
             if (game == null) {
               // if we asked for data only after updatedAfter
               // null will be returned if there's no updated state.
               return
             }
             this.game = game
-            if (game.state === 0 && game.myId == null && game.players.length < 4) {
-              this.joining = true
-              api.blockers.join(game.id).then((game)=>{
-                this.game = game
-                this.loading = false
-                this.joining = false
-                if (this.gameIsActive()) {
-                  setTimeout(this.get, 5000)
-                }
-              })
-            }
           })
+        }
+        if (isMDoReq) {
+          promise = mapi.sendMDo()
         }
         promise.catch((error)=>{
           if (error.isMDoErrors === true) {
@@ -212,13 +251,44 @@
             this.errors.push(error)
           }
         }).finally(()=>{
-          if (!this.joining) {
+          let poll = ()=>{
             this.loading = false
-            if (this.gameIsActive()) {
-              setTimeout(this.get, 5000)
+            if (this.game.id == null || this.gameIsActive()) {
+              this.getTimeoutId = setTimeout(this.get, 5000)
             }
           }
+          if (this.game.state === 0 && 
+            this.game.myId == null && 
+            this.game.players.length < this.pieceSetsCount &&
+            this.myActiveGame.id == null) {
+              api.blockers.join(this.game.id).then((game)=>{
+                this.game = game
+                poll()
+            })
+          } else {
+            poll()
+          }
         })
+      },
+      turnPlayerIdx: function(){
+        let playerIdx = 0
+        if (this.game.players.length === 3) {
+          playerIdx = this.game.turn % this.pieceSetsCount
+          if (playerIdx == 3) {
+            playerIdx = (Math.floor(((this.game.turn) + 1) / this.pieceSetsCount) - 1) % 3
+          }
+        } else {
+          playerIdx = this.game.turn % this.game.players.length
+        }
+        return playerIdx
+      },
+      turnPieceSetIdx: function(){
+        return this.game.turn % this.pieceSetsCount
+      },
+      goToMyActiveGame: function(){
+        if (this.myActiveGame.id != null) {
+          router.push('/'+this.myActiveGame.type+'/'+this.myActiveGame.id)
+        }
       },
       xyToI: function(x, y, xDim){
         return xDim*y + x
@@ -252,11 +322,8 @@
         let p = this.pieces[piece]
         return p.shape[this.xyToI(x, y, p.bb[0])]
       },
-      gameState: function(){
-        return this.game.state
-      },
       gameIsActive: function(){
-        return this.gameState() === 0 || this.gameState() === 1
+        return this.game.state === 0 || this.game.state === 1
       },
       start: function(){
         api.blockers.start(false).then((game)=>{
@@ -265,9 +332,18 @@
       },
       abandon: function(){
         if (window.confirm("Do you really want to abandon this game?!?!")) {
-          api.blockers.abandon()
+          clearTimeout(this.getTimeoutId)
+          api.blockers.abandon().then(()=>{
+            this.game.state = 3
+          })
         }
       }
+    },
+    mounted: function(){
+      this.get()
+    },
+    destroyed: function(){
+      clearTimeout(this.getTimeoutId)
     }
   }
 </script>
@@ -341,9 +417,35 @@
 }
 .piece-sets {
   border-collapse: collapse;
-  border: 1px solid white;
+  border: 1px solid grey;
   td, th {
-    border-right: 1px solid white;
+    border-right: 1px solid grey;
+  }
+}
+.info-and-controls{
+  .piece-set-0{
+    color: #f00;
+    span{
+      color: inherit;
+    }
+  }
+  .piece-set-1{
+    color: #0f0;
+    span{
+      color: inherit;
+    }
+  }
+  .piece-set-2{
+    color: #00f;
+    span{
+      color: inherit;
+    }
+  }
+  .piece-set-3{
+    color: #ff0;
+    span{
+      color: inherit;
+    }
   }
 }
 .abandon{
