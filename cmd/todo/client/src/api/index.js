@@ -212,4 +212,6 @@ let newApi = (isMDoApi) => {
   }
 }
 
-export default newApi(false)
+// make it available for console hacking
+window.api = newApi(false)
+export default window.api

@@ -9,7 +9,7 @@
     <div v-if="game != null && game.board != null" class="game">
       <table class=board>
         <tr v-for="(_, y) in boardDims" :key="y">
-          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="['p'+boardCell(x, y), startCellStyleInfo(x, y).is?'p'+startCellStyleInfo(x, y).pieceSet+'start':'']">{{xyToI(x, y, boardDims)}}</td>
+          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="boardCellClass(x, y)">{{xyToI(x, y, boardDims)}}</td>
         </tr>
       </table>
       <div class="info-and-controls">
@@ -32,9 +32,6 @@
           <p>
             turn: {{game.turn + 1}}
           </p>
-          <p :class="'piece-set-'+turnPieceSetIdx()">
-            P{{turnPlayerIdx()+1}}s turn<span v-if="game.myId === game.players[turnPlayerIdx()]">. That's you!</span>
-          </p>
         </div>
         <p v-if="game.state === 2">
           Game is finished
@@ -42,22 +39,22 @@
         <p v-if="game.state === 3">
           This game was abandoned! shame! shame! shame!
         </p>
-        <p v-if="game.state === 1 || game.state === 2">
-          // todo print player scores
-        </p>
       </div>
-      <table class="piece-sets">
-         <tr v-for="(_, piece) in pieces.length" :key="piece">
-          <td v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet">
+      <div class="piece-sets">
+         <div v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet" :class="[game.state === 1 && turnPieceSetIdx() === pieceSet?'active':'','piece-set',''+pieceSet]">
+          <!-- <div v-if="game.state >= 1" class="piece-set-header">
+            P{{pieceSetPlayerIdx(pieceSet)}} score: {{pieceSetScore(pieceSet)}}
+          </div> -->
+          <div v-for="(_, piece) in pieces.length" :key="piece">
             <table class="piece" :class="'p'+pieceSet" v-if="game.pieceSets[(pieces.length*pieceSet)+piece] === '1'">
               <tr v-for="(_, y) in pieces[piece].bb[1]" :key="y">
                 <td v-for="(_, x) in pieces[piece].bb[0]" :key="x" 
-                  class="cell" :class="[pieceCell(piece, x, y)===1? 'p'+pieceSet :'' ]">{{piece}}</td>
+                  class="cell" :class="[pieceCell(piece, x, y)===1? 'ps'+pieceSet :'dead' ]">{{piece}}</td>
               </tr>
             </table>
-          </td>
-        </tr>
-      </table>
+          </div>
+        </div>
+      </div>
       <div class="abandon">
           <button v-if="gameIsActive() && game.myId != null" @click.stop.prevent="abandon">Abandon</button>
       </div>
@@ -85,109 +82,109 @@
         pieces: [
           // 0
           // #
-          {bb: [1, 1], shape: [1]},
+          {bb: [1, 1], shape: [1], score: 1},
 
           // 1
           // ##
-          {bb: [2, 1], shape: [1, 1]},
+          {bb: [2, 1], shape: [1, 1], score: 2},
 
           // 2
           // ###
-          {bb: [3, 1], shape: [1, 1, 1]},
+          {bb: [3, 1], shape: [1, 1, 1], score: 3},
 
           // 3
           // #
           // ##
-          {bb: [2, 2], shape: [1, 0, 1, 1]},
+          {bb: [2, 2], shape: [1, 0, 1, 1], score: 3},
 
           // 4
           // ####
-          {bb: [4, 1], shape: [1, 1, 1, 1]},
+          {bb: [4, 1], shape: [1, 1, 1, 1], score: 4},
 
           // 5
           // ##
           // ##
-          {bb: [2, 2], shape: [1, 1, 1, 1]},
+          {bb: [2, 2], shape: [1, 1, 1, 1], score: 4},
 
           // 6
           //  #
           // ###
-          {bb: [3, 2], shape: [0, 1, 0, 1, 1, 1]},
+          {bb: [3, 2], shape: [0, 1, 0, 1, 1, 1], score: 4},
 
           // 7
           //   #
           // ###
-          {bb: [3, 2], shape: [0, 0, 1, 1, 1, 1]},
+          {bb: [3, 2], shape: [0, 0, 1, 1, 1, 1], score: 4},
 
           // 8
           //  ##
           // ##
-          {bb: [3, 2], shape: [0, 1, 1, 1, 1, 0]},
+          {bb: [3, 2], shape: [0, 1, 1, 1, 1, 0], score: 4},
 
           // 9
           // #####
-          {bb: [5, 1], shape: [1, 1, 1, 1, 1]},
+          {bb: [5, 1], shape: [1, 1, 1, 1, 1], score: 5},
 
           // 10
           // ###
           // ##
-          {bb: [3, 2], shape: [1, 1, 1, 1, 1, 0]},
+          {bb: [3, 2], shape: [1, 1, 1, 1, 1, 0], score: 5},
 
           // 11
           //  #
           // ###
           //  #
-          {bb: [3, 3], shape: [0, 1, 0, 1, 1, 1, 0, 1, 0]},
+          {bb: [3, 3], shape: [0, 1, 0, 1, 1, 1, 0, 1, 0], score: 5},
 
           // 12
           // #
           // ###
           //   #
-          {bb: [3, 3], shape: [1, 0, 0, 1, 1, 1, 0, 0, 1]},
+          {bb: [3, 3], shape: [1, 0, 0, 1, 1, 1, 0, 0, 1], score: 5},
 
           // 13
           //    #
           // ####
-          {bb: [4, 2], shape: [0, 0, 0, 1, 1, 1, 1, 1]},
+          {bb: [4, 2], shape: [0, 0, 0, 1, 1, 1, 1, 1], score: 5},
 
           // 14
           //   #
           // ####
-          {bb: [4, 2], shape: [0, 0, 1, 0, 1, 1, 1, 1]},
+          {bb: [4, 2], shape: [0, 0, 1, 0, 1, 1, 1, 1], score: 5},
 
           // 15
           // ###
           //   ##
-          {bb: [4, 2], shape: [1, 1, 1, 0, 0, 0, 1, 1]},
+          {bb: [4, 2], shape: [1, 1, 1, 0, 0, 0, 1, 1], score: 5},
 
           // 16
           // #
           // ###
           //  #
-          {bb: [3, 3], shape: [1, 0, 0, 1, 1, 1, 0, 1, 0]},
+          {bb: [3, 3], shape: [1, 0, 0, 1, 1, 1, 0, 1, 0], score: 5},
 
           // 17
           // ###
           // # #
-          {bb: [3, 2], shape: [1, 1, 1, 1, 0, 1]},
+          {bb: [3, 2], shape: [1, 1, 1, 1, 0, 1], score: 5},
 
           // 18
           // #
           // ###
           // #
-          {bb: [3, 3], shape: [1, 0, 0, 1, 1, 1, 1, 0, 0]},
+          {bb: [3, 3], shape: [1, 0, 0, 1, 1, 1, 1, 0, 0], score: 5},
 
           // 19
           // ##
           //  ##
           //   #
-          {bb: [3, 3], shape: [1, 1, 0, 0, 1, 1, 0, 0, 1]},
+          {bb: [3, 3], shape: [1, 1, 0, 0, 1, 1, 0, 0, 1], score: 5},
 
           // 20
           // #
           // #
           // ###
-          {bb: [3, 3], shape: [1, 0, 0, 1, 0, 0, 1, 1, 1]}
+          {bb: [3, 3], shape: [1, 0, 0, 1, 0, 0, 1, 1, 1], score: 5}
         ]
       }
     },
@@ -254,7 +251,7 @@
           let poll = ()=>{
             this.loading = false
             if (this.game.id == null || this.gameIsActive()) {
-              this.getTimeoutId = setTimeout(this.get, 5000)
+              this.getTimeoutId = setTimeout(this.get, 2000)
             }
           }
           if (this.game.state === 0 && 
@@ -302,21 +299,21 @@
       boardCell: function(x, y){
         return this.game.board[this.xyToI(x, y, this.boardDims)]
       },
-      startCellStyleInfo: function(x, y) {
+      boardCellClass: function(x, y) {
         if (this.boardCell(x, y) === '4') {
           // only apply start cell styles to start cells
           // with no pieces over the top of them.
           if (x === 0 && y === 0) {
-            return {is: true, pieceSet: 0}
+            return "ps0 start"
           } else if (x === this.boardDims - 1 && y === 0) {
-            return {is: true, pieceSet: 1}
+            return "ps1 start"
           } else if (x === this.boardDims - 1 && y === this.boardDims - 1) {
-            return {is: true, pieceSet: 2}
+            return "ps2 start"
           } else if (x === 0 && y === this.boardDims - 1) {
-            return {is: true, pieceSet: 3}
+            return "ps3 start"
           }
         }
-        return {is: false, pieceSet: null}
+        return "ps"+this.boardCell(x, y)
       },
       pieceCell: function(piece, x, y){
         let p = this.pieces[piece]
@@ -349,105 +346,84 @@
 </script>
 
 <style scoped lang="scss">
+@use "sass:color";
+
+$ps0: #d00;
+$ps1: #0d0;
+$ps2: #00d;
+$ps3: #dd0;
+$empty: #222;
+$border: 1px solid black;
+$cellSize: 2pc;
+
+@mixin cell($base) {
+  color: white;
+  background: $base;
+  &.start{
+    background: repeating-linear-gradient(
+      45deg,
+      color.adjust($base, $lightness: -33),
+      color.adjust($base, $lightness: -33) 5px,
+      color.adjust($base, $lightness: -26) 5px,
+      color.adjust($base, $lightness: -26) 10px
+    );
+  }
+}
+
 .game > *{
   margin: 1pc;
 }
-.board, .piece{
+
+table, tr, td{
   border-collapse: collapse;
-  .cell{
-    border: 1px solid black;
-    width: 2pc;
-    height: 2pc;
-    &.p0 {
-      background: #f00;
-    }
-    &.p1 {
-      background: #0f0;
-    }
-    &.p2 {
-      background: #00f;
-    }
-    &.p3 {
-      background: #ff0;
-    }
-    &.p0start {
-      background: repeating-linear-gradient(
-        45deg,
-        #300,
-        #300 5px,
-        #500 5px,
-        #500 10px
-      );
-    }
-    &.p1start {
-      background: repeating-linear-gradient(
-        45deg,
-        #030,
-        #030 5px,
-        #050 5px,
-        #050 10px
-      );
-    }
-    &.p2start {
-      background: repeating-linear-gradient(
-        45deg,
-        #003,
-        #003 5px,
-        #005 5px,
-        #005 10px
-      );
-    }
-    &.p3start {
-      background: repeating-linear-gradient(
-        45deg,
-        #330,
-        #330 5px,
-        #550 5px,
-        #550 10px
-      );
-    }
+  background: transparent;
+}
+
+.cell{
+  width: $cellSize;
+  height: $cellSize;
+  &:not(.dead){
+    border: $border
+  }
+  &.ps0 {
+    @include cell($ps0);
+  }
+  &.ps1 {
+    @include cell($ps1);
+  }
+  &.ps2 {
+    @include cell($ps2);
+  }
+  &.ps3 {
+    @include cell($ps3);
+  }
+  &.ps4 {
+    @include cell($empty);
   }
 }
-.board .cell {
-  background: #222;
-}
-.piece{
-  margin: 0.5pc;
+
+.cell{
   cursor: pointer;
 }
+
 .piece-sets {
-  border-collapse: collapse;
-  border: 1px solid grey;
-  td, th {
-    border-right: 1px solid grey;
+  > div {
+    vertical-align: top;
+    display: inline-block;
+    border: 1px solid #555;
+    &.active{
+      background: #555;
+    }
+    > * {
+      background: transparent;
+      margin: 0.75pc;
+    }
   }
 }
+
 .info-and-controls{
-  .piece-set-0{
-    color: #f00;
-    span{
-      color: inherit;
-    }
-  }
-  .piece-set-1{
-    color: #0f0;
-    span{
-      color: inherit;
-    }
-  }
-  .piece-set-2{
-    color: #00f;
-    span{
-      color: inherit;
-    }
-  }
-  .piece-set-3{
-    color: #ff0;
-    span{
-      color: inherit;
-    }
-  }
 }
+
 .abandon{
   button{
     background: #500;
