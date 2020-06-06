@@ -171,6 +171,18 @@ var (
 						firstCornerConMet := turn >= uint32(pieceSetsCount)
 						// diagonalTouchCon doesnt need to be met on first turn of each piece set
 						diagnonalTouchConMet := turn < uint32(pieceSetsCount)
+						//special case if 3 player game and p1 skipped taking turn on the shared pieceSet.
+						if len(g.Players) == 3 && pieceSet == 3 && turn > uint32(pieceSetsCount) {
+							rotaSetFirstPiecePlaced := false
+							for i := uint8(0); i < blockers.PiecesCount(); i++ {
+								if g.PieceSets[pieceSet*blockers.PiecesCount()+i] == 0 {
+									rotaSetFirstPiecePlaced = true
+									break
+								}
+							}
+							firstCornerConMet = rotaSetFirstPiecePlaced
+							diagnonalTouchConMet = !rotaSetFirstPiecePlaced
+						}
 						// board cell indexes to be inserted into by this placement
 						insertIdxs := make([]uint16, 0, 5) // 5 because that's the largest piece by active cell count
 						posX, posY := iToXY(args.Position, boardDims, boardDims)

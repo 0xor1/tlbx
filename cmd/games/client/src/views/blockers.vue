@@ -14,39 +14,57 @@
       </table>
       <div class="info-and-controls">
         <p v-if="gameIsActive() && game.myId == null">
-          Obeserving game, enjoy the show :)
+          OBSERVING GAME, ENJOY :)
         </p>
         <div v-if="game.state === 0">
           <p>
-            players: {{game.players.length}}
+            PLAYERS: {{game.players.length}}
           </p>
           <p v-if="game.id !== game.myId">
-            Waiting for more players or creator to start the game.
+            WAITING FOR MORE PLAYERS OR CREATOR TO START GAME
           </p>
           <p v-if="game.id === game.myId">
-            Send this link to a friend <br> {{link()}}
+            SEND LINK TO FRIENDS:<br>{{link()}}
           </p>
-          <button v-if="game.id === game.myId && game.players.length >= 2" @click.stop.prevent="start">Start</button>
+          <button v-if="game.id === game.myId && game.players.length >= 2" @click.stop.prevent="start">START GAME</button>
         </div>
-        <div v-if="game.state === 1">
-          <p>
-            turn: {{game.turn + 1}}
-          </p>
-        </div>
+        <p v-if="game.state >= 1">
+          TURN: {{game.turn + 1}}
+        </p>
         <p v-if="game.state === 2">
-          Game is finished
+          GAME OVER
+        </p>
+        <p v-if="game.state === 2" class="winner" :class="'ps'+getWinningPlayerIdx()">
+          P{{getWinningPlayerIdx()+1}} WON!
         </p>
         <p v-if="game.state === 3">
-          This game was abandoned! shame! shame! shame!
+          GAME ABANDONED! SHAME! SHAME! SHAME!
         </p>
+        <button v-if="game.state === 2 || game.state === 3" @click.stop.prevent="goToGames()">
+          BACK TO GAMES
+        </button>
       </div>
       <div class="piece-sets">
-         <div v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet" :class="[game.state === 1 && turnPieceSetIdx() === pieceSet?'active':'','piece-set',''+pieceSet]">
-          <!-- <div v-if="game.state >= 1" class="piece-set-header">
-            P{{pieceSetPlayerIdx(pieceSet)}} score: {{pieceSetScore(pieceSet)}}
-          </div> -->
-          <div v-for="(_, piece) in pieces.length" :key="piece">
-            <table class="piece" :class="'p'+pieceSet" v-if="game.pieceSets[(pieces.length*pieceSet)+piece] === '1'">
+         <div v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet" :class="['piece-set',game.state === 1 && turnPieceSetIdx() === pieceSet?'active':'','ps'+pieceSet]">
+          <div class="piece-set-header">
+            <p v-if="game.state === 0" class="player-tag">
+              WAITING TO START
+            </p>
+            <p v-if="game.state >= 1" class="player-tag">
+              {{pieceSetPlayerLabel(pieceSet)}} <span v-if="game.players[turnPieceSetIdx()] === game.myId">THAT'S YOU!</span>
+            </p>
+            <button :disabled="turnPieceSetIdx() !== pieceSet || game.state !== 1" class="red" v-if="game.pieceSetsEnded[pieceSet] === '0'" @click.stop.prevent="end(pieceSet)">
+              END SET
+            </button>
+            <p class="set-state" v-else>
+              SET ENDED
+            </p>
+            <p class="set-score">
+              SET SCORE: {{pieceSetScore(pieceSet)}}
+            </p>
+          </div>
+          <div v-for="(_, piece) in pieces.length" :key="piece" class="piece">
+            <table class="piece" :class="'ps'+pieceSet" v-if="game.pieceSets[(pieces.length*pieceSet)+piece] === '1'">
               <tr v-for="(_, y) in pieces[piece].bb[1]" :key="y">
                 <td v-for="(_, x) in pieces[piece].bb[0]" :key="x" 
                   class="cell" :class="[pieceCell(piece, x, y)===1? 'ps'+pieceSet :'dead' ]">{{piece}}</td>
@@ -55,9 +73,7 @@
           </div>
         </div>
       </div>
-      <div class="abandon">
-          <button v-if="gameIsActive() && game.myId != null" @click.stop.prevent="abandon">Abandon</button>
-      </div>
+        <button class="red" v-if="gameIsActive() && game.myId != null" @click.stop.prevent="abandon">Abandon</button>
     </div>
   </div>
 </template>
@@ -251,7 +267,7 @@
           let poll = ()=>{
             this.loading = false
             if (this.game.id == null || this.gameIsActive()) {
-              this.getTimeoutId = setTimeout(this.get, 2000)
+              this.getTimeoutId = setTimeout(this.get, 3000)
             }
           }
           if (this.game.state === 0 && 
@@ -282,10 +298,68 @@
       turnPieceSetIdx: function(){
         return this.game.turn % this.pieceSetsCount
       },
+      pieceSetPlayerLabel: function(pieceSet){
+        switch (pieceSet) {
+          case 0:
+          case 1:
+            return 'P'+(pieceSet+1)
+          case 2:
+            switch (this.game.players.length) {
+              case 2:
+                return 'P1'
+              default:
+                return 'P3'
+            }
+          case 3:
+            switch (this.game.players.length) {
+              case 2:
+                return 'P2'
+              case 4:
+                return 'P4'
+              case 3:
+                if (this.turnPieceSetIdx() !== 3) {
+                  return 'ROTA'
+                }
+                return 'P'+ (this.turnPlayerIdx()+1);
+            }
+        }
+      },
+      pieceSetScore: function(pieceSet){
+        let score = 0
+        for (let i = 0, l = this.pieces.length; i < l; i++) {
+          if (this.game.pieceSets[(this.pieces.length*pieceSet)+i] === '1') {
+            score += this.pieces[i].score
+          }
+        }
+        return score
+      },
+      getWinningPlayerIdx: function() {
+        let scores = []
+        switch (this.game.players.length) {
+          case 2:
+            scores = [this.pieceSetScore(0)+this.pieceSetScore(2), this.pieceSetScore(1)+this.pieceSetScore(3)]
+            break
+          case 3:
+            scores = [this.pieceSetScore(0), this.pieceSetScore(1), this.pieceSetScore(2)]
+            break
+          case 4:
+            scores = [this.pieceSetScore(0), this.pieceSetScore(1), this.pieceSetScore(2), this.pieceSetScore(3)]
+        }
+        let winningPlayer = 0
+        for (let i = 1, l = scores.length; i < l; i++) {
+          if (scores[winningPlayer] >= scores[i]) {
+            winningPlayer = i
+          }
+        }
+        return winningPlayer
+      },
       goToMyActiveGame: function(){
         if (this.myActiveGame.id != null) {
           router.push('/'+this.myActiveGame.type+'/'+this.myActiveGame.id)
         }
+      },
+      goToGames: function(){
+        router.push('/games')
       },
       xyToI: function(x, y, xDim){
         return xDim*y + x
@@ -304,13 +378,13 @@
           // only apply start cell styles to start cells
           // with no pieces over the top of them.
           if (x === 0 && y === 0) {
-            return "ps0 start"
+            return "ps0 shade"
           } else if (x === this.boardDims - 1 && y === 0) {
-            return "ps1 start"
+            return "ps1 shade"
           } else if (x === this.boardDims - 1 && y === this.boardDims - 1) {
-            return "ps2 start"
+            return "ps2 shade"
           } else if (x === 0 && y === this.boardDims - 1) {
-            return "ps3 start"
+            return "ps3 shade"
           }
         }
         return "ps"+this.boardCell(x, y)
@@ -326,6 +400,13 @@
         api.blockers.start(false).then((game)=>{
           this.game = game
         })
+      },
+      end: function(pieceSet){
+        if (this.turnPieceSetIdx() === pieceSet && this.game.players[this.turnPlayerIdx()] === this.game.myId) {
+          api.blockers.takeTurn(0, 0, 0, 0, 1).then((game)=>{
+            this.game = game
+          })
+        }
       },
       abandon: function(){
         if (window.confirm("Do you really want to abandon this game?!?!")) {
@@ -356,17 +437,47 @@ $empty: #222;
 $border: 1px solid black;
 $cellSize: 2pc;
 
-@mixin cell($base) {
-  color: white;
-  background: $base;
-  &.start{
-    background: repeating-linear-gradient(
+@mixin shade($base) {
+  background: repeating-linear-gradient(
       45deg,
-      color.adjust($base, $lightness: -33),
-      color.adjust($base, $lightness: -33) 5px,
+      color.adjust($base, $lightness: -26),
       color.adjust($base, $lightness: -26) 5px,
-      color.adjust($base, $lightness: -26) 10px
+      color.adjust($base, $lightness: -15) 5px,
+      color.adjust($base, $lightness: -15) 10px
     );
+}
+@mixin cell($root, $base) {
+  &.#{$root}{
+    color: white; //todo set this back to $base
+    background: $base;
+    &.dead{
+      background: transparent;
+    }
+    &.shade{
+      @include shade($base)
+    }
+  }
+}
+@mixin pieceSet($root, $base) {
+  &.#{$root}{
+    @include shade($base);
+    &:not(.active){
+      @include shade(color.adjust($base, $lightness: -27));
+      .cell {
+        background: color.adjust($base, $lightness: -36);
+        &.dead{
+          background: transparent;
+        }
+      }
+    }
+    &.active{
+      .piece-set-header{
+      @include shade(#fff);
+        p {
+          color: $base;
+        }
+      }
+    }
   }
 }
 
@@ -380,59 +491,94 @@ table, tr, td{
 }
 
 .cell{
+  cursor: pointer;
   width: $cellSize;
   height: $cellSize;
   &:not(.dead){
     border: $border
   }
-  &.ps0 {
-    @include cell($ps0);
-  }
-  &.ps1 {
-    @include cell($ps1);
-  }
-  &.ps2 {
-    @include cell($ps2);
-  }
-  &.ps3 {
-    @include cell($ps3);
-  }
-  &.ps4 {
-    @include cell($empty);
-  }
-}
-
-.cell{
-  cursor: pointer;
+  @include cell("ps0", $ps0);
+  @include cell("ps1", $ps1);
+  @include cell("ps2", $ps2);
+  @include cell("ps3", $ps3);
+  @include cell("ps4", $empty);
 }
 
 .piece-sets {
-  > div {
+    white-space: nowrap;
+  > .piece-set {
     vertical-align: top;
     display: inline-block;
     border: 1px solid #555;
-    &.active{
-      background: #555;
+    @include pieceSet('ps0', $ps0);
+    @include pieceSet('ps1', $ps1);
+    @include pieceSet('ps2', $ps2);
+    @include pieceSet('ps3', $ps3);
+
+    > .piece-set-header{
+      font-weight: 1000;
+      align-content: center;
+      @include shade(#333);
+      p {
+        margin: 10px 0;
+        color: #555;
+        background: transparent;
+        text-align: center;
+        > span {
+          font-weight: inherit;
+          color: inherit;
+          background: transparent;
+        }
+      }
+      button.red{
+        position: relative;
+        width: 5pc;
+        left: calc(50% - 2.5pc);
+        &:disabled, &[disabled]{
+          background: #100;
+          color: #555;
+        }
+      }
     }
-    > * {
+    > .piece {
       background: transparent;
-      margin: 0.75pc;
+      float: left;
+      clear: both;
+      > table {
+        margin: 0.5pc;
+      }
+    }
+    &.active > .piece:hover td:not(.dead){
+      border: 1px solid white;      
     }
   }
 }
 
 .info-and-controls{
+  .winner{
+    &.ps0{
+      color: $ps0;
+    }
+    &.ps1{
+      color: $ps1;
+    }
+    &.ps2{
+      color: $ps2;
+    }
+    &.ps3{
+      color: $ps3;
+    }
+  }
 }
 
-.abandon{
-  button{
-    background: #500;
-    &:hover {
-        background-color: #700;
-    }
-    &:active {
-        background-color: #500;
-    }
+button.red{
+  background: #500;
+  border: 1px solid #300;
+  &:hover {
+      background-color: #700;
+  }
+  &:active {
+      background-color: #500;
   }
 }
 </style>
