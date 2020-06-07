@@ -166,23 +166,13 @@ var (
 							x+piece.BB[0] > uint8(boardDims) || y+piece.BB[1] > uint8(boardDims),
 							"piece/position/rotation combination is not contained on the board")
 
+						pieceSetStartI := pieceSetBoardStartI(pieceSet)
 						// validate placement con(straints) met, firstCorner, diagonalTouch, sideTouch
 						// firstCornerCon only needs to be met on first turns of each piece set
-						firstCornerConMet := turn >= uint32(pieceSetsCount)
+						firstCornerConMet := g.Board[pieceSetStartI] != 4
 						// diagonalTouchCon doesnt need to be met on first turn of each piece set
-						diagnonalTouchConMet := turn < uint32(pieceSetsCount)
-						//special case if 3 player game and p1 skipped taking turn on the shared pieceSet.
-						if len(g.Players) == 3 && pieceSet == 3 && turn > uint32(pieceSetsCount) {
-							rotaSetFirstPiecePlaced := false
-							for i := uint8(0); i < blockers.PiecesCount(); i++ {
-								if g.PieceSets[pieceSet*blockers.PiecesCount()+i] == 0 {
-									rotaSetFirstPiecePlaced = true
-									break
-								}
-							}
-							firstCornerConMet = rotaSetFirstPiecePlaced
-							diagnonalTouchConMet = !rotaSetFirstPiecePlaced
-						}
+						diagnonalTouchConMet := !firstCornerConMet
+
 						// board cell indexes to be inserted into by this placement
 						insertIdxs := make([]uint16, 0, 5) // 5 because that's the largest piece by active cell count
 						posX, posY := iToXY(args.Position, boardDims, boardDims)
@@ -201,11 +191,7 @@ var (
 									// ↑   ↓
 									// 3 ← 2
 
-									firstCornerConMet = firstCornerConMet ||
-										(pieceSet == 0 && cellX == 0 && cellY == 0) ||
-										(pieceSet == 1 && cellX == boardDims-1 && cellY == 0) ||
-										(pieceSet == 2 && cellX == boardDims-1 && cellY == boardDims-1) ||
-										(pieceSet == 3 && cellX == 0 && cellY == boardDims-1)
+									firstCornerConMet = firstCornerConMet || cellI == pieceSetStartI
 
 									// loop through surrounding cells to check for diagonal and side touches
 									for offsetY := -1; offsetY < 2; offsetY++ {
@@ -353,4 +339,18 @@ func iToXY(i uint16, xDim, yDim uint8) (x uint8, y uint8) {
 
 func xyToI(x, y, xDim uint8) uint16 {
 	return uint16(xDim)*uint16(y) + uint16(x)
+}
+
+func pieceSetBoardStartI(pieceSet uint8) uint16 {
+	PanicIf(pieceSet > 3, "invalid pieceSet value")
+	switch pieceSet {
+	case 0:
+		return xyToI(0, 0, boardDims)
+	case 1:
+		return xyToI(boardDims-1, 0, boardDims)
+	case 2:
+		return xyToI(boardDims-1, boardDims-1, boardDims)
+	default: //case 3
+		return xyToI(0, boardDims-1, boardDims)
+	}
 }

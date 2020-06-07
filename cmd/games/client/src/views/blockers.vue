@@ -44,7 +44,7 @@
             WAITING FOR MORE PLAYERS OR CREATOR TO START GAME
           </p>
           <p v-if="game.id === game.myId">
-            SEND LINK TO FRIENDS:<br><br>{{link()}} <button @click.stop.prevent="copyLink">COPY LINK</button>
+            SEND LINK TO FRIENDS: <button @click.stop.prevent="copyLink">COPY LINK</button>
           </p>
           <button v-if="game.id === game.myId && game.players.length >= 2" @click.stop.prevent="start">START GAME</button>
         </div>
@@ -297,7 +297,7 @@
         }).finally(()=>{
           let poll = ()=>{
             this.loading = false
-            if (this.game.id == null || this.gameIsActive()) {
+            if (this.game.id != null && this.gameIsActive()) {
               this.getTimeoutId = setTimeout(this.get, 3000)
             }
           }
