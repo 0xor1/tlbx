@@ -71,9 +71,9 @@
               WAITING TO START
             </p>
             <p v-if="game.state >= 1" class="player-tag">
-              {{pieceSetPlayerLabel(pieceSet)}} <span v-if="game.players[turnPieceSetIdx()] === game.myId && turnPieceSetIdx() === pieceSet">THAT'S YOU!</span>
+              {{pieceSetPlayerLabel(pieceSet)}} <span v-if="game.players[turnPlayerIdx()] === game.myId && turnPieceSetIdx() === pieceSet">THAT'S YOU!</span>
             </p>
-            <button :disabled="turnPieceSetIdx() !== pieceSet || game.state !== 1" class="red" v-if="game.pieceSetsEnded[pieceSet] === '0'" @click.stop.prevent="end(pieceSet)">
+            <button :disabled="turnPieceSetIdx() !== pieceSet || game.players[turnPlayerIdx()] != game.myId || game.state !== 1" class="red" v-if="game.pieceSetsEnded[pieceSet] === '0'" @click.stop.prevent="end(pieceSet)">
               END SET
             </button>
             <p class="set-state" v-else>
