@@ -71,7 +71,7 @@
               WAITING TO START
             </p>
             <p v-if="game.state >= 1" class="player-tag">
-              {{pieceSetPlayerLabel(pieceSet)}} <span v-if="game.players[turnPieceSetIdx()] === game.myId">THAT'S YOU!</span>
+              {{pieceSetPlayerLabel(pieceSet)}} <span v-if="game.players[turnPieceSetIdx()] === game.myId && turnPieceSetIdx() === pieceSet">THAT'S YOU!</span>
             </p>
             <button :disabled="turnPieceSetIdx() !== pieceSet || game.state !== 1" class="red" v-if="game.pieceSetsEnded[pieceSet] === '0'" @click.stop.prevent="end(pieceSet)">
               END SET
@@ -503,7 +503,7 @@ $cellSize: 2pc;
     }
     &.active{
       .piece-set-header{
-      @include shade(#fff);
+      @include shade(#777);
         p {
           color: $base;
         }
@@ -547,7 +547,7 @@ table, tr, td{
     @include pieceSet('ps3', $ps3);
 
     > .piece-set-header{
-      font-weight: 1000;
+      font-weight: 900;
       align-content: center;
       @include shade(#333);
       p {
