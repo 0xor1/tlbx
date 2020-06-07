@@ -44,7 +44,7 @@
             WAITING FOR MORE PLAYERS OR CREATOR TO START GAME
           </p>
           <p v-if="game.id === game.myId">
-            SEND LINK TO FRIENDS:<br><br>{{link()}}
+            SEND LINK TO FRIENDS:<br><br>{{link()}} <button @click.stop.prevent="copyLink">COPY LINK</button>
           </p>
           <button v-if="game.id === game.myId && game.players.length >= 2" @click.stop.prevent="start">START GAME</button>
         </div>
@@ -237,6 +237,16 @@
       },
       link: function(){
         return window.location.href
+      },
+      copyLink: function(){
+        let el = document.createElement('textarea');
+        el.value = window.location.href;
+        el.setAttribute('readonly', '');
+        el.style = {position: 'absolute', left: '-9999px'};
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
       },
       get: function(){
         clearTimeout(this.getTimeoutId)
