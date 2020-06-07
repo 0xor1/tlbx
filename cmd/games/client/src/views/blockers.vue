@@ -23,13 +23,13 @@
           <p v-if="showGuide">
             <ol>
               <li>FIRST PIECE OF A COLOR MUST COVER THAT COLORS STARTING CELL</li>
-              <li>EVERY PIECE OF A COLOR MUST ONLY TOUCH AT THE CORNERS</li>
-              <li>DIFFERENT COLORS CAN TOUCH IN ANY WAY BUT NOT OVERLAP</li>
+              <li>SAME COLOR PIECES CAN ONLY TOUCH AT THE CORNERS</li>
+              <li>DIFFERENT COLORS CAN TOUCH FACES</li>
               <li>A COLORS SCORE IS THE SUM OF THE UNPLACED PIECES CELLS</li>
               <li>THE WINNER IS THE PLAYER WITH THE LOWEST SCORE</li>
-              <li>IN 4 PLAYER GAMES EACH PLAYER CONTROLS 1 COLOR</li>
-              <li>IN 2 PLAYER GAMES EACH PLAYER CONTROLS 2 COLORS</li>
-              <li>IN 3 PLAYER GAMES EACH PLAYER CONTROLS 1 COLOR AND THE LAST COLOR IS CONTROLLED BY EACH PLAYER ON ROTATION</li>
+              <li>4 PLAYER GAMES - EACH PLAYER CONTROLS 1 COLOR</li>
+              <li>2 PLAYER GAMES - EACH PLAYER CONTROLS 2 COLORS</li>
+              <li>3 PLAYER GAMES - EACH PLAYER CONTROLS 1 COLOR AND THE LAST COLOR IS CONTROLLED BY EACH PLAYER ON ROTATION</li>
             </ol>
           </p>
         </div>
@@ -226,15 +226,6 @@
       }
     },
     methods: {
-      new: function(){
-        this.loading = true
-        this.myActiveGameRequested = false
-        this.errors = []
-        this.myActiveGame = {}
-        this.game = {}
-        router.push('/'+this.gameType+'/new')
-        this.get()
-      },
       link: function(){
         return window.location.href
       },
@@ -268,6 +259,11 @@
           promise = mapi.blockers.new().then((game)=>{
             this.game = game
             router.push('/'+this.gameType+'/'+this.game.id)
+          }).catch((err)=>{
+            let matches = err.body.match(/ id: ([^,]*), type: (.*)$/)
+            if (matches.length === 3) {
+              router.push('/'+matches[2]+'/'+matches[1])
+            }
           })
         } else {
           let updatedAfter = null
@@ -453,7 +449,12 @@
     },
     destroyed: function(){
       clearTimeout(this.getTimeoutId)
-    }
+    },
+    watch: {
+      $route () {
+        this.get()
+      }
+    },
   }
 </script>
 
