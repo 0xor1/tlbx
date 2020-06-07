@@ -13,6 +13,26 @@
         </tr>
       </table>
       <div class="info-and-controls">
+        <div class="guide">
+          <button v-if="!showGuide" @click.stop.prevent="showGuide = !showGuide">
+            SHOW GUIDE
+          </button>
+          <button v-if="showGuide" @click.stop.prevent="showGuide = !showGuide">
+            HIDE GUIDE
+          </button>
+          <p v-if="showGuide">
+            <ol>
+              <li>FIRST PIECE OF A COLOR MUST COVER THAT COLORS STARTING CELL</li>
+              <li>EVERY PIECE OF A COLOR MUST ONLY TOUCH AT THE CORNERS</li>
+              <li>DIFFERENT COLORS CAN TOUCH IN ANY WAY BUT NOT OVERLAP</li>
+              <li>A COLORS SCORE IS THE SUM OF THE UNPLACED PIECES CELLS</li>
+              <li>THE WINNER IS THE PLAYER WITH THE LOWEST SCORE</li>
+              <li>IN 4 PLAYER GAMES EACH PLAYER CONTROLS 1 COLOR</li>
+              <li>IN 2 PLAYER GAMES EACH PLAYER CONTROLS 2 COLORS</li>
+              <li>IN 3 PLAYER GAMES EACH PLAYER CONTROLS 1 COLOR AND THE LAST COLOR IS CONTROLLED BY EACH PLAYER ON ROTATION</li>
+            </ol>
+          </p>
+        </div>
         <p v-if="gameIsActive() && game.myId == null">
           OBSERVING GAME, ENJOY :)
         </p>
@@ -24,7 +44,7 @@
             WAITING FOR MORE PLAYERS OR CREATOR TO START GAME
           </p>
           <p v-if="game.id === game.myId">
-            SEND LINK TO FRIENDS:<br>{{link()}}
+            SEND LINK TO FRIENDS:<br><br>{{link()}}
           </p>
           <button v-if="game.id === game.myId && game.players.length >= 2" @click.stop.prevent="start">START GAME</button>
         </div>
@@ -91,6 +111,7 @@
         pieceSetsCount: 4,
         minPlayers: 2,
         loading: true,
+        showGuide: false,
         myActiveGameRequested: false,
         errors: [],
         myActiveGame: {},
