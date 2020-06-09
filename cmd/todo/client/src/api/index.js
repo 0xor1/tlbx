@@ -12,6 +12,7 @@ let newApi = (isMDoApi) => {
       return axios({
         method: 'put',
         url: path,
+        headers: {"X-Client": "wtf-web-client"},
         data: args
       }).then((res) => {
         return res.data

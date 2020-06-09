@@ -171,7 +171,7 @@ var (
 						// firstCornerCon only needs to be met on first turns of each piece set
 						firstCornerConMet := g.Board[pieceSetStartI] != 4
 						// diagonalTouchCon doesnt need to be met on first turn of each piece set
-						diagnonalTouchConMet := !firstCornerConMet
+						cornerConMet := !firstCornerConMet
 
 						// board cell indexes to be inserted into by this placement
 						insertIdxs := make([]uint16, 0, 5) // 5 because that's the largest piece by active cell count
@@ -205,7 +205,7 @@ var (
 											// check coord is actually on the board
 											if loopBoardX >= 0 && loopBoardY >= 0 && loopBoardX < int(boardDims) && loopBoardY < int(boardDims) {
 												loopI := xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)
-												diagnonalTouchConMet = diagnonalTouchConMet ||
+												cornerConMet = cornerConMet ||
 													((offsetX != 0 || offsetY != 0) &&
 														g.Board[loopI] == blockers.Pbit(pieceSet))
 												tlbx.BadReqIf((offsetX == 0 || offsetY == 0) &&
@@ -218,7 +218,7 @@ var (
 							}
 						}
 						tlbx.BadReqIf(!firstCornerConMet, "first corner constraint not met")
-						tlbx.BadReqIf(!diagnonalTouchConMet, "diagonal touch constraint not met")
+						tlbx.BadReqIf(!cornerConMet, "diagonal touch constraint not met")
 
 						// update the board with the new piece cells on it
 						for _, i := range insertIdxs {

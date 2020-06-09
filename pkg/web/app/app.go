@@ -179,7 +179,9 @@ func Run(configs ...func(*Config)) {
 		tlbx.resp.Header().Set("X-Version", c.Version)
 		// check method
 		method := tlbx.req.Method
-		tlbx.ExitIf(method != http.MethodGet && method != http.MethodPut, http.StatusMethodNotAllowed, "only GET and PUT methods are accepted")
+		tlbx.BadReqIf(method != http.MethodGet && method != http.MethodPut, "only GET and PUT methods are accepted")
+		// check all requests have a X-Client header
+		tlbx.BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
 		// session
 		gses, err := sessionStore.Get(tlbx.req, c.SessionName)
 		PanicOn(err)
@@ -205,7 +207,7 @@ func Run(configs ...func(*Config)) {
 		rateLimit(c, tlbx)
 		lPath := strings.ToLower(tlbx.req.URL.Path)
 		// serve static file
-		if tlbx.req.Method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefix+"/") {
+		if method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefix+"/") {
 			fileServer.ServeHTTP(tlbx.resp, tlbx.req)
 			return
 		}
@@ -959,6 +961,7 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 			Value: value,
 		})
 	}
+	req.Header.Set("X-Client", "wtf-go-client")
 
 	httpRes, err := c.http.Do(req)
 	if err != nil {

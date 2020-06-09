@@ -7,9 +7,9 @@
       <p v-for="(error, index) in errors" :key="index">{{error}}</p>
     </div>
     <div v-if="game != null && game.board != null" class="game">
-      <table class=board>
+      <table class="board">
         <tr v-for="(_, y) in boardDims" :key="y">
-          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="boardCellClass(x, y)">{{xyToI(x, y, boardDims)}}</td>
+          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="boardCellClass(x, y)" @mouseenter.stop.prevent="onMouseEnterBoardCell(x, y)"></td>
         </tr>
       </table>
       <div class="info-and-controls">
@@ -25,11 +25,11 @@
               <li>FIRST PIECE OF A COLOR MUST COVER THAT COLORS STARTING CELL</li>
               <li>SAME COLOR PIECES CAN ONLY TOUCH AT THE CORNERS</li>
               <li>DIFFERENT COLORS CAN TOUCH FACES</li>
-              <li>A COLORS SCORE IS THE SUM OF THE UNPLACED PIECES CELLS</li>
+              <li>IF YOU CAN'T PLACE A PIECE PRESS THE END BUTTON</li>
               <li>THE WINNER IS THE PLAYER WITH THE LOWEST SCORE</li>
-              <li>4 PLAYER GAMES - EACH PLAYER CONTROLS 1 COLOR</li>
-              <li>2 PLAYER GAMES - EACH PLAYER CONTROLS 2 COLORS</li>
-              <li>3 PLAYER GAMES - EACH PLAYER CONTROLS 1 COLOR AND THE LAST COLOR IS CONTROLLED BY EACH PLAYER ON ROTATION</li>
+              <li>2 PLAYER - EACH PLAYER CONTROLS 2 COLORS</li>
+              <li>3 PLAYER - EACH PLAYER CONTROLS 1 COLOR AND THE LAST COLOR IS CONTROLLED BY EACH PLAYER ON ROTATION</li>
+              <li>4 PLAYER - EACH PLAYER CONTROLS 1 COLOR</li>
             </ol>
           </p>
         </div>
@@ -65,7 +65,7 @@
         </button>
       </div>
       <div class="piece-sets">
-         <div v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet" :class="['piece-set',game.state === 1 && turnPieceSetIdx() === pieceSet?'active':'','ps'+pieceSet]">
+        <div v-for="(_, pieceSet) in pieceSetsCount" :key="pieceSet" :class="['piece-set',game.state === 1 && turnPieceSetIdx() === pieceSet?'active':'','ps'+pieceSet]">
           <div class="piece-set-header">
             <p v-if="game.state === 0" class="player-tag">
               WAITING TO START
@@ -74,26 +74,26 @@
               {{pieceSetPlayerLabel(pieceSet)}} <span v-if="game.players[turnPlayerIdx()] === game.myId && turnPieceSetIdx() === pieceSet">THAT'S YOU!</span>
             </p>
             <button :disabled="turnPieceSetIdx() !== pieceSet || game.players[turnPlayerIdx()] != game.myId || game.state !== 1" class="red" v-if="game.pieceSetsEnded[pieceSet] === '0'" @click.stop.prevent="end(pieceSet)">
-              END SET
+              END
             </button>
             <p class="set-state" v-else>
-              SET ENDED
+              ENDED
             </p>
             <p class="set-score">
-              SET SCORE: {{pieceSetScore(pieceSet)}}
+              SCORE: {{pieceSetScore(pieceSet)}}
             </p>
           </div>
           <div v-for="(_, piece) in pieces.length" :key="piece" class="piece">
-            <table class="piece" :class="'ps'+pieceSet" v-if="game.pieceSets[(pieces.length*pieceSet)+piece] === '1'">
+            <table class="piece" :class="'ps'+pieceSet" @click.stop.prevent="select(pieceSet, piece)" v-if="game.pieceSets[(pieces.length*pieceSet)+piece] === '1'">
               <tr v-for="(_, y) in pieces[piece].bb[1]" :key="y">
                 <td v-for="(_, x) in pieces[piece].bb[0]" :key="x" 
-                  class="cell" :class="[pieceCell(piece, x, y)===1? 'ps'+pieceSet :'dead' ]">{{piece}}</td>
+                  class="cell" :class="[pieceCell(piece, x, y)===1? 'ps'+pieceSet :'dead' ]"></td>
               </tr>
             </table>
           </div>
         </div>
       </div>
-        <button class="red" v-if="gameIsActive() && game.myId != null" @click.stop.prevent="abandon">Abandon</button>
+      <button class="red" v-if="gameIsActive() && game.myId != null" @click.stop.prevent="abandon">Abandon</button>
     </div>
   </div>
 </template>
@@ -116,6 +116,7 @@
         errors: [],
         myActiveGame: {},
         game: {},
+        selected: {},
         pieces: [
           // 0
           // #
@@ -276,6 +277,8 @@
               // null will be returned if there's no updated state.
               return
             }
+            // reset selected
+            this.selected = {}
             this.game = game
           })
         }
@@ -309,6 +312,74 @@
             poll()
           }
         })
+      },
+      select: function(pieceSet, piece) {
+        if (this.game != null &&
+          this.game.state === 1 &&
+          this.game.players[this.turnPlayerIdx()] === this.game.myId &&
+          this.turnPieceSetIdx() === pieceSet &&
+          this.game.pieceSets[(this.pieces.length*pieceSet)+piece] === '1') {
+          let bb = this.pieces[piece].bb
+          let bbCpy = [bb[0], bb[1]]
+          let shape = this.pieces[piece].shape
+          let shapeCpy = []
+          for (let i = 0, l = shape.length; i < l; i++) {
+            shapeCpy.push(shape[i])
+          }
+          // place it in the center of the board by default
+          let x = Math.floor(this.boardDims / 2) - Math.floor(bb[0] / 2)
+          let y = Math.floor(this.boardDims / 2) - Math.floor(bb[1] / 2)
+
+          this.selected = {
+            position: this.xyToI(x, y, this.boardDims),
+            flip: false,
+            rotation: 0,
+            piece: piece,
+            pieceSet: pieceSet,
+            bb: bbCpy,
+            shape: shapeCpy,
+            activeCells: {},
+          }
+          this.updateSelectedActiveCells()
+          window.scrollTo({top: 0, left: 0, behavior: "smooth"})
+        }
+      },
+      updateSelectedActiveCells: function(){
+        if (this.selected.position != null) {
+          let piecePos = this.iToXY(this.selected.position, this.boardDims, this.boardDims)
+          for (let i = 0, l = this.selected.shape.length; i < l; i++) {
+            if (this.selected.shape[i] === 1) {
+              // get cells coords on board
+              let cellPos = this.iToXY(i, this.selected.bb[0], this.selected.bb[1])
+              let cellX = cellPos.x + piecePos.x
+              let cellY = cellPos.y + piecePos.y
+              for (let offsetY = -1; offsetY < 2; offsetY++) {
+                for (let offsetX = -1; offsetX < 2; offsetX++) {
+                  let loopX = cellX + offsetX
+                  let loopY = cellY + offsetY
+                  if (loopX >= 0 &&
+                    loopY >= 0 &&
+                    loopX < this.boardDims &&
+                    loopY < this.boardDims) {
+                    this.selected.activeCells[loopX+','+loopY] = true
+                    // todo set this.selected.cornerConMet = true/false
+                    // todo set this.selected.faceConMet = true/false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      onMouseEnterBoardCell: function(x, y) {
+        if (this.game != null &&
+          this.game.state === 1 &&
+          this.selected.position != null &&
+          x+this.selected.bb[0] <= this.boardDims &&
+          y+this.selected.bb[1] <= this.boardDims) {
+          this.selected.position = this.xyToI(x, y, this.boardDims)
+          this.updateSelectedActiveCells()
+        }
       },
       turnPlayerIdx: function(){
         let playerIdx = 0
@@ -401,6 +472,11 @@
         return this.game.board[this.xyToI(x, y, this.boardDims)]
       },
       boardCellClass: function(x, y) {
+        if (this.selected.piece != null &&
+          this.selected.activeCells[x+','+y]) {
+            // todo check if there is an error condition on this cell
+        }
+
         if (this.boardCell(x, y) === '4') {
           // only apply start cell styles to start cells
           // with no pieces over the top of them.
@@ -444,11 +520,13 @@
         }
       }
     },
-    mounted: function(){
+    created: function(){
       this.get()
+      // add event listeners
     },
     destroyed: function(){
       clearTimeout(this.getTimeoutId)
+      // remove event listeners
     },
     watch: {
       $route () {
@@ -520,6 +598,10 @@ $cellSize: 2pc;
 table, tr, td{
   border-collapse: collapse;
   background: transparent;
+}
+
+.board {
+  min-width: 44pc;
 }
 
 .cell{
