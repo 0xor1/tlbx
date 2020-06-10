@@ -161,7 +161,7 @@ var (
 						}
 
 						// validate piece is contained by board
-						x, y := iToXY(args.Position, boardDims, boardDims)
+						x, y := iToXY(args.Position, boardDims)
 						tlbx.BadReqIf(
 							x+piece.BB[0] > uint8(boardDims) || y+piece.BB[1] > uint8(boardDims),
 							"piece/position/rotation combination is not contained on the board")
@@ -175,7 +175,7 @@ var (
 
 						// board cell indexes to be inserted into by this placement
 						insertIdxs := make([]uint16, 0, 5) // 5 because that's the largest piece by active cell count
-						posX, posY := iToXY(args.Position, boardDims, boardDims)
+						posX, posY := iToXY(args.Position, boardDims)
 						for pieceY := uint8(0); pieceY < piece.BB[1]; pieceY++ {
 							for pieceX := uint8(0); pieceX < piece.BB[0]; pieceX++ {
 								if piece.Shape[(pieceY*piece.BB[0])+pieceX] == 1 {
@@ -205,6 +205,9 @@ var (
 											// check coord is actually on the board
 											if loopBoardX >= 0 && loopBoardY >= 0 && loopBoardX < int(boardDims) && loopBoardY < int(boardDims) {
 												loopI := xyToI(uint8(loopBoardX), uint8(loopBoardY), boardDims)
+												// this will validate as true on inappropriate cells
+												// but for those invalid cases the face to face or cell already
+												// occupied errors will be given.
 												cornerConMet = cornerConMet ||
 													((offsetX != 0 || offsetY != 0) &&
 														g.Board[loopI] == blockers.Pbit(pieceSet))
@@ -218,7 +221,7 @@ var (
 							}
 						}
 						tlbx.BadReqIf(!firstCornerConMet, "first corner constraint not met")
-						tlbx.BadReqIf(!cornerConMet, "diagonal touch constraint not met")
+						tlbx.BadReqIf(!cornerConMet, "corner touch constraint not met")
 
 						// update the board with the new piece cells on it
 						for _, i := range insertIdxs {
@@ -331,9 +334,9 @@ func NewGame() *blockers.Game {
 	}
 }
 
-func iToXY(i uint16, xDim, yDim uint8) (x uint8, y uint8) {
+func iToXY(i uint16, xDim uint8) (x uint8, y uint8) {
 	x = uint8(i % uint16(xDim))
-	y = uint8(i / uint16(yDim))
+	y = uint8((i - uint16(x)) / uint16(xDim))
 	return
 }
 

@@ -7,7 +7,7 @@
       <p v-for="(error, index) in errors" :key="index">{{error}}</p>
     </div>
     <div v-if="game != null && game.board != null" class="game">
-      <table class="board">
+      <table class="board" @click.stop.prevent="onBoardClick" @contextmenu.stop.prevent="onContextMenu">
         <tr v-for="(_, y) in boardDims" :key="y">
           <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="boardCellClass(x, y)" @mouseenter.stop.prevent="onMouseEnterBoardCell(x, y)"></td>
         </tr>
@@ -106,6 +106,7 @@
     data: function() {
       window.x_api = api // todo delete this line
       return {
+        pollInterval: 3000,
         gameType: "blockers",
         boardDims: 20,
         pieceSetsCount: 4,
@@ -297,7 +298,7 @@
           let poll = ()=>{
             this.loading = false
             if (this.game.id != null && this.gameIsActive()) {
-              this.getTimeoutId = setTimeout(this.get, 3000)
+              this.getTimeoutId = setTimeout(this.get, this.pollInterval)
             }
           }
           if (this.game.state === 0 && 
@@ -332,12 +333,16 @@
 
           this.selected = {
             position: this.xyToI(x, y, this.boardDims),
-            flip: false,
+            flip: 0,
             rotation: 0,
             piece: piece,
             pieceSet: pieceSet,
             bb: bbCpy,
             shape: shapeCpy,
+            activeCellConMet: true,
+            firstCornerConMet: false,
+            cornerConMet: false,
+            faceConMet: true,
             activeCells: {},
           }
           this.updateSelectedActiveCells()
@@ -346,11 +351,17 @@
       },
       updateSelectedActiveCells: function(){
         if (this.selected.position != null) {
+          //todo flip
+          
+          
+
+          this.selected.activeCells = new Map()
           let piecePos = this.iToXY(this.selected.position, this.boardDims, this.boardDims)
           for (let i = 0, l = this.selected.shape.length; i < l; i++) {
             if (this.selected.shape[i] === 1) {
               // get cells coords on board
               let cellPos = this.iToXY(i, this.selected.bb[0], this.selected.bb[1])
+              console.log(cellPos)
               let cellX = cellPos.x + piecePos.x
               let cellY = cellPos.y + piecePos.y
               for (let offsetY = -1; offsetY < 2; offsetY++) {
@@ -358,17 +369,126 @@
                   let loopX = cellX + offsetX
                   let loopY = cellY + offsetY
                   if (loopX >= 0 &&
-                    loopY >= 0 &&
-                    loopX < this.boardDims &&
-                    loopY < this.boardDims) {
-                    this.selected.activeCells[loopX+','+loopY] = true
-                    // todo set this.selected.cornerConMet = true/false
-                    // todo set this.selected.faceConMet = true/false
+                  loopY >= 0 &&
+                  loopX < this.boardDims &&
+                  loopY < this.boardDims) {
+                    // set to 'c'orner, 'f'ace, 'a'tive cell
+                    let boardI = this.xyToI(loopX, loopY, this.boardDims)
+                    if (offsetX === 0 &&
+                    offsetY === 0) {
+                      this.selected.activeCells.set(boardI, 'a')
+                    } else if ((offsetX === 0 || 
+                    offsetY === 0) && 
+                    this.selected.activeCells.get(boardI) !== 'a') {
+                      this.selected.activeCells.set(boardI, 'f')
+                    } else if (this.selected.activeCells.get(boardI) == null) {
+                      this.selected.activeCells.set(boardI, 'c')
+                    }
                   }
                 }
               }
             }
           }
+          // loop over finalized active cells and check
+          // if constraints are met.
+          let startI = this.pieceSetBoardStartI(this.selected.pieceSet)
+          this.selected.firstCornerConMet =
+            this.game.board[startI] !== '4'
+          this.selected.cornerConMet = !this.selected.firstCornerConMet
+          this.selected.activeCellConMet = true
+          this.selected.faceConMet = true
+          this.selected.activeCells.forEach((v, i)=>{
+            this.selected.firstCornerConMet = this.selected.firstCornerConMet || (i === startI && v === 'a')
+            this.selected.cornerConMet = this.selected.cornerConMet || (v === 'c' && this.game.board[i] === ''+this.selected.pieceSet)
+            if (v === 'a') {
+              this.selected.activeCellConMet = this.selected.activeCellConMet && this.game.board[i] === '4'
+            }
+            if (v === 'f') {
+              this.selected.faceConMet = this.selected.faceConMet && this.game.board[i] !== ''+this.selected.pieceSet
+            }
+          })
+        }
+      },
+      boardCellClass: function(x, y) {
+        let i = this.xyToI(x, y, this.boardDims)
+        if (this.selected.piece != null && 
+        this.selected.activeCells.get(i) != null) {
+          let cellState = this.selected.activeCells.get(i)
+          switch (cellState) {
+            // 'a'ctive
+            case 'a':
+              if (this.game.board[i] !== '4') {
+                return 'ps'+this.selected.pieceSet+' shade'
+              }
+              return 'ps'+this.selected.pieceSet
+            // 'f'ace
+            case 'f':
+              if (this.selected.activeCellConMet && this.game.board[i] === ''+this.selected.pieceSet) {
+                return 'ps'+this.selected.pieceSet+' shade'
+              }
+              break;
+            // 'c'orner
+            case 'c':
+              if (this.selected.activeCellConMet && this.selected.faceConMet && !this.selected.cornerConMet) {
+                return 'ps'+this.selected.pieceSet+' shade'
+              }
+              break;
+          }
+        }
+
+        if (this.game.board[i] === '4') {
+          if (this.selected.position == null ||
+          i === this.pieceSetBoardStartI(this.selected.pieceSet)) {
+            // only apply start cell styles to start cells
+            // with no pieces over the top of them.
+            if (i === this.pieceSetBoardStartI(0)) {
+              return "ps0 shade"
+            } else if (i === this.pieceSetBoardStartI(1)) {
+              return "ps1 shade"
+            } else if (i === this.pieceSetBoardStartI(2)) {
+              return "ps2 shade"
+            } else if (i === this.pieceSetBoardStartI(3)) {
+              return "ps3 shade"
+            }
+          }
+        }
+        return "ps"+this.game.board[i]
+      },
+      onBoardClick: function() {
+        if (this.selected.position != null &&
+        this.selected.firstCornerConMet &&
+        this.selected.activeCellConMet &&
+        this.selected.faceConMet &&
+        this.selected.cornerConMet) {
+          clearTimeout(this.getTimeoutId)
+          api.blockers.takeTurn(
+            this.selected.piece,
+            this.selected.position,
+            this.selected.flip,
+            this.selected.rotation,
+            0).then((game)=>{
+              this.game = game
+              this.getTimeoutId = setTimeout(this.get, this.pollInterval)
+            })
+            this.selected = {}
+        }
+      },
+      onContextMenu: function() {
+        if (this.selected.rotation != null) {
+          this.selected.rotation++
+          this.selected.rotation %= 4
+          // rotate
+          let rotatedShape = []
+          for (let y = 0; y < this.selected.bb[1]; y++) {
+            for (let x = 0; x < this.selected.bb[0]; x++) {
+              rotatedShape[(x*this.selected.bb[1])+(this.selected.bb[1]-1-y)] = this.selected.shape[(y*this.selected.bb[0])+x]
+            }
+          }
+          this.selected.shape = rotatedShape
+          let bb0 = this.selected.bb[0]
+          this.selected.bb[0] = this.selected.bb[1]
+          this.selected.bb[1] = bb0
+          this.updateSelectedActiveCells()
         }
       },
       onMouseEnterBoardCell: function(x, y) {
@@ -462,39 +582,26 @@
       xyToI: function(x, y, xDim){
         return xDim*y + x
       },
-      iToXY: function(i, xDim, yDim){
-        return {
-          x: i % xDim,
-          y: Math.floor(i / yDim)
-        }
-      },
-      boardCell: function(x, y){
-        return this.game.board[this.xyToI(x, y, this.boardDims)]
-      },
-      boardCellClass: function(x, y) {
-        if (this.selected.piece != null &&
-          this.selected.activeCells[x+','+y]) {
-            // todo check if there is an error condition on this cell
-        }
-
-        if (this.boardCell(x, y) === '4') {
-          // only apply start cell styles to start cells
-          // with no pieces over the top of them.
-          if (x === 0 && y === 0) {
-            return "ps0 shade"
-          } else if (x === this.boardDims - 1 && y === 0) {
-            return "ps1 shade"
-          } else if (x === this.boardDims - 1 && y === this.boardDims - 1) {
-            return "ps2 shade"
-          } else if (x === 0 && y === this.boardDims - 1) {
-            return "ps3 shade"
-          }
-        }
-        return "ps"+this.boardCell(x, y)
+      iToXY: function(i, xDim){
+        let x = i % xDim
+        let y = Math.floor((i-x) / xDim)
+        return {x, y}
       },
       pieceCell: function(piece, x, y){
         let p = this.pieces[piece]
         return p.shape[this.xyToI(x, y, p.bb[0])]
+      },
+      pieceSetBoardStartI: function(pieceSet) {
+        switch (pieceSet) {
+          case 0:
+            return this.xyToI(0, 0, this.boardDims)
+          case 1:
+            return this.xyToI(this.boardDims-1, 0, this.boardDims)
+          case 2:
+            return this.xyToI(this.boardDims-1, this.boardDims-1, this.boardDims)
+          case 3:
+            return this.xyToI(0, this.boardDims-1, this.boardDims)
+        }
       },
       gameIsActive: function(){
         return this.game.state === 0 || this.game.state === 1

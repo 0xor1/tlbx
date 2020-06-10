@@ -222,7 +222,7 @@ func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {
 		Position: 22,
 	}).Do(player())
 	a.Nil(g)
-	a.Regexp("diagonal touch constraint not met", err)
+	a.Regexp("corner touch constraint not met", err)
 
 	// valid
 	g = (&blockers.TakeTurn{
