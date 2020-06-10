@@ -7,7 +7,7 @@
       <p v-for="(error, index) in errors" :key="index">{{error}}</p>
     </div>
     <div v-if="game != null && game.board != null" class="game">
-      <table class="board" @click.stop.prevent="onBoardClick" @contextmenu.stop.prevent="onContextMenu">
+      <table class="board" @click.stop.prevent="place" @contextmenu.stop.prevent="rotate" @wheel.stop="flip">
         <tr v-for="(_, y) in boardDims" :key="y">
           <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="boardCellClass(x, y)" @mouseenter.stop.prevent="onMouseEnterBoardCell(x, y)"></td>
         </tr>
@@ -351,17 +351,46 @@
       },
       updateSelectedActiveCells: function(){
         if (this.selected.position != null) {
-          //todo flip
-          
-          
-
+          // cpy shape and bb fresh as flip and rotate need to be applied
+          // in specific order
+          let bb = this.pieces[this.selected.piece].bb
+          let bbCpy = [bb[0], bb[1]]
+          let shape = this.pieces[this.selected.piece].shape
+          let shapeCpy = []
+          for (let i = 0, l = shape.length; i < l; i++) {
+            shapeCpy.push(shape[i])
+          }
+          this.selected.bb = bbCpy
+          this.selected.shape = shapeCpy
+          // flip 
+          if (this.selected.flip === 1) {
+            let flippedShape = []
+            for ( let y = 0; y < this.selected.bb[1]; y++) {
+              for (let x = 0; x < this.selected.bb[0]; x++) {
+                flippedShape[(y*this.selected.bb[0])+x] = this.selected.shape[(y*this.selected.bb[0])+this.selected.bb[0]-1-x]
+              }
+            }
+            this.selected.shape = flippedShape
+          }
+          // rotate
+          for (let i = 0; i < this.selected.rotation; i++) {
+            let rotatedShape = []
+            for (let y = 0; y < this.selected.bb[1]; y++) {
+              for (let x = 0; x < this.selected.bb[0]; x++) {
+                rotatedShape[(x*this.selected.bb[1])+(this.selected.bb[1]-1-y)] = this.selected.shape[(y*this.selected.bb[0])+x]
+              }
+            }
+            this.selected.shape = rotatedShape
+            let bb0 = this.selected.bb[0]
+            this.selected.bb[0] = this.selected.bb[1]
+            this.selected.bb[1] = bb0
+          }
           this.selected.activeCells = new Map()
           let piecePos = this.iToXY(this.selected.position, this.boardDims, this.boardDims)
           for (let i = 0, l = this.selected.shape.length; i < l; i++) {
             if (this.selected.shape[i] === 1) {
               // get cells coords on board
               let cellPos = this.iToXY(i, this.selected.bb[0], this.selected.bb[1])
-              console.log(cellPos)
               let cellX = cellPos.x + piecePos.x
               let cellY = cellPos.y + piecePos.y
               for (let offsetY = -1; offsetY < 2; offsetY++) {
@@ -454,7 +483,7 @@
         }
         return "ps"+this.game.board[i]
       },
-      onBoardClick: function() {
+      place: function() {
         if (this.selected.position != null &&
         this.selected.firstCornerConMet &&
         this.selected.activeCellConMet &&
@@ -473,21 +502,21 @@
             this.selected = {}
         }
       },
-      onContextMenu: function() {
-        if (this.selected.rotation != null) {
+      rotate: function() {
+        if (this.selected.position != null) {
           this.selected.rotation++
           this.selected.rotation %= 4
-          // rotate
-          let rotatedShape = []
-          for (let y = 0; y < this.selected.bb[1]; y++) {
-            for (let x = 0; x < this.selected.bb[0]; x++) {
-              rotatedShape[(x*this.selected.bb[1])+(this.selected.bb[1]-1-y)] = this.selected.shape[(y*this.selected.bb[0])+x]
-            }
+          this.updateSelectedActiveCells()
+        }
+      },
+      flip: function(event) {
+        if (this.selected.position != null) {
+          event.preventDefault()
+          if (this.selected.flip === 0) {
+            this.selected.flip = 1
+          } else {
+            this.selected.flip = 0
           }
-          this.selected.shape = rotatedShape
-          let bb0 = this.selected.bb[0]
-          this.selected.bb[0] = this.selected.bb[1]
-          this.selected.bb[1] = bb0
           this.updateSelectedActiveCells()
         }
       },
