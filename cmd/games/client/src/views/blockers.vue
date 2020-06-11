@@ -7,9 +7,9 @@
       <p v-for="(error, index) in errors" :key="index">{{error}}</p>
     </div>
     <div v-if="game != null && game.board != null" class="game">
-      <table class="board" @click.stop.prevent="place" @contextmenu.stop.prevent="rotate" @wheel.stop="flip">
+      <table class="board" @touchstart="touchBoard" @touchmove="touchBoard" @touchend="touchBoard" @click.stop.prevent="place" @contextmenu.stop.prevent="rotate" @wheel="flip">
         <tr v-for="(_, y) in boardDims" :key="y">
-          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="boardCellClass(x, y)" @mouseenter.stop.prevent="move(x, y)"></td>
+          <td v-for="(_, x) in boardDims" :key="x" class="cell" :data-x="x" :data-y="y" :class="boardCellClass(x, y)" @mouseenter.stop.prevent="move(x, y)"></td>
         </tr>
       </table>
       <div class="info-and-controls">
@@ -19,6 +19,9 @@
           </button>
           <button v-if="selected.position != null" @click.stop.prevent="flip">
             FLIP (MOUSE WHEEL)
+          </button>
+          <button v-if="selected.position != null" @click.stop.prevent="place">
+            PLACE (LEFT CLICK)
           </button>
         </div>
         <div class="guide">
@@ -533,6 +536,7 @@
       },
       flip: function(event) {
         if (this.selected.position != null) {
+          event.stopPropagation()
           event.preventDefault()
           if (this.selected.flip === 0) {
             this.selected.flip = 1
@@ -556,6 +560,21 @@
           }
           this.selected.position = this.xyToI(x, y, this.boardDims)
           this.updateSelectedActiveCells()
+        }
+      },
+      touchBoard: function(event){
+        if (event != null && 
+        event.target != null &&
+        event.target.dataset != null &&
+        event.target.dataset.x != null &&
+        event.target.dataset.y != null) {
+          if (this.selected.position != null) {
+            event.stopPropagation()
+            event.preventDefault()
+            let changedTouch = event.changedTouches[0];
+            let target = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+            this.move(parseInt(target.dataset.x), parseInt(target.dataset.y))
+          }
         }
       },
       turnPlayerIdx: function(){

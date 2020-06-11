@@ -180,8 +180,6 @@ func Run(configs ...func(*Config)) {
 		// check method
 		method := tlbx.req.Method
 		tlbx.BadReqIf(method != http.MethodGet && method != http.MethodPut, "only GET and PUT methods are accepted")
-		// check all requests have a X-Client header
-		tlbx.BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
 		// session
 		gses, err := sessionStore.Get(tlbx.req, c.SessionName)
 		PanicOn(err)
@@ -211,6 +209,8 @@ func Run(configs ...func(*Config)) {
 			fileServer.ServeHTTP(tlbx.resp, tlbx.req)
 			return
 		}
+		// check all requests have a X-Client header
+		tlbx.BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
 		// lower path now we have passed static file server
 		tlbx.req.URL.Path = lPath
 		// endpoint docs
