@@ -670,6 +670,7 @@
       },
       end: function(pieceSet){
         if (this.turnPieceSetIdx() === pieceSet && this.game.players[this.turnPlayerIdx()] === this.game.myId) {
+          this.selected = {}
           api.blockers.takeTurn(0, 0, 0, 0, 1).then((game)=>{
             this.game = game
           })
