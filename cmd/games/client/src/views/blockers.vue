@@ -703,10 +703,10 @@
 <style scoped lang="scss">
 @use "sass:color";
 
-$ps0: #d00;
-$ps1: #0d0;
-$ps2: #00d;
-$ps3: #dd0;
+$ps0: #d33;
+$ps1: #3d3;
+$ps2: #33d;
+$ps3: #dd3;
 $empty: #222;
 $border: 1px solid black;
 $cellSize: 2pc;
