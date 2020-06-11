@@ -13,6 +13,14 @@
         </tr>
       </table>
       <div class="info-and-controls">
+        <div class="active-controls">
+          <button v-if="selected.position != null" @click.stop.prevent="rotate">
+            ROTATE (RIGHT CLICK)
+          </button>
+          <button v-if="selected.position != null" @click.stop.prevent="flip">
+            FLIP (MOUSE WHEEL)
+          </button>
+        </div>
         <div class="guide">
           <button v-if="!showGuide" @click.stop.prevent="showGuide = !showGuide">
             SHOW GUIDE
@@ -819,6 +827,9 @@ table, tr, td{
 }
 
 .info-and-controls{
+  .active-controls button{
+    margin: 0pc 1pc 1pc 0pc;
+  }
   .winner{
     &.ps0{
       color: $ps0;
