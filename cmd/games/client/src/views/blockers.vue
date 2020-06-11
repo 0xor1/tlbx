@@ -9,7 +9,7 @@
     <div v-if="game != null && game.board != null" class="game">
       <table class="board" @click.stop.prevent="place" @contextmenu.stop.prevent="rotate" @wheel.stop="flip">
         <tr v-for="(_, y) in boardDims" :key="y">
-          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="boardCellClass(x, y)" @mouseenter.stop.prevent="onMouseEnterBoardCell(x, y)"></td>
+          <td v-for="(_, x) in boardDims" :key="x" class="cell" :class="boardCellClass(x, y)" @mouseenter.stop.prevent="move(x, y)"></td>
         </tr>
       </table>
       <div class="info-and-controls">
@@ -542,12 +542,18 @@
           this.updateSelectedActiveCells()
         }
       },
-      onMouseEnterBoardCell: function(x, y) {
+      move: function(x, y) {
         if (this.game != null &&
           this.game.state === 1 &&
-          this.selected.position != null &&
-          x+this.selected.bb[0] <= this.boardDims &&
-          y+this.selected.bb[1] <= this.boardDims) {
+          this.selected.position != null) {
+          let offsetX = this.boardDims - this.selected.bb[0] - x
+          let offsetY = this.boardDims - this.selected.bb[1] - y
+          if (offsetX < 0) {
+            x += offsetX
+          }
+          if (offsetY < 0) {
+            y += offsetY
+          }
           this.selected.position = this.xyToI(x, y, this.boardDims)
           this.updateSelectedActiveCells()
         }
