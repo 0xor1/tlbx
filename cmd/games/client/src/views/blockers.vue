@@ -281,6 +281,10 @@
             // reset selected
             this.selected = {}
             this.game = game
+          }).catch((err)=>{
+            if (err.status === 404) {
+              router.push('/games')
+            }
           })
         }
         if (isMDoReq) {
@@ -506,6 +510,16 @@
         if (this.selected.position != null) {
           this.selected.rotation++
           this.selected.rotation %= 4
+          let pos = this.iToXY(this.selected.position, this.boardDims)
+          let offsetX = this.boardDims - this.selected.bb[1] - pos.x
+          let offsetY = this.boardDims - this.selected.bb[0] - pos.y
+          if (offsetX < 0) {
+            pos.x += offsetX
+          }
+          if (offsetY < 0) {
+            pos.y += offsetY
+          }
+          this.selected.position = this.xyToI(pos.x, pos.y, this.boardDims)
           this.updateSelectedActiveCells()
         }
       },
