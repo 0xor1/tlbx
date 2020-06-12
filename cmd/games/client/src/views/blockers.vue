@@ -7,7 +7,7 @@
       <p v-for="(error, index) in errors" :key="index">{{error}}</p>
     </div>
     <div v-if="game != null && game.board != null" class="game">
-      <table class="board" @touchstart="touchBoard" @touchmove="touchBoard" @touchend="touchBoard" @click.stop.prevent="place" @contextmenu.stop.prevent="rotate" @wheel="flip">
+      <table class="board" @touchstart="touchBoard" @touchmove="touchBoard" @click.stop.prevent="place" @contextmenu.stop.prevent="rotate" @wheel="flip">
         <tr v-for="(_, y) in boardDims" :key="y">
           <td v-for="(_, x) in boardDims" :key="x" class="cell" :data-x="x" :data-y="y" :class="boardCellClass(x, y)" @mouseenter.stop.prevent="move(x, y)"></td>
         </tr>
@@ -513,8 +513,9 @@
             0).then((game)=>{
               this.game = game
               this.getTimeoutId = setTimeout(this.get, this.pollInterval)
+            }).finally(()=>{
+              this.selected = {}
             })
-            this.selected = {}
         }
       },
       rotate: function() {
@@ -567,12 +568,15 @@
         event.target != null &&
         event.target.dataset != null &&
         event.target.dataset.x != null &&
-        event.target.dataset.y != null) {
-          if (this.selected.position != null) {
-            event.stopPropagation()
-            event.preventDefault()
-            let changedTouch = event.changedTouches[0];
-            let target = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+        event.target.dataset.y != null &&
+        this.selected.position != null &&
+        event.touches.length === 1) {
+          event.stopPropagation()
+          event.preventDefault()
+          let changedTouch = event.changedTouches[0];
+          let target = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+          if (target.dataset.x != null &&
+          target.dataset.y != null) {
             this.move(parseInt(target.dataset.x), parseInt(target.dataset.y))
           }
         }
