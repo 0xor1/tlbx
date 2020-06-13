@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/0xor1/wtf/pkg/web/app/common/config"
+	"github.com/0xor1/wtf/pkg/web/app/config"
 )
 
 func Get(file ...string) *config.Config {

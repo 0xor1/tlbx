@@ -10,10 +10,10 @@ import (
 	"github.com/0xor1/wtf/pkg/log"
 	"github.com/0xor1/wtf/pkg/store"
 	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/common/auth"
-	"github.com/0xor1/wtf/pkg/web/app/common/auth/autheps"
-	"github.com/0xor1/wtf/pkg/web/app/common/config"
-	"github.com/0xor1/wtf/pkg/web/app/common/service"
+	"github.com/0xor1/wtf/pkg/web/app/auth"
+	"github.com/0xor1/wtf/pkg/web/app/auth/autheps"
+	"github.com/0xor1/wtf/pkg/web/app/config"
+	"github.com/0xor1/wtf/pkg/web/app/service"
 )
 
 const (

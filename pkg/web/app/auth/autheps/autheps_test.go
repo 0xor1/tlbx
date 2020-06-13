@@ -3,7 +3,7 @@ package autheps_test
 import (
 	"testing"
 
-	"github.com/0xor1/wtf/pkg/web/app/common/auth/authtest"
+	"github.com/0xor1/wtf/pkg/web/app/auth/authtest"
 )
 
 func Test(t *testing.T) {

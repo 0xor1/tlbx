@@ -4,8 +4,8 @@ services:
   wtf-sql-testall:
     container_name: wtf-sql-testall
     build:
-      context: ../../.
-      dockerfile: common/docker/sql.dockerfile
+      context: ../.
+      dockerfile: docker/sql.dockerfile
     image: wtf-sql-testall
     environment:
       MYSQL_ROOT_PASSWORD: dev

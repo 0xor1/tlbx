@@ -6,9 +6,9 @@ import (
 
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/common/auth"
-	"github.com/0xor1/wtf/pkg/web/app/common/config"
-	"github.com/0xor1/wtf/pkg/web/app/common/test"
+	"github.com/0xor1/wtf/pkg/web/app/auth"
+	"github.com/0xor1/wtf/pkg/web/app/config"
+	"github.com/0xor1/wtf/pkg/web/app/test"
 	"github.com/stretchr/testify/assert"
 )
 

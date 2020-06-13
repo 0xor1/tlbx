@@ -12,7 +12,8 @@ wtf
 * `/pkg` - reusable packages
 * `/bin` - util scripts to run/build/test
 * `/cmd` - executable go programs
-* `/common` - common clientside ui commponents and sql db schemas
+* `/sql` - sql schemas
+* `/docker` - docker-compose files for dev environment setup
 
 ## web apps
 

@@ -10,8 +10,8 @@ import (
 	"github.com/0xor1/wtf/pkg/isql"
 	"github.com/0xor1/wtf/pkg/json"
 	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/common/service"
-	comsql "github.com/0xor1/wtf/pkg/web/app/common/sql"
+	"github.com/0xor1/wtf/pkg/web/app/service"
+	comsql "github.com/0xor1/wtf/pkg/web/app/sql"
 	"github.com/gomodule/redigo/redis"
 )
 

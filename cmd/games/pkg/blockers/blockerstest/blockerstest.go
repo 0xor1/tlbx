@@ -9,7 +9,7 @@ import (
 	"github.com/0xor1/wtf/cmd/games/pkg/game"
 	. "github.com/0xor1/wtf/pkg/core"
 	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/common/test"
+	"github.com/0xor1/wtf/pkg/web/app/test"
 	"github.com/logrusorgru/aurora"
 	"github.com/stretchr/testify/assert"
 )

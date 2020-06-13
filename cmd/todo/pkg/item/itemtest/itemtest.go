@@ -13,7 +13,7 @@ import (
 	"github.com/0xor1/wtf/pkg/field"
 	"github.com/0xor1/wtf/pkg/ptr"
 	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/common/test"
+	"github.com/0xor1/wtf/pkg/web/app/test"
 	"github.com/stretchr/testify/assert"
 )
 
