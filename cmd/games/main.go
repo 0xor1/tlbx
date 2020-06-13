@@ -15,7 +15,8 @@ func main() {
 		defer config.Store.(store.LocalClient).MustDeleteStore()
 	}
 	app.Run(func(c *app.Config) {
-		c.StaticDir = "client/dist"
+		c.StaticDir = config.StaticDir
+		c.ContentSecurityPolicies = config.ContentSecurityPolicies
 		c.Name = "games"
 		c.Description = "a web app to play turn based multiplayer games"
 		if config.IsLocal {

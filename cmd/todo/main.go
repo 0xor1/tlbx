@@ -16,6 +16,8 @@ func main() {
 		defer config.Store.(store.LocalClient).MustDeleteStore()
 	}
 	app.Run(func(c *app.Config) {
+		c.StaticDir = config.StaticDir
+		c.ContentSecurityPolicies = config.ContentSecurityPolicies
 		c.Name = "Todo"
 		c.Description = "A simple Todo list application, create multiple lists with many items which can be marked complete or uncomplete"
 		if config.IsLocal {

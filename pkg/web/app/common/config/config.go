@@ -14,18 +14,20 @@ import (
 )
 
 type Config struct {
-	IsLocal           bool
-	FromEmail         string
-	BaseHref          string
-	SessionAuthKey64s [][]byte
-	SessionEncrKey32s [][]byte
-	Log               log.Log
-	Email             email.Client
-	Store             store.Client
-	Cache             iredis.Pool
-	User              isql.ReplicaSet
-	Pwd               isql.ReplicaSet
-	Data              isql.ReplicaSet
+	IsLocal                 bool
+	FromEmail               string
+	BaseHref                string
+	StaticDir               string
+	ContentSecurityPolicies []string
+	SessionAuthKey64s       [][]byte
+	SessionEncrKey32s       [][]byte
+	Log                     log.Log
+	Email                   email.Client
+	Store                   store.Client
+	Cache                   iredis.Pool
+	User                    isql.ReplicaSet
+	Pwd                     isql.ReplicaSet
+	Data                    isql.ReplicaSet
 }
 
 func GetBase(file ...string) *config.Config {
@@ -33,9 +35,14 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("isLocal", true)
 	c.SetDefault("fromEmail", "test@test.localhost")
 	c.SetDefault("baseHref", "http://localhost:8081")
+	c.SetDefault("staticDir", "client/dist")
+	c.SetDefault("contentSecurityPolicies", []interface{}{
+		"style-src-elem https://fonts.googleapis.com http://localhost:8080 https://*.ngrok.io",
+		"font-src https://fonts.gstatic.com",
+	})
 	c.SetDefault("log.type", "local")
-	c.SetDefault("email.type", "local")
-	c.SetDefault("store.type", "local")
+	c.SetDefault("email.type", "")
+	c.SetDefault("store.type", "")
 	c.SetDefault("store.dir", "tmpStoreDir")
 	// session cookie store
 	c.SetDefault("sessionAuthKey64s", []interface{}{
@@ -76,6 +83,8 @@ func GetProcessed(c *config.Config) *Config {
 		}
 
 		switch c.GetString("email.type") {
+		case "":
+			break // none needed
 		case "sparkpost":
 			fallthrough // TODO
 		default:
@@ -83,11 +92,15 @@ func GetProcessed(c *config.Config) *Config {
 		}
 
 		switch c.GetString("store.type") {
+		case "":
+			break // none needed
 		default:
 			PanicIf(true, "unsupported store type %s", c.GetString("store.type"))
 		}
 	}
 
+	res.StaticDir = c.GetString("staticDir")
+	res.ContentSecurityPolicies = c.GetStringSlice("contentSecurityPolicies")
 	res.FromEmail = c.GetString("fromEmail")
 	res.BaseHref = c.GetString("baseHref")
 

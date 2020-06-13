@@ -3,15 +3,9 @@
 </template>
 
 <style lang="scss">
-@font-face {
-    font-family: JB-Mono;
-    src: url('~@/assets/font/JetBrainsMono-Regular.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
-}
+@import url(https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap);
 * {
-    font-family: JB-Mono;
-    font-weight: lighter;
+    font-family: 'Roboto Mono', monospace;
     background-color: #000;
     color: #ddd;
     button {

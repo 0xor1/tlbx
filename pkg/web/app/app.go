@@ -37,9 +37,10 @@ const (
 type mdoRootTlbxCtxKey struct{}
 
 type Config struct {
-	Log       log.Log
-	Version   string
-	StaticDir string
+	Log                     log.Log
+	Version                 string
+	StaticDir               string
+	ContentSecurityPolicies []string
 	// session
 	SessionAuthKey64s [][]byte
 	SessionEncrKey32s [][]byte
@@ -59,7 +60,7 @@ type Config struct {
 	MDoMaxBodyBytes int64
 	// tlbx
 	ToolboxMware func(Toolbox)
-	// docs
+	// app
 	Name        string
 	Description string
 	Endpoints   []*Endpoint
@@ -89,6 +90,8 @@ func Run(configs ...func(*Config)) {
 	staticFileDir, err := filepath.Abs(c.StaticDir)
 	PanicOn(err)
 	fileServer := http.FileServer(http.Dir(staticFileDir))
+	// content-security-policy
+	csps := strings.Join(append([]string{"default-src 'self'"}, c.ContentSecurityPolicies...), ";")
 	// endpoints
 	router := map[string]*Endpoint{}
 	router[docsPath] = nil
@@ -174,7 +177,7 @@ func Run(configs ...func(*Config)) {
 		// set common headers
 		tlbx.resp.Header().Set("X-Frame-Options", "DENY")
 		tlbx.resp.Header().Set("X-XSS-Protection", "1; mode=block")
-		tlbx.resp.Header().Set("Content-Security-Policy", "default-src 'self'")
+		tlbx.resp.Header().Set("Content-Security-Policy", csps)
 		tlbx.resp.Header().Set("Cache-Control", "no-cache, no-store")
 		tlbx.resp.Header().Set("X-Version", c.Version)
 		// check method
