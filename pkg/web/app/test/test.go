@@ -134,7 +134,7 @@ func NewClient() *app.Client {
 	return app.NewClient(baseHref)
 }
 
-func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onDelete func(app.Toolbox, ID)) Rig {
+func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onDelete func(app.Tlbx, ID)) Rig {
 	r := &rig{
 		log:     config.Log,
 		cache:   config.Cache,
@@ -150,7 +150,7 @@ func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onDelete f
 		eps = append(eps, autheps.New(onDelete, config.FromEmail, config.BaseHref)...)
 	}
 	go app.Run(func(c *app.Config) {
-		c.ToolboxMware = service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store)
+		c.TlbxMware = service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store)
 		c.RateLimiterPool = r.cache
 		c.RateLimitPerMinute = 1000000 // when running batch tests 120 rate limit is easily exceeded
 		c.SessionAuthKey64s = config.SessionAuthKey64s

@@ -59,7 +59,7 @@ type Config struct {
 	MDoMax          int
 	MDoMaxBodyBytes int64
 	// tlbx
-	ToolboxMware func(Toolbox)
+	TlbxMware func(Tlbx)
 	// app
 	Name        string
 	Description string
@@ -134,8 +134,8 @@ func Run(configs ...func(*Config)) {
 	var root http.HandlerFunc
 	root = func(w http.ResponseWriter, r *http.Request) {
 		start := NowUnixMilli()
-		// toolbox
-		tlbx := &toolbox{
+		// tlbx
+		tlbx := &tlbx{
 			resp:          &responseWrapper{w: w},
 			req:           r,
 			isSubMDo:      isSubMDo(r),
@@ -221,9 +221,9 @@ func Run(configs ...func(*Config)) {
 			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
 			return
 		}
-		// toolbox mware
-		if c.ToolboxMware != nil {
-			c.ToolboxMware(tlbx)
+		// tlbx mware
+		if c.TlbxMware != nil {
+			c.TlbxMware(tlbx)
 		}
 		// do mdo
 		if lPath == mdoPath {
@@ -397,7 +397,7 @@ func config(configs ...func(*Config)) *Config {
 						"c": "cat",
 					}
 				},
-				Handler: func(tlbx Toolbox, args interface{}) interface{} {
+				Handler: func(tlbx Tlbx, args interface{}) interface{} {
 					return args
 				},
 			},
@@ -461,7 +461,7 @@ func (r *responseWrapper) WriteHeader(status int) {
 	r.w.WriteHeader(status)
 }
 
-type Toolbox interface {
+type Tlbx interface {
 	Me() ID
 	Session() Session
 	Ctx() context.Context
@@ -476,7 +476,7 @@ type Toolbox interface {
 	Set(key, value interface{})
 }
 
-type toolbox struct {
+type tlbx struct {
 	resp          *responseWrapper
 	req           *http.Request
 	idGen         IDGen
@@ -489,43 +489,43 @@ type toolbox struct {
 	store         map[interface{}]interface{}
 }
 
-func (t *toolbox) Me() ID {
+func (t *tlbx) Me() ID {
 	return t.Session().Me()
 }
 
-func (t *toolbox) Session() Session {
+func (t *tlbx) Session() Session {
 	return t.session
 }
 
-func (t *toolbox) Ctx() context.Context {
+func (t *tlbx) Ctx() context.Context {
 	return t.req.Context()
 }
 
-func (t *toolbox) NewID() ID {
+func (t *tlbx) NewID() ID {
 	if t.idGen == nil {
 		t.idGen = NewIDGen()
 	}
 	return t.idGen.MustNew()
 }
 
-func (t *toolbox) Log() log.Log {
+func (t *tlbx) Log() log.Log {
 	return t.log
 }
 
-func (t *toolbox) LogQueryStats(qs *QueryStats) {
+func (t *tlbx) LogQueryStats(qs *QueryStats) {
 	t.queryStatsMtx.Lock()
 	defer t.queryStatsMtx.Unlock()
 	t.queryStats = append(t.queryStats, qs)
 }
 
-func (t *toolbox) Redirect(status int, url string) {
+func (t *tlbx) Redirect(status int, url string) {
 	PanicOn(&redirect{
 		status: status,
 		url:    url,
 	})
 }
 
-func (t *toolbox) ExitIf(condition bool, status int, format string, args ...interface{}) {
+func (t *tlbx) ExitIf(condition bool, status int, format string, args ...interface{}) {
 	if format == "" {
 		format = http.StatusText(status)
 	}
@@ -537,17 +537,17 @@ func (t *toolbox) ExitIf(condition bool, status int, format string, args ...inte
 	}
 }
 
-func (t *toolbox) BadReqIf(condition bool, format string, args ...interface{}) {
+func (t *tlbx) BadReqIf(condition bool, format string, args ...interface{}) {
 	t.ExitIf(condition, http.StatusBadRequest, format, args...)
 }
 
-func (t *toolbox) Get(key interface{}) interface{} {
+func (t *tlbx) Get(key interface{}) interface{} {
 	t.storeMtx.RLock()
 	defer t.storeMtx.RUnlock()
 	return t.store[key]
 }
 
-func (t *toolbox) Set(key, value interface{}) {
+func (t *tlbx) Set(key, value interface{}) {
 	t.storeMtx.Lock()
 	defer t.storeMtx.Unlock()
 	t.store[key] = value
@@ -673,7 +673,7 @@ func (s *session) Login(me ID) {
 		rootTlbxI := s.r.Context().Value(mdoRootTlbxCtxKey{})
 
 		PanicIf(rootTlbxI == nil, "isSubMDo but rootTlbx is nil in req ctx")
-		rootTlbx := rootTlbxI.(*toolbox)
+		rootTlbx := rootTlbxI.(*tlbx)
 		rootTlbx.session.Login(me)
 	}
 	s.isAuthed = true
@@ -693,7 +693,7 @@ func (s *session) Logout() {
 		// get root tlbx from ctx to login on root
 		rootTlbxI := s.r.Context().Value(mdoRootTlbxCtxKey{})
 		PanicIf(rootTlbxI == nil, "isSubMDo but rootTlbx is nil in req ctx")
-		rootTlbx := rootTlbxI.(*toolbox)
+		rootTlbx := rootTlbxI.(*tlbx)
 		rootTlbx.session.Logout()
 	}
 	s.isAuthed = false
@@ -713,7 +713,7 @@ type Endpoint struct {
 	GetDefaultArgs     func() interface{}
 	GetExampleArgs     func() interface{}
 	GetExampleResponse func() interface{}
-	Handler            func(tlbx Toolbox, args interface{}) interface{}
+	Handler            func(tlbx Tlbx, args interface{}) interface{}
 }
 
 func ExampleID() ID {
@@ -745,7 +745,7 @@ type endpointDoc struct {
 	ExampleResponse interface{} `json:"exampleResponse"`
 }
 
-func checkErrForMaxBytes(tlbx *toolbox, err error) {
+func checkErrForMaxBytes(tlbx *tlbx, err error) {
 	if err != nil {
 		tlbx.ExitIf(
 			err.Error() == "http: request body too large",
@@ -755,7 +755,7 @@ func checkErrForMaxBytes(tlbx *toolbox, err error) {
 	}
 }
 
-func rateLimit(c *Config, tlbx *toolbox) {
+func rateLimit(c *Config, tlbx *tlbx) {
 	if c.RateLimiterPool == nil || c.RateLimitPerMinute < 1 {
 		return
 	}
@@ -844,7 +844,7 @@ func rateLimit(c *Config, tlbx *toolbox) {
 	}
 }
 
-func getJsonArgs(tlbx *toolbox, args interface{}) {
+func getJsonArgs(tlbx *tlbx, args interface{}) {
 	if args == nil {
 		return
 	}

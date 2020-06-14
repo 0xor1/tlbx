@@ -66,7 +66,7 @@ func (b *Base) Abandoned() bool {
 	return b.State == 3
 }
 
-func (b *Base) setMyID(tlbx app.Toolbox) {
+func (b *Base) setMyID(tlbx app.Tlbx) {
 	// only set myId on active games
 	if b.IsActive() && tlbx.Session().IsAuthed() {
 		me := tlbx.Me()
@@ -83,7 +83,7 @@ func (b *Base) setMyID(tlbx app.Toolbox) {
 	b.MyID = nil
 }
 
-func New(tlbx app.Toolbox, gameType string, game Game) {
+func New(tlbx app.Tlbx, gameType string, game Game) {
 	b := game.GetBase()
 	PanicIf(gameType == "", "gameType must be set")
 	PanicIf(StrLen(gameType) > gameTypeMaxLen, "gameType len must be < %d", gameTypeMaxLen)
@@ -105,7 +105,7 @@ func New(tlbx app.Toolbox, gameType string, game Game) {
 	b.setMyID(tlbx)
 }
 
-func Join(tlbx app.Toolbox, maxPlayers uint8, gameType string, game ID, dst Game) Game {
+func Join(tlbx app.Tlbx, maxPlayers uint8, gameType string, game ID, dst Game) Game {
 	validateUserIsntInAnActiveGame(tlbx, "join")
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
@@ -125,7 +125,7 @@ func Join(tlbx app.Toolbox, maxPlayers uint8, gameType string, game ID, dst Game
 	return g
 }
 
-func Start(tlbx app.Toolbox, minPlayers uint8, randomizePlayerOrder bool, gameType string, dst Game, customSetup func(game Game)) Game {
+func Start(tlbx app.Tlbx, minPlayers uint8, randomizePlayerOrder bool, gameType string, dst Game, customSetup func(game Game)) Game {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
@@ -154,7 +154,7 @@ func Start(tlbx app.Toolbox, minPlayers uint8, randomizePlayerOrder bool, gameTy
 	return g
 }
 
-func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Game)) Game {
+func TakeTurn(tlbx app.Tlbx, gameType string, dst Game, takeTurn func(game Game)) Game {
 	tx := service.Get(tlbx).Data().Begin()
 	defer tx.Rollback()
 	g, _ := getUsersActiveGame(tlbx, tx, true, gameType, dst)
@@ -170,7 +170,7 @@ func TakeTurn(tlbx app.Toolbox, gameType string, dst Game, takeTurn func(game Ga
 	return g
 }
 
-func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
+func Abandon(tlbx app.Tlbx, gameType string, dst Game) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
@@ -182,11 +182,11 @@ func Abandon(tlbx app.Toolbox, gameType string, dst Game) {
 	}
 }
 
-func Get(tlbx app.Toolbox, gameType string, game ID, updatedAfter *time.Time, dst Game) Game {
+func Get(tlbx app.Tlbx, gameType string, game ID, updatedAfter *time.Time, dst Game) Game {
 	return read(tlbx, nil, false, gameType, game, updatedAfter, dst)
 }
 
-func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, game ID, updatedAfter *time.Time, dst Game) Game {
+func read(tlbx app.Tlbx, tx service.Tx, forUpdate bool, gameType string, game ID, updatedAfter *time.Time, dst Game) Game {
 	PanicIf(forUpdate && tx == nil, "tx required forUpdate get call")
 	PanicIf(forUpdate && updatedAfter != nil, "updatedAfter should not be passed on forUpdate calls")
 	PanicIf(!forUpdate && tx != nil, "tx must be nil if it is a not forUpdate get call")
@@ -218,7 +218,7 @@ func read(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, game
 	return dst
 }
 
-func update(tlbx app.Toolbox, tx service.Tx, gameType string, game Game) {
+func update(tlbx app.Tlbx, tx service.Tx, gameType string, game Game) {
 	base := game.GetBase()
 	base.UpdatedOn = NowMilli()
 	base.MyID = nil
@@ -241,7 +241,7 @@ func DeleteOutdated(exec func(query string, args ...interface{}), delay time.Dur
 	lastDeleteOutdatedCalledOn = Now()
 }
 
-func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameType string, dst Game) (Game, string) {
+func getUsersActiveGame(tlbx app.Tlbx, tx service.Tx, forUpdate bool, gameType string, dst Game) (Game, string) {
 	PanicIf(forUpdate && tx == nil, "tx required forUpdate get call")
 	PanicIf(!forUpdate && tx != nil, "tx must be nil if it is a not forUpdate get call")
 	buf := make([]byte, 0, 5*app.KB)
@@ -279,7 +279,7 @@ func getUsersActiveGame(tlbx app.Toolbox, tx service.Tx, forUpdate bool, gameTyp
 	return nil, ""
 }
 
-func validateUserIsntInAnActiveGame(tlbx app.Toolbox, verb string) {
+func validateUserIsntInAnActiveGame(tlbx app.Tlbx, verb string) {
 	g, gameType := getUsersActiveGame(tlbx, nil, false, "", &Base{})
 	if g == nil {
 		return
@@ -292,14 +292,14 @@ func validateUserIsntInAnActiveGame(tlbx app.Toolbox, verb string) {
 		gameType)
 }
 
-func cacheSerializedGame(tlbx app.Toolbox, gameType string, id ID, serialized []byte) {
+func cacheSerializedGame(tlbx app.Tlbx, gameType string, id ID, serialized []byte) {
 	cnn := service.Get(tlbx).Cache().Get()
 	defer cnn.Close()
 	_, err := cnn.Do("SETEX", gameType+id.String(), 3600, serialized)
 	tlbx.Log().ErrorOn(err)
 }
 
-func getSerializedGameFromCache(tlbx app.Toolbox, gameType string, id ID) []byte {
+func getSerializedGameFromCache(tlbx app.Tlbx, gameType string, id ID) []byte {
 	cnn := service.Get(tlbx).Cache().Get()
 	defer cnn.Close()
 	serialized, err := redis.Bytes(cnn.Do("GET", gameType+id.String()))
@@ -351,7 +351,7 @@ var (
 					ID:   app.ExampleID(),
 				}
 			},
-			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				g, gameType := getUsersActiveGame(tlbx, nil, false, "", &Base{})
 				if g == nil {
 					return nil

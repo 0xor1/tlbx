@@ -36,7 +36,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return exampleItem
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*item.Create)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				me := tlbx.Me()
@@ -93,7 +93,7 @@ var (
 					More: true,
 				}
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				return getSet(tlbx, a.(*item.Get))
 			},
 		},
@@ -117,7 +117,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return exampleItem
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*item.Update)
 				if args.Name != nil {
 					validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
@@ -186,7 +186,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*item.Delete)
 				idsLen := len(args.IDs)
 				if idsLen == 0 {
@@ -218,7 +218,7 @@ var (
 	}
 )
 
-func getSet(tlbx app.Toolbox, args *item.Get) *item.GetRes {
+func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	tlbx.BadReqIf(
 		args.CreatedOnMin != nil &&

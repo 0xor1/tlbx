@@ -19,7 +19,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endpoint {
+func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoint {
 	return []*app.Endpoint{
 		{
 			Description:  "register a new account (requires email link)",
@@ -40,7 +40,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				tlbx.BadReqIf(tlbx.Session().IsAuthed(), "already logged in")
 				args := a.(*auth.Register)
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
@@ -75,7 +75,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*auth.ResendActivateLink)
 				srv := service.Get(tlbx)
 				user := getUser(srv, &args.Email, nil)
@@ -104,7 +104,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*auth.Activate)
 				srv := service.Get(tlbx)
 				user := getUser(srv, &args.Email, nil)
@@ -134,7 +134,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*auth.ChangeEmail)
 				validate.Str("email", args.NewEmail, tlbx, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
@@ -165,7 +165,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				srv := service.Get(tlbx)
 				me := tlbx.Me()
 				user := getUser(srv, nil, &me)
@@ -191,7 +191,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*auth.ConfirmChangeEmail)
 				srv := service.Get(tlbx)
 				user := getUser(srv, nil, &args.Me)
@@ -220,7 +220,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*auth.ResetPwd)
 				srv := service.Get(tlbx)
 				user := getUser(srv, &args.Email, nil)
@@ -258,7 +258,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*auth.SetPwd)
 				srv := service.Get(tlbx)
 				me := tlbx.Me()
@@ -285,7 +285,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*auth.Delete)
 				srv := service.Get(tlbx)
 				me := tlbx.Me()
@@ -322,7 +322,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 					Me: app.ExampleID(),
 				}
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				emailOrPwdMismatch := func(condition bool) {
 					tlbx.ExitIf(condition, http.StatusNotFound, "email and/or pwd are not valid")
 				}
@@ -359,7 +359,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				tlbx.Session().Logout()
 				return nil
 			},
@@ -381,7 +381,7 @@ func New(onDelete func(app.Toolbox, ID), fromEmail, baseHref string) []*app.Endp
 					Me: app.ExampleID(),
 				}
 			},
-			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				return &auth.GetRes{
 					Me: tlbx.Me(),
 				}
@@ -483,7 +483,7 @@ func getPwd(srv service.Layer, id ID) *pwd {
 	return res
 }
 
-func setPwd(tlbx app.Toolbox, id ID, pwd, confirmPwd string) {
+func setPwd(tlbx app.Tlbx, id ID, pwd, confirmPwd string) {
 	tlbx.BadReqIf(pwd != confirmPwd, "pwds do not match")
 	validate.Str("pwd", pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
 	srv := service.Get(tlbx)

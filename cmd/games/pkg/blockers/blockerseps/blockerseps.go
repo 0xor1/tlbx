@@ -31,7 +31,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return NewGame()
 			},
-			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				g := NewGame()
 				game.New(tlbx, gameType, g)
 				return g
@@ -54,7 +54,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return NewGame()
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*blockers.Join)
 				return game.Join(tlbx, pieceSetsCount, gameType, args.Game, &blockers.Game{})
 			},
@@ -78,7 +78,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return NewGame()
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*blockers.Start)
 				return game.Start(tlbx, minPlayers, args.RandomizePlayerOrder, gameType, &blockers.Game{}, nil)
 			},
@@ -98,7 +98,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return NewGame()
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*blockers.TakeTurn)
 				return game.TakeTurn(tlbx, gameType, &blockers.Game{}, func(a game.Game) {
 					g := a.(*blockers.Game)
@@ -285,7 +285,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return NewGame()
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*blockers.Get)
 				return game.Get(tlbx, gameType, args.Game, args.UpdatedAfter, &blockers.Game{})
 			},
@@ -305,7 +305,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, _ interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				game.Abandon(tlbx, gameType, &blockers.Game{})
 				return nil
 			},

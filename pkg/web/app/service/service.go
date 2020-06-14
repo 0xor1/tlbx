@@ -22,8 +22,8 @@ type Layer interface {
 	Store() store.Client
 }
 
-func Mware(cache iredis.Pool, user, pwd, data isql.ReplicaSet, email email.Client, store store.Client) func(app.Toolbox) {
-	return func(tlbx app.Toolbox) {
+func Mware(cache iredis.Pool, user, pwd, data isql.ReplicaSet, email email.Client, store store.Client) func(app.Tlbx) {
+	return func(tlbx app.Tlbx) {
 		tlbx.Set(tlbxKey{}, &service{
 			cache: &redisPoolWrapper{tlbx: tlbx, pool: cache},
 			user:  &sqlClient{tlbx: tlbx, sql: user},
@@ -35,7 +35,7 @@ func Mware(cache iredis.Pool, user, pwd, data isql.ReplicaSet, email email.Clien
 	}
 }
 
-func Get(tlbx app.Toolbox) Layer {
+func Get(tlbx app.Tlbx) Layer {
 	return tlbx.Get(tlbxKey{}).(Layer)
 }
 
@@ -92,7 +92,7 @@ type Tx interface {
 
 type tx struct {
 	tx        isql.Tx
-	tlbx      app.Toolbox
+	tlbx      app.Tlbx
 	sqlClient *sqlClient
 	done      bool
 }
@@ -136,7 +136,7 @@ func (t *tx) Commit() {
 }
 
 type sqlClient struct {
-	tlbx app.Toolbox
+	tlbx app.Tlbx
 	sql  isql.ReplicaSet
 }
 
@@ -193,7 +193,7 @@ type RedisPoolClient interface {
 }
 
 type redisPoolWrapper struct {
-	tlbx app.Toolbox
+	tlbx app.Tlbx
 	pool iredis.Pool
 }
 
@@ -214,7 +214,7 @@ type RedisConnClient interface {
 }
 
 type redisConnWrapper struct {
-	tlbx app.Toolbox
+	tlbx app.Tlbx
 	conn iredis.Conn
 }
 

@@ -34,7 +34,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return exampleList
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*list.Create)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				me := tlbx.Me()
@@ -89,7 +89,7 @@ var (
 					More: true,
 				}
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				return getSet(tlbx, a.(*list.Get))
 			},
 		},
@@ -111,7 +111,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return exampleList
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*list.Update)
 				validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
 				getSetRes := getSet(tlbx, &list.Get{
@@ -144,7 +144,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return nil
 			},
-			Handler: func(tlbx app.Toolbox, a interface{}) interface{} {
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*list.Delete)
 				idsLen := len(args.IDs)
 				if idsLen == 0 {
@@ -178,7 +178,7 @@ var (
 	}
 )
 
-func OnDelete(tlbx app.Toolbox, me ID) {
+func OnDelete(tlbx app.Tlbx, me ID) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
@@ -189,7 +189,7 @@ func OnDelete(tlbx app.Toolbox, me ID) {
 	tx.Commit()
 }
 
-func getSet(tlbx app.Toolbox, args *list.Get) *list.GetRes {
+func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	tlbx.BadReqIf(
 		args.CreatedOnMin != nil &&

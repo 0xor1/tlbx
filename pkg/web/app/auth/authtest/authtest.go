@@ -13,7 +13,7 @@ import (
 )
 
 func Everything(t *testing.T) {
-	r := test.NewRig(config.GetProcessed(config.GetBase()), nil, true, func(tlbx app.Toolbox, id ID) {})
+	r := test.NewRig(config.GetProcessed(config.GetBase()), nil, true, func(tlbx app.Tlbx, id ID) {})
 	defer r.CleanUp()
 
 	a := assert.New(t)
