@@ -14,11 +14,11 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/iredis"
-	"github.com/0xor1/wtf/pkg/json"
-	"github.com/0xor1/wtf/pkg/log"
-	"github.com/0xor1/wtf/pkg/web/server"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/iredis"
+	"github.com/0xor1/tlbx/pkg/json"
+	"github.com/0xor1/tlbx/pkg/log"
+	"github.com/0xor1/tlbx/pkg/web/server"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/sessions"
 	"github.com/tomasen/realip"
@@ -964,7 +964,7 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 			Value: value,
 		})
 	}
-	req.Header.Set("X-Client", "wtf-go-client")
+	req.Header.Set("X-Client", "tlbx-go-client")
 
 	httpRes, err := c.http.Do(req)
 	if err != nil {

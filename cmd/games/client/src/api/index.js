@@ -10,7 +10,7 @@ let newApi = (isMDoApi) => {
       return axios({
         method: 'put',
         url: path,
-        headers: {"X-Client": "wtf-web-client"},
+        headers: {"X-Client": "tlbx-web-client"},
         data: args
       }).then((res) => {
         return res.data

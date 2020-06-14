@@ -3,7 +3,7 @@ package field
 import (
 	"time"
 
-	. "github.com/0xor1/wtf/pkg/core"
+	. "github.com/0xor1/tlbx/pkg/core"
 )
 
 type Id struct {

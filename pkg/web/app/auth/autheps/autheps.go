@@ -9,13 +9,13 @@ import (
 	"regexp"
 	"time"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/crypt"
-	"github.com/0xor1/wtf/pkg/json"
-	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/auth"
-	"github.com/0xor1/wtf/pkg/web/app/service"
-	"github.com/0xor1/wtf/pkg/web/app/validate"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/crypt"
+	"github.com/0xor1/tlbx/pkg/json"
+	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/auth"
+	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/go-sql-driver/mysql"
 )
 

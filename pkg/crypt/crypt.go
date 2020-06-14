@@ -5,7 +5,7 @@ import (
 	"io"
 	"math/big"
 
-	. "github.com/0xor1/wtf/pkg/core"
+	. "github.com/0xor1/tlbx/pkg/core"
 	"golang.org/x/crypto/scrypt"
 )
 

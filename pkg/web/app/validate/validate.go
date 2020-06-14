@@ -3,8 +3,8 @@ package validate
 import (
 	"regexp"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/web/app"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
 func Str(name, str string, tlbx app.Toolbox, minLen, maxLen int, regexs ...*regexp.Regexp) {

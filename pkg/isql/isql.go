@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"time"
 
-	. "github.com/0xor1/wtf/pkg/core"
+	. "github.com/0xor1/tlbx/pkg/core"
 	_ "github.com/go-sql-driver/mysql"
 )
 

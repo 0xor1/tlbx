@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/json"
-	"github.com/0xor1/wtf/pkg/log"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/json"
+	"github.com/0xor1/tlbx/pkg/log"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -28,7 +28,7 @@ func main() {
 	defer Recover(log.ErrorOn)
 	log.Info("Starting")
 
-	fs := flag.NewFlagSet("wtf_tw_clockin_catchup", flag.ExitOnError)
+	fs := flag.NewFlagSet("tlbx_tw_clockin_catchup", flag.ExitOnError)
 	var baseHref string
 	fs.StringVar(&baseHref, "b", "", Sprintf("baseHref e.g. %s", exampleBaseHref))
 	var username string

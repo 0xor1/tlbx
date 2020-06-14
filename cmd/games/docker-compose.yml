@@ -1,19 +1,19 @@
 version: '3.7'
 services:
 
-  wtf-sql-games:
-    container_name: wtf-sql-games
+  tlbx-sql-games:
+    container_name: tlbx-sql-games
     build:
       context: ../../.
       dockerfile: cmd/games/sql.dockerfile
-    image: wtf-sql-games
+    image: tlbx-sql-games
     environment:
       MYSQL_ROOT_PASSWORD: dev
     ports:
     - "3306:3306"
 
-  wtf-redis-games:
-    container_name: wtf-redis-games
+  tlbx-redis-games:
+    container_name: tlbx-redis-games
     image: redis:5.0.8-alpine
     ports:
     - "6379:6379"

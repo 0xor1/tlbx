@@ -1,8 +1,8 @@
 package auth
 
 import (
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/web/app"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
 type Register struct {

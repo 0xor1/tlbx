@@ -3,7 +3,7 @@ package item_test
 import (
 	"testing"
 
-	test "github.com/0xor1/wtf/cmd/todo/pkg/item/itemtest"
+	test "github.com/0xor1/tlbx/cmd/todo/pkg/item/itemtest"
 )
 
 func TestEverything(t *testing.T) {

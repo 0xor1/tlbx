@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/json"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/json"
 )
 
 const (

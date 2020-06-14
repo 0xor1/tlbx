@@ -3,7 +3,7 @@ package game_test
 import (
 	"testing"
 
-	test "github.com/0xor1/wtf/cmd/games/pkg/blockers/blockerstest"
+	test "github.com/0xor1/tlbx/cmd/games/pkg/blockers/blockerstest"
 )
 
 func TestEverything(t *testing.T) {

@@ -5,12 +5,12 @@ import (
 	"flag"
 	"os"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/crypt"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/crypt"
 )
 
 func main() {
-	fs := flag.NewFlagSet("wtfcrypt", flag.ExitOnError)
+	fs := flag.NewFlagSet("tlbxcrypt", flag.ExitOnError)
 	var t string
 	fs.StringVar(&t, "t", "b", "b for url base64 encoded bytes array or s for ASCII string")
 	var nTmp uint

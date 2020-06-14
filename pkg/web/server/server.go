@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/log"
-	"github.com/0xor1/wtf/pkg/web/server/autocertcache"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/log"
+	"github.com/0xor1/tlbx/pkg/web/server/autocertcache"
 	"golang.org/x/crypto/acme/autocert"
 )
 

@@ -5,15 +5,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/0xor1/wtf/cmd/todo/pkg/item"
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/field"
-	"github.com/0xor1/wtf/pkg/isql"
-	"github.com/0xor1/wtf/pkg/ptr"
-	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/service"
-	"github.com/0xor1/wtf/pkg/web/app/sql"
-	"github.com/0xor1/wtf/pkg/web/app/validate"
+	"github.com/0xor1/tlbx/cmd/todo/pkg/item"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/field"
+	"github.com/0xor1/tlbx/pkg/isql"
+	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/sql"
+	"github.com/0xor1/tlbx/pkg/web/app/validate"
 )
 
 var (

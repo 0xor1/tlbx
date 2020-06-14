@@ -1,8 +1,8 @@
 package email
 
 import (
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/log"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/log"
 	sp "github.com/SparkPost/gosparkpost"
 )
 

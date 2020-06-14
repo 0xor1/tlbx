@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/json"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/stretchr/testify/assert"
 )
 

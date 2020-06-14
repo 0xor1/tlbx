@@ -1,19 +1,19 @@
 version: '3.7'
 services:
 
-  wtf-sql-testall:
-    container_name: wtf-sql-testall
+  tlbx-sql-testall:
+    container_name: tlbx-sql-testall
     build:
       context: ../.
       dockerfile: docker/sql.dockerfile
-    image: wtf-sql-testall
+    image: tlbx-sql-testall
     environment:
       MYSQL_ROOT_PASSWORD: dev
     ports:
     - "3306:3306"
 
-  wtf-redis-testall:
-    container_name: wtf-redis-testall
+  tlbx-redis-testall:
+    container_name: tlbx-redis-testall
     image: redis:5.0.8-alpine
     ports:
     - "6379:6379"

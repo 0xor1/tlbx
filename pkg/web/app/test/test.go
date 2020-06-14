@@ -3,17 +3,17 @@ package test
 import (
 	"time"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/email"
-	"github.com/0xor1/wtf/pkg/iredis"
-	"github.com/0xor1/wtf/pkg/isql"
-	"github.com/0xor1/wtf/pkg/log"
-	"github.com/0xor1/wtf/pkg/store"
-	"github.com/0xor1/wtf/pkg/web/app"
-	"github.com/0xor1/wtf/pkg/web/app/auth"
-	"github.com/0xor1/wtf/pkg/web/app/auth/autheps"
-	"github.com/0xor1/wtf/pkg/web/app/config"
-	"github.com/0xor1/wtf/pkg/web/app/service"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/email"
+	"github.com/0xor1/tlbx/pkg/iredis"
+	"github.com/0xor1/tlbx/pkg/isql"
+	"github.com/0xor1/tlbx/pkg/log"
+	"github.com/0xor1/tlbx/pkg/store"
+	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/auth"
+	"github.com/0xor1/tlbx/pkg/web/app/auth/autheps"
+	"github.com/0xor1/tlbx/pkg/web/app/config"
+	"github.com/0xor1/tlbx/pkg/web/app/service"
 )
 
 const (

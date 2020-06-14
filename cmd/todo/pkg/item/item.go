@@ -3,9 +3,9 @@ package item
 import (
 	"time"
 
-	. "github.com/0xor1/wtf/pkg/core"
-	"github.com/0xor1/wtf/pkg/field"
-	"github.com/0xor1/wtf/pkg/web/app"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/field"
+	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
 type sort string

@@ -3,7 +3,7 @@ package autocertcache
 import (
 	"context"
 
-	"github.com/0xor1/wtf/pkg/iredis"
+	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/gomodule/redigo/redis"
 	"golang.org/x/crypto/acme/autocert"
 )
