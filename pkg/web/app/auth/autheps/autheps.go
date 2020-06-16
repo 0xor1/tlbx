@@ -15,6 +15,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/auth"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/go-sql-driver/mysql"
 )
@@ -41,7 +42,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				tlbx.BadReqIf(tlbx.Session().IsAuthed(), "already logged in")
+				tlbx.BadReqIf(me.Exists(tlbx), "already logged in")
 				args := a.(*auth.Register)
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
 				activateCode := crypt.UrlSafeString(250)
@@ -138,7 +139,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				args := a.(*auth.ChangeEmail)
 				validate.Str("email", args.NewEmail, tlbx, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
-				me := tlbx.Me()
+				me := me.Get(tlbx)
 				changeEmailCode := crypt.UrlSafeString(250)
 				existingUser := getUser(srv, &args.NewEmail, nil)
 				tlbx.BadReqIf(existingUser != nil, "email already registered")
@@ -167,7 +168,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				srv := service.Get(tlbx)
-				me := tlbx.Me()
+				me := me.Get(tlbx)
 				user := getUser(srv, nil, &me)
 				sendConfirmChangeEmailEmail(srv, *user.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: *user.ChangeEmailCode})
 				return nil
@@ -261,7 +262,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*auth.SetPwd)
 				srv := service.Get(tlbx)
-				me := tlbx.Me()
+				me := me.Get(tlbx)
 				pwd := getPwd(srv, me)
 				tlbx.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.CurrentPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
 				setPwd(tlbx, me, args.NewPwd, args.ConfirmNewPwd)
@@ -288,16 +289,16 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*auth.Delete)
 				srv := service.Get(tlbx)
-				me := tlbx.Me()
-				tlbx.Session().Logout()
-				pwd := getPwd(srv, me)
+				m := me.Get(tlbx)
+				me.Del(tlbx)
+				pwd := getPwd(srv, m)
 				tlbx.BadReqIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), "incorrect pwd")
 				if onDelete != nil {
-					onDelete(tlbx, me)
+					onDelete(tlbx, m)
 				}
-				_, err := srv.User().Exec(`DELETE FROM users WHERE id=?`, me)
+				_, err := srv.User().Exec(`DELETE FROM users WHERE id=?`, m)
 				PanicOn(err)
-				_, err = srv.Pwd().Exec(`DELETE FROM pwds WHERE id=?`, me)
+				_, err = srv.Pwd().Exec(`DELETE FROM pwds WHERE id=?`, m)
 				PanicOn(err)
 				return nil
 			},
@@ -338,7 +339,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				if len(pwd.Salt) != scryptSaltLen || len(pwd.Pwd) != scryptKeyLen || pwd.N != scryptN || pwd.R != scryptR || pwd.P != scryptP {
 					setPwd(tlbx, user.ID, args.Pwd, args.Pwd)
 				}
-				tlbx.Session().Login(user.ID)
+				me.Set(tlbx, user.ID)
 				return &auth.LoginRes{
 					Me: user.ID,
 				}
@@ -360,7 +361,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
-				tlbx.Session().Logout()
+				me.Del(tlbx)
 				return nil
 			},
 		},
@@ -383,7 +384,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				return &auth.GetRes{
-					Me: tlbx.Me(),
+					Me: me.Get(tlbx),
 				}
 			},
 		},

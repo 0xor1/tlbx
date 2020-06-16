@@ -13,7 +13,11 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/auth"
 	"github.com/0xor1/tlbx/pkg/web/app/auth/autheps"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
+	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/session"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
+	"github.com/tomasen/realip"
 )
 
 const (
@@ -150,11 +154,24 @@ func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onDelete f
 		eps = append(eps, autheps.New(onDelete, config.FromEmail, config.BaseHref)...)
 	}
 	go app.Run(func(c *app.Config) {
-		c.TlbxMware = service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store)
-		c.RateLimiterPool = r.cache
-		c.RateLimitPerMinute = 1000000 // when running batch tests 120 rate limit is easily exceeded
-		c.SessionAuthKey64s = config.SessionAuthKey64s
-		c.SessionEncrKey32s = config.SessionEncrKey32s
+		c.TlbxMwares = app.TlbxMwares{
+			session.Mware(func(c *session.Config) {
+				c.AuthKey64s = config.SessionAuthKey64s
+				c.EncrKey32s = config.SessionEncrKey32s
+			}),
+			ratelimit.Mware(func(c *ratelimit.Config) {
+				c.KeyGen = func(tlbx app.Tlbx) string {
+					var key string
+					if me.Exists(tlbx) {
+						key = me.Get(tlbx).String()
+					}
+					return Sprintf("rate-limiter-%s-%s", realip.RealIP(tlbx.Req()), key)
+				}
+				c.Pool = r.cache
+				c.PerMinute = 1000000 // when running batch tests 120 rate limit is easily exceeded
+			}),
+			service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store),
+		}
 		c.Endpoints = eps
 	})
 

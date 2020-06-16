@@ -3,7 +3,6 @@ package app
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,13 +14,9 @@ import (
 	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/log"
 	"github.com/0xor1/tlbx/pkg/web/server"
-	"github.com/gomodule/redigo/redis"
-	"github.com/gorilla/sessions"
-	"github.com/tomasen/realip"
 )
 
 const (
@@ -34,32 +29,16 @@ const (
 	mdoPath       = ApiPathPrefix + "/mdo"
 )
 
-type mdoRootTlbxCtxKey struct{}
-
 type Config struct {
 	Log                     log.Log
 	Version                 string
 	StaticDir               string
 	ContentSecurityPolicies []string
-	// session
-	SessionAuthKey64s [][]byte
-	SessionEncrKey32s [][]byte
-	SessionName       string
-	SessionPath       string
-	SessionDomain     string
-	SessionMaxAge     int
-	SessionSecure     bool
-	SessionHttpOnly   bool
-	SessionSameSite   http.SameSite
-	// ratelimit
-	RateLimitPerMinute   int
-	RateLimitExitOnError bool
-	RateLimiterPool      iredis.Pool
 	// mdo
 	MDoMax          int
 	MDoMaxBodyBytes int64
 	// tlbx
-	TlbxMware func(Tlbx)
+	TlbxMwares []func(Tlbx)
 	// app
 	Name        string
 	Description string
@@ -67,25 +46,11 @@ type Config struct {
 	Serve       func(http.HandlerFunc)
 }
 
+type TlbxMware func(Tlbx)
+type TlbxMwares []func(Tlbx)
+
 func Run(configs ...func(*Config)) {
 	c := config(configs...)
-	// init session store
-	sessionAuthEncrKeyPairs := make([][]byte, 0, len(c.SessionAuthKey64s)*2)
-	for i := range c.SessionAuthKey64s {
-		PanicIf(len(c.SessionAuthKey64s[i]) != 64, "authKey64s length is not 64")
-		PanicIf(len(c.SessionEncrKey32s[i]) != 32, "encrKey32s length is not 32")
-		sessionAuthEncrKeyPairs = append(sessionAuthEncrKeyPairs, c.SessionAuthKey64s[i], c.SessionEncrKey32s[i])
-	}
-	sessionStore := sessions.NewCookieStore(sessionAuthEncrKeyPairs...)
-	sessionStore.Options.Path = c.SessionPath
-	sessionStore.Options.Domain = c.SessionDomain
-	sessionStore.Options.MaxAge = c.SessionMaxAge
-	sessionStore.Options.Secure = c.SessionSecure
-	sessionStore.Options.HttpOnly = c.SessionHttpOnly
-	sessionStore.Options.SameSite = c.SessionSameSite
-	// register types for sessionCookie
-	gob.Register(NewIDGen().MustNew())
-	gob.Register(time.Time{})
 	// static file server
 	staticFileDir, err := filepath.Abs(c.StaticDir)
 	PanicOn(err)
@@ -183,30 +148,11 @@ func Run(configs ...func(*Config)) {
 		// check method
 		method := tlbx.req.Method
 		tlbx.BadReqIf(method != http.MethodGet && method != http.MethodPut, "only GET and PUT methods are accepted")
-		// session
-		gses, err := sessionStore.Get(tlbx.req, c.SessionName)
-		PanicOn(err)
-		tlbx.session = &session{
-			r:       tlbx.req,
-			w:       tlbx.resp,
-			gorilla: gses,
-			mtx:     &sync.RWMutex{},
-		}
-		if !tlbx.session.gorilla.IsNew {
-			i, ok := tlbx.session.gorilla.Values["me"]
-			if ok {
-				me := i.(ID)
-				tlbx.session.me = &me
-				tlbx.session.isAuthed = true
-			}
-			i, ok = tlbx.session.gorilla.Values["authedOn"]
-			if ok {
-				tlbx.session.authedOn = i.(time.Time)
-			}
-		}
-		// rate limiter
-		rateLimit(c, tlbx)
 		lPath := strings.ToLower(tlbx.req.URL.Path)
+		// tlbx mwares
+		for _, mware := range c.TlbxMwares {
+			mware(tlbx)
+		}
 		// serve static file
 		if method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefix+"/") {
 			fileServer.ServeHTTP(tlbx.resp, tlbx.req)
@@ -220,10 +166,6 @@ func Run(configs ...func(*Config)) {
 		if lPath == docsPath {
 			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
 			return
-		}
-		// tlbx mware
-		if c.TlbxMware != nil {
-			c.TlbxMware(tlbx)
 		}
 		// do mdo
 		if lPath == mdoPath {
@@ -244,10 +186,6 @@ func Run(configs ...func(*Config)) {
 						subReq, err := http.NewRequest(http.MethodPut, strings.ToLower(mdoReq.Path)+"?isSubMDo=true", bytes.NewReader(argsBytes))
 						PanicOn(err)
 						PanicIf(subReq.URL.Path == mdoPath, "can't have mdo request inside an mdo request")
-						// thread tlbx through ctx back on itself so a subMDoReq tlbx can get its
-						// root tlbx so calls to tlbx.Session.Login() effect the root requests
-						// cookies
-						subReq = subReq.WithContext(context.WithValue(subReq.Context(), mdoRootTlbxCtxKey{}, tlbx))
 						for _, c := range tlbx.req.Cookies() {
 							subReq.AddCookie(c)
 						}
@@ -258,6 +196,9 @@ func Run(configs ...func(*Config)) {
 						root(subResp, subReq)
 						fullMDoRespMtx.Lock()
 						defer fullMDoRespMtx.Unlock()
+						for _, val := range subResp.Header().Values("Set-Cookie") {
+							tlbx.Resp().Header().Add("Set-Cookie", val)
+						}
 						fullMDoResp[key] = subResp
 					}
 				}(key, mDoReqs[key]))
@@ -354,25 +295,13 @@ func Run(configs ...func(*Config)) {
 func config(configs ...func(*Config)) *Config {
 	l := log.New()
 	c := &Config{
-		Log:                  l,
-		Version:              "dev",
-		StaticDir:            ".",
-		SessionAuthKey64s:    [][]byte{},
-		SessionEncrKey32s:    [][]byte{},
-		SessionName:          "s",
-		SessionPath:          "/",
-		SessionDomain:        "",
-		SessionMaxAge:        0,
-		SessionSecure:        false,
-		SessionHttpOnly:      true,
-		SessionSameSite:      http.SameSiteDefaultMode,
-		RateLimitPerMinute:   120,
-		RateLimitExitOnError: false,
-		RateLimiterPool:      nil,
-		MDoMax:               20,
-		MDoMaxBodyBytes:      MB,
-		Name:                 "Web App",
-		Description:          "A web app",
+		Log:             l,
+		Version:         "dev",
+		StaticDir:       ".",
+		MDoMax:          20,
+		MDoMaxBodyBytes: MB,
+		Name:            "Web App",
+		Description:     "A web app",
 		Endpoints: []*Endpoint{
 			{
 				Description:  "A test endpoint to echo back the args",
@@ -462,8 +391,8 @@ func (r *responseWrapper) WriteHeader(status int) {
 }
 
 type Tlbx interface {
-	Me() ID
-	Session() Session
+	Req() *http.Request
+	Resp() http.ResponseWriter
 	Ctx() context.Context
 	NewID() ID
 	Log() log.Log
@@ -480,7 +409,6 @@ type tlbx struct {
 	resp          *responseWrapper
 	req           *http.Request
 	idGen         IDGen
-	session       *session
 	isSubMDo      bool
 	log           log.Log
 	queryStatsMtx *sync.Mutex
@@ -489,12 +417,12 @@ type tlbx struct {
 	store         map[interface{}]interface{}
 }
 
-func (t *tlbx) Me() ID {
-	return t.Session().Me()
+func (t *tlbx) Req() *http.Request {
+	return t.req
 }
 
-func (t *tlbx) Session() Session {
-	return t.session
+func (t *tlbx) Resp() http.ResponseWriter {
+	return t.resp
 }
 
 func (t *tlbx) Ctx() context.Context {
@@ -623,87 +551,6 @@ func (r *mDoResp) MarshalJSON() ([]byte, error) {
 	}
 }
 
-type Session interface {
-	IsAuthed() bool
-	Me() ID
-	AuthedOn() time.Time
-	Login(ID)
-	Logout()
-}
-
-type session struct {
-	w        http.ResponseWriter
-	r        *http.Request
-	isAuthed bool
-	me       *ID
-	authedOn time.Time
-	gorilla  *sessions.Session
-	mtx      *sync.RWMutex
-}
-
-func (s *session) IsAuthed() bool {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-	return s.isAuthed
-}
-
-func (s *session) Me() ID {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-	if !s.isAuthed {
-		PanicOn(&ErrMsg{
-			Status: http.StatusUnauthorized,
-			Msg:    http.StatusText(http.StatusUnauthorized),
-		})
-	}
-	return *s.me
-}
-
-func (s *session) AuthedOn() time.Time {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-	return s.authedOn
-}
-
-func (s *session) Login(me ID) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-	if isSubMDo(s.r) {
-		// get root tlbx from ctx to login on root
-		rootTlbxI := s.r.Context().Value(mdoRootTlbxCtxKey{})
-
-		PanicIf(rootTlbxI == nil, "isSubMDo but rootTlbx is nil in req ctx")
-		rootTlbx := rootTlbxI.(*tlbx)
-		rootTlbx.session.Login(me)
-	}
-	s.isAuthed = true
-	s.me = &me
-	s.authedOn = Now()
-	s.gorilla.Values = map[interface{}]interface{}{
-		"me":       me,
-		"authedOn": s.authedOn,
-	}
-	PanicOn(s.gorilla.Save(s.r, s.w))
-}
-
-func (s *session) Logout() {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-	if isSubMDo(s.r) {
-		// get root tlbx from ctx to login on root
-		rootTlbxI := s.r.Context().Value(mdoRootTlbxCtxKey{})
-		PanicIf(rootTlbxI == nil, "isSubMDo but rootTlbx is nil in req ctx")
-		rootTlbx := rootTlbxI.(*tlbx)
-		rootTlbx.session.Logout()
-	}
-	s.isAuthed = false
-	s.me = nil
-	s.authedOn = time.Time{}
-	s.gorilla.Options.MaxAge = -1
-	s.gorilla.Values = map[interface{}]interface{}{}
-	PanicOn(s.gorilla.Save(s.r, s.w))
-}
-
 type Endpoint struct {
 	Description        string
 	Path               string
@@ -752,95 +599,6 @@ func checkErrForMaxBytes(tlbx *tlbx, err error) {
 			http.StatusRequestEntityTooLarge,
 			"request body too large")
 		PanicOn(err)
-	}
-}
-
-func rateLimit(c *Config, tlbx *tlbx) {
-	if c.RateLimiterPool == nil || c.RateLimitPerMinute < 1 {
-		return
-	}
-
-	shouldReturn := func(err error) bool {
-		if err != nil {
-			if c.RateLimitExitOnError {
-				PanicOn(err)
-			}
-			c.Log.ErrorOn(err)
-			return true
-		}
-		return false
-	}
-
-	remaining := c.RateLimitPerMinute
-
-	defer func() {
-		tlbx.resp.Header().Add("X-Rate-Limit-Limit", strconv.Itoa(c.RateLimitPerMinute))
-		tlbx.resp.Header().Add("X-Rate-Limit-Remaining", strconv.Itoa(remaining))
-		tlbx.resp.Header().Add("X-Rate-Limit-Reset", "60")
-
-		tlbx.ExitIf(remaining < 1, http.StatusTooManyRequests, "")
-	}()
-
-	// get key
-	var key string
-	if tlbx.session.me != nil {
-		key = tlbx.session.me.String()
-	}
-	key = Sprintf("rate-limiter-%s-%s", realip.RealIP(tlbx.req), key)
-
-	now := NowUnixNano()
-	cnn := c.RateLimiterPool.Get()
-	defer cnn.Close()
-
-	err := cnn.Send("MULTI")
-	if shouldReturn(err) {
-		return
-	}
-
-	err = cnn.Send("ZREMRANGEBYSCORE", key, 0, now-time.Minute.Nanoseconds())
-	if shouldReturn(err) {
-		return
-	}
-
-	err = cnn.Send("ZRANGE", key, 0, -1)
-	if shouldReturn(err) {
-		return
-	}
-
-	results, err := redis.Values(cnn.Do("EXEC"))
-	if shouldReturn(err) {
-		return
-	}
-
-	keys, err := redis.Strings(results[len(results)-1], err)
-	if shouldReturn(err) {
-		return
-	}
-
-	remaining = remaining - len(keys)
-
-	if remaining > 0 {
-		remaining--
-
-		err := cnn.Send("MULTI")
-		if shouldReturn(err) {
-			return
-		}
-
-		err = cnn.Send("ZADD", key, now, now)
-		if shouldReturn(err) {
-			return
-		}
-
-		err = cnn.Send("EXPIRE", key, 60)
-		if shouldReturn(err) {
-			return
-		}
-
-		_, err = cnn.Do("EXEC")
-		if shouldReturn(err) {
-			return
-		}
 	}
 }
 

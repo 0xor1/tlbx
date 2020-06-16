@@ -12,6 +12,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 )
@@ -39,7 +40,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*item.Create)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
-				me := tlbx.Me()
+				me := me.Get(tlbx)
 				srv := service.Get(tlbx)
 				res := &item.Item{
 					ID:        tlbx.NewID(),
@@ -122,7 +123,7 @@ var (
 				if args.Name != nil {
 					validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
 				}
-				me := tlbx.Me()
+				me := me.Get(tlbx)
 				getSetRes := getSet(tlbx, &item.Get{
 					List:  args.List,
 					IDs:   IDs{args.ID},
@@ -193,7 +194,7 @@ var (
 					return nil
 				}
 				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
-				me := tlbx.Me()
+				me := me.Get(tlbx)
 				srv := service.Get(tlbx)
 				queryArgs := make([]interface{}, 0, idsLen+2)
 				queryArgs = append(queryArgs, me, args.List)
@@ -226,7 +227,7 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 			args.CreatedOnMin.After(*args.CreatedOnMax),
 		"createdOnMin must be before createdOnMax")
 	limit := sql.Limit(*args.Limit, 100)
-	me := tlbx.Me()
+	me := me.Get(tlbx)
 	srv := service.Get(tlbx)
 	res := &item.GetRes{
 		Set: make([]*item.Item, 0, limit),
