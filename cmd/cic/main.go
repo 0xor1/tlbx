@@ -36,7 +36,7 @@ func main() {
 	var hour int
 	fs.IntVar(&hour, "h", 8, "hour e.g. 8")
 	var minutes int
-	fs.IntVar(&minutes, "m", 30, "minutes e.g. 30")
+	fs.IntVar(&minutes, "m", 0, "minutes e.g. 30")
 	var randomMinutes int64
 	fs.Int64Var(&randomMinutes, "r", 0, "randomMinutes to vary start and end times e.g. 15")
 	PanicOn(fs.Parse(os.Args[1:]))

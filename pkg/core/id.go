@@ -14,6 +14,45 @@ var (
 	seedMtx = &sync.Mutex{}
 )
 
+type IDGenPool interface {
+	Get() IDGen
+}
+
+// n.b. each IDGen allocates approx 5kb of memory
+// so use a fixed pool to save on lots of big memory
+// de/allocations
+func NewIDGenPool(size int) IDGenPool {
+	PanicIf(size <= 1, "pool size must be greater than 1")
+	pool := make([]IDGen, size)
+	for i := 0; i < size; i++ {
+		pool[i] = NewIDGen()
+	}
+	return &idGenPool{
+		mtx:  &sync.Mutex{},
+		i:    0,
+		sm1:  size - 1,
+		pool: pool,
+	}
+}
+
+type idGenPool struct {
+	mtx  *sync.Mutex
+	i    int
+	sm1  int
+	pool []IDGen
+}
+
+func (p *idGenPool) Get() IDGen {
+	p.mtx.Lock()
+	if p.i == p.sm1 {
+		p.i = 0
+	} else {
+		p.i++
+	}
+	p.mtx.Unlock()
+	return p.pool[p.i]
+}
+
 type IDGen interface {
 	New() (ID, error)
 	MustNew() ID

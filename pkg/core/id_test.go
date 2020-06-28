@@ -7,6 +7,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func Test_NewIDGenPool(t *testing.T) {
+	pool := NewIDGenPool(2)
+	MustGoGroup(func() {
+		pool.Get().MustNew()
+	}, func() {
+		pool.Get().MustNew()
+	}, func() {
+		pool.Get().MustNew()
+	}, func() {
+		pool.Get().MustNew()
+	}, func() {
+		pool.Get().MustNew()
+	}, func() {
+		pool.Get().MustNew()
+	}, func() {
+		pool.Get().MustNew()
+	})
+}
+
 func Test_IDGenerator(t *testing.T) {
 	NewIDGen().MustNew()
 }

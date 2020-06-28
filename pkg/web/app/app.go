@@ -34,6 +34,8 @@ type Config struct {
 	Version                 string
 	StaticDir               string
 	ContentSecurityPolicies []string
+	// id
+	IDGenPoolSize int
 	// mdo
 	MDoMax          int
 	MDoMaxBodyBytes int64
@@ -57,6 +59,8 @@ func Run(configs ...func(*Config)) {
 	fileServer := http.FileServer(http.Dir(staticFileDir))
 	// content-security-policy
 	csps := strings.Join(append([]string{"default-src 'self'"}, c.ContentSecurityPolicies...), ";")
+	// id pool
+	idGenPool := NewIDGenPool(c.IDGenPoolSize)
 	// endpoints
 	router := map[string]*Endpoint{}
 	router[docsPath] = nil
@@ -95,6 +99,7 @@ func Run(configs ...func(*Config)) {
 	delete(router, docsPath)
 	delete(router, mdoPath)
 	docsBytes := json.MustMarshal(docs)
+	ApiPathPrefixSegment := ApiPathPrefix + "/"
 	// Handle requests!
 	var root http.HandlerFunc
 	root = func(w http.ResponseWriter, r *http.Request) {
@@ -103,6 +108,7 @@ func Run(configs ...func(*Config)) {
 		tlbx := &tlbx{
 			resp:          &responseWrapper{w: w},
 			req:           r,
+			idGenPool:     idGenPool,
 			isSubMDo:      isSubMDo(r),
 			log:           c.Log,
 			queryStatsMtx: &sync.Mutex{},
@@ -140,9 +146,6 @@ func Run(configs ...func(*Config)) {
 			}
 		}()
 		// set common headers
-		tlbx.resp.Header().Set("X-Frame-Options", "DENY")
-		tlbx.resp.Header().Set("X-XSS-Protection", "1; mode=block")
-		tlbx.resp.Header().Set("Content-Security-Policy", csps)
 		tlbx.resp.Header().Set("Cache-Control", "no-cache, no-store")
 		tlbx.resp.Header().Set("X-Version", c.Version)
 		// check method
@@ -154,7 +157,11 @@ func Run(configs ...func(*Config)) {
 			mware(tlbx)
 		}
 		// serve static file
-		if method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefix+"/") {
+		if method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefixSegment) {
+			// set common headers
+			tlbx.resp.Header().Set("X-Frame-Options", "DENY")
+			tlbx.resp.Header().Set("X-XSS-Protection", "1; mode=block")
+			tlbx.resp.Header().Set("Content-Security-Policy", csps)
 			fileServer.ServeHTTP(tlbx.resp, tlbx.req)
 			return
 		}
@@ -298,6 +305,7 @@ func config(configs ...func(*Config)) *Config {
 		Log:             l,
 		Version:         "dev",
 		StaticDir:       ".",
+		IDGenPoolSize:   50,
 		MDoMax:          20,
 		MDoMaxBodyBytes: MB,
 		Name:            "Web App",
@@ -408,6 +416,7 @@ type Tlbx interface {
 type tlbx struct {
 	resp          *responseWrapper
 	req           *http.Request
+	idGenPool     IDGenPool
 	idGen         IDGen
 	isSubMDo      bool
 	log           log.Log
@@ -431,7 +440,7 @@ func (t *tlbx) Ctx() context.Context {
 
 func (t *tlbx) NewID() ID {
 	if t.idGen == nil {
-		t.idGen = NewIDGen()
+		t.idGen = t.idGenPool.Get()
 	}
 	return t.idGen.MustNew()
 }

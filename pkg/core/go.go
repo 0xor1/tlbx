@@ -151,6 +151,10 @@ func GoGroup(fs ...func()) Error {
 	return nil
 }
 
+func MustGoGroup(fs ...func()) {
+	PanicOn(GoGroup(fs...))
+}
+
 type goGroup struct {
 	errs    Errors
 	errsMtx *sync.Mutex
