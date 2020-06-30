@@ -1,4 +1,4 @@
-package auth
+package user
 
 import (
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -6,13 +6,14 @@ import (
 )
 
 type Register struct {
-	Email      string `json:"email"`
-	Pwd        string `json:"pwd"`
-	ConfirmPwd string `json:"confirmPwd"`
+	Alias      *string `json:"alias,omitempty"`
+	Email      string  `json:"email"`
+	Pwd        string  `json:"pwd"`
+	ConfirmPwd string  `json:"confirmPwd"`
 }
 
 func (_ *Register) Path() string {
-	return "/me/register"
+	return "/user/register"
 }
 
 func (a *Register) Do(c *app.Client) error {
@@ -28,7 +29,7 @@ type ResendActivateLink struct {
 }
 
 func (_ *ResendActivateLink) Path() string {
-	return "/me/resendActivateLink"
+	return "/user/resendActivateLink"
 }
 
 func (a *ResendActivateLink) Do(c *app.Client) error {
@@ -45,7 +46,7 @@ type Activate struct {
 }
 
 func (_ *Activate) Path() string {
-	return "/me/activate"
+	return "/user/activate"
 }
 
 func (a *Activate) Do(c *app.Client) error {
@@ -61,7 +62,7 @@ type ChangeEmail struct {
 }
 
 func (_ *ChangeEmail) Path() string {
-	return "/me/changeEmail"
+	return "/user/changeEmail"
 }
 
 func (a *ChangeEmail) Do(c *app.Client) error {
@@ -75,7 +76,7 @@ func (a *ChangeEmail) MustDo(c *app.Client) {
 type ResendChangeEmailLink struct{}
 
 func (_ *ResendChangeEmailLink) Path() string {
-	return "/me/resendChangeEmailLink"
+	return "/user/resendChangeEmailLink"
 }
 
 func (a *ResendChangeEmailLink) Do(c *app.Client) error {
@@ -92,7 +93,7 @@ type ConfirmChangeEmail struct {
 }
 
 func (_ *ConfirmChangeEmail) Path() string {
-	return "/me/confirmChangeEmail"
+	return "/user/confirmChangeEmail"
 }
 
 func (a *ConfirmChangeEmail) Do(c *app.Client) error {
@@ -108,7 +109,7 @@ type ResetPwd struct {
 }
 
 func (_ *ResetPwd) Path() string {
-	return "/me/resetPwd"
+	return "/user/resetPwd"
 }
 
 func (a *ResetPwd) Do(c *app.Client) error {
@@ -119,6 +120,22 @@ func (a *ResetPwd) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
+type SetAlias struct {
+	Alias *string `json:"alias"`
+}
+
+func (_ *SetAlias) Path() string {
+	return "/user/setAlias"
+}
+
+func (a *SetAlias) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *SetAlias) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
+
 type SetPwd struct {
 	CurrentPwd    string `json:"currentPwd"`
 	NewPwd        string `json:"newPwd"`
@@ -126,7 +143,7 @@ type SetPwd struct {
 }
 
 func (_ *SetPwd) Path() string {
-	return "/me/setPwd"
+	return "/user/setPwd"
 }
 
 func (a *SetPwd) Do(c *app.Client) error {
@@ -142,7 +159,7 @@ type Delete struct {
 }
 
 func (_ *Delete) Path() string {
-	return "/me/delete"
+	return "/user/delete"
 }
 
 func (a *Delete) Do(c *app.Client) error {
@@ -158,21 +175,17 @@ type Login struct {
 	Pwd   string `json:"pwd"`
 }
 
-type LoginRes struct {
-	Me ID `json:"id"`
-}
-
 func (_ *Login) Path() string {
-	return "/me/login"
+	return "/user/login"
 }
 
-func (a *Login) Do(c *app.Client) (*LoginRes, error) {
-	res := &LoginRes{}
+func (a *Login) Do(c *app.Client) (*User, error) {
+	res := &User{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Login) MustDo(c *app.Client) *LoginRes {
+func (a *Login) MustDo(c *app.Client) *User {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -181,7 +194,7 @@ func (a *Login) MustDo(c *app.Client) *LoginRes {
 type Logout struct{}
 
 func (_ *Logout) Path() string {
-	return "/me/logout"
+	return "/user/logout"
 }
 
 func (a *Logout) Do(c *app.Client) error {
@@ -192,21 +205,44 @@ func (a *Logout) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
-type Get struct{}
+type Me struct{}
 
-type GetRes LoginRes
-
-func (_ *Get) Path() string {
-	return "/me/get"
+func (_ *Me) Path() string {
+	return "/user/me"
 }
 
-func (a *Get) Do(c *app.Client) (*GetRes, error) {
-	res := &GetRes{}
+func (a *Me) Do(c *app.Client) (*User, error) {
+	res := &User{}
 	err := app.Call(c, a.Path(), nil, &res)
 	return res, err
 }
 
-func (a *Get) MustDo(c *app.Client) *GetRes {
+func (a *Me) MustDo(c *app.Client) *User {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type Get struct {
+	Users []ID `json:"users"`
+}
+
+type User struct {
+	ID    ID      `json:"id"`
+	Alias *string `json:"alias"`
+}
+
+func (_ *Get) Path() string {
+	return "/user/get"
+}
+
+func (a *Get) Do(c *app.Client) ([]*User, error) {
+	res := []*User{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *Get) MustDo(c *app.Client) []*User {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res

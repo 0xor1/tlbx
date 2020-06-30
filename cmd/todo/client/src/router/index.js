@@ -1,6 +1,8 @@
 import vue from 'vue'
 import vueRouter from 'vue-router'
 import init from '../views/init.vue'
+import activate from '../views/activate.vue'
+import confirmChangeEmail from '../views/confirmChangeEmail.vue'
 import register from '../views/register.vue'
 import login from '../views/login.vue'
 import lists from '../views/lists.vue'
@@ -13,6 +15,16 @@ const routes = [
     path: '/',
     name: 'init',
     component: init
+  },
+  {
+    path: '/activate',
+    name: 'activate',
+    component: activate
+  },
+  {
+    path: '/confirmChangeEmail',
+    name: 'confirmChangeEmail',
+    component: confirmChangeEmail
   },
   {
     path: '/register',

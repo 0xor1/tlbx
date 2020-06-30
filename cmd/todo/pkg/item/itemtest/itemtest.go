@@ -19,7 +19,7 @@ import (
 
 func Everything(t *testing.T) {
 	a := assert.New(t)
-	r := test.NewRig(config.Get(), append(listeps.Eps, itemeps.Eps...), true, listeps.OnDelete)
+	r := test.NewRig(config.Get(), append(listeps.Eps, itemeps.Eps...), true, nil, listeps.OnDelete)
 	defer r.CleanUp()
 
 	testList1 := (&list.Create{

@@ -135,7 +135,7 @@
         }
       },
       logout: function(){
-        api.me.logout().then(()=>{
+        api.user.logout().then(()=>{
           router.push('/login')
         })
       }

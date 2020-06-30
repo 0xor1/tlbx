@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     id BINARY(16) NOT NULL,
 	email VARCHAR(250) NOT NULL,
+    alias VARCHAR(20) NULL,
     registeredOn DATETIME NOT NULL,
     activatedOn DATETIME NULL,
 	newEmail VARCHAR(250) NULL,

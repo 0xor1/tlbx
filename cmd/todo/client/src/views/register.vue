@@ -1,6 +1,8 @@
 <template>
   <div class="root">
     <h1>Register</h1>
+    <input v-model="alias" placeholder="alias" @blur="validate" @keydown.enter="register">
+    <span v-if="aliasErr.length > 0" class="err">{{aliasErr}}</span>
     <input v-model="email" placeholder="email" @blur="validate" @keydown.enter="register">
     <span v-if="!emailIsValid" class="err">email is not valid</span>
     <input v-model="pwd" placeholder="pwd" type="password" @blur="validate" @keydown.enter="register">
@@ -21,6 +23,8 @@
     name: 'login',
     data: function() {
       return {
+        aliasErr: true,
+        alias: "",
         emailIsValid: true,
         email: "",
         pwdErr: "",
@@ -34,6 +38,11 @@
     },
     methods: {
       validate: function(){
+        if (this.alias.length > 20) {
+            this.aliasErr = "alias must be less than 20 characters long"
+        } else {
+            this.aliasErr = ""
+        }
         if (this.email.length > 0) {
           this.emailIsValid = /^.+@.+\..+$/.test(this.email)
         }
@@ -57,7 +66,7 @@
       },
       register: function(){
         if (this.validate()) {
-          api.me.register(this.email, this.pwd, this.confirmPwd).then(()=>{
+          api.user.register(this.alias, this.email, this.pwd, this.confirmPwd).then(()=>{
             this.registered = true
           }).catch((err)=>{
             this.alreadyLoggedIn = err.response.data === "already logged in"

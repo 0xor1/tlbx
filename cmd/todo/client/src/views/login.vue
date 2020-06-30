@@ -47,7 +47,7 @@
       },
       login: function(){
         if (this.validate()) {
-          api.me.login(this.email, this.pwd).then(()=>{
+          api.user.login(this.email, this.pwd).then(()=>{
             router.push('/lists')
           })
         }

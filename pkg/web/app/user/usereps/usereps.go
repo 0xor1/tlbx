@@ -1,38 +1,40 @@
-package autheps
+package usereps
 
 import (
 	"bytes"
 	"database/sql"
 	"math"
 	"net/http"
-	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/crypt"
-	"github.com/0xor1/tlbx/pkg/json"
+	"github.com/0xor1/tlbx/pkg/isql"
+	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
-	"github.com/0xor1/tlbx/pkg/web/app/auth"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
+	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/go-sql-driver/mysql"
 )
 
-func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoint {
-	return []*app.Endpoint{
+func New(onSetAlias func(app.Tlbx, ID, *string) error, onDelete func(app.Tlbx, ID), fromEmail, activateFmtLink, confirmChangeEmailFmtLink string) []*app.Endpoint {
+	eps := []*app.Endpoint{
 		{
 			Description:  "register a new account (requires email link)",
-			Path:         (&auth.Register{}).Path(),
+			Path:         (&user.Register{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &auth.Register{}
+				return &user.Register{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &auth.Register{
+				return &user.Register{
+					Alias:      ptr.String("Joe Bloggs"),
 					Email:      "joe@bloggs.example",
 					Pwd:        "J03-8l0-Gg5-Pwd",
 					ConfirmPwd: "J03-8l0-Gg5-Pwd",
@@ -43,33 +45,38 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				tlbx.BadReqIf(me.Exists(tlbx), "already logged in")
-				args := a.(*auth.Register)
+				args := a.(*user.Register)
+				args.Email = strings.Trim(args.Email, " ")
+				if args.Alias != nil {
+					args.Alias = ptr.String(strings.Trim(*args.Alias, " "))
+					validate.Str("alias", *args.Alias, tlbx, 0, aliasMaxLen)
+				}
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
 				activateCode := crypt.UrlSafeString(250)
 				id := tlbx.NewID()
 				srv := service.Get(tlbx)
-				_, err := srv.User().Exec("INSERT INTO users (id, email, registeredOn, activateCode) VALUES (?, ?, ?, ?)", id, args.Email, Now(), activateCode)
+				_, err := srv.User().Exec("INSERT INTO users (id, email, alias, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?)", id, args.Email, args.Alias, Now(), activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					tlbx.BadReqIf(ok && mySqlErr.Number == 1062, "email already registered")
 					PanicOn(err)
 				}
 				setPwd(tlbx, id, args.Pwd, args.ConfirmPwd)
-				sendActivateEmail(srv, args.Email, fromEmail, baseHref, &auth.Activate{Email: args.Email, Code: activateCode})
+				sendActivateEmail(srv, args.Email, fromEmail, Sprintf(activateFmtLink, args.Email, activateCode))
 				return nil
 			},
 		},
 		{
 			Description:  "resend activate link",
-			Path:         (&auth.ResendActivateLink{}).Path(),
+			Path:         (&user.ResendActivateLink{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &auth.ResendActivateLink{}
+				return &user.ResendActivateLink{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &auth.ResendActivateLink{
+				return &user.ResendActivateLink{
 					Email: "joe@bloggs.example",
 				}
 			},
@@ -77,27 +84,27 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*auth.ResendActivateLink)
+				args := a.(*user.ResendActivateLink)
 				srv := service.Get(tlbx)
-				user := getUser(srv, &args.Email, nil)
-				if user == nil || user.ActivateCode == nil {
+				fullUser := getUser(srv, &args.Email, nil)
+				if fullUser == nil || fullUser.ActivateCode == nil {
 					return nil
 				}
-				sendActivateEmail(srv, args.Email, fromEmail, baseHref, &auth.Activate{Email: args.Email, Code: *user.ActivateCode})
+				sendActivateEmail(srv, args.Email, fromEmail, Sprintf(activateFmtLink, args.Email, *fullUser.ActivateCode))
 				return nil
 			},
 		},
 		{
 			Description:  "activate a new account",
-			Path:         (&auth.Activate{}).Path(),
+			Path:         (&user.Activate{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &auth.Activate{}
+				return &user.Activate{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &auth.Activate{
+				return &user.Activate{
 					Email: "joe@bloggs.example",
 					Code:  "123abc",
 				}
@@ -106,29 +113,30 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*auth.Activate)
+				args := a.(*user.Activate)
 				srv := service.Get(tlbx)
 				user := getUser(srv, &args.Email, nil)
 				tlbx.BadReqIf(*user.ActivateCode != args.Code, "")
 				now := Now()
 				user.ActivatedOn = &now
 				user.ActivateCode = nil
-				updateUser(srv, user)
-				tlbx.Redirect(http.StatusFound, "/")
+				tx := srv.User().Begin()
+				updateUser(tx, user)
+				tx.Commit()
 				return nil
 			},
 		},
 		{
 			Description:  "change email address (requires email link)",
-			Path:         (&auth.ChangeEmail{}).Path(),
+			Path:         (&user.ChangeEmail{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &auth.ChangeEmail{}
+				return &user.ChangeEmail{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &auth.ChangeEmail{
+				return &user.ChangeEmail{
 					NewEmail: "new_joe@bloggs.example",
 				}
 			},
@@ -136,24 +144,27 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*auth.ChangeEmail)
+				args := a.(*user.ChangeEmail)
+				args.NewEmail = strings.Trim(args.NewEmail, " ")
 				validate.Str("email", args.NewEmail, tlbx, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
 				me := me.Get(tlbx)
 				changeEmailCode := crypt.UrlSafeString(250)
 				existingUser := getUser(srv, &args.NewEmail, nil)
 				tlbx.BadReqIf(existingUser != nil, "email already registered")
-				user := getUser(srv, nil, &me)
-				user.NewEmail = &args.NewEmail
-				user.ChangeEmailCode = &changeEmailCode
-				updateUser(srv, user)
-				sendConfirmChangeEmailEmail(srv, args.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: changeEmailCode})
+				fullUser := getUser(srv, nil, &me)
+				fullUser.NewEmail = &args.NewEmail
+				fullUser.ChangeEmailCode = &changeEmailCode
+				tx := srv.User().Begin()
+				updateUser(tx, fullUser)
+				tx.Commit()
+				sendConfirmChangeEmailEmail(srv, args.NewEmail, fromEmail, Sprintf(confirmChangeEmailFmtLink, me, changeEmailCode))
 				return nil
 			},
 		},
 		{
 			Description:  "resend change email link",
-			Path:         (&auth.ResendChangeEmailLink{}).Path(),
+			Path:         (&user.ResendChangeEmailLink{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
@@ -169,22 +180,22 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				srv := service.Get(tlbx)
 				me := me.Get(tlbx)
-				user := getUser(srv, nil, &me)
-				sendConfirmChangeEmailEmail(srv, *user.NewEmail, fromEmail, baseHref, &auth.ConfirmChangeEmail{Me: me, Code: *user.ChangeEmailCode})
+				fullUser := getUser(srv, nil, &me)
+				sendConfirmChangeEmailEmail(srv, *fullUser.NewEmail, fromEmail, Sprintf(confirmChangeEmailFmtLink, me, *fullUser.ChangeEmailCode))
 				return nil
 			},
 		},
 		{
 			Description:  "confirm change email",
-			Path:         (&auth.ConfirmChangeEmail{}).Path(),
+			Path:         (&user.ConfirmChangeEmail{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &auth.ConfirmChangeEmail{}
+				return &user.ConfirmChangeEmail{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &auth.ConfirmChangeEmail{
+				return &user.ConfirmChangeEmail{
 					Me:   app.ExampleID(),
 					Code: "123abc",
 				}
@@ -193,28 +204,30 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*auth.ConfirmChangeEmail)
+				args := a.(*user.ConfirmChangeEmail)
 				srv := service.Get(tlbx)
 				user := getUser(srv, nil, &args.Me)
 				tlbx.BadReqIf(*user.ChangeEmailCode != args.Code, "")
 				user.ChangeEmailCode = nil
 				user.Email = *user.NewEmail
 				user.NewEmail = nil
-				updateUser(srv, user)
+				tx := srv.User().Begin()
+				updateUser(tx, user)
+				tx.Commit()
 				return nil
 			},
 		},
 		{
 			Description:  "reset password (requires email link)",
-			Path:         (&auth.ResetPwd{}).Path(),
+			Path:         (&user.ResetPwd{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &auth.ResetPwd{}
+				return &user.ResetPwd{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &auth.ResetPwd{
+				return &user.ResetPwd{
 					Email: "joe@bloggs.example",
 				}
 			},
@@ -222,7 +235,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*auth.ResetPwd)
+				args := a.(*user.ResetPwd)
 				srv := service.Get(tlbx)
 				user := getUser(srv, &args.Email, nil)
 				if user != nil {
@@ -233,24 +246,62 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 					}
 					newPwd := `$aA1` + crypt.UrlSafeString(12)
 					setPwd(tlbx, user.ID, newPwd, newPwd)
-					sendResetPwdEmail(srv, args.Email, fromEmail, baseHref, newPwd)
+					sendResetPwdEmail(srv, args.Email, fromEmail, newPwd)
 					user.LastPwdResetOn = &now
-					updateUser(srv, user)
+					tx := srv.User().Begin()
+					updateUser(tx, user)
+					tx.Commit()
 				}
 				return nil
 			},
 		},
 		{
-			Description:  "set password",
-			Path:         (&auth.SetPwd{}).Path(),
+			Description:  "change alias",
+			Path:         (&user.SetAlias{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &auth.SetPwd{}
+				return &user.SetAlias{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &auth.SetPwd{
+				return &user.SetAlias{
+					Alias: ptr.String("Boe Jloggs"),
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*user.SetAlias)
+				if args.Alias != nil {
+					validate.Str("alias", *args.Alias, tlbx, 0, aliasMaxLen)
+				}
+				srv := service.Get(tlbx)
+				me := me.Get(tlbx)
+				user := getUser(srv, nil, &me)
+				user.Alias = args.Alias
+				tx := srv.User().Begin()
+				defer tx.Rollback()
+				updateUser(tx, user)
+				if onSetAlias != nil {
+					PanicOn(onSetAlias(tlbx, me, user.Alias))
+				}
+				tx.Commit()
+				return nil
+			},
+		},
+		{
+			Description:  "set password",
+			Path:         (&user.SetPwd{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &user.SetPwd{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &user.SetPwd{
 					CurrentPwd:    "J03-8l0-Gg5-Pwd",
 					NewPwd:        "N3w-J03-8l0-Gg5-Pwd",
 					ConfirmNewPwd: "N3w-J03-8l0-Gg5-Pwd",
@@ -260,7 +311,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*auth.SetPwd)
+				args := a.(*user.SetPwd)
 				srv := service.Get(tlbx)
 				me := me.Get(tlbx)
 				pwd := getPwd(srv, me)
@@ -271,15 +322,15 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 		},
 		{
 			Description:  "delete account",
-			Path:         (&auth.Delete{}).Path(),
+			Path:         (&user.Delete{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &auth.Delete{}
+				return &user.Delete{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &auth.Delete{
+				return &user.Delete{
 					Pwd: "J03-8l0-Gg5-Pwd",
 				}
 			},
@@ -287,7 +338,7 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*auth.Delete)
+				args := a.(*user.Delete)
 				srv := service.Get(tlbx)
 				m := me.Get(tlbx)
 				me.Del(tlbx)
@@ -305,29 +356,29 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 		},
 		{
 			Description:  "login",
-			Path:         (&auth.Login{}).Path(),
+			Path:         (&user.Login{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &auth.Login{}
+				return &user.Login{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &auth.Login{
+				return &user.Login{
 					Email: "joe@bloggs.example",
 					Pwd:   "J03-8l0-Gg5-Pwd",
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return &auth.LoginRes{
-					Me: app.ExampleID(),
+				return &user.User{
+					ID: app.ExampleID(),
 				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				emailOrPwdMismatch := func(condition bool) {
 					tlbx.ExitIf(condition, http.StatusNotFound, "email and/or pwd are not valid")
 				}
-				args := a.(*auth.Login)
+				args := a.(*user.Login)
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
 				validate.Str("pwd", args.Pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
 				srv := service.Get(tlbx)
@@ -340,14 +391,12 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 					setPwd(tlbx, user.ID, args.Pwd, args.Pwd)
 				}
 				me.Set(tlbx, user.ID)
-				return &auth.LoginRes{
-					Me: user.ID,
-				}
+				return &user.User
 			},
 		},
 		{
 			Description:  "logout",
-			Path:         (&auth.Logout{}).Path(),
+			Path:         (&user.Logout{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
@@ -366,8 +415,8 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 			},
 		},
 		{
-			Description:  "get",
-			Path:         (&auth.Get{}).Path(),
+			Description:  "get me",
+			Path:         (&user.Me{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
@@ -378,22 +427,73 @@ func New(onDelete func(app.Tlbx, ID), fromEmail, baseHref string) []*app.Endpoin
 				return nil
 			},
 			GetExampleResponse: func() interface{} {
-				return &auth.GetRes{
-					Me: app.ExampleID(),
+				return &user.User{
+					ID: app.ExampleID(),
 				}
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
-				return &auth.GetRes{
-					Me: me.Get(tlbx),
+				me := me.Get(tlbx)
+				user := getUser(service.Get(tlbx), nil, &me)
+				return &user.User
+			},
+		},
+		{
+			Description:  "get users",
+			Path:         (&user.Get{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &user.Get{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &user.Get{
+					Users: []ID{app.ExampleID()},
 				}
+			},
+			GetExampleResponse: func() interface{} {
+				return []user.User{
+					{
+						ID:    app.ExampleID(),
+						Alias: ptr.String("Joe Bloggs"),
+					},
+				}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*user.Get)
+				if len(args.Users) == 0 {
+					return nil
+				}
+				validate.MaxIDs(tlbx, "users", args.Users, 100)
+				srv := service.Get(tlbx)
+				query := bytes.NewBufferString(`SELECT id, alias FROM users WHERE id IN(?`)
+				queryArgs := make([]interface{}, 0, len(args.Users))
+				queryArgs = append(queryArgs, args.Users[0])
+				for _, id := range args.Users[1:] {
+					query.WriteString(`,?`)
+					queryArgs = append(queryArgs, id)
+				}
+				query.WriteString(`)`)
+				res := make([]*user.User, 0, len(args.Users))
+				srv.User().Query(func(rows isql.Rows) {
+					for rows.Next() {
+						u := &user.User{}
+						rows.Scan(&u.ID, &u.Alias)
+						res = append(res, u)
+					}
+				}, query.String(), queryArgs...)
+				return res
 			},
 		},
 	}
+
+	return eps
 }
 
 var (
 	emailRegex  = regexp.MustCompile(`\A.+@.+\..+\z`)
 	emailMaxLen = 250
+	aliasMaxLen = 250
 	pwdRegexs   = []*regexp.Regexp{
 		regexp.MustCompile(`[0-9]`),
 		regexp.MustCompile(`[a-z]`),
@@ -409,26 +509,20 @@ var (
 	scryptKeyLen  = 256
 )
 
-func sendActivateEmail(srv service.Layer, sendTo, from, baseHref string, args *auth.Activate) {
-	bs, err := json.Marshal(args)
-	PanicOn(err)
-	link := baseHref + app.ApiPathPrefix + args.Path() + `?args=` + url.QueryEscape(string(bs))
+func sendActivateEmail(srv service.Layer, sendTo, from, link string) {
 	srv.Email().MustSend([]string{sendTo}, from, "Activate", `<a href="`+link+`">Activate</a>`, `Activate `+link)
 }
 
-func sendConfirmChangeEmailEmail(srv service.Layer, sendTo, from, baseHref string, args *auth.ConfirmChangeEmail) {
-	bs, err := json.Marshal(args)
-	PanicOn(err)
-	link := baseHref + app.ApiPathPrefix + args.Path() + `?args=` + url.QueryEscape(string(bs))
+func sendConfirmChangeEmailEmail(srv service.Layer, sendTo, from, link string) {
 	srv.Email().MustSend([]string{sendTo}, from, "Confirm change email", `<a href="`+link+`">Confirm change email</a>`, `Confirm change email `+link)
 }
 
-func sendResetPwdEmail(srv service.Layer, sendTo, from, baseHref, newPwd string) {
+func sendResetPwdEmail(srv service.Layer, sendTo, from, newPwd string) {
 	srv.Email().MustSend([]string{sendTo}, from, "Pwd Reset", `<p>New Pwd: `+newPwd+`</p>`, `New Pwd: `+newPwd)
 }
 
-type user struct {
-	ID              ID
+type fullUser struct {
+	user.User
 	Email           string
 	RegisteredOn    time.Time
 	ActivatedOn     *time.Time
@@ -438,9 +532,9 @@ type user struct {
 	LastPwdResetOn  *time.Time
 }
 
-func getUser(srv service.Layer, email *string, id *ID) *user {
+func getUser(srv service.Layer, email *string, id *ID) *fullUser {
 	PanicIf(email == nil && id == nil, "one of email or id must not be nil")
-	query := `SELECT id, email, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn FROM users WHERE `
+	query := `SELECT id, email, alias, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn FROM users WHERE `
 	var arg interface{}
 	if email != nil {
 		query += `email=?`
@@ -450,8 +544,8 @@ func getUser(srv service.Layer, email *string, id *ID) *user {
 		arg = *id
 	}
 	row := srv.User().QueryRow(query, arg)
-	res := &user{}
-	err := row.Scan(&res.ID, &res.Email, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
+	res := &fullUser{}
+	err := row.Scan(&res.ID, &res.Email, &res.Alias, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
 	if err == sql.ErrNoRows {
 		return nil
 	}
@@ -459,8 +553,8 @@ func getUser(srv service.Layer, email *string, id *ID) *user {
 	return res
 }
 
-func updateUser(srv service.Layer, user *user) {
-	_, err := srv.User().Exec(`UPDATE users SET email=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
+func updateUser(tx service.Tx, user *fullUser) {
+	_, err := tx.Exec(`UPDATE users SET email=?, alias=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.Alias, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
 	PanicOn(err)
 }
 

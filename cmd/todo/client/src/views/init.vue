@@ -8,7 +8,7 @@
   export default {
     name: 'init',
     data () {
-      api.me.get().then(() => {
+      api.user.me().then(() => {
         router.push('/lists')
       }).catch(() => {
         router.push('/login')

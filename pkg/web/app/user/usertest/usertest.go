@@ -1,19 +1,20 @@
-package authtest
+package usertest
 
 import (
 	"regexp"
 	"testing"
 
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
-	"github.com/0xor1/tlbx/pkg/web/app/auth"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
+	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/stretchr/testify/assert"
 )
 
 func Everything(t *testing.T) {
-	r := test.NewRig(config.GetProcessed(config.GetBase()), nil, true, func(tlbx app.Tlbx, id ID) {})
+	r := test.NewRig(config.GetProcessed(config.GetBase()), nil, true, func(tlbx app.Tlbx, id ID, alias *string) error { return nil }, func(tlbx app.Tlbx, id ID) {})
 	defer r.CleanUp()
 
 	a := assert.New(t)
@@ -21,21 +22,21 @@ func Everything(t *testing.T) {
 	email := "test@test.localhost"
 	pwd := "1aA$_t;3"
 
-	(&auth.Register{
+	(&user.Register{
 		Email:      email,
 		Pwd:        pwd,
 		ConfirmPwd: pwd,
 	}).MustDo(c)
 
 	// check existing email err
-	err := (&auth.Register{
+	err := (&user.Register{
 		Email:      email,
 		Pwd:        pwd,
 		ConfirmPwd: pwd,
 	}).Do(c)
 	a.Equal(&app.ErrMsg{Status: 400, Msg: "email already registered"}, err)
 
-	(&auth.ResendActivateLink{
+	(&user.ResendActivateLink{
 		Email: email,
 	}).MustDo(c)
 
@@ -43,66 +44,85 @@ func Everything(t *testing.T) {
 	row := r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
 	PanicOn(row.Scan(&code))
 
-	(&auth.Activate{
+	(&user.Activate{
 		Email: email,
 		Code:  code,
 	}).MustDo(c)
 
 	// check return ealry path
-	(&auth.ResendActivateLink{
+	(&user.ResendActivateLink{
 		Email: email,
 	}).MustDo(c)
 
-	id := (&auth.Login{
+	id := (&user.Login{
 		Email: email,
 		Pwd:   pwd,
-	}).MustDo(c).Me
+	}).MustDo(c).ID
 
-	(&auth.ChangeEmail{
+	(&user.ChangeEmail{
 		NewEmail: "change@test.localhost",
 	}).MustDo(c)
 
-	(&auth.ResendChangeEmailLink{}).MustDo(c)
+	(&user.ResendChangeEmailLink{}).MustDo(c)
 
 	row = r.User().Primary().QueryRow(`SELECT changeEmailCode FROM users WHERE id=?`, id)
 	PanicOn(row.Scan(&code))
 
-	(&auth.ConfirmChangeEmail{
+	(&user.ConfirmChangeEmail{
 		Me:   id,
 		Code: code,
 	}).MustDo(c)
 
-	(&auth.ChangeEmail{
+	(&user.ChangeEmail{
 		NewEmail: email,
 	}).MustDo(c)
 
 	row = r.User().Primary().QueryRow(`SELECT changeEmailCode FROM users WHERE id=?`, id)
 	PanicOn(row.Scan(&code))
 
-	(&auth.ConfirmChangeEmail{
+	(&user.ConfirmChangeEmail{
 		Me:   id,
 		Code: code,
 	}).MustDo(c)
 
 	newPwd := pwd + "123abc"
-	(&auth.SetPwd{
+	(&user.SetPwd{
 		CurrentPwd:    pwd,
 		NewPwd:        newPwd,
 		ConfirmNewPwd: newPwd,
 	}).MustDo(c)
 
-	(&auth.Logout{}).MustDo(c)
+	(&user.Logout{}).MustDo(c)
 
-	(&auth.Login{
+	(&user.Login{
 		Email: email,
 		Pwd:   newPwd,
 	}).MustDo(c)
 
-	(&auth.Delete{
+	alias := "shabba!"
+	(&user.SetAlias{
+		Alias: ptr.String(alias),
+	}).MustDo(c)
+
+	me := (&user.Me{}).MustDo(c)
+	a.Equal(alias, *me.Alias)
+
+	users := (&user.Get{
+		Users: []ID{
+			id,
+			r.Ali().ID(),
+			r.Bob().ID(),
+			r.Cat().ID(),
+			r.Dan().ID(),
+		},
+	}).MustDo(c)
+	a.Equal(5, len(users))
+
+	(&user.Delete{
 		Pwd: newPwd,
 	}).MustDo(c)
 
-	(&auth.Register{
+	(&user.Register{
 		Email:      email,
 		Pwd:        pwd,
 		ConfirmPwd: pwd,
@@ -111,22 +131,22 @@ func Everything(t *testing.T) {
 	row = r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
 	PanicOn(row.Scan(&code))
 
-	(&auth.Activate{
+	(&user.Activate{
 		Email: email,
 		Code:  code,
 	}).MustDo(c)
 
-	id = (&auth.Login{
+	id = (&user.Login{
 		Email: email,
 		Pwd:   pwd,
-	}).MustDo(c).Me
-	a.Equal(id, (&auth.Get{}).MustDo(c).Me)
+	}).MustDo(c).ID
+	a.Equal(id, (&user.Me{}).MustDo(c).ID)
 
-	(&auth.ResetPwd{
+	(&user.ResetPwd{
 		Email: email,
 	}).MustDo(c)
 
-	err = (&auth.ResetPwd{
+	err = (&user.ResetPwd{
 		Email: email,
 	}).Do(c)
 	a.Equal(400, err.(*app.ErrMsg).Status)

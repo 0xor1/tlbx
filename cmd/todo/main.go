@@ -7,11 +7,11 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
-	"github.com/0xor1/tlbx/pkg/web/app/auth/autheps"
 	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
+	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/tomasen/realip"
 )
 
@@ -46,6 +46,6 @@ func main() {
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),
 		}
 		c.Log = config.Log
-		c.Endpoints = append(append(autheps.New(nil, config.FromEmail, config.BaseHref), listeps.Eps...), itemeps.Eps...)
+		c.Endpoints = append(append(usereps.New(nil, nil, config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink), listeps.Eps...), itemeps.Eps...)
 	})
 }

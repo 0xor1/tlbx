@@ -8,15 +8,16 @@ import (
 	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/log"
+	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
-	"github.com/0xor1/tlbx/pkg/web/app/auth"
-	"github.com/0xor1/tlbx/pkg/web/app/auth/autheps"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
 	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
+	"github.com/0xor1/tlbx/pkg/web/app/user"
+	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/tomasen/realip"
 )
 
@@ -52,34 +53,34 @@ type User interface {
 	Pwd() string
 }
 
-type user struct {
+type testUser struct {
 	client *app.Client
 	id     ID
 	email  string
 	pwd    string
 }
 
-func (u *user) Client() *app.Client {
+func (u *testUser) Client() *app.Client {
 	return u.client
 }
 
-func (u *user) ID() ID {
+func (u *testUser) ID() ID {
 	return u.id
 }
 
-func (u *user) Email() string {
+func (u *testUser) Email() string {
 	return u.email
 }
 
-func (u *user) Pwd() string {
+func (u *testUser) Pwd() string {
 	return u.pwd
 }
 
 type rig struct {
-	ali     *user
-	bob     *user
-	cat     *user
-	dan     *user
+	ali     *testUser
+	bob     *testUser
+	cat     *testUser
+	dan     *testUser
 	log     log.Log
 	cache   iredis.Pool
 	user    isql.ReplicaSet
@@ -138,7 +139,7 @@ func NewClient() *app.Client {
 	return app.NewClient(baseHref)
 }
 
-func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onDelete func(app.Tlbx, ID)) Rig {
+func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onSetAlias func(app.Tlbx, ID, *string) error, onDelete func(app.Tlbx, ID)) Rig {
 	r := &rig{
 		log:     config.Log,
 		cache:   config.Cache,
@@ -151,7 +152,7 @@ func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onDelete f
 	}
 
 	if useAuth {
-		eps = append(eps, autheps.New(onDelete, config.FromEmail, config.BaseHref)...)
+		eps = append(eps, usereps.New(onSetAlias, onDelete, config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink)...)
 	}
 	go app.Run(func(c *app.Config) {
 		c.TlbxMwares = app.TlbxMwares{
@@ -176,35 +177,37 @@ func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onDelete f
 	})
 
 	time.Sleep(20 * time.Millisecond)
-	r.ali = r.createUser("ali"+emailSuffix, pwd)
-	r.bob = r.createUser("bob"+emailSuffix, pwd)
-	r.cat = r.createUser("cat"+emailSuffix, pwd)
-	r.dan = r.createUser("dan"+emailSuffix, pwd)
+	r.ali = r.createUser("ali", emailSuffix, pwd)
+	r.bob = r.createUser("bob", emailSuffix, pwd)
+	r.cat = r.createUser("cat", emailSuffix, pwd)
+	r.dan = r.createUser("dan", emailSuffix, pwd)
 	return r
 }
 
 func (r *rig) CleanUp() {
 	r.Store().MustDeleteStore()
 	if r.useAuth {
-		(&auth.Delete{
+		(&user.Delete{
 			Pwd: r.Ali().Pwd(),
 		}).MustDo(r.Ali().Client())
-		(&auth.Delete{
+		(&user.Delete{
 			Pwd: r.Bob().Pwd(),
 		}).MustDo(r.Bob().Client())
-		(&auth.Delete{
+		(&user.Delete{
 			Pwd: r.Cat().Pwd(),
 		}).MustDo(r.Cat().Client())
-		(&auth.Delete{
+		(&user.Delete{
 			Pwd: r.Dan().Pwd(),
 		}).MustDo(r.Dan().Client())
 	}
 }
 
-func (r *rig) createUser(email, pwd string) *user {
+func (r *rig) createUser(alias, emailSuffix, pwd string) *testUser {
+	email := alias + emailSuffix
 	c := NewClient()
 	if r.useAuth {
-		(&auth.Register{
+		(&user.Register{
+			Alias:      ptr.String(alias),
 			Email:      email,
 			Pwd:        pwd,
 			ConfirmPwd: pwd,
@@ -214,22 +217,22 @@ func (r *rig) createUser(email, pwd string) *user {
 		row := r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
 		PanicOn(row.Scan(&code))
 
-		(&auth.Activate{
+		(&user.Activate{
 			Email: email,
 			Code:  code,
 		}).MustDo(c)
 
-		id := (&auth.Login{
+		id := (&user.Login{
 			Email: email,
 			Pwd:   pwd,
-		}).MustDo(c).Me
+		}).MustDo(c).ID
 
-		return &user{
+		return &testUser{
 			client: c,
 			id:     id,
 			email:  email,
 			pwd:    pwd,
 		}
 	}
-	return &user{client: c}
+	return &testUser{client: c}
 }

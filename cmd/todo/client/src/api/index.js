@@ -110,48 +110,84 @@ let newApi = (isMDoApi) => {
       })
       return new Promise(mDoCompleterFunc)
     },
-    me: {
-      register: (email, pwd, confirmPwd) => {
-        return doReq('/me/register', {email, pwd, confirmPwd})
+    user: {
+      register: (alias, email, pwd, confirmPwd) => {
+        return doReq('/user/register', {alias, email, pwd, confirmPwd})
       },
       resendActivateLink: (email) => {
-        return doReq('/me/resendActivateLink', {email})
+        return doReq('/user/resendActivateLink', {email})
       },
       activate: (email, code) => {
-        return doReq('/me/activate', {email, code})
+        return doReq('/user/activate', {email, code})
       },
       changeEmail: (newEmail) => {
-        return doReq('/me/changeEmail', {newEmail})
+        return doReq('/user/changeEmail', {newEmail})
       },
       resendChangeEmailLink: () => {
-        return doReq('/me/resendChangeEmailLink')
+        return doReq('/user/resendChangeEmailLink')
       },
       confirmChangeEmail: (me, code) => {
-        return doReq('/me/confirmChangeEmail', {me, code})
+        return doReq('/user/confirmChangeEmail', {me, code})
       },
       resetPwd: (email) => {
-        return doReq('/me/resetPwd', {email})
+        return doReq('/user/resetPwd', {email})
+      },
+      setAlias: (alias) => {
+        return doReq('/user/setAlias', {alias}).then(()=>{
+          memCache.me.alias = alias
+        })
       },
       setPwd: (currentPwd, newPwd, confirmNewPwd) => {
-        return doReq('/me/setPwd', {currentPwd, newPwd, confirmNewPwd})
+        return doReq('/user/setPwd', {currentPwd, newPwd, confirmNewPwd})
       },
       delete: (pwd) => {
-        return doReq('/me/delete', {pwd})
+        return doReq('/user/delete', {pwd})
       },
       login: (email, pwd) => {
-        return doReq('/me/login', {email, pwd})
+        return doReq('/user/login', {email, pwd}).then((res)=>{
+          memCache.me = res
+          memCache[res.id] = res
+          return res
+        })
       },
       logout: () => {
-        return doReq('/me/logout')
+        memCache = {}
+        return doReq('/user/logout')
       },
-      get: () => {
+      me: () => {
         if (memCache.me) {
           return new Promise((resolve) => {
             resolve(memCache.me)
           })
         }
-        return doReq('/me/get').then((res) => {
+        return doReq('/user/me').then((res) => {
           memCache.me = res
+          memCache[res.id] = res
+          return res
+        })
+      },
+      get: (ids) => {
+        let toGet = []
+        let found = []
+        ids.forEach((id)=>{
+          if (memCache[id]) {
+            found.push(memCache[id])
+          } else {
+            found.push(memCache[id])
+            toGet.push(id)
+          }
+        })
+        if (toGet.length === 0) {
+          return new Promise((resolve) => {
+            resolve(found)
+          })
+        }
+        return doReq('/user/get', {users: toGet}).then((res) => {
+          if (res != null) {
+            res.forEach((user)=>{
+              memCache[user.id] = user
+            })
+          }
           return res
         })
       }
