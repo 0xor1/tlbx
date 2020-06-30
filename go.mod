@@ -7,12 +7,9 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/gorilla/sessions v1.2.0
-	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
 	github.com/oklog/ulid/v2 v2.0.2
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/tomasen/realip v0.0.0-20180522021738-f0c99a92ddce
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
-	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
