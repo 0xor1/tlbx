@@ -139,7 +139,16 @@ func NewClient() *app.Client {
 	return app.NewClient(baseHref)
 }
 
-func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onSetAlias func(app.Tlbx, ID, *string) error, onDelete func(app.Tlbx, ID)) Rig {
+func NewRig(
+	config *config.Config,
+	eps []*app.Endpoint,
+	useUsers bool,
+	onDelete func(app.Tlbx, ID),
+	enableAliases bool,
+	onSetAlias func(app.Tlbx, ID, *string) error,
+	enableAvatars bool,
+	onSetAvatar func(app.Tlbx, ID, bool) error,
+) Rig {
 	r := &rig{
 		log:     config.Log,
 		cache:   config.Cache,
@@ -148,11 +157,12 @@ func NewRig(config *config.Config, eps []*app.Endpoint, useAuth bool, onSetAlias
 		user:    config.User,
 		pwd:     config.Pwd,
 		data:    config.Data,
-		useAuth: useAuth,
+		useAuth: useUsers,
 	}
 
-	if useAuth {
-		eps = append(eps, usereps.New(onSetAlias, onDelete, config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink)...)
+	eps = append(eps, r.store.Endpoints()...)
+	if useUsers {
+		eps = append(eps, usereps.New(config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink, onDelete, enableAliases, onSetAlias, enableAvatars, onSetAvatar)...)
 	}
 	go app.Run(func(c *app.Config) {
 		c.TlbxMwares = app.TlbxMwares{

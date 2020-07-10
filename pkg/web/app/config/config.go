@@ -46,6 +46,7 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("email.type", "")
 	c.SetDefault("store.type", "")
 	c.SetDefault("store.dir", "tmpStoreDir")
+	c.SetDefault("store.preBaseUrl", "http://localhost:8081")
 	// session cookie store
 	c.SetDefault("sessionAuthKey64s", []interface{}{
 		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
@@ -76,7 +77,7 @@ func GetProcessed(c *config.Config) *Config {
 		res.IsLocal = true
 		res.Log = log.New()
 		res.Email = email.NewLocalClient(res.Log)
-		res.Store = store.NewLocalClient(c.GetString("store.dir"))
+		res.Store = store.NewLocalClient(c.GetString("store.preBaseUrl"), c.GetString("store.dir"))
 	} else {
 		res.IsLocal = false
 		switch c.GetString("log.type") {

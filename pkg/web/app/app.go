@@ -165,8 +165,6 @@ func Run(configs ...func(*Config)) {
 			fileServer.ServeHTTP(tlbx.resp, tlbx.req)
 			return
 		}
-		// check all requests have a X-Client header
-		tlbx.BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
 		// lower path now we have passed static file server
 		tlbx.req.URL.Path = lPath
 		// endpoint docs
@@ -174,6 +172,8 @@ func Run(configs ...func(*Config)) {
 			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
 			return
 		}
+		// check all requests have a X-Client header
+		tlbx.BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
 		// do mdo
 		if lPath == mdoPath {
 			if c.MDoMaxBodyBytes > 0 {

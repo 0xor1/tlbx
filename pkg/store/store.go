@@ -4,41 +4,40 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/json"
+	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
 const (
 	localStoreObjInfo = "__local_store_obj_info__.json"
-)
-
-var (
-	localErr = Errorf("presigned urls not valid in local store setting")
+	localPrePutPath   = "/store/put"
+	localPreGetPath   = "/store/get"
 )
 
 type Client interface {
-	Put(key, mimeType string, size int64, content io.ReadCloser) error
-	MustPut(key, mimeType string, size int64, content io.ReadCloser)
-	Get(key string) (string, int64, io.ReadCloser, error)
-	MustGet(key string) (string, int64, io.ReadCloser)
-	Delete(key string) error
-	MustDelete(key string)
-	PresignedPutUrl(key, mimeType string, size int64) (string, error)
-	MustPresignedPutUrl(key, mimeType string, size int64) string
-	PresignedGetUrl(key string) (string, error)
-	MustPresignedGetUrl(key string) string
+	Put(id ID, name, mimeType string, size int64, content io.ReadCloser) error
+	MustPut(id ID, name, mimeType string, size int64, content io.ReadCloser)
+	Get(id ID) (string, string, int64, io.ReadCloser, error)
+	MustGet(id ID) (string, string, int64, io.ReadCloser)
+	Delete(id ID) error
+	MustDelete(id ID)
+	PresignedPutUrl(id ID, name, mimeType string, size int64) (string, error)
+	MustPresignedPutUrl(id ID, name, mimeType string, size int64) string
+	PresignedGetUrl(id ID, isDownload bool) (string, error)
+	MustPresignedGetUrl(id ID, isDownload bool) string
 }
 
 type LocalClient interface {
 	Client
+	Endpoints() []*app.Endpoint
 	DeleteStore() error
 	MustDeleteStore()
 }
 
-func NewLocalClient(dir string) LocalClient {
+func NewLocalClient(preBaseUrl, dir string) LocalClient {
 	PanicIf(dir == "" || dir == ".", "dir must be a named directory")
 	dir, err := filepath.Abs(dir)
 	PanicOn(err)
@@ -53,41 +52,44 @@ func NewLocalClient(dir string) LocalClient {
 		json.MustUnmarshalReader(f, &info)
 	}
 	return &localClient{
-		dir:     dir,
-		mtx:     &sync.Mutex{},
-		objInfo: info,
+		dir:        dir,
+		objMtx:     &sync.Mutex{},
+		objInfo:    info,
+		preMtx:     &sync.Mutex{},
+		preInfo:    map[string]objInfo{},
+		preBaseUrl: preBaseUrl + app.ApiPathPrefix,
 	}
 }
 
 type objInfo struct {
+	Name     string
 	MimeType string
 	Size     int64
 }
 
 type localClient struct {
-	dir                 string
-	mtx                 *sync.Mutex
-	objInfo             map[string]objInfo
-	presignedPutBaseUrl string
-	presignedGetBaseUrl string
+	dir        string
+	objMtx     *sync.Mutex
+	objInfo    map[string]objInfo
+	preMtx     *sync.Mutex
+	preInfo    map[string]objInfo
+	preBaseUrl string
 }
 
-func (c *localClient) Put(key string, mimeType string, size int64, content io.ReadCloser) error {
-	if err := checkKey(key); err != nil {
-		return err
-	}
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
+func (c *localClient) Put(id ID, name, mimeType string, size int64, content io.ReadCloser) error {
+	c.objMtx.Lock()
+	defer c.objMtx.Unlock()
 	defer content.Close()
 
+	idStr := id.String()
 	// check for duplicate
-	_, exists := c.objInfo[key]
+	_, exists := c.objInfo[id.String()]
 	if exists {
-		return Errorf("object with key: %s, already exists", key)
+		return Errorf("object with id: %s, already exists", idStr)
 	}
 
 	// write obj file
-	objFile, err := os.Create(filepath.Join(c.dir, key))
+	objFile, err := os.Create(filepath.Join(c.dir, idStr))
 	if err != nil {
 		return err
 	}
@@ -98,7 +100,8 @@ func (c *localClient) Put(key string, mimeType string, size int64, content io.Re
 		return err
 	}
 
-	c.objInfo[key] = objInfo{
+	c.objInfo[idStr] = objInfo{
+		Name:     name,
 		MimeType: mimeType,
 		Size:     size,
 	}
@@ -125,83 +128,96 @@ func (c *localClient) Put(key string, mimeType string, size int64, content io.Re
 	return err
 }
 
-func (c *localClient) MustPut(key string, mimeType string, size int64, content io.ReadCloser) {
-	PanicOn(c.Put(key, mimeType, size, content))
+func (c *localClient) MustPut(id ID, name, mimeType string, size int64, content io.ReadCloser) {
+	PanicOn(c.Put(id, name, mimeType, size, content))
 }
 
-func (c *localClient) Get(key string) (string, int64, io.ReadCloser, error) {
-	if err := checkKey(key); err != nil {
-		return "", 0, nil, err
-	}
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
+func (c *localClient) Get(id ID) (string, string, int64, io.ReadCloser, error) {
+	c.objMtx.Lock()
+	defer c.objMtx.Unlock()
 
-	info, exists := c.objInfo[key]
+	idStr := id.String()
+	info, exists := c.objInfo[idStr]
 	if !exists {
-		return "", 0, nil, Errorf("object with key: %s, does not exist", key)
+		return "", "", 0, nil, Errorf("object with id: %s, does not exist", idStr)
 	}
 
-	objFile, err := os.Open(filepath.Join(c.dir, key))
+	objFile, err := os.Open(filepath.Join(c.dir, idStr))
 	if err != nil {
-		return "", 0, nil, err
+		return "", "", 0, nil, err
 	}
 
-	return info.MimeType, info.Size, objFile, nil
+	return info.Name, info.MimeType, info.Size, objFile, nil
 }
 
-func (c *localClient) MustGet(key string) (string, int64, io.ReadCloser) {
-	mimeType, size, content, err := c.Get(key)
+func (c *localClient) MustGet(id ID) (string, string, int64, io.ReadCloser) {
+	name, mimeType, size, content, err := c.Get(id)
 	PanicOn(err)
-	return mimeType, size, content
+	return name, mimeType, size, content
 }
 
-func (c *localClient) Delete(key string) error {
-	if err := checkKey(key); err != nil {
-		return err
-	}
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
+func (c *localClient) Delete(id ID) error {
+	c.objMtx.Lock()
+	defer c.objMtx.Unlock()
 
-	_, exists := c.objInfo[key]
+	idStr := id.String()
+	_, exists := c.objInfo[idStr]
 	if !exists {
-		return Errorf("object with key: %s, does not exist", key)
+		return Errorf("object with id: %s, does not exist", idStr)
 	}
 
-	if err := os.Remove(filepath.Join(c.dir, key)); err != nil {
+	if err := os.Remove(filepath.Join(c.dir, idStr)); err != nil {
 		return err
 	}
 
-	delete(c.objInfo, key)
+	delete(c.objInfo, idStr)
 	return nil
 }
 
-func (c *localClient) MustDelete(key string) {
-	PanicOn(c.Delete(key))
+func (c *localClient) MustDelete(id ID) {
+	PanicOn(c.Delete(id))
 }
 
-func (c *localClient) PresignedPutUrl(key string, mimeType string, size int64) (string, error) {
-	return "", localErr
+func (c *localClient) PresignedPutUrl(id ID, name, mimeType string, size int64) (string, error) {
+	c.preMtx.Lock()
+	defer c.preMtx.Unlock()
+	idStr := id.String()
+	_, preExists := c.preInfo[idStr]
+	_, objExists := c.objInfo[idStr]
+	if preExists || objExists {
+		return "", Errorf("id already in use")
+	}
+	c.preInfo[idStr] = objInfo{
+		Name:     name,
+		MimeType: mimeType,
+		Size:     size,
+	}
+	return Sprintf("%s%s?id=%s", c.preBaseUrl, localPrePutPath, idStr), nil
 }
 
-func (c *localClient) MustPresignedPutUrl(key string, mimeType string, size int64) string {
-	str, err := c.PresignedPutUrl(key, mimeType, size)
+func (c *localClient) MustPresignedPutUrl(id ID, name, mimeType string, size int64) string {
+	str, err := c.PresignedPutUrl(id, name, mimeType, size)
 	PanicOn(err)
 	return str
 }
 
-func (c *localClient) PresignedGetUrl(key string) (string, error) {
-	return "", localErr
+func (c *localClient) PresignedGetUrl(id ID, isDownload bool) (string, error) {
+	idStr := id.String()
+	if _, exists := c.objInfo[idStr]; !exists {
+		return "", Errorf("no such resource")
+	}
+	return Sprintf(`%s%s?id=%s&isDownload=%v`, c.preBaseUrl, localPreGetPath, idStr, isDownload), nil
 }
 
-func (c *localClient) MustPresignedGetUrl(key string) string {
-	str, err := c.PresignedGetUrl(key)
+func (c *localClient) MustPresignedGetUrl(id ID, isDownload bool) string {
+	str, err := c.PresignedGetUrl(id, isDownload)
 	PanicOn(err)
 	return str
 }
 
 func (c *localClient) DeleteStore() error {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
+	c.objMtx.Lock()
+	defer c.objMtx.Unlock()
 
 	return os.RemoveAll(c.dir)
 }
@@ -210,9 +226,70 @@ func (c *localClient) MustDeleteStore() {
 	PanicOn(c.DeleteStore())
 }
 
-func checkKey(key string) error {
-	if strings.ToLower(key) == localStoreObjInfo {
-		return Errorf("invalid key, may not use %s", localStoreObjInfo)
+func (c *localClient) Endpoints() []*app.Endpoint {
+	return []*app.Endpoint{
+		{
+			Description:  "put an object in the store from a presigned request",
+			Path:         localPrePutPath,
+			Timeout:      5000,
+			MaxBodyBytes: app.GB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &app.Stream{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &app.Stream{}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*app.Stream)
+				query := tlbx.Req().URL.Query()
+				idStr := query.Get("id")
+				c.preMtx.Lock()
+				defer c.preMtx.Unlock()
+				info, exists := c.preInfo[idStr]
+				tlbx.BadReqIf(!exists, "unknown presigned id")
+				tlbx.BadReqIf(info.Name != args.Name, "name mismatch")
+				tlbx.BadReqIf(info.MimeType != args.Type, "mimeType mismatch")
+				tlbx.BadReqIf(info.Size != args.Size, "size mismatch")
+				defer args.Content.Close()
+				delete(c.preInfo, idStr)
+				c.MustPut(MustParseID(idStr), info.Name, info.MimeType, info.Size, args.Content)
+				return nil
+			},
+		},
+		{
+			Description:  "get an object from the store from a presigned request",
+			Path:         localPreGetPath,
+			Timeout:      5000,
+			MaxBodyBytes: app.GB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return nil
+			},
+			GetExampleArgs: func() interface{} {
+				return nil
+			},
+			GetExampleResponse: func() interface{} {
+				return &app.Stream{}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				query := tlbx.Req().URL.Query()
+				idStr := query.Get("id")
+				id := MustParseID(idStr)
+				isDownload := query.Get("isDownload") == "true"
+				name, mimeType, size, content := c.MustGet(id)
+				return &app.Stream{
+					ID:         id,
+					Name:       name,
+					Type:       mimeType,
+					Size:       size,
+					Content:    content,
+					IsDownload: isDownload,
+				}
+			},
+		},
 	}
-	return nil
 }

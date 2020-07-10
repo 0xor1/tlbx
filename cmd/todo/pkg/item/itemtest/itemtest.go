@@ -19,7 +19,7 @@ import (
 
 func Everything(t *testing.T) {
 	a := assert.New(t)
-	r := test.NewRig(config.Get(), append(listeps.Eps, itemeps.Eps...), true, nil, listeps.OnDelete)
+	r := test.NewRig(config.Get(), append(listeps.Eps, itemeps.Eps...), true, listeps.OnDelete, true, func(tlbx app.Tlbx, id ID, alias *string) error { return nil }, true, func(tlbx app.Tlbx, id ID, hasAvatar bool) error { return nil })
 	defer r.CleanUp()
 
 	testList1 := (&list.Create{

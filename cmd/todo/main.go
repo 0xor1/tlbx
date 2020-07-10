@@ -17,8 +17,11 @@ import (
 
 func main() {
 	config := config.Get()
+	eps := []*app.Endpoint{}
 	if config.IsLocal {
-		defer config.Store.(store.LocalClient).MustDeleteStore()
+		store := config.Store.(store.LocalClient)
+		defer store.MustDeleteStore()
+		eps = append(eps, store.Endpoints()...)
 	}
 	app.Run(func(c *app.Config) {
 		c.StaticDir = config.StaticDir
@@ -46,6 +49,6 @@ func main() {
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),
 		}
 		c.Log = config.Log
-		c.Endpoints = append(append(usereps.New(nil, nil, config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink), listeps.Eps...), itemeps.Eps...)
+		c.Endpoints = append(append(append(eps, usereps.New(config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink, listeps.OnDelete, true, nil, true, nil)...), listeps.Eps...), itemeps.Eps...)
 	})
 }

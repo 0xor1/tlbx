@@ -136,6 +136,22 @@ func (a *SetAlias) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
+type SetAvatar struct {
+	Avatar *app.Stream
+}
+
+func (_ *SetAvatar) Path() string {
+	return "/user/setAvatar"
+}
+
+func (a *SetAvatar) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a.Avatar, nil)
+}
+
+func (a *SetAvatar) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
+
 type SetPwd struct {
 	CurrentPwd    string `json:"currentPwd"`
 	NewPwd        string `json:"newPwd"`
@@ -228,8 +244,9 @@ type Get struct {
 }
 
 type User struct {
-	ID    ID      `json:"id"`
-	Alias *string `json:"alias"`
+	ID        ID      `json:"id"`
+	Alias     *string `json:"alias,omitempty"`
+	HasAvatar *bool   `json:"hasAvatar,omitempty"`
 }
 
 func (_ *Get) Path() string {
