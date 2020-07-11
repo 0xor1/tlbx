@@ -3,11 +3,17 @@ package usereps
 import (
 	"bytes"
 	"database/sql"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	"image/png"
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/crypt"
@@ -18,6 +24,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
+	"github.com/disintegration/imaging"
 	"github.com/go-sql-driver/mysql"
 )
 
@@ -550,7 +557,7 @@ func New(
 			Description:  "set avatar",
 			Path:         (&user.SetAvatar{}).Path(),
 			Timeout:      500,
-			MaxBodyBytes: app.KB,
+			MaxBodyBytes: app.MB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
 				return &app.Stream{}
@@ -566,14 +573,27 @@ func New(
 				defer args.Content.Close()
 				me := me.Get(tlbx)
 				srv := service.Get(tlbx)
-				if args.Size > 0 {
-					srv.Store().MustPut(me, args.Name, args.Type, args.Size, args.Content)
-				} else {
-					srv.Store().MustDelete(me)
-				}
 				tx := srv.User().Begin()
 				defer tx.Rollback()
 				user := getUser(tx, nil, &me)
+				if args.Size > 0 {
+					if *user.HasAvatar {
+						srv.Store().MustDelete(me)
+					}
+					avatar, _, err := image.Decode(args.Content)
+					PanicOn(err)
+					bounds := avatar.Bounds()
+					xDiff := bounds.Max.X - bounds.Min.X
+					yDiff := bounds.Max.Y - bounds.Min.Y
+					if xDiff != yDiff || xDiff != avatarDim || yDiff != avatarDim {
+						avatar = imaging.Fill(avatar, avatarDim, avatarDim, imaging.Center, imaging.Lanczos)
+					}
+					buff := &bytes.Buffer{}
+					PanicOn(png.Encode(buff, avatar))
+					srv.Store().MustPut(me, args.Name, "image/png", int64(buff.Len()), ioutil.NopCloser(buff))
+				} else if *user.HasAvatar == true {
+					srv.Store().MustDelete(me)
+				}
 				user.HasAvatar = ptr.Bool(args.Size > 0)
 				updateUser(tx, user)
 				tx.Commit()
@@ -601,6 +621,7 @@ var (
 	scryptP       = 1
 	scryptSaltLen = 256
 	scryptKeyLen  = 256
+	avatarDim     = 250
 )
 
 func sendActivateEmail(srv service.Layer, sendTo, from, link string) {

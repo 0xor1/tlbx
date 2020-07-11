@@ -1,7 +1,10 @@
 package usertest
 
 import (
+	"encoding/base64"
+	"io/ioutil"
 	"regexp"
+	"strings"
 	"testing"
 
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -106,6 +109,40 @@ func Everything(t *testing.T) {
 
 	me := (&user.Me{}).MustDo(c)
 	a.Equal(alias, *me.Alias)
+	a.False(*me.HasAvatar)
+
+	(&user.SetAvatar{
+		Avatar: &app.Stream{
+			ID:      me.ID,
+			Size:    49397,
+			Name:    "test.png",
+			Type:    "image/png",
+			Content: ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))),
+		},
+	}).MustDo(c)
+
+	me = (&user.Me{}).MustDo(c)
+	a.True(*me.HasAvatar)
+
+	(&user.SetAvatar{
+		Avatar: &app.Stream{
+			ID:      me.ID,
+			Size:    985927,
+			Name:    "test.png",
+			Type:    "image/png",
+			Content: ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgNotSquare))),
+		},
+	}).MustDo(c)
+
+	me = (&user.Me{}).MustDo(c)
+	a.True(*me.HasAvatar)
+
+	(&user.SetAvatar{
+		Avatar: nil,
+	}).MustDo(c)
+
+	me = (&user.Me{}).MustDo(c)
+	a.False(*me.HasAvatar)
 
 	users := (&user.Get{
 		Users: []ID{

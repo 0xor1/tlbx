@@ -245,7 +245,7 @@ func Run(configs ...func(*Config)) {
 			tlbx.BadReqIf(isStream && tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
 			if isStream {
 				s.Type = tlbx.req.Header.Get("Content-Type")
-				s.Size, err = strconv.ParseInt(tlbx.req.Header.Get("Content-Length"), 10, 64)
+				s.Size = tlbx.req.ContentLength
 				PanicOn(err)
 				s.Name = tlbx.req.Header.Get("Content-Name")
 				contentID := tlbx.req.Header.Get("Content-Id")
@@ -645,6 +645,7 @@ func (s *Stream) ToReq(method, url string) (*http.Request, error) {
 	}
 	r.Header.Add("Content-Type", s.Type)
 	r.Header.Add("Content-Length", strconv.FormatInt(s.Size, 10))
+	r.ContentLength = s.Size
 	r.Header.Add("Content-Name", s.Name)
 	r.Header.Add("Content-Id", s.ID.String())
 	if s.IsDownload {
@@ -712,7 +713,11 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 	var req *http.Request
 	var err error
 	if s, ok := args.(*Stream); ok {
-		req, err = s.ToReq(method, url)
+		if s != nil {
+			req, err = s.ToReq(method, url)
+		} else {
+			req, err = http.NewRequest(method, url, nil)
+		}
 	} else if args != nil {
 		argsBytes, err := json.Marshal(args)
 		if err != nil {
