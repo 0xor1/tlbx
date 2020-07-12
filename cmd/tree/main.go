@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/0xor1/tlbx/cmd/todo/pkg/config"
-	"github.com/0xor1/tlbx/cmd/todo/pkg/item/itemeps"
-	"github.com/0xor1/tlbx/cmd/todo/pkg/list/listeps"
+	"github.com/0xor1/tlbx/cmd/tree/pkg/config"
+	"github.com/0xor1/tlbx/cmd/tree/pkg/item/itemeps"
+	"github.com/0xor1/tlbx/cmd/tree/pkg/list/listeps"
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
@@ -24,7 +24,7 @@ func main() {
 		c.StaticDir = config.StaticDir
 		c.ContentSecurityPolicies = config.ContentSecurityPolicies
 		c.Name = "Todo"
-		c.Description = "A simple Todo list application, create multiple lists with many items which can be marked complete or uncomplete"
+		c.Description = "A simple project management web application which stores tasks in tree"
 		c.TlbxMwares = app.TlbxMwares{
 			session.BasicMware(config.SessionAuthKey64s, config.SessionEncrKey32s, config.IsLocal),
 			me.RateLimitMware(config.Cache),

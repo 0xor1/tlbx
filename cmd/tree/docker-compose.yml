@@ -1,0 +1,19 @@
+version: '3.7'
+services:
+
+  tlbx-sql-tree:
+    container_name: tlbx-sql-tree
+    build:
+      context: ../../.
+      dockerfile: cmd/tree/sql.dockerfile
+    image: tlbx-sql-tree
+    environment:
+      MYSQL_ROOT_PASSWORD: dev
+    ports:
+    - "3306:3306"
+
+  tlbx-redis-tree:
+    container_name: tlbx-redis-tree
+    image: redis:5.0.8-alpine
+    ports:
+    - "6379:6379"

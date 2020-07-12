@@ -11,6 +11,14 @@ import (
 
 type tlbxKey struct{}
 
+func BasicMware(authKey64s, encrKey32s [][]byte, isLocal bool) func(app.Tlbx) {
+	return Mware(func(c *Config) {
+		c.AuthKey64s = authKey64s
+		c.EncrKey32s = encrKey32s
+		c.Secure = !isLocal
+	})
+}
+
 func Mware(configs ...func(*Config)) func(app.Tlbx) {
 	c := config(configs...)
 	AuthEncrKeyPairs := make([][]byte, 0, len(c.AuthKey64s)*2)

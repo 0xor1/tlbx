@@ -166,10 +166,7 @@ func NewRig(
 	}
 	go app.Run(func(c *app.Config) {
 		c.TlbxMwares = app.TlbxMwares{
-			session.Mware(func(c *session.Config) {
-				c.AuthKey64s = config.SessionAuthKey64s
-				c.EncrKey32s = config.SessionEncrKey32s
-			}),
+			session.BasicMware(config.SessionAuthKey64s, config.SessionEncrKey32s, config.IsLocal),
 			ratelimit.Mware(func(c *ratelimit.Config) {
 				c.KeyGen = func(tlbx app.Tlbx) string {
 					var key string
