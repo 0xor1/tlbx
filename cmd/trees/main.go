@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/0xor1/tlbx/cmd/tree/pkg/config"
-	"github.com/0xor1/tlbx/cmd/tree/pkg/item/itemeps"
-	"github.com/0xor1/tlbx/cmd/tree/pkg/list/listeps"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/item/itemeps"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/list/listeps"
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
@@ -24,7 +24,7 @@ func main() {
 		c.StaticDir = config.StaticDir
 		c.ContentSecurityPolicies = config.ContentSecurityPolicies
 		c.Name = "Todo"
-		c.Description = "A simple project management web application which stores tasks in tree"
+		c.Description = "A simple project management web application which stores tasks in trees"
 		c.TlbxMwares = app.TlbxMwares{
 			session.BasicMware(config.SessionAuthKey64s, config.SessionEncrKey32s, config.IsLocal),
 			me.RateLimitMware(config.Cache),
