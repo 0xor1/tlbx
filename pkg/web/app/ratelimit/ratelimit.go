@@ -8,8 +8,23 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/gomodule/redigo/redis"
+	"github.com/tomasen/realip"
 )
+
+func MeMware(cache iredis.Pool) func(app.Tlbx) {
+	return Mware(func(c *Config) {
+		c.KeyGen = func(tlbx app.Tlbx) string {
+			var key string
+			if me.Exists(tlbx) {
+				key = me.Get(tlbx).String()
+			}
+			return Sprintf("rate-limiter-%s-%s", realip.RealIP(tlbx.Req()), key)
+		}
+		c.Pool = cache
+	})
+}
 
 func Mware(configs ...func(*Config)) func(app.Tlbx) {
 	c := config(configs...)

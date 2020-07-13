@@ -6,9 +6,9 @@ import (
 	"github.com/0xor1/tlbx/cmd/games/pkg/game"
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
-	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 		c.Description = "a web app to play turn based multiplayer games"
 		c.TlbxMwares = app.TlbxMwares{
 			session.BasicMware(config.SessionAuthKey64s, config.SessionEncrKey32s, config.IsLocal),
-			me.RateLimitMware(config.Cache),
+			ratelimit.MeMware(config.Cache),
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),
 		}
 		c.Log = config.Log
