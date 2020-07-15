@@ -143,6 +143,7 @@ func NewRig(
 	config *config.Config,
 	eps []*app.Endpoint,
 	useUsers bool,
+	onActivate func(app.Tlbx, *user.User),
 	onDelete func(app.Tlbx, ID),
 	enableAliases bool,
 	onSetAlias func(app.Tlbx, ID, *string) error,
@@ -162,7 +163,7 @@ func NewRig(
 
 	eps = append(eps, r.store.Endpoints()...)
 	if useUsers {
-		eps = append(eps, usereps.New(config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink, onDelete, enableAliases, onSetAlias, enableAvatars, onSetAvatar)...)
+		eps = append(eps, usereps.New(config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink, onActivate, onDelete, enableAliases, onSetAlias, enableAvatars, onSetAvatar)...)
 	}
 	go app.Run(func(c *app.Config) {
 		c.TlbxMwares = app.TlbxMwares{

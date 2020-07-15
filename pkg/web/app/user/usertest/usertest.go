@@ -17,7 +17,7 @@ import (
 )
 
 func Everything(t *testing.T) {
-	r := test.NewRig(config.GetProcessed(config.GetBase()), nil, true, func(tlbx app.Tlbx, id ID) {}, true, func(tlbx app.Tlbx, id ID, alias *string) error { return nil }, true, func(tlbx app.Tlbx, id ID, hasAvatar bool) error { return nil })
+	r := test.NewRig(config.GetProcessed(config.GetBase()), nil, true, func(tlbx app.Tlbx, user *user.User) {}, func(tlbx app.Tlbx, id ID) {}, true, func(tlbx app.Tlbx, id ID, alias *string) error { return nil }, true, func(tlbx app.Tlbx, id ID, hasAvatar bool) error { return nil })
 	defer r.CleanUp()
 
 	a := assert.New(t)

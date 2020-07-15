@@ -32,6 +32,7 @@ func New(
 	fromEmail,
 	activateFmtLink,
 	confirmChangeEmailFmtLink string,
+	onActivate func(app.Tlbx, *user.User),
 	onDelete func(app.Tlbx, ID),
 	enableAliases bool,
 	onSetAlias func(app.Tlbx, ID, *string) error,
@@ -152,6 +153,9 @@ func New(
 				user.ActivatedOn = &now
 				user.ActivateCode = nil
 				updateUser(tx, user)
+				if onActivate != nil {
+					onActivate(tlbx, &user.User)
+				}
 				tx.Commit()
 				return nil
 			},
@@ -594,7 +598,11 @@ func New(
 				} else if *user.HasAvatar == true {
 					srv.Store().MustDelete(me)
 				}
-				user.HasAvatar = ptr.Bool(args.Size > 0)
+				nowHasAvatar := args.Size > 0
+				if *user.HasAvatar != nowHasAvatar {
+					user.HasAvatar = ptr.Bool(nowHasAvatar)
+					onSetAvatar(tlbx, user.ID, nowHasAvatar)
+				}
 				updateUser(tx, user)
 				tx.Commit()
 				return nil

@@ -12,3 +12,8 @@ COPY cmd/games/sql/data.sql /docker-entrypoint-initdb.d/data_games.sql
 COPY cmd/todo/sql/users.sql /docker-entrypoint-initdb.d/users_todo.sql
 COPY cmd/todo/sql/pwds.sql /docker-entrypoint-initdb.d/pwds_todo.sql
 COPY cmd/todo/sql/data.sql /docker-entrypoint-initdb.d/data_todo.sql
+
+# trees sqls
+COPY cmd/trees/sql/users.sql /docker-entrypoint-initdb.d/users_trees.sql
+COPY cmd/trees/sql/pwds.sql /docker-entrypoint-initdb.d/pwds_trees.sql
+COPY cmd/trees/sql/data.sql /docker-entrypoint-initdb.d/data_trees.sql
