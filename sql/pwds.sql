@@ -1,5 +1,7 @@
 DROP DATABASE IF EXISTS pwds;
-CREATE DATABASE pwds;
+CREATE DATABASE pwds
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_general_ci';
 USE pwds;
 
 DROP TABLE IF EXISTS pwds;

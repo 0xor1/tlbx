@@ -1,6 +1,8 @@
-DROP DATABASE IF EXISTS pwds_todo;
-CREATE DATABASE pwds_todo;
-USE pwds_todo;
+DROP DATABASE IF EXISTS todo_pwds;
+CREATE DATABASE todo_pwds
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_unicode_ci';
+USE todo_pwds;
 
 DROP TABLE IF EXISTS pwds;
 CREATE TABLE pwds(
@@ -13,10 +15,10 @@ CREATE TABLE pwds(
     PRIMARY KEY (id)
 );
 
-DROP USER IF EXISTS 'pwds_todo'@'%';
-CREATE USER 'pwds_todo'@'%' IDENTIFIED BY 'C0-Mm-0n-Pwd5';
-GRANT SELECT ON pwds_todo.* TO 'pwds_todo'@'%';
-GRANT INSERT ON pwds_todo.* TO 'pwds_todo'@'%';
-GRANT UPDATE ON pwds_todo.* TO 'pwds_todo'@'%';
-GRANT DELETE ON pwds_todo.* TO 'pwds_todo'@'%';
-GRANT EXECUTE ON pwds_todo.* TO 'pwds_todo'@'%';
+DROP USER IF EXISTS 'todo_pwds'@'%';
+CREATE USER 'todo_pwds'@'%' IDENTIFIED BY 'C0-Mm-0n-Pwd5';
+GRANT SELECT ON todo_pwds.* TO 'todo_pwds'@'%';
+GRANT INSERT ON todo_pwds.* TO 'todo_pwds'@'%';
+GRANT UPDATE ON todo_pwds.* TO 'todo_pwds'@'%';
+GRANT DELETE ON todo_pwds.* TO 'todo_pwds'@'%';
+GRANT EXECUTE ON todo_pwds.* TO 'todo_pwds'@'%';

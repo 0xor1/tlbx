@@ -1,6 +1,8 @@
-DROP DATABASE IF EXISTS data_games;
-CREATE DATABASE data_games;
-USE data_games;
+DROP DATABASE IF EXISTS games_data;
+CREATE DATABASE games_data
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_unicode_ci';
+USE games_data;
 
 DROP TABLE IF EXISTS games;
 CREATE TABLE games (
@@ -21,10 +23,10 @@ CREATE TABLE players (
     FOREIGN KEY (game) REFERENCES games (id) ON DELETE CASCADE
 );
 
-DROP USER IF EXISTS 'data_games'@'%';
-CREATE USER 'data_games'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
-GRANT SELECT ON data_games.* TO 'data_games'@'%';
-GRANT INSERT ON data_games.* TO 'data_games'@'%';
-GRANT UPDATE ON data_games.* TO 'data_games'@'%';
-GRANT DELETE ON data_games.* TO 'data_games'@'%';
-GRANT EXECUTE ON data_games.* TO 'data_games'@'%';
+DROP USER IF EXISTS 'games_data'@'%';
+CREATE USER 'games_data'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
+GRANT SELECT ON games_data.* TO 'games_data'@'%';
+GRANT INSERT ON games_data.* TO 'games_data'@'%';
+GRANT UPDATE ON games_data.* TO 'games_data'@'%';
+GRANT DELETE ON games_data.* TO 'games_data'@'%';
+GRANT EXECUTE ON games_data.* TO 'games_data'@'%';

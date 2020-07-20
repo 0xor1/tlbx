@@ -1,7 +1,7 @@
-package accounteps
+package projecteps
 
 import (
-	"github.com/0xor1/tlbx/cmd/trees/pkg/account"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
@@ -11,8 +11,8 @@ import (
 var (
 	Eps = []*app.Endpoint{
 		{
-			Description:  "Create a new account",
-			Path:         (&account.Create{}).Path(),
+			Description:  "Create a new project",
+			Path:         (&project.Create{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,

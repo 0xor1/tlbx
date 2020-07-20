@@ -6,6 +6,6 @@ import (
 
 func Get(file ...string) *config.Config {
 	c := config.GetBase(file...)
-	c.SetDefault("data.primary", "data_games:C0-Mm-0n-Da-Ta@tcp(localhost:3306)/data_games?parseTime=true&loc=UTC&multiStatements=true")
+	c.SetDefault("data.primary", "games_data:C0-Mm-0n-Da-Ta@tcp(localhost:3306)/games_data?parseTime=true&loc=UTC&multiStatements=true")
 	return config.GetProcessed(c)
 }

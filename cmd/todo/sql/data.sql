@@ -1,6 +1,8 @@
-DROP DATABASE IF EXISTS data_todo;
-CREATE DATABASE data_todo;
-USE data_todo;
+DROP DATABASE IF EXISTS todo_data;
+CREATE DATABASE todo_data
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_unicode_ci';
+USE todo_data;
 
 DROP TABLE IF EXISTS lists;
 CREATE TABLE lists (
@@ -30,10 +32,10 @@ CREATE TABLE items (
     UNIQUE INDEX id (user, list, id)
 );
 
-DROP USER IF EXISTS 'data_todo'@'%';
-CREATE USER 'data_todo'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
-GRANT SELECT ON data_todo.* TO 'data_todo'@'%';
-GRANT INSERT ON data_todo.* TO 'data_todo'@'%';
-GRANT UPDATE ON data_todo.* TO 'data_todo'@'%';
-GRANT DELETE ON data_todo.* TO 'data_todo'@'%';
-GRANT EXECUTE ON data_todo.* TO 'data_todo'@'%';
+DROP USER IF EXISTS 'todo_data'@'%';
+CREATE USER 'todo_data'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
+GRANT SELECT ON todo_data.* TO 'todo_data'@'%';
+GRANT INSERT ON todo_data.* TO 'todo_data'@'%';
+GRANT UPDATE ON todo_data.* TO 'todo_data'@'%';
+GRANT DELETE ON todo_data.* TO 'todo_data'@'%';
+GRANT EXECUTE ON todo_data.* TO 'todo_data'@'%';

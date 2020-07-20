@@ -1,4 +1,4 @@
-package account
+package project
 
 import (
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -10,7 +10,7 @@ type Create struct {
 }
 
 func (_ *Create) Path() string {
-	return "/account/create"
+	return "/project/create"
 }
 
 func (a *Create) Do(c *app.Client) (interface{}, error) {

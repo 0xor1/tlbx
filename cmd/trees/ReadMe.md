@@ -1,7 +1,7 @@
 trees
 ====
 
-a simple project management web application which stores tasks in trees.
+a simple project management app which stores tasks in trees.
 
 ## run
 

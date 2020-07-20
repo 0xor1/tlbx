@@ -1,5 +1,7 @@
 DROP DATABASE IF EXISTS data;
-CREATE DATABASE data;
+CREATE DATABASE data
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_general_ci';
 USE data;
 
 DROP TABLE IF EXISTS data;

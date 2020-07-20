@@ -1,6 +1,8 @@
-DROP DATABASE IF EXISTS users_trees;
-CREATE DATABASE users_trees;
-USE users_trees;
+DROP DATABASE IF EXISTS trees_users;
+CREATE DATABASE trees_users
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_unicode_ci';
+USE trees_users;
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
@@ -18,10 +20,10 @@ CREATE TABLE users (
     UNIQUE INDEX id (id)
 );
 
-DROP USER IF EXISTS 'users_trees'@'%';
-CREATE USER 'users_trees'@'%' IDENTIFIED BY 'C0-Mm-0n-U5-3r5';
-GRANT SELECT ON users_trees.* TO 'users_trees'@'%';
-GRANT INSERT ON users_trees.* TO 'users_trees'@'%';
-GRANT UPDATE ON users_trees.* TO 'users_trees'@'%';
-GRANT DELETE ON users_trees.* TO 'users_trees'@'%';
-GRANT EXECUTE ON users_trees.* TO 'users_trees'@'%';
+DROP USER IF EXISTS 'trees_users'@'%';
+CREATE USER 'trees_users'@'%' IDENTIFIED BY 'C0-Mm-0n-U5-3r5';
+GRANT SELECT ON trees_users.* TO 'trees_users'@'%';
+GRANT INSERT ON trees_users.* TO 'trees_users'@'%';
+GRANT UPDATE ON trees_users.* TO 'trees_users'@'%';
+GRANT DELETE ON trees_users.* TO 'trees_users'@'%';
+GRANT EXECUTE ON trees_users.* TO 'trees_users'@'%';

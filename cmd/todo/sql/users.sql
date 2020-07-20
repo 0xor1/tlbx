@@ -1,6 +1,8 @@
-DROP DATABASE IF EXISTS users_todo;
-CREATE DATABASE users_todo;
-USE users_todo;
+DROP DATABASE IF EXISTS todo_users;
+CREATE DATABASE todo_users
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_unicode_ci';
+USE todo_users;
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
@@ -18,10 +20,10 @@ CREATE TABLE users (
     UNIQUE INDEX id (id)
 );
 
-DROP USER IF EXISTS 'users_todo'@'%';
-CREATE USER 'users_todo'@'%' IDENTIFIED BY 'C0-Mm-0n-U5-3r5';
-GRANT SELECT ON users_todo.* TO 'users_todo'@'%';
-GRANT INSERT ON users_todo.* TO 'users_todo'@'%';
-GRANT UPDATE ON users_todo.* TO 'users_todo'@'%';
-GRANT DELETE ON users_todo.* TO 'users_todo'@'%';
-GRANT EXECUTE ON users_todo.* TO 'users_todo'@'%';
+DROP USER IF EXISTS 'todo_users'@'%';
+CREATE USER 'todo_users'@'%' IDENTIFIED BY 'C0-Mm-0n-U5-3r5';
+GRANT SELECT ON todo_users.* TO 'todo_users'@'%';
+GRANT INSERT ON todo_users.* TO 'todo_users'@'%';
+GRANT UPDATE ON todo_users.* TO 'todo_users'@'%';
+GRANT DELETE ON todo_users.* TO 'todo_users'@'%';
+GRANT EXECUTE ON todo_users.* TO 'todo_users'@'%';
