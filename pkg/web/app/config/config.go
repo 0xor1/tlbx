@@ -39,8 +39,8 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("confirmChangeEmailFmtLink", "http://localhost:8081/#/confirmChangeEmail?me=%s&code=%s")
 	c.SetDefault("staticDir", "client/dist")
 	c.SetDefault("contentSecurityPolicies", []interface{}{
-		"style-src-elem https://fonts.googleapis.com http://localhost:8080 https://*.ngrok.io",
-		"font-src https://fonts.gstatic.com",
+		"style-src-elem 'self' https://fonts.googleapis.com",
+		"font-src 'self' https://fonts.gstatic.com",
 	})
 	c.SetDefault("log.type", "local")
 	c.SetDefault("email.type", "")
