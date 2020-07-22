@@ -37,6 +37,7 @@ func New(
 	enableAliases bool,
 	onSetAlias func(app.Tlbx, ID, *string) error,
 	enableAvatars bool,
+	avatarBucket, avatarPrefix string,
 	onSetAvatar func(app.Tlbx, ID, bool) error,
 ) []*app.Endpoint {
 	eps := []*app.Endpoint{
@@ -557,57 +558,111 @@ func New(
 		})
 	}
 	if enableAvatars {
-		eps = append(eps, &app.Endpoint{
-			Description:  "set avatar",
-			Path:         (&user.SetAvatar{}).Path(),
-			Timeout:      500,
-			MaxBodyBytes: app.MB,
-			IsPrivate:    false,
-			GetDefaultArgs: func() interface{} {
-				return &app.Stream{}
-			},
-			GetExampleArgs: func() interface{} {
-				return &app.Stream{}
-			},
-			GetExampleResponse: func() interface{} {
-				return nil
-			},
-			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*app.Stream)
-				defer args.Content.Close()
-				me := me.Get(tlbx)
-				srv := service.Get(tlbx)
-				tx := srv.User().Begin()
-				defer tx.Rollback()
-				user := getUser(tx, nil, &me)
-				if args.Size > 0 {
-					if *user.HasAvatar {
-						srv.Store().MustDelete(me)
+		eps = append(eps,
+			&app.Endpoint{
+				Description:  "set avatar",
+				Path:         (&user.SetAvatar{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: app.MB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return &app.Stream{}
+				},
+				GetExampleArgs: func() interface{} {
+					return &app.Stream{}
+				},
+				GetExampleResponse: func() interface{} {
+					return nil
+				},
+				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+					args := a.(*app.Stream)
+					defer args.Content.Close()
+					me := me.Get(tlbx)
+					srv := service.Get(tlbx)
+					tx := srv.User().Begin()
+					defer tx.Rollback()
+					user := getUser(tx, nil, &me)
+					if args.Size > 0 {
+						if *user.HasAvatar {
+							srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
+						}
+						avatar, _, err := image.Decode(args.Content)
+						PanicOn(err)
+						bounds := avatar.Bounds()
+						xDiff := bounds.Max.X - bounds.Min.X
+						yDiff := bounds.Max.Y - bounds.Min.Y
+						if xDiff != yDiff || xDiff != avatarDim || yDiff != avatarDim {
+							avatar = imaging.Fill(avatar, avatarDim, avatarDim, imaging.Center, imaging.Lanczos)
+						}
+						buff := &bytes.Buffer{}
+						PanicOn(png.Encode(buff, avatar))
+						srv.Store().MustPut(avatarBucket, avatarPrefix, me, args.Name, "image/png", int64(buff.Len()), ioutil.NopCloser(buff))
+					} else if *user.HasAvatar == true {
+						srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
 					}
-					avatar, _, err := image.Decode(args.Content)
-					PanicOn(err)
-					bounds := avatar.Bounds()
-					xDiff := bounds.Max.X - bounds.Min.X
-					yDiff := bounds.Max.Y - bounds.Min.Y
-					if xDiff != yDiff || xDiff != avatarDim || yDiff != avatarDim {
-						avatar = imaging.Fill(avatar, avatarDim, avatarDim, imaging.Center, imaging.Lanczos)
+					nowHasAvatar := args.Size > 0
+					if *user.HasAvatar != nowHasAvatar {
+						user.HasAvatar = ptr.Bool(nowHasAvatar)
+						onSetAvatar(tlbx, user.ID, nowHasAvatar)
 					}
-					buff := &bytes.Buffer{}
-					PanicOn(png.Encode(buff, avatar))
-					srv.Store().MustPut(me, args.Name, "image/png", int64(buff.Len()), ioutil.NopCloser(buff))
-				} else if *user.HasAvatar == true {
-					srv.Store().MustDelete(me)
-				}
-				nowHasAvatar := args.Size > 0
-				if *user.HasAvatar != nowHasAvatar {
-					user.HasAvatar = ptr.Bool(nowHasAvatar)
-					onSetAvatar(tlbx, user.ID, nowHasAvatar)
-				}
-				updateUser(tx, user)
-				tx.Commit()
-				return nil
+					updateUser(tx, user)
+					tx.Commit()
+					return nil
+				},
 			},
-		})
+			&app.Endpoint{
+				Description:  "get avatar",
+				Path:         (&user.GetAvatar{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: app.KB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return &user.GetAvatar{}
+				},
+				GetExampleArgs: func() interface{} {
+					return &user.GetAvatar{
+						User: app.ExampleID(),
+					}
+				},
+				GetExampleResponse: func() interface{} {
+					return &app.Stream{}
+				},
+				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+					args := a.(*app.Stream)
+					defer args.Content.Close()
+					me := me.Get(tlbx)
+					srv := service.Get(tlbx)
+					tx := srv.User().Begin()
+					defer tx.Rollback()
+					user := getUser(tx, nil, &me)
+					if args.Size > 0 {
+						if *user.HasAvatar {
+							srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
+						}
+						avatar, _, err := image.Decode(args.Content)
+						PanicOn(err)
+						bounds := avatar.Bounds()
+						xDiff := bounds.Max.X - bounds.Min.X
+						yDiff := bounds.Max.Y - bounds.Min.Y
+						if xDiff != yDiff || xDiff != avatarDim || yDiff != avatarDim {
+							avatar = imaging.Fill(avatar, avatarDim, avatarDim, imaging.Center, imaging.Lanczos)
+						}
+						buff := &bytes.Buffer{}
+						PanicOn(png.Encode(buff, avatar))
+						srv.Store().MustPut(avatarBucket, avatarPrefix, me, args.Name, "image/png", int64(buff.Len()), ioutil.NopCloser(buff))
+					} else if *user.HasAvatar == true {
+						srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
+					}
+					nowHasAvatar := args.Size > 0
+					if *user.HasAvatar != nowHasAvatar {
+						user.HasAvatar = ptr.Bool(nowHasAvatar)
+						onSetAvatar(tlbx, user.ID, nowHasAvatar)
+					}
+					updateUser(tx, user)
+					tx.Commit()
+					return nil
+				},
+			})
 	}
 	return eps
 }

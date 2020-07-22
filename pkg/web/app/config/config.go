@@ -18,6 +18,8 @@ type Config struct {
 	FromEmail                 string
 	ActivateFmtLink           string
 	ConfirmChangeEmailFmtLink string
+	AvatarBucket              string
+	AvatarPrefix              string
 	StaticDir                 string
 	ContentSecurityPolicies   []string
 	SessionAuthKey64s         [][]byte
@@ -36,6 +38,8 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("isLocal", true)
 	c.SetDefault("fromEmail", "test@test.localhost")
 	c.SetDefault("activateFmtLink", "http://localhost:8081/#/activate?email=%s&code=%s")
+	c.SetDefault("avatar.bucket", "avatars")
+	c.SetDefault("avatar.prefix", "avatars")
 	c.SetDefault("confirmChangeEmailFmtLink", "http://localhost:8081/#/confirmChangeEmail?me=%s&code=%s")
 	c.SetDefault("staticDir", "client/dist")
 	c.SetDefault("contentSecurityPolicies", []interface{}{

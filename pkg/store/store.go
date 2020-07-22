@@ -18,16 +18,16 @@ const (
 )
 
 type Client interface {
-	Put(id ID, name, mimeType string, size int64, content io.ReadCloser) error
-	MustPut(id ID, name, mimeType string, size int64, content io.ReadCloser)
-	Get(id ID) (string, string, int64, io.ReadCloser, error)
-	MustGet(id ID) (string, string, int64, io.ReadCloser)
-	Delete(id ID) error
-	MustDelete(id ID)
-	PresignedPutUrl(id ID, name, mimeType string, size int64) (string, error)
-	MustPresignedPutUrl(id ID, name, mimeType string, size int64) string
-	PresignedGetUrl(id ID, isDownload bool) (string, error)
-	MustPresignedGetUrl(id ID, isDownload bool) string
+	Put(bucket, prefix string, id ID, name, mimeType string, size int64, content io.ReadCloser) error
+	MustPut(bucket, prefix string, id ID, name, mimeType string, size int64, content io.ReadCloser)
+	Get(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser, error)
+	MustGet(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser)
+	Delete(bucket, prefix string, id ID) error
+	MustDelete(bucket, prefix string, id ID)
+	PresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) (string, error)
+	MustPresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) string
+	PresignedGetUrl(bucket, prefix string, id ID, isDownload bool) (string, error)
+	MustPresignedGetUrl(bucket, prefix string, id ID, isDownload bool) string
 }
 
 type LocalClient interface {
@@ -76,20 +76,20 @@ type localClient struct {
 	preBaseUrl string
 }
 
-func (c *localClient) Put(id ID, name, mimeType string, size int64, content io.ReadCloser) error {
+func (c *localClient) Put(bucket, prefix string, id ID, name, mimeType string, size int64, content io.ReadCloser) error {
 	c.objMtx.Lock()
 	defer c.objMtx.Unlock()
 	defer content.Close()
 
-	idStr := id.String()
+	fullID := filepath.Join(bucket, prefix, id.String())
 	// check for duplicate
-	_, exists := c.objInfo[id.String()]
+	_, exists := c.objInfo[fullID]
 	if exists {
-		return Errorf("object with id: %s, already exists", idStr)
+		return Errorf("object with fullID: %s, already exists", fullID)
 	}
 
 	// write obj file
-	objFile, err := os.Create(filepath.Join(c.dir, idStr))
+	objFile, err := os.Create(filepath.Join(c.dir, fullID))
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (c *localClient) Put(id ID, name, mimeType string, size int64, content io.R
 		return err
 	}
 
-	c.objInfo[idStr] = objInfo{
+	c.objInfo[fullID] = objInfo{
 		Name:     name,
 		MimeType: mimeType,
 		Size:     size,
@@ -128,21 +128,21 @@ func (c *localClient) Put(id ID, name, mimeType string, size int64, content io.R
 	return err
 }
 
-func (c *localClient) MustPut(id ID, name, mimeType string, size int64, content io.ReadCloser) {
-	PanicOn(c.Put(id, name, mimeType, size, content))
+func (c *localClient) MustPut(bucket, prefix string, id ID, name, mimeType string, size int64, content io.ReadCloser) {
+	PanicOn(c.Put(bucket, prefix, id, name, mimeType, size, content))
 }
 
-func (c *localClient) Get(id ID) (string, string, int64, io.ReadCloser, error) {
+func (c *localClient) Get(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser, error) {
 	c.objMtx.Lock()
 	defer c.objMtx.Unlock()
 
-	idStr := id.String()
-	info, exists := c.objInfo[idStr]
+	fullID := filepath.Join(bucket, prefix, id.String())
+	info, exists := c.objInfo[fullID]
 	if !exists {
-		return "", "", 0, nil, Errorf("object with id: %s, does not exist", idStr)
+		return "", "", 0, nil, Errorf("object with fullID: %s, does not exist", fullID)
 	}
 
-	objFile, err := os.Open(filepath.Join(c.dir, idStr))
+	objFile, err := os.Open(filepath.Join(c.dir, fullID))
 	if err != nil {
 		return "", "", 0, nil, err
 	}
@@ -150,13 +150,13 @@ func (c *localClient) Get(id ID) (string, string, int64, io.ReadCloser, error) {
 	return info.Name, info.MimeType, info.Size, objFile, nil
 }
 
-func (c *localClient) MustGet(id ID) (string, string, int64, io.ReadCloser) {
-	name, mimeType, size, content, err := c.Get(id)
+func (c *localClient) MustGet(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser) {
+	name, mimeType, size, content, err := c.Get(bucket, prefix, id)
 	PanicOn(err)
 	return name, mimeType, size, content
 }
 
-func (c *localClient) Delete(id ID) error {
+func (c *localClient) Delete(bucket, prefix string, id ID) error {
 	c.objMtx.Lock()
 	defer c.objMtx.Unlock()
 
@@ -174,11 +174,11 @@ func (c *localClient) Delete(id ID) error {
 	return nil
 }
 
-func (c *localClient) MustDelete(id ID) {
-	PanicOn(c.Delete(id))
+func (c *localClient) MustDelete(bucket, prefix string, id ID) {
+	PanicOn(c.Delete(bucket, prefix, id))
 }
 
-func (c *localClient) PresignedPutUrl(id ID, name, mimeType string, size int64) (string, error) {
+func (c *localClient) PresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) (string, error) {
 	c.preMtx.Lock()
 	defer c.preMtx.Unlock()
 	idStr := id.String()
@@ -195,13 +195,13 @@ func (c *localClient) PresignedPutUrl(id ID, name, mimeType string, size int64) 
 	return Sprintf("%s%s?id=%s", c.preBaseUrl, localPrePutPath, idStr), nil
 }
 
-func (c *localClient) MustPresignedPutUrl(id ID, name, mimeType string, size int64) string {
-	str, err := c.PresignedPutUrl(id, name, mimeType, size)
+func (c *localClient) MustPresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) string {
+	str, err := c.PresignedPutUrl(bucket, prefix, id, name, mimeType, size)
 	PanicOn(err)
 	return str
 }
 
-func (c *localClient) PresignedGetUrl(id ID, isDownload bool) (string, error) {
+func (c *localClient) PresignedGetUrl(bucket, prefix string, id ID, isDownload bool) (string, error) {
 	idStr := id.String()
 	if _, exists := c.objInfo[idStr]; !exists {
 		return "", Errorf("no such resource")
@@ -209,8 +209,8 @@ func (c *localClient) PresignedGetUrl(id ID, isDownload bool) (string, error) {
 	return Sprintf(`%s%s?id=%s&isDownload=%v`, c.preBaseUrl, localPreGetPath, idStr, isDownload), nil
 }
 
-func (c *localClient) MustPresignedGetUrl(id ID, isDownload bool) string {
-	str, err := c.PresignedGetUrl(id, isDownload)
+func (c *localClient) MustPresignedGetUrl(bucket, prefix string, id ID, isDownload bool) string {
+	str, err := c.PresignedGetUrl(bucket, prefix, id, isDownload)
 	PanicOn(err)
 	return str
 }

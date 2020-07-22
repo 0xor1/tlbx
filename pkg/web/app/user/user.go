@@ -243,12 +243,6 @@ type Get struct {
 	Users []ID `json:"users"`
 }
 
-type User struct {
-	ID        ID      `json:"id"`
-	Alias     *string `json:"alias,omitempty"`
-	HasAvatar *bool   `json:"hasAvatar,omitempty"`
-}
-
 func (_ *Get) Path() string {
 	return "/user/get"
 }
@@ -263,4 +257,30 @@ func (a *Get) MustDo(c *app.Client) []*User {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
+}
+
+type GetAvatar struct {
+	User ID `json:"user"`
+}
+
+func (_ *GetAvatar) Path() string {
+	return "/user/getAvatar"
+}
+
+func (a *GetAvatar) Do(c *app.Client) (*app.Stream, error) {
+	res := &app.Stream{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *GetAvatar) MustDo(c *app.Client) *app.Stream {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type User struct {
+	ID        ID      `json:"id"`
+	Alias     *string `json:"alias,omitempty"`
+	HasAvatar *bool   `json:"hasAvatar,omitempty"`
 }

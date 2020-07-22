@@ -30,8 +30,8 @@ func Test_Bit(t *testing.T) {
 	a.False(b.Bool())
 
 	_, err = Bit(2).MarshalJSON()
-	a.Equal(`invalid value 2, Bit only accepts 0 or 1`, err.Error())
-	a.Equal(`invalid value 2, Bit only accepts 0 or 1`, b.UnmarshalJSON([]byte(`2`)).Error())
+	a.Contains(err.Error(), `invalid value 2, Bit only accepts 0 or 1`)
+	a.Contains(b.UnmarshalJSON([]byte(`2`)).Error(), `invalid value 2, Bit only accepts 0 or 1`)
 
 	bs := Bits{0, 1, 1, 0}
 
@@ -44,6 +44,6 @@ func Test_Bit(t *testing.T) {
 
 	a.Nil(bs.UnmarshalText([]byte(`0110`)))
 	_, err = Bits{0, 1, 2, 1, 0}.MarshalText()
-	a.Equal(`invalid value 2, Bits only accepts 0s and 1s`, err.Error())
-	a.Equal(`invalid value 2, Bits only accepts 0s and 1s`, bs.UnmarshalText([]byte(`01210`)).Error())
+	a.Contains(err.Error(), `invalid value 2, Bits only accepts 0s and 1s`)
+	a.Contains(bs.UnmarshalText([]byte(`01210`)).Error(), `invalid value 2, Bits only accepts 0s and 1s`)
 }

@@ -10,7 +10,8 @@ func StrLen(s string) int {
 }
 
 func Errorf(f string, args ...interface{}) error {
-	return fmt.Errorf(f, args...)
+	// return Error for stacktrace
+	return ToError(fmt.Errorf(f, args...))
 }
 
 func Sprint(args ...interface{}) string {

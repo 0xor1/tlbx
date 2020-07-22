@@ -163,7 +163,20 @@ func NewRig(
 
 	eps = append(eps, r.store.Endpoints()...)
 	if useUsers {
-		eps = append(eps, usereps.New(config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink, onActivate, onDelete, enableAliases, onSetAlias, enableAvatars, onSetAvatar)...)
+		eps = append(
+			eps,
+			usereps.New(
+				config.FromEmail,
+				config.ActivateFmtLink,
+				config.ConfirmChangeEmailFmtLink,
+				onActivate,
+				onDelete,
+				enableAliases,
+				onSetAlias,
+				enableAvatars,
+				config.AvatarBucket,
+				config.AvatarPrefix,
+				onSetAvatar)...)
 	}
 	go app.Run(func(c *app.Config) {
 		c.TlbxMwares = app.TlbxMwares{

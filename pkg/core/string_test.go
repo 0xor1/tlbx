@@ -15,8 +15,8 @@ func TestStrLen(t *testing.T) {
 
 func TestErrorf(t *testing.T) {
 	a := assert.New(t)
-	a.Equal(`1 1 "1"`, Errorf("1 %d %q", 1, "1").Error())
-	a.Equal(`1`, Errorf("1").Error())
+	a.Contains(Errorf("1 %d %q", 1, "1").Error(), "message: 1 1 \"1\"\nstackTrace")
+	a.Contains(Errorf("1").Error(), "message: 1\nstackTrace")
 }
 
 func TestSprint(t *testing.T) {

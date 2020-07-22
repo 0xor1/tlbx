@@ -31,6 +31,23 @@ func main() {
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),
 		}
 		c.Log = config.Log
-		c.Endpoints = append(append(append(eps, usereps.New(config.FromEmail, config.ActivateFmtLink, config.ConfirmChangeEmailFmtLink, nil, listeps.OnDelete, true, nil, true, nil)...), listeps.Eps...), itemeps.Eps...)
+		c.Endpoints = append(
+			append(
+				append(
+					eps,
+					usereps.New(
+						config.FromEmail,
+						config.ActivateFmtLink,
+						config.ConfirmChangeEmailFmtLink,
+						nil,
+						listeps.OnDelete,
+						true,
+						nil,
+						true,
+						config.AvatarBucket,
+						config.AvatarPrefix,
+						nil)...),
+				listeps.Eps...),
+			itemeps.Eps...)
 	})
 }
