@@ -37,8 +37,8 @@ func Test_Bit(t *testing.T) {
 	a.Nil(p.UnmarshalJSON([]byte(`4`)))
 
 	_, err = Pbit(5).MarshalJSON()
-	a.Equal(`invalid value 5, Pbit only accepts 0, 1, 2, 3 or 4`, err.Error())
-	a.Equal(`invalid value 5, Pbit only accepts 0, 1, 2, 3 or 4`, p.UnmarshalJSON([]byte(`5`)).Error())
+	a.Contains(err.Error(), `invalid value 5, Pbit only accepts 0, 1, 2, 3 or 4`)
+	a.Contains(p.UnmarshalJSON([]byte(`5`)).Error(), `invalid value 5, Pbit only accepts 0, 1, 2, 3 or 4`)
 
 	ps := Pbits{0, 1, 2, 3, 4}
 
@@ -52,6 +52,6 @@ func Test_Bit(t *testing.T) {
 	a.Nil(ps.UnmarshalText([]byte(`012343210`)))
 
 	_, err = Pbits{0, 1, 2, 3, 4, 5, 4, 3, 2, 1, 0}.MarshalText()
-	a.Equal(`invalid value 5, Pbits only accepts 0s, 1s, 2s, 3s and 4s`, err.Error())
-	a.Equal(`invalid value 5, Pbits only accepts 0s, 1s, 2s, 3s and 4s`, ps.UnmarshalText([]byte(`01234543210`)).Error())
+	a.Contains(err.Error(), `invalid value 5, Pbits only accepts 0s, 1s, 2s, 3s and 4s`)
+	a.Contains(ps.UnmarshalText([]byte(`01234543210`)).Error(), `invalid value 5, Pbits only accepts 0s, 1s, 2s, 3s and 4s`)
 }

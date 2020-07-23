@@ -37,7 +37,7 @@ type LocalClient interface {
 	MustDeleteStore()
 }
 
-func NewLocalClient(preBaseUrl, dir string) LocalClient {
+func NewLocalClient(preBaseUrl, preBucket, prePrefix, dir string) LocalClient {
 	PanicIf(dir == "" || dir == ".", "dir must be a named directory")
 	dir, err := filepath.Abs(dir)
 	PanicOn(err)
@@ -58,6 +58,8 @@ func NewLocalClient(preBaseUrl, dir string) LocalClient {
 		preMtx:     &sync.Mutex{},
 		preInfo:    map[string]objInfo{},
 		preBaseUrl: preBaseUrl + app.ApiPathPrefix,
+		preBucket:  preBucket,
+		prePrefix:  prePrefix,
 	}
 }
 
@@ -74,6 +76,8 @@ type localClient struct {
 	preMtx     *sync.Mutex
 	preInfo    map[string]objInfo
 	preBaseUrl string
+	preBucket  string
+	prePrefix  string
 }
 
 func (c *localClient) Put(bucket, prefix string, id ID, name, mimeType string, size int64, content io.ReadCloser) error {
@@ -256,7 +260,7 @@ func (c *localClient) Endpoints() []*app.Endpoint {
 				tlbx.BadReqIf(info.Size != args.Size, "size mismatch")
 				defer args.Content.Close()
 				delete(c.preInfo, idStr)
-				c.MustPut(MustParseID(idStr), info.Name, info.MimeType, info.Size, args.Content)
+				c.MustPut(c.preBucket, c.prePrefix, MustParseID(idStr), info.Name, info.MimeType, info.Size, args.Content)
 				return nil
 			},
 		},
@@ -280,7 +284,7 @@ func (c *localClient) Endpoints() []*app.Endpoint {
 				idStr := query.Get("id")
 				id := MustParseID(idStr)
 				isDownload := query.Get("isDownload") == "true"
-				name, mimeType, size, content := c.MustGet(id)
+				name, mimeType, size, content := c.MustGet(c.preBucket, c.prePrefix, id)
 				return &app.Stream{
 					ID:         id,
 					Name:       name,
