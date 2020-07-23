@@ -1,9 +1,9 @@
 package iredis
 
 import (
-	"errors"
 	"time"
 
+	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -18,7 +18,7 @@ func CreatePool(address string) Pool {
 			if time.Since(ti) < time.Minute {
 				return nil
 			}
-			return errors.New("Redis connection timed out")
+			return ToError("Redis connection timed out")
 		},
 	})
 }

@@ -57,7 +57,7 @@ func (c *sparkPostClient) Send(sendTo []string, from, subject, html, text string
 			Text:    text,
 		},
 	})
-	return err
+	return ToError(err)
 }
 
 func (c *sparkPostClient) MustSend(sendTo []string, from, subject, html, text string) {

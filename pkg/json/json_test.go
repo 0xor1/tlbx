@@ -259,8 +259,8 @@ func Test_Get_WithMissingMapKey(t *testing.T) {
 
 	obj, pathErr := obj.Get("a", 1, "b", 2, "d")
 	a.NotNil(pathErr, "err is not nil")
-	a.Equal([]interface{}{"a", 1, "b", 2}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"d"}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a", 1, "b", 2}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"d"}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -275,8 +275,8 @@ func Test_Get_WithInappropriateMapKey(t *testing.T) {
 
 	obj, pathErr := obj.Get("a", 1, "b", "c")
 	a.NotNil(pathErr, "err is not nil")
-	a.Equal([]interface{}{"a", 1, "b"}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"c"}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a", 1, "b"}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"c"}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -291,8 +291,8 @@ func Test_Get_WithOutOfBoundsSliceIndex(t *testing.T) {
 
 	obj, pathErr := obj.Get("a", 1, "b", 0, 0)
 	a.NotNil(pathErr, "err is not nil")
-	a.Equal([]interface{}{"a", 1, "b", 0}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{0}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a", 1, "b", 0}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{0}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -307,8 +307,8 @@ func Test_Get_WithInappropriateSliceIndex(t *testing.T) {
 
 	obj, pathErr := obj.Get("a", 1, 0, "b")
 	a.NotNil(pathErr, "err is not nil")
-	a.Equal([]interface{}{"a", 1}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{0, "b"}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a", 1}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{0, "b"}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -323,8 +323,8 @@ func Test_Get_WithInappropriatePathValue(t *testing.T) {
 
 	obj, pathErr := obj.Get("a", 1, true)
 	a.NotNil(pathErr, "err is not nil")
-	a.Equal([]interface{}{"a", 1}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{true}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a", 1}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{true}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -408,8 +408,8 @@ func Test_Set_WithInappropriateMapKey(t *testing.T) {
 
 	pathErr := obj.Set("a", "b", true)
 	a.NotNil(pathErr, "err is not nil")
-	a.Equal([]interface{}{"a"}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a"}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -438,8 +438,8 @@ func Test_Set_WithInappropriateSliceIndex(t *testing.T) {
 
 	pathErr := obj.Set("a", 0, true)
 	a.NotNil(pathErr, "err is not nil")
-	a.Equal([]interface{}{"a"}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{0}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a"}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{0}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -454,8 +454,8 @@ func Test_Set_WithInappropriatePathValue(t *testing.T) {
 
 	pathErr := obj.Set("a", true, true)
 	a.NotNil(pathErr, "err is not nil")
-	a.Equal([]interface{}{"a"}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{true}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a"}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{true}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -542,8 +542,8 @@ func Test_Del_WithIncorrectPathValue(t *testing.T) {
 
 	pathErr := obj.Del("a", "c", "b")
 	a.NotNil(pathErr, "err is nil")
-	a.Equal([]interface{}{"a"}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"c", "b"}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a"}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"c", "b"}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -558,8 +558,8 @@ func Test_Del_WithInappropriateLastMapKey(t *testing.T) {
 
 	pathErr := obj.Del("a", "b", "c", "d")
 	a.NotNil(pathErr, "err is nil")
-	a.Equal([]interface{}{"a", "b", "c"}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"d"}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a", "b", "c"}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"d"}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -574,8 +574,8 @@ func Test_Del_WithInappropriateLastSliceIndex(t *testing.T) {
 
 	pathErr := obj.Del("a", "b", 1)
 	a.NotNil(pathErr, "err is nil")
-	a.Equal([]interface{}{"a", "b"}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{1}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a", "b"}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{1}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -590,8 +590,8 @@ func Test_Del_WithOutOfBoundsLastSliceIndex(t *testing.T) {
 
 	pathErr := obj.Del("a", "b", "c", 1)
 	a.NotNil(pathErr, "err is nil")
-	a.Equal([]interface{}{"a", "b", "c"}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{1}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"a", "b", "c"}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{1}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -606,9 +606,9 @@ func Test_Del_WithInappropriateLastPathValue(t *testing.T) {
 
 	pathErr := obj.Del("a", "b", true)
 	a.NotNil(pathErr, "err is nil")
-	a.Equal([]interface{}{"a", "b"}, pathErr.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{true}, pathErr.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a b] missing: [true]", pathErr.Error(), "error message is correct")
+	a.Equal([]interface{}{"a", "b"}, ToError(pathErr).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{true}, ToError(pathErr).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a b] missing: [true]", ToError(pathErr).Value().(*jsonPathError).Error(), "error message is correct")
 
 	str, err := obj.ToString()
 	a.Nil(err, "err is nil")
@@ -650,9 +650,9 @@ func Test_Map_PathError(t *testing.T) {
 	a.Equal(map[string]interface{}{"a": true}, val)
 	val, err = obj.Map("a", "b")
 	a.NotNil(err, "err is not nil")
-	a.Equal([]interface{}{"a"}, err.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, err.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a] missing: [b]", err.(*jsonPathError).Error(), "error message is correct")
+	a.Equal([]interface{}{"a"}, ToError(err).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(err).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a] missing: [b]", ToError(err).Value().(*jsonPathError).Error(), "error message is correct")
 	a.Nil(val, "val is correct")
 }
 
@@ -683,9 +683,9 @@ func Test_MapString_PathError(t *testing.T) {
 
 	val, err := obj.MapString("a", "b")
 	a.NotNil(err, "err is not nil")
-	a.Equal([]interface{}{"a"}, err.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, err.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a] missing: [b]", err.(*jsonPathError).Error(), "error message is correct")
+	a.Equal([]interface{}{"a"}, ToError(err).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(err).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a] missing: [b]", ToError(err).Value().(*jsonPathError).Error(), "error message is correct")
 	a.Nil(val, "val is correct")
 }
 
@@ -758,9 +758,9 @@ func Test_Slice(t *testing.T) {
 
 	val, err := obj.Slice("a", "b")
 	a.NotNil(err, "err is not nil")
-	a.Equal([]interface{}{"a"}, err.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, err.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a] missing: [b]", err.(*jsonPathError).Error(), "error message is correct")
+	a.Equal([]interface{}{"a"}, ToError(err).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(err).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a] missing: [b]", ToError(err).Value().(*jsonPathError).Error(), "error message is correct")
 	a.Nil(val, "val is nil")
 }
 
@@ -809,9 +809,9 @@ func Test_Bool_PathError(t *testing.T) {
 
 	val, err := obj.Bool("a", "b")
 	a.NotNil(err, "err is not nil")
-	a.Equal([]interface{}{"a"}, err.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, err.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a] missing: [b]", err.(*jsonPathError).Error(), "error message is correct")
+	a.Equal([]interface{}{"a"}, ToError(err).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(err).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a] missing: [b]", ToError(err).Value().(*jsonPathError).Error(), "error message is correct")
 	a.Equal(false, val, "val is correct")
 }
 
@@ -899,9 +899,9 @@ func Test_String_PathError(t *testing.T) {
 
 	val, err := obj.String("a", "b")
 	a.NotNil(err, "err is not nil")
-	a.Equal([]interface{}{"a"}, err.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, err.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a] missing: [b]", err.(*jsonPathError).Error(), "error message is correct")
+	a.Equal([]interface{}{"a"}, ToError(err).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(err).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a] missing: [b]", ToError(err).Value().(*jsonPathError).Error(), "error message is correct")
 	a.Equal("", val, "val is correct")
 }
 
@@ -1012,9 +1012,9 @@ func Test_Time_PathError(t *testing.T) {
 
 	val, err := obj.Time("a", "b")
 	a.NotNil(err, "err is not nil")
-	a.Equal([]interface{}{"a"}, err.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, err.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a] missing: [b]", err.(*jsonPathError).Error(), "error message is correct")
+	a.Equal([]interface{}{"a"}, ToError(err).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(err).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a] missing: [b]", ToError(err).Value().(*jsonPathError).Error(), "error message is correct")
 	a.True(val.IsZero(), "val is correct")
 }
 
@@ -1413,9 +1413,9 @@ func Test_Float64_PathError(t *testing.T) {
 
 	val, err := obj.Float64("a", "b")
 	a.NotNil(err, "err is not nil")
-	a.Equal([]interface{}{"a"}, err.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, err.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a] missing: [b]", err.(*jsonPathError).Error(), "error message is correct")
+	a.Equal([]interface{}{"a"}, ToError(err).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(err).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a] missing: [b]", ToError(err).Value().(*jsonPathError).Error(), "error message is correct")
 	a.Equal(float64(0), val, "val is correct")
 }
 
@@ -1530,9 +1530,9 @@ func Test_Int64_PathError(t *testing.T) {
 
 	val, err := obj.Int64("a", "b")
 	a.NotNil(err, "err is not nil")
-	a.Equal([]interface{}{"a"}, err.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, err.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a] missing: [b]", err.(*jsonPathError).Error(), "error message is correct")
+	a.Equal([]interface{}{"a"}, ToError(err).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(err).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a] missing: [b]", ToError(err).Value().(*jsonPathError).Error(), "error message is correct")
 	a.Equal(int64(0), val, "val is correct")
 }
 
@@ -1698,9 +1698,9 @@ func Test_Uint64_PathError(t *testing.T) {
 
 	val, err := obj.Uint64("a", "b")
 	a.NotNil(err, "err is not nil")
-	a.Equal([]interface{}{"a"}, err.(*jsonPathError).FoundPath, "error FoundPath is correct")
-	a.Equal([]interface{}{"b"}, err.(*jsonPathError).MissingPath, "error FoundPath is correct")
-	a.Equal("found: [a] missing: [b]", err.(*jsonPathError).Error(), "error message is correct")
+	a.Equal([]interface{}{"a"}, ToError(err).Value().(*jsonPathError).FoundPath, "error FoundPath is correct")
+	a.Equal([]interface{}{"b"}, ToError(err).Value().(*jsonPathError).MissingPath, "error FoundPath is correct")
+	a.Equal("found: [a] missing: [b]", ToError(err).Value().(*jsonPathError).Error(), "error message is correct")
 	a.Equal(uint64(0), val, "val is correct")
 }
 

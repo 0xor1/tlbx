@@ -85,6 +85,11 @@ func (c *localClient) Put(bucket, prefix string, id ID, name, mimeType string, s
 	defer c.objMtx.Unlock()
 	defer content.Close()
 
+	err := os.MkdirAll(filepath.Join(c.dir, bucket, prefix), os.ModePerm)
+	if err != nil {
+		return ToError(err)
+	}
+
 	fullID := filepath.Join(bucket, prefix, id.String())
 	// check for duplicate
 	_, exists := c.objInfo[fullID]
@@ -95,13 +100,13 @@ func (c *localClient) Put(bucket, prefix string, id ID, name, mimeType string, s
 	// write obj file
 	objFile, err := os.Create(filepath.Join(c.dir, fullID))
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 	defer objFile.Close()
 
 	_, err = io.Copy(objFile, content)
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 
 	c.objInfo[fullID] = objInfo{
@@ -114,22 +119,22 @@ func (c *localClient) Put(bucket, prefix string, id ID, name, mimeType string, s
 	path := filepath.Join(c.dir, localStoreObjInfo)
 	err = os.Remove(path)
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 
 	infoFile, err := os.Create(path)
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 	defer infoFile.Close()
 
 	bs, err := json.Marshal(c.objInfo)
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 
 	_, err = infoFile.Write(bs)
-	return err
+	return ToError(err)
 }
 
 func (c *localClient) MustPut(bucket, prefix string, id ID, name, mimeType string, size int64, content io.ReadCloser) {
@@ -171,7 +176,7 @@ func (c *localClient) Delete(bucket, prefix string, id ID) error {
 	}
 
 	if err := os.Remove(filepath.Join(c.dir, idStr)); err != nil {
-		return err
+		return ToError(err)
 	}
 
 	delete(c.objInfo, idStr)

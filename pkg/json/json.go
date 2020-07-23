@@ -58,7 +58,7 @@ func MustUnmarshal(data []byte, v interface{}) {
 func UnmarshalReader(data io.Reader, v interface{}) error {
 	bs, err := ioutil.ReadAll(data)
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 	return json.Unmarshal(bs, v)
 }
@@ -229,7 +229,7 @@ func (j *Json) MustToPrettyString() string {
 func (j *Json) ToFile(file string, perm os.FileMode) error {
 	b, err := j.ToBytes()
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 	return ioutil.WriteFile(file, b, perm)
 }
@@ -259,12 +259,12 @@ func (j *Json) MarshalJSON() ([]byte, error) {
 func (j *Json) UnmarshalJSON(p []byte) error {
 	jNew, err := FromReader(bytes.NewReader(p))
 	j.data = jNew.data
-	return err
+	return ToError(err)
 }
 
 func (j *Json) Exists(path ...interface{}) bool {
 	_, err := j.Get(path...)
-	return err == nil
+	return ToError(err) == nil
 }
 
 func (j *Json) Get(path ...interface{}) (*Json, error) {
@@ -275,23 +275,23 @@ func (j *Json) Get(path ...interface{}) (*Json, error) {
 				if val, ok := m[key]; ok {
 					tmp = &Json{val}
 				} else {
-					return tmp, &jsonPathError{path[:i], path[i:]}
+					return tmp, ToError(&jsonPathError{path[:i], path[i:]})
 				}
 			} else {
-				return tmp, &jsonPathError{path[:i], path[i:]}
+				return tmp, ToError(&jsonPathError{path[:i], path[i:]})
 			}
 		} else if index, ok := k.(int); ok {
 			if a, err := tmp.Slice(); err == nil {
 				if index < 0 || index >= len(a) {
-					return tmp, &jsonPathError{path[:i], path[i:]}
+					return tmp, ToError(&jsonPathError{path[:i], path[i:]})
 				} else {
 					tmp = &Json{a[index]}
 				}
 			} else {
-				return tmp, &jsonPathError{path[:i], path[i:]}
+				return tmp, ToError(&jsonPathError{path[:i], path[i:]})
 			}
 		} else {
-			return tmp, &jsonPathError{path[:i], path[i:]}
+			return tmp, ToError(&jsonPathError{path[:i], path[i:]})
 		}
 	}
 	return tmp, nil
@@ -306,7 +306,7 @@ func (j *Json) MustGet(path ...interface{}) *Json {
 func (j *Json) Set(pathThenValue ...interface{}) error {
 	path, val, err := splitPathThenValue(pathThenValue)
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 
 	if len(path) == 0 {
@@ -330,7 +330,7 @@ func (j *Json) Set(pathThenValue ...interface{}) error {
 					tmp = &Json{m[key]}
 				}
 			} else {
-				return &jsonPathError{path[:i], path[i:]}
+				return ToError(&jsonPathError{path[:i], path[i:]})
 			}
 		} else if index, ok := path[i].(int); ok {
 			if a, err := tmp.Slice(); err == nil && index >= 0 && index < len(a) {
@@ -340,10 +340,10 @@ func (j *Json) Set(pathThenValue ...interface{}) error {
 					tmp = &Json{a[index]}
 				}
 			} else {
-				return &jsonPathError{path[:i], path[i:]}
+				return ToError(&jsonPathError{path[:i], path[i:]})
 			}
 		} else {
-			return &jsonPathError{path[:i], path[i:]}
+			return ToError(&jsonPathError{path[:i], path[i:]})
 		}
 	}
 
@@ -364,21 +364,22 @@ func (j *Json) Del(path ...interface{}) error {
 	i := len(path) - 1
 	tmp, err := j.Get(path[:i]...)
 	if err != nil {
-		err.(*jsonPathError).MissingPath = append(err.(*jsonPathError).MissingPath, path[i])
-		return err
+		pathErr := ToError(err).Value().(*jsonPathError)
+		pathErr.MissingPath = append(pathErr.MissingPath, path[i])
+		return ToError(pathErr)
 	}
 
 	if key, ok := path[i].(string); ok {
 		if m, err := tmp.Map(); err != nil {
-			return &jsonPathError{path[:i], path[i:]}
+			return ToError(&jsonPathError{path[:i], path[i:]})
 		} else {
 			delete(m, key)
 		}
 	} else if index, ok := path[i].(int); ok {
 		if a, err := tmp.Slice(); err != nil {
-			return &jsonPathError{path[:i], path[i:]}
+			return ToError(&jsonPathError{path[:i], path[i:]})
 		} else if index < 0 || index >= len(a) {
-			return &jsonPathError{path[:i], path[i:]}
+			return ToError(&jsonPathError{path[:i], path[i:]})
 		} else {
 			a, a[len(a)-1] = append(a[:index], a[index+1:]...), nil
 			if i == 0 {
@@ -393,7 +394,7 @@ func (j *Json) Del(path ...interface{}) error {
 			}
 		}
 	} else {
-		return &jsonPathError{path[:i], path[i:]}
+		return ToError(&jsonPathError{path[:i], path[i:]})
 	}
 	return nil
 }

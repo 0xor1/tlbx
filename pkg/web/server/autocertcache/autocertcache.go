@@ -3,6 +3,7 @@ package autocertcache
 import (
 	"context"
 
+	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/gomodule/redigo/redis"
 	"golang.org/x/crypto/acme/autocert"
@@ -55,7 +56,7 @@ func (c *redisCache) Put(ctx context.Context, key string, data []byte) error {
 	defer cnn.Close()
 
 	_, err := cnn.Do("SETEX", keyPrefix+key, daySecs, data)
-	return err
+	return ToError(err)
 }
 
 func (c *redisCache) Delete(ctx context.Context, key string) error {
@@ -63,5 +64,5 @@ func (c *redisCache) Delete(ctx context.Context, key string) error {
 	defer cnn.Close()
 
 	_, err := cnn.Do("DEL", keyPrefix+key)
-	return err
+	return ToError(err)
 }

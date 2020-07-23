@@ -124,6 +124,15 @@ func Everything(t *testing.T) {
 	me = (&user.Me{}).MustDo(c)
 	a.True(*me.HasAvatar)
 
+	avatar := (&user.GetAvatar{
+		User: me.ID,
+	}).MustDo(c)
+	a.Equal("image/png", avatar.Type)
+	a.True(me.ID.Equal(avatar.ID))
+	a.False(avatar.IsDownload)
+	a.Equal(int64(126670), avatar.Size)
+	avatar.Content.Close()
+
 	(&user.SetAvatar{
 		Avatar: &app.Stream{
 			ID:      me.ID,

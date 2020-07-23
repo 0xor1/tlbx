@@ -628,39 +628,16 @@ func New(
 					return &app.Stream{}
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-					args := a.(*app.Stream)
-					defer args.Content.Close()
-					me := me.Get(tlbx)
+					args := a.(*user.GetAvatar)
 					srv := service.Get(tlbx)
-					tx := srv.User().Begin()
-					defer tx.Rollback()
-					user := getUser(tx, nil, &me)
-					if args.Size > 0 {
-						if *user.HasAvatar {
-							srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
-						}
-						avatar, _, err := image.Decode(args.Content)
-						PanicOn(err)
-						bounds := avatar.Bounds()
-						xDiff := bounds.Max.X - bounds.Min.X
-						yDiff := bounds.Max.Y - bounds.Min.Y
-						if xDiff != yDiff || xDiff != avatarDim || yDiff != avatarDim {
-							avatar = imaging.Fill(avatar, avatarDim, avatarDim, imaging.Center, imaging.Lanczos)
-						}
-						buff := &bytes.Buffer{}
-						PanicOn(png.Encode(buff, avatar))
-						srv.Store().MustPut(avatarBucket, avatarPrefix, me, args.Name, "image/png", int64(buff.Len()), ioutil.NopCloser(buff))
-					} else if *user.HasAvatar == true {
-						srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
+					name, mimeType, size, content := srv.Store().MustGet(avatarBucket, avatarPrefix, args.User)
+					return &app.Stream{
+						ID:      args.User,
+						Name:    name,
+						Type:    mimeType,
+						Size:    size,
+						Content: content,
 					}
-					nowHasAvatar := args.Size > 0
-					if *user.HasAvatar != nowHasAvatar {
-						user.HasAvatar = ptr.Bool(nowHasAvatar)
-						onSetAvatar(tlbx, user.ID, nowHasAvatar)
-					}
-					updateUser(tx, user)
-					tx.Commit()
-					return nil
 				},
 			})
 	}

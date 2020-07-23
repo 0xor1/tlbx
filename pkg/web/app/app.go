@@ -663,7 +663,7 @@ func (bs *Stream) MustToReq(method, url string) *http.Request {
 func (s *Stream) FromResp(r *http.Response) error {
 	size, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 	var id ID
 	contentID := r.Header.Get("Content-Id")
@@ -721,14 +721,14 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 	} else if args != nil {
 		argsBytes, err := json.Marshal(args)
 		if err != nil {
-			return err
+			return ToError(err)
 		}
 		req, err = http.NewRequest(method, url, bytes.NewBuffer(argsBytes))
 	} else {
 		req, err = http.NewRequest(method, url, nil)
 	}
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 	for name, value := range c.cookies {
 		req.AddCookie(&http.Cookie{
@@ -740,23 +740,27 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 
 	httpRes, err := c.http.Do(req)
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 	for _, cookie := range httpRes.Cookies() {
 		c.cookies[cookie.Name] = cookie.Value
 	}
-	if s, ok := res.(*Stream); ok {
-		err = s.FromResp(httpRes)
+	if s, ok := res.(**Stream); ok {
+		err = (*s).FromResp(httpRes)
 		if err != nil {
-			return err
+			if s != nil && *s != nil && (*s).Content != nil {
+				(*s).Content.Close()
+				v := reflect.ValueOf(res)
+				v.Elem().Set(reflect.Zero(v.Elem().Type()))
+			}
+			return ToError(err)
 		}
-		*res.(*Stream) = *s
 		return nil
 	}
 	defer httpRes.Body.Close()
 	bs, err := ioutil.ReadAll(httpRes.Body)
 	if err != nil {
-		return err
+		return ToError(err)
 	}
 	if httpRes.StatusCode >= 400 {
 		if res != nil {
@@ -768,7 +772,7 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 		}
 		err = json.Unmarshal(bs, &msg.Msg)
 		if err != nil {
-			return err
+			return ToError(err)
 		}
 		return msg
 	}
