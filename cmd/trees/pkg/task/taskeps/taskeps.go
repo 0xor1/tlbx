@@ -1,11 +1,8 @@
-package projecteps
+package taskeps
 
 import (
-	"time"
-
-	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
@@ -14,49 +11,21 @@ import (
 var (
 	Eps = []*app.Endpoint{
 		{
-			Description:  "Create a new project",
-			Path:         (&project.Create{}).Path(),
+			Description:  "Create a new task",
+			Path:         (&task.Create{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &project.Create{
-					Base: project.Base{
-						HoursPerDay: 8,
-						DaysPerWeek: 5,
-						IsPublic:    false,
-					},
-				}
+				return nil
 			},
 			GetExampleArgs: func() interface{} {
-				return &project.Create{
-					Base: project.Base{
-						HoursPerDay: 8,
-						DaysPerWeek: 5,
-						StartOn:     ptr.Time(app.ExampleTime()),
-						DueOn:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-						IsPublic:    false,
-					},
-					Name: "My New Project",
-				}
+				return nil
 			},
 			GetExampleResponse: func() interface{} {
-				return &project.Project{
-					Task: project.Task{
-						Name: "My New Project",
-					},
-					Base: project.Base{
-						HoursPerDay: 8,
-						DaysPerWeek: 5,
-						StartOn:     ptr.Time(app.ExampleTime()),
-						DueOn:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-						IsPublic:    false,
-					},
-					IsArchived: false,
-				}
+				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				// args := a.(*project.Create)
 				return nil
 			},
 		},
