@@ -1,12 +1,34 @@
 package task
 
 import (
-	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
+	"time"
+
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
-type Task project.Task
+type Task struct {
+	ID                   ID        `json:"id"`
+	Parent               *ID       `json:"parent"`
+	FirstChild           *ID       `json:"firstChild"`
+	NextSibling          *ID       `json:"nextSibling"`
+	User                 *ID       `json:"user"`
+	Name                 string    `json:"name"`
+	Description          string    `json:"description"`
+	CreatedOn            time.Time `json:"createdOn"`
+	MinimumRemainingTime uint64    `json:"minimumRemainingTime"`
+	EstimatedTime        uint64    `json:"estimatedTime"`
+	LoggedTime           uint64    `json:"loggedTime"`
+	EstimatedSubTime     uint64    `json:"estimatedSubTime"`
+	LoggedSubTime        uint64    `json:"loggedSubTime"`
+	FileCount            uint64    `json:"fileCount"`
+	FileSize             uint64    `json:"fileSize"`
+	SubFileCount         uint64    `json:"subFileCount"`
+	SubFileSize          uint64    `json:"subFileSize"`
+	ChildCount           uint64    `json:"childCount"`
+	DescendantCount      uint64    `json:"descendantCount"`
+	IsParallel           bool      `json:"isParallel"`
+}
 
 type Create struct {
 }

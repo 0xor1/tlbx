@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
@@ -42,7 +43,7 @@ var (
 			},
 			GetExampleResponse: func() interface{} {
 				return &project.Project{
-					Task: project.Task{
+					Task: task.Task{
 						Name: "My New Project",
 					},
 					Base: project.Base{
@@ -56,7 +57,8 @@ var (
 				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				// args := a.(*project.Create)
+				args := a.(*project.Create)
+				Println(args.Base)
 				return nil
 			},
 		},
@@ -76,16 +78,23 @@ func OnActivate(tlbx app.Tlbx, me *user.User) {
 func OnDelete(tlbx app.Tlbx, me ID) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
+	// TODO delete all files from minio/s3
 	defer tx.Rollback()
-	// _, err := tx.Exec(`DELETE FROM accounts WHERE id=?`, me)
-	// PanicOn(err)
-	// _, err = tx.Exec(`DELETE FROM times WHERE account=?`, me)
-	// PanicOn(err)
-	// _, err = tx.Exec(`DELETE FROM tasks WHERE account=?`, me)
-	// PanicOn(err)
-	// _, err = tx.Exec(`DELETE FROM projects WHERE account=?`, me)
-	// PanicOn(err)
-	// _, err = tx.Exec(`DELETE FROM projects WHERE account=?`, me)
-	// PanicOn(err)
+	_, err := tx.Exec(`DELETE FROM projectLocks WHERE host=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM projectUsers WHERE host=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM projectActivities WHERE host=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM projects WHERE host=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM tasks WHERE host=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM timeLogs WHERE host=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM files WHERE host=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM comments WHERE host=?`, me)
+	PanicOn(err)
 	tx.Commit()
 }
