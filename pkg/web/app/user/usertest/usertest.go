@@ -3,6 +3,7 @@ package usertest
 import (
 	"encoding/base64"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -20,9 +21,10 @@ func Everything(t *testing.T) {
 	r := test.NewRig(config.GetProcessed(config.GetBase()), nil, true, func(tlbx app.Tlbx, user *user.User) {}, func(tlbx app.Tlbx, id ID) {}, true, func(tlbx app.Tlbx, id ID, alias *string) error { return nil }, true, func(tlbx app.Tlbx, id ID, hasAvatar bool) error { return nil })
 	defer r.CleanUp()
 
+	unique := NowUnixNano() + int64(os.Getpid())
 	a := assert.New(t)
 	c := test.NewClient()
-	email := "test@test.localhost"
+	email := Sprintf("test@test.localhost%s", unique)
 	pwd := "1aA$_t;3"
 
 	(&user.Register{
@@ -61,6 +63,14 @@ func Everything(t *testing.T) {
 		Email: email,
 		Pwd:   pwd,
 	}).MustDo(c).ID
+
+	tmpFirstID := id.Copy()
+	defer func() {
+		_, err = r.User().Primary().Exec(`DELETE FROM users WHERE id=?`, tmpFirstID)
+		PanicOn(err)
+		_, err = r.Pwd().Primary().Exec(`DELETE FROM pwds WHERE id=?`, tmpFirstID)
+		PanicOn(err)
+	}()
 
 	(&user.ChangeEmail{
 		NewEmail: "change@test.localhost",
@@ -188,6 +198,13 @@ func Everything(t *testing.T) {
 	}).MustDo(c).ID
 	a.Equal(id, (&user.Me{}).MustDo(c).ID)
 
+	defer func() {
+		_, err = r.User().Primary().Exec(`DELETE FROM users WHERE id=?`, id)
+		PanicOn(err)
+		_, err = r.Pwd().Primary().Exec(`DELETE FROM pwds WHERE id=?`, id)
+		PanicOn(err)
+	}()
+
 	(&user.ResetPwd{
 		Email: email,
 	}).MustDo(c)
@@ -197,9 +214,4 @@ func Everything(t *testing.T) {
 	}).Do(c)
 	a.Equal(400, err.(*app.ErrMsg).Status)
 	a.True(regexp.MustCompile(`must wait [1-9][0-9]{2} seconds before reseting pwd again`).MatchString(err.(*app.ErrMsg).Msg))
-
-	_, err = r.User().Primary().Exec(`DELETE FROM users WHERE id=?`, id)
-	PanicOn(err)
-	_, err = r.Pwd().Primary().Exec(`DELETE FROM pwds WHERE id=?`, id)
-	PanicOn(err)
 }

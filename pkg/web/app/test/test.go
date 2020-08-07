@@ -41,7 +41,7 @@ type Rig interface {
 	Pwd() isql.ReplicaSet
 	Data() isql.ReplicaSet
 	Email() email.Client
-	Store() store.LocalClient
+	Store() store.Client
 	// cleanup
 	CleanUp()
 }
@@ -87,7 +87,7 @@ type rig struct {
 	pwd     isql.ReplicaSet
 	data    isql.ReplicaSet
 	email   email.Client
-	store   store.LocalClient
+	store   store.Client
 	useAuth bool
 }
 
@@ -131,7 +131,7 @@ func (r *rig) Email() email.Client {
 	return r.email
 }
 
-func (r *rig) Store() store.LocalClient {
+func (r *rig) Store() store.Client {
 	return r.store
 }
 
@@ -154,14 +154,13 @@ func NewRig(
 		log:     config.Log,
 		cache:   config.Cache,
 		email:   config.Email,
-		store:   config.Store.(store.LocalClient),
+		store:   config.Store,
 		user:    config.User,
 		pwd:     config.Pwd,
 		data:    config.Data,
 		useAuth: useUsers,
 	}
 
-	eps = append(eps, r.store.Endpoints()...)
 	if useUsers {
 		eps = append(
 			eps,
@@ -206,7 +205,6 @@ func NewRig(
 }
 
 func (r *rig) CleanUp() {
-	r.Store().MustDeleteStore()
 	if r.useAuth {
 		(&user.Delete{
 			Pwd: r.Ali().Pwd(),

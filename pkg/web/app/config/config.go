@@ -10,7 +10,12 @@ import (
 	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/log"
+	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/store"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 type Config struct {
@@ -36,10 +41,14 @@ type Config struct {
 func GetBase(file ...string) *config.Config {
 	c := config.New(file...)
 	c.SetDefault("isLocal", true)
+	c.SetDefault("aws.region", "local")
+	c.SetDefault("aws.s3.endpoint", "http://minio:9000")
+	c.SetDefault("aws.s3.creds.id", "localtest")
+	c.SetDefault("aws.s3.creds.secret", "localtest")
 	c.SetDefault("fromEmail", "test@test.localhost")
 	c.SetDefault("activateFmtLink", "http://localhost:8081/#/activate?email=%s&code=%s")
 	c.SetDefault("avatar.bucket", "avatars")
-	c.SetDefault("avatar.prefix", "avatars")
+	c.SetDefault("avatar.prefix", "")
 	c.SetDefault("confirmChangeEmailFmtLink", "http://localhost:8081/#/confirmChangeEmail?me=%s&code=%s")
 	c.SetDefault("staticDir", "client/dist")
 	c.SetDefault("contentSecurityPolicies", []interface{}{
@@ -83,11 +92,6 @@ func GetProcessed(c *config.Config) *Config {
 		res.IsLocal = true
 		res.Log = log.New()
 		res.Email = email.NewLocalClient(res.Log)
-		res.Store = store.NewLocalClient(
-			c.GetString("store.preBaseUrl"),
-			c.GetString("store.local.presigned.bucket"),
-			c.GetString("store.local.presigned.prefix"),
-			c.GetString("store.dir"))
 	} else {
 		res.IsLocal = false
 		switch c.GetString("log.type") {
@@ -103,20 +107,25 @@ func GetProcessed(c *config.Config) *Config {
 		default:
 			PanicIf(true, "unsupported email type %s", c.GetString("email.type"))
 		}
-
-		switch c.GetString("store.type") {
-		case "":
-			break // none needed
-		default:
-			PanicIf(true, "unsupported store type %s", c.GetString("store.type"))
-		}
 	}
+	res.Store = store.New(
+		s3.New(
+			session.New(
+				&aws.Config{
+					Region:           ptr.String(c.GetString("aws.region")),
+					Endpoint:         ptr.String(c.GetString("aws.s3.endpoint")),
+					Credentials:      credentials.NewStaticCredentials(c.GetString("aws.s3.creds.id"), c.GetString("aws.s3.creds.secret"), ""),
+					DisableSSL:       ptr.Bool(true),
+					S3ForcePathStyle: ptr.Bool(true),
+				})))
 
 	res.StaticDir = c.GetString("staticDir")
 	res.ContentSecurityPolicies = c.GetStringSlice("contentSecurityPolicies")
 	res.FromEmail = c.GetString("fromEmail")
 	res.ActivateFmtLink = c.GetString("activateFmtLink")
 	res.ConfirmChangeEmailFmtLink = c.GetString("confirmChangeEmailFmtLink")
+	res.AvatarBucket = c.GetString("avatar.bucket")
+	res.AvatarPrefix = c.GetString("avatar.prefix")
 
 	authKey64s := c.GetStringSlice("sessionAuthKey64s")
 	encrKey32s := c.GetStringSlice("sessionEncrKey32s")

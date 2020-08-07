@@ -3,7 +3,6 @@ package usereps
 import (
 	"bytes"
 	"database/sql"
-	"io/ioutil"
 	"math"
 	"net/http"
 	"regexp"
@@ -596,7 +595,7 @@ func New(
 						}
 						buff := &bytes.Buffer{}
 						PanicOn(png.Encode(buff, avatar))
-						srv.Store().MustPut(avatarBucket, avatarPrefix, me, args.Name, "image/png", int64(buff.Len()), ioutil.NopCloser(buff))
+						srv.Store().MustPut(avatarBucket, avatarPrefix, me, args.Name, "image/png", int64(buff.Len()), true, false, bytes.NewReader(buff.Bytes()))
 					} else if *user.HasAvatar == true {
 						srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
 					}

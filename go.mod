@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/SparkPost/gosparkpost v0.0.0-20200518221114-5b781faf9f19
+	github.com/aws/aws-sdk-go v1.33.21
 	github.com/disintegration/imaging v1.6.2
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gomodule/redigo v2.0.0+incompatible

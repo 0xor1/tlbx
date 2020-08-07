@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"io"
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/email"
@@ -30,7 +31,7 @@ func Mware(cache iredis.Pool, user, pwd, data isql.ReplicaSet, email email.Clien
 			pwd:   &sqlClient{tlbx: tlbx, sql: pwd},
 			data:  &sqlClient{tlbx: tlbx, sql: data},
 			email: email,
-			store: store,
+			store: &storeClient{tlbx: tlbx, store: store},
 		})
 	}
 }
@@ -181,9 +182,9 @@ func (c *sqlClient) do(do func(string), query string) {
 	// no query should ever even come close to 1 second in execution time
 	start := NowUnixMilli()
 	do(`SET STATEMENT max_statement_time=1 FOR ` + query)
-	c.tlbx.LogQueryStats(&app.QueryStats{
-		Milli: NowUnixMilli() - start,
-		Query: query,
+	c.tlbx.LogActionStats(&app.ActionStats{
+		Milli:  NowUnixMilli() - start,
+		Action: Sprintf("# SQL\n%s", query),
 	})
 }
 
@@ -251,8 +252,94 @@ func (w *redisConnWrapper) Receive() (reply interface{}, err error) {
 func (w *redisConnWrapper) do(do func(string, ...interface{}), cmd string, args ...interface{}) {
 	start := NowUnixMilli()
 	do(cmd, args...)
-	w.tlbx.LogQueryStats(&app.QueryStats{
-		Milli: NowUnixMilli() - start,
-		Query: Sprint(append([]interface{}{cmd, " ", args[0], " ..."})...),
+	w.tlbx.LogActionStats(&app.ActionStats{
+		Milli:  NowUnixMilli() - start,
+		Action: Sprint(append([]interface{}{"# REDIS\n", cmd, " ", args[0], " ..."})...),
+	})
+}
+
+type storeClient struct {
+	tlbx  app.Tlbx
+	store store.Client
+}
+
+func (s *storeClient) Put(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error {
+	var err error
+	s.do(func(bucket, prefix string, id ID) {
+		err = s.store.Put(bucket, prefix, id, name, mimeType, size, isPublic, isAttachment, content)
+	}, "PUT", bucket, prefix, id)
+	return err
+}
+
+func (s *storeClient) MustPut(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) {
+	PanicOn(s.Put(bucket, prefix, id, name, mimeType, size, isPublic, isAttachment, content))
+}
+
+func (s *storeClient) PresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) (string, error) {
+	var url string
+	var err error
+	s.do(func(bucket, prefix string, id ID) {
+		url, err = s.store.PresignedPutUrl(bucket, prefix, id, name, mimeType, size)
+	}, "PUT_PRESIGNED_URL", bucket, prefix, id)
+	return url, err
+}
+
+func (s *storeClient) MustPresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) string {
+	url, err := s.PresignedPutUrl(bucket, prefix, id, name, mimeType, size)
+	PanicOn(err)
+	return url
+}
+
+func (s *storeClient) Get(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser, error) {
+	var name string
+	var mimeType string
+	var size int64
+	var content io.ReadCloser
+	var err error
+	s.do(func(bucket, prefix string, id ID) {
+		name, mimeType, size, content, err = s.store.Get(bucket, prefix, id)
+	}, "GET", bucket, prefix, id)
+	return name, mimeType, size, content, err
+}
+
+func (s *storeClient) MustGet(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser) {
+	name, mimeType, size, content, err := s.Get(bucket, prefix, id)
+	PanicOn(err)
+	return name, mimeType, size, content
+}
+
+func (s *storeClient) PresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) (string, error) {
+	var url string
+	var err error
+	s.do(func(bucket, prefix string, id ID) {
+		url, err = s.store.PresignedGetUrl(bucket, prefix, id, name, isAttachment)
+	}, "GET_PRESIGNED_URL", bucket, prefix, id)
+	return url, err
+}
+
+func (s *storeClient) MustPresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) string {
+	url, err := s.PresignedGetUrl(bucket, prefix, id, name, isAttachment)
+	PanicOn(err)
+	return url
+}
+
+func (s *storeClient) Delete(bucket, prefix string, id ID) error {
+	var err error
+	s.do(func(bucket, prefix string, id ID) {
+		err = s.store.Delete(bucket, prefix, id)
+	}, "DELETE", bucket, prefix, id)
+	return err
+}
+
+func (s *storeClient) MustDelete(bucket, prefix string, id ID) {
+	PanicOn(s.Delete(bucket, prefix, id))
+}
+
+func (s *storeClient) do(do func(bucket, prefix string, id ID), cmd, bucket, prefix string, id ID) {
+	start := NowUnixMilli()
+	do(bucket, prefix, id)
+	s.tlbx.LogActionStats(&app.ActionStats{
+		Milli:  NowUnixMilli() - start,
+		Action: Sprint("# STORE\n%s %s %s", cmd, bucket, store.Key(prefix, id)),
 	})
 }

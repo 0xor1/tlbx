@@ -14,11 +14,6 @@ import (
 func main() {
 	config := config.Get()
 	eps := []*app.Endpoint{}
-	if config.IsLocal {
-		store := config.Store.(store.LocalClient)
-		defer store.MustDeleteStore()
-		eps = append(eps, store.Endpoints()...)
-	}
 	app.Run(func(c *app.Config) {
 		c.StaticDir = config.StaticDir
 		c.ContentSecurityPolicies = config.ContentSecurityPolicies

@@ -106,15 +106,15 @@ func Run(configs ...func(*Config)) {
 		start := NowUnixMilli()
 		// tlbx
 		tlbx := &tlbx{
-			resp:          &responseWrapper{w: w},
-			req:           r,
-			idGenPool:     idGenPool,
-			isSubMDo:      isSubMDo(r),
-			log:           c.Log,
-			queryStatsMtx: &sync.Mutex{},
-			queryStats:    make([]*QueryStats, 0, 10),
-			storeMtx:      &sync.RWMutex{},
-			store:         map[interface{}]interface{}{},
+			resp:           &responseWrapper{w: w},
+			req:            r,
+			idGenPool:      idGenPool,
+			isSubMDo:       isSubMDo(r),
+			log:            c.Log,
+			actionStatsMtx: &sync.Mutex{},
+			actionStats:    make([]*ActionStats, 0, 10),
+			storeMtx:       &sync.RWMutex{},
+			store:          map[interface{}]interface{}{},
 		}
 		// close body
 		if tlbx.req != nil && tlbx.req.Body != nil {
@@ -122,14 +122,14 @@ func Run(configs ...func(*Config)) {
 		}
 		// log stats
 		defer func() {
-			tlbx.queryStatsMtx.Lock()
-			defer tlbx.queryStatsMtx.Unlock()
+			tlbx.actionStatsMtx.Lock()
+			defer tlbx.actionStatsMtx.Unlock()
 			tlbx.log.Stats(&reqStats{
 				Milli:   NowUnixMilli() - start,
 				Status:  tlbx.resp.status,
 				Method:  tlbx.req.Method,
 				Path:    tlbx.req.URL.Path,
-				Queries: tlbx.queryStats,
+				Queries: tlbx.actionStats,
 			})
 		}()
 		// recover from errors / redirects
@@ -352,17 +352,17 @@ func config(configs ...func(*Config)) *Config {
 	return c
 }
 
-type QueryStats struct {
-	Milli int64  `json:"ms"`
-	Query string `json:"query"`
+type ActionStats struct {
+	Milli  int64  `json:"ms"`
+	Action string `json:"action"`
 }
 
 type reqStats struct {
-	Milli   int64         `json:"ms"`
-	Status  int           `json:"status"`
-	Method  string        `json:"method"`
-	Path    string        `json:"path"`
-	Queries []*QueryStats `json:"queries"`
+	Milli   int64          `json:"ms"`
+	Status  int            `json:"status"`
+	Method  string         `json:"method"`
+	Path    string         `json:"path"`
+	Queries []*ActionStats `json:"queries"`
 }
 
 func (r *reqStats) String() string {
@@ -372,7 +372,7 @@ func (r *reqStats) String() string {
 	}
 	queries := make([]string, 0, len(r.Queries))
 	for _, q := range r.Queries {
-		queries = append(queries, Sprintf("%dms\t%s", q.Milli, q.Query))
+		queries = append(queries, Sprintf("%dms\t%s", q.Milli, q.Action))
 	}
 	return Sprintf("%s\n%s", basic, strings.Join(queries, "\n"))
 }
@@ -404,7 +404,7 @@ type Tlbx interface {
 	Ctx() context.Context
 	NewID() ID
 	Log() log.Log
-	LogQueryStats(*QueryStats)
+	LogActionStats(*ActionStats)
 	Redirect(status int, url string)
 	ExitIf(condition bool, status int, format string, args ...interface{})
 	BadReqIf(condition bool, format string, args ...interface{})
@@ -414,16 +414,16 @@ type Tlbx interface {
 }
 
 type tlbx struct {
-	resp          *responseWrapper
-	req           *http.Request
-	idGenPool     IDGenPool
-	idGen         IDGen
-	isSubMDo      bool
-	log           log.Log
-	queryStatsMtx *sync.Mutex
-	queryStats    []*QueryStats
-	storeMtx      *sync.RWMutex
-	store         map[interface{}]interface{}
+	resp           *responseWrapper
+	req            *http.Request
+	idGenPool      IDGenPool
+	idGen          IDGen
+	isSubMDo       bool
+	log            log.Log
+	actionStatsMtx *sync.Mutex
+	actionStats    []*ActionStats
+	storeMtx       *sync.RWMutex
+	store          map[interface{}]interface{}
 }
 
 func (t *tlbx) Req() *http.Request {
@@ -449,10 +449,10 @@ func (t *tlbx) Log() log.Log {
 	return t.log
 }
 
-func (t *tlbx) LogQueryStats(qs *QueryStats) {
-	t.queryStatsMtx.Lock()
-	defer t.queryStatsMtx.Unlock()
-	t.queryStats = append(t.queryStats, qs)
+func (t *tlbx) LogActionStats(as *ActionStats) {
+	t.actionStatsMtx.Lock()
+	defer t.actionStatsMtx.Unlock()
+	t.actionStats = append(t.actionStats, as)
 }
 
 func (t *tlbx) Redirect(status int, url string) {

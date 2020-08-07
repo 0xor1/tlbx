@@ -13,9 +13,6 @@ import (
 
 func main() {
 	config := config.Get()
-	if config.IsLocal {
-		defer config.Store.(store.LocalClient).MustDeleteStore()
-	}
 	app.Run(func(c *app.Config) {
 		c.StaticDir = config.StaticDir
 		c.ContentSecurityPolicies = config.ContentSecurityPolicies
