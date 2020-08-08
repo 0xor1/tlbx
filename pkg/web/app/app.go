@@ -354,6 +354,7 @@ func config(configs ...func(*Config)) *Config {
 
 type ActionStats struct {
 	Milli  int64  `json:"ms"`
+	Type   string `json:"type"`
 	Action string `json:"action"`
 }
 
@@ -372,7 +373,7 @@ func (r *reqStats) String() string {
 	}
 	queries := make([]string, 0, len(r.Queries))
 	for _, q := range r.Queries {
-		queries = append(queries, Sprintf("%dms\t%s", q.Milli, q.Action))
+		queries = append(queries, Sprintf("%s\t%dms\t%s", q.Type, q.Milli, q.Action))
 	}
 	return Sprintf("%s\n%s", basic, strings.Join(queries, "\n"))
 }
@@ -699,10 +700,13 @@ type Client struct {
 	cookies  map[string]string
 }
 
-func NewClient(baseHref string) *Client {
+func NewClient(baseHref string, httpClient *http.Client) *Client {
+	if httpClient == nil {
+		httpClient = &http.Client{}
+	}
 	return &Client{
 		baseHref: baseHref,
-		http:     &http.Client{},
+		http:     httpClient,
 		cookies:  map[string]string{},
 	}
 }

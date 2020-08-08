@@ -184,7 +184,8 @@ func (c *sqlClient) do(do func(string), query string) {
 	do(`SET STATEMENT max_statement_time=1 FOR ` + query)
 	c.tlbx.LogActionStats(&app.ActionStats{
 		Milli:  NowUnixMilli() - start,
-		Action: Sprintf("# SQL\n%s", query),
+		Type:   "SQL",
+		Action: query,
 	})
 }
 
@@ -254,7 +255,8 @@ func (w *redisConnWrapper) do(do func(string, ...interface{}), cmd string, args 
 	do(cmd, args...)
 	w.tlbx.LogActionStats(&app.ActionStats{
 		Milli:  NowUnixMilli() - start,
-		Action: Sprint(append([]interface{}{"# REDIS\n", cmd, " ", args[0], " ..."})...),
+		Type:   "REDIS",
+		Action: Sprint(append([]interface{}{cmd, " ", args[0], " ..."})...),
 	})
 }
 
@@ -340,6 +342,7 @@ func (s *storeClient) do(do func(bucket, prefix string, id ID), cmd, bucket, pre
 	do(bucket, prefix, id)
 	s.tlbx.LogActionStats(&app.ActionStats{
 		Milli:  NowUnixMilli() - start,
-		Action: Sprint("# STORE\n%s %s %s", cmd, bucket, store.Key(prefix, id)),
+		Type:   "STORE",
+		Action: Sprintf("%s %s %s", cmd, bucket, *store.Key(prefix, id)),
 	})
 }

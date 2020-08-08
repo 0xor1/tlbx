@@ -31,8 +31,9 @@ const (
 )
 
 type Rig interface {
-	// port
+	// http
 	Port() int
+	NewClient() *app.Client
 	// log
 	Log() log.Log
 	// users
@@ -145,8 +146,8 @@ func (r *rig) Store() store.Client {
 	return r.store
 }
 
-func NewClient(port int) *app.Client {
-	return app.NewClient(Sprintf(baseHref, port))
+func (r *rig) NewClient() *app.Client {
+	return app.NewClient(Sprintf(baseHref, r.Port()), &http.Client{Transport: &http.Transport{MaxIdleConnsPerHost: 50}})
 }
 
 func NewRig(
@@ -243,7 +244,7 @@ func (r *rig) CleanUp() {
 
 func (r *rig) createUser(alias, emailSuffix, pwd string) *testUser {
 	email := Sprintf("%s%s%d", alias, emailSuffix, r.port)
-	c := NewClient(r.port)
+	c := r.NewClient()
 	if r.useAuth {
 		(&user.Register{
 			Alias:      ptr.String(alias),

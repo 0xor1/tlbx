@@ -21,7 +21,7 @@ func Everything(t *testing.T) {
 	defer r.CleanUp()
 
 	a := assert.New(t)
-	c := test.NewClient(r.Port())
+	c := r.NewClient()
 	email := Sprintf("test@test.localhost%d", r.Port())
 	pwd := "1aA$_t;3"
 
