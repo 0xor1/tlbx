@@ -1,6 +1,8 @@
 package test
 
 import (
+	"net"
+	"net/http"
 	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -18,16 +20,19 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
+	"github.com/0xor1/tlbx/pkg/web/server"
 	"github.com/tomasen/realip"
 )
 
 const (
-	baseHref    = "http://localhost:8080"
+	baseHref    = "http://localhost:%d"
 	pwd         = "1aA$_t;3"
 	emailSuffix = "@test.localhost"
 )
 
 type Rig interface {
+	// port
+	Port() int
 	// log
 	Log() log.Log
 	// users
@@ -77,6 +82,7 @@ func (u *testUser) Pwd() string {
 }
 
 type rig struct {
+	port    int
 	ali     *testUser
 	bob     *testUser
 	cat     *testUser
@@ -89,6 +95,10 @@ type rig struct {
 	email   email.Client
 	store   store.Client
 	useAuth bool
+}
+
+func (r *rig) Port() int {
+	return r.port
 }
 
 func (r *rig) Log() log.Log {
@@ -135,8 +145,8 @@ func (r *rig) Store() store.Client {
 	return r.store
 }
 
-func NewClient() *app.Client {
-	return app.NewClient(baseHref)
+func NewClient(port int) *app.Client {
+	return app.NewClient(Sprintf(baseHref, port))
 }
 
 func NewRig(
@@ -150,7 +160,10 @@ func NewRig(
 	enableAvatars bool,
 	onSetAvatar func(app.Tlbx, ID, bool) error,
 ) Rig {
+	listener, err := net.Listen("tcp", ":0")
+	PanicOn(err)
 	r := &rig{
+		port:    listener.Addr().(*net.TCPAddr).Port,
 		log:     config.Log,
 		cache:   config.Cache,
 		email:   config.Email,
@@ -194,6 +207,13 @@ func NewRig(
 			service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store),
 		}
 		c.Endpoints = eps
+		c.Serve = func(h http.HandlerFunc) {
+			server.Run(func(servC *server.Config) {
+				servC.AppListener = listener
+				servC.Log = c.Log
+				servC.Handler = h
+			})
+		}
 	})
 
 	time.Sleep(20 * time.Millisecond)
@@ -222,8 +242,8 @@ func (r *rig) CleanUp() {
 }
 
 func (r *rig) createUser(alias, emailSuffix, pwd string) *testUser {
-	email := alias + emailSuffix
-	c := NewClient()
+	email := Sprintf("%s%s%d", alias, emailSuffix, r.port)
+	c := NewClient(r.port)
 	if r.useAuth {
 		(&user.Register{
 			Alias:      ptr.String(alias),

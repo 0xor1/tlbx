@@ -4,7 +4,6 @@ import (
 	"github.com/0xor1/tlbx/cmd/todo/pkg/config"
 	"github.com/0xor1/tlbx/cmd/todo/pkg/item/itemeps"
 	"github.com/0xor1/tlbx/cmd/todo/pkg/list/listeps"
-	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"

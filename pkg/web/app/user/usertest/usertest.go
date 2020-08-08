@@ -3,7 +3,6 @@ package usertest
 import (
 	"encoding/base64"
 	"io/ioutil"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -21,10 +20,9 @@ func Everything(t *testing.T) {
 	r := test.NewRig(config.GetProcessed(config.GetBase()), nil, true, func(tlbx app.Tlbx, user *user.User) {}, func(tlbx app.Tlbx, id ID) {}, true, func(tlbx app.Tlbx, id ID, alias *string) error { return nil }, true, func(tlbx app.Tlbx, id ID, hasAvatar bool) error { return nil })
 	defer r.CleanUp()
 
-	unique := NowUnixNano() + int64(os.Getpid())
 	a := assert.New(t)
-	c := test.NewClient()
-	email := Sprintf("test@test.localhost%s", unique)
+	c := test.NewClient(r.Port())
+	email := Sprintf("test@test.localhost%d", r.Port())
 	pwd := "1aA$_t;3"
 
 	(&user.Register{
@@ -73,7 +71,7 @@ func Everything(t *testing.T) {
 	}()
 
 	(&user.ChangeEmail{
-		NewEmail: "change@test.localhost",
+		NewEmail: Sprintf("change@test.localhost%d", r.Port()),
 	}).MustDo(c)
 
 	(&user.ResendChangeEmailLink{}).MustDo(c)

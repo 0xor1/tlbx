@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +19,7 @@ import (
 type Config struct {
 	Log                   log.Log
 	UseHttps              bool
+	AppListener           net.Listener
 	AppBindTo             string
 	CertBindTo            string
 	HostWhitelist         []string
@@ -53,10 +55,10 @@ func Run(configs ...func(c *Config)) {
 	}
 
 	if !c.UseHttps {
-		c.Log.Info("Insecure app server running bound to %s", c.AppBindTo)
+		c.Log.Info("Insecure app server running bound to %s", c.AppListener.Addr().String())
 		appServer := appServer(c, c.Handler, nil)
 		Go(shutdownServers(appServer), c.Log.ErrorOn)
-		logDoneError(appServer.ListenAndServe())
+		logDoneError(appServer.Serve(c.AppListener))
 	} else {
 		certManager := certManager(c)
 		certServer := certServer(c, certManager)
@@ -64,14 +66,14 @@ func Run(configs ...func(c *Config)) {
 		go certServer.ListenAndServe()
 
 		appServer := &http.Server{
-			Addr:      c.AppBindTo,
+			Addr:      c.AppListener.Addr().String(),
 			Handler:   c.Handler,
 			TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
 		}
 
-		c.Log.Info("Secure app server running bound to %s", c.AppBindTo)
+		c.Log.Info("Secure app server running bound to %s", c.AppListener.Addr().String())
 		Go(shutdownServers(appServer, certServer), c.Log.ErrorOn)
-		logDoneError(appServer.ListenAndServeTLS("", ""))
+		logDoneError(appServer.ServeTLS(c.AppListener, "", ""))
 	}
 	c.Log.Info("Server stopped")
 }
@@ -81,6 +83,7 @@ func config(configs ...func(c *Config)) *Config {
 		Log:                   log.New(),
 		UseHttps:              false,
 		AppBindTo:             ":8080",
+		AppListener:           nil,
 		CertBindTo:            ":http",
 		HostWhitelist:         nil,
 		CertReadTimeout:       50 * time.Millisecond,
@@ -94,6 +97,11 @@ func config(configs ...func(c *Config)) *Config {
 	}
 	for _, config := range configs {
 		config(c)
+	}
+	if c.AppListener == nil {
+		var err error
+		c.AppListener, err = net.Listen("tcp", c.AppBindTo)
+		PanicOn(err)
 	}
 	return c
 }
@@ -118,7 +126,7 @@ func certServer(c *Config, certManager *autocert.Manager) *http.Server {
 
 func appServer(c *Config, handler http.HandlerFunc, tlsConfig *tls.Config) *http.Server {
 	return &http.Server{
-		Addr:      c.AppBindTo,
+		Addr:      c.AppListener.Addr().String(),
 		Handler:   handler,
 		TLSConfig: tlsConfig,
 	}

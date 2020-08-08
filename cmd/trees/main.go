@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
-	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
