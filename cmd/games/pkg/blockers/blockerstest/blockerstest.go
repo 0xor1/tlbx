@@ -2,6 +2,7 @@ package blockerstest
 
 import (
 	"testing"
+	"time"
 
 	"github.com/0xor1/tlbx/cmd/games/pkg/blockers"
 	"github.com/0xor1/tlbx/cmd/games/pkg/blockers/blockerseps"
@@ -56,7 +57,7 @@ func Everything(t *testing.T) {
 
 	game.DeleteOutdated(func(query string, args ...interface{}) {
 		r.Data().Primary().Exec(query, args...)
-	}, 0, 0)
+	}, 0, time.Hour)
 }
 
 func playGame(a *assert.Assertions, players []*app.Client) *blockers.Game {

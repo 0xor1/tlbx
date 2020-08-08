@@ -147,7 +147,7 @@ func (r *rig) Store() store.Client {
 }
 
 func (r *rig) NewClient() *app.Client {
-	return app.NewClient(Sprintf(baseHref, r.Port()), &http.Client{Transport: &http.Transport{MaxIdleConnsPerHost: 50}})
+	return app.NewClient(Sprintf(baseHref, r.Port()), &http.Client{Transport: &http.Transport{MaxIdleConnsPerHost: 1000}})
 }
 
 func NewRig(
@@ -176,6 +176,10 @@ func NewRig(
 	}
 
 	if useUsers {
+
+		if r.store != nil {
+			r.store.MustCreateBucket("avatars", "public_read")
+		}
 		eps = append(
 			eps,
 			usereps.New(

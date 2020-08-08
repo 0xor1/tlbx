@@ -265,6 +265,21 @@ type storeClient struct {
 	store store.Client
 }
 
+func (s *storeClient) CreateBucket(bucket, acl string) error {
+	start := NowUnixMilli()
+	err := s.store.CreateBucket(bucket, acl)
+	s.tlbx.LogActionStats(&app.ActionStats{
+		Milli:  NowUnixMilli() - start,
+		Type:   "STORE",
+		Action: Sprintf("%s %s %s", "CREATE_BUCKET", bucket, acl),
+	})
+	return err
+}
+
+func (s *storeClient) MustCreateBucket(bucket, acl string) {
+	s.CreateBucket(bucket, acl)
+}
+
 func (s *storeClient) Put(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error {
 	var err error
 	s.do(func(bucket, prefix string, id ID) {

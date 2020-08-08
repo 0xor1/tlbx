@@ -1,0 +1,8 @@
+
+#!/bin/bash
+
+if [ "$1" == "reset" ]; then
+    docker-compose -f docker/docker-compose.yml down
+fi
+docker ps --format '{{.Names}}' | grep "^tlbx-" | awk '{print $1}' | xargs -I {} docker stop {} && \
+docker-compose -f docker/docker-compose.yml up

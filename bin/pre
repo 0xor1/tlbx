@@ -1,14 +1,5 @@
 #!/bin/bash
 go fmt ./... && \
-docker-compose -f docker/docker-compose.yml down && \
-docker ps --format '{{.Names}}' | grep "^tlbx-" | awk '{print $1}' | xargs -I {} docker stop {} && \
-docker-compose -f docker/docker-compose.yml up -d && \
-echo "waiting 30 seconds for mariadb" && \
-echo "to start accepting connections :(" && \
-echo "figure out a way of detecting when" && \
-echo "mariadb is accepting connections :)" && \
-sleep 30s && \
-go test -coverprofile=coverage.out ./... && \
+go test -p=5 -coverprofile=coverage.out ./... && \
 go tool cover -html=coverage.out && \
-rm coverage.out && \
-docker-compose -f docker/docker-compose.yml down
+rm coverage.out

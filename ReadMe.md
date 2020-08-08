@@ -4,8 +4,17 @@ tlbx
 ## fmt & test
 
 ```
+./bin/dkr
+```
+to up the service containers that are used by the apps.
+```
+./bin/dkr reset
+```
+to fully rebuild and run all the docker images/containers.
+```
 ./bin/pre
 ```
+to fmt and test everything.
 
 ## structure
 

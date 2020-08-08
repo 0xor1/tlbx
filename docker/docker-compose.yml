@@ -26,4 +26,4 @@ services:
       MINIO_SECRET_KEY: localtest
     ports:
     - "9000:9000"
-    command: "minio server /tmp/data"
+    command: "minio server /data"

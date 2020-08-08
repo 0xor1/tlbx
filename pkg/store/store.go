@@ -7,6 +7,7 @@ import (
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
@@ -17,6 +18,8 @@ const (
 )
 
 type Client interface {
+	CreateBucket(bucket, acl string) error
+	MustCreateBucket(bucket, acl string)
 	Put(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error
 	MustPut(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker)
 	PresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) (string, error)
@@ -38,6 +41,21 @@ func New(s3 *s3.S3) Client {
 
 type client struct {
 	s3 *s3.S3
+}
+
+func (c *client) CreateBucket(bucket, acl string) error {
+	_, err := c.s3.CreateBucket(&s3.CreateBucketInput{
+		Bucket: ptr.String(bucket),
+		ACL:    ptr.String(acl),
+	})
+	if aerr, ok := err.(awserr.Error); ok && aerr.Code() == s3.ErrCodeBucketAlreadyOwnedByYou {
+		err = nil
+	}
+	return ToError(err)
+}
+
+func (c *client) MustCreateBucket(bucket, acl string) {
+	PanicOn(c.CreateBucket(bucket, acl))
 }
 
 func (c *client) putReq(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) (*request.Request, *s3.PutObjectOutput) {
