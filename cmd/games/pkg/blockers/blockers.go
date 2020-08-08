@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/0xor1/tlbx/cmd/games/pkg/game"
+	"github.com/0xor1/tlbx/cmd/games/pkg/pbit"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
@@ -141,9 +142,9 @@ type piece struct {
 
 type Game struct {
 	game.Base
-	PieceSetsEnded Bits  `json:"pieceSetsEnded"`
-	PieceSets      Bits  `json:"pieceSets"`
-	Board          Pbits `json:"board"`
+	PieceSetsEnded Bits       `json:"pieceSetsEnded"`
+	PieceSets      Bits       `json:"pieceSets"`
+	Board          pbit.Pbits `json:"board"`
 }
 
 func (g *Game) GetBase() *game.Base {

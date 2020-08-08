@@ -1,4 +1,4 @@
-package blockers
+package pbit
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Bit(t *testing.T) {
+func Test_PBit(t *testing.T) {
 	a := assert.New(t)
 
 	p := Pbit(0)

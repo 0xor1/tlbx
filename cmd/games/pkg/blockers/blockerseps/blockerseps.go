@@ -3,6 +3,7 @@ package blockerseps
 import (
 	"github.com/0xor1/tlbx/cmd/games/pkg/blockers"
 	"github.com/0xor1/tlbx/cmd/games/pkg/game"
+	"github.com/0xor1/tlbx/cmd/games/pkg/pbit"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
@@ -210,9 +211,9 @@ var (
 												// occupied errors will be given.
 												cornerConMet = cornerConMet ||
 													((offsetX != 0 || offsetY != 0) &&
-														g.Board[loopI] == blockers.Pbit(pieceSet))
+														g.Board[loopI] == pbit.Pbit(pieceSet))
 												tlbx.BadReqIf((offsetX == 0 || offsetY == 0) &&
-													g.Board[loopI] == blockers.Pbit(pieceSet),
+													g.Board[loopI] == pbit.Pbit(pieceSet),
 													"face to face constraint not met, cell %d", loopI)
 											}
 										}
@@ -225,7 +226,7 @@ var (
 
 						// update the board with the new piece cells on it
 						for _, i := range insertIdxs {
-							g.Board[i] = blockers.Pbit(pieceSet)
+							g.Board[i] = pbit.Pbit(pieceSet)
 						}
 
 						// set this piece from this set as having been used.
@@ -322,9 +323,9 @@ func NewGame() *blockers.Game {
 	for len(pieceSets) < cap(pieceSets) {
 		pieceSets = append(pieceSets, Bit(1))
 	}
-	board := make(blockers.Pbits, 0, uint16(boardDims)*uint16(boardDims))
+	board := make(pbit.Pbits, 0, uint16(boardDims)*uint16(boardDims))
 	for len(board) < cap(board) {
-		board = append(board, blockers.Pbit(pieceSetsCount))
+		board = append(board, pbit.Pbit(pieceSetsCount))
 	}
 	return &blockers.Game{
 		Base:           game.Base{},

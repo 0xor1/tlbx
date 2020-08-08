@@ -147,7 +147,7 @@ func (r *rig) Store() store.Client {
 }
 
 func (r *rig) NewClient() *app.Client {
-	return app.NewClient(Sprintf(baseHref, r.Port()), &http.Client{Transport: &http.Transport{MaxIdleConnsPerHost: 1000}})
+	return app.NewClient(Sprintf(baseHref, r.Port()), &http.Client{Transport: &http.Transport{MaxIdleConnsPerHost: 200}})
 }
 
 func NewRig(
