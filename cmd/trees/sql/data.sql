@@ -54,17 +54,17 @@ CREATE TABLE projects(
     isArchived BOOL NOT NULL,
 	name VARCHAR(250) NOT NULL,
     createdOn DATETIME NOT NULL,
+    currencyCode VARCHAR NOT NULL, 
     hoursPerDay TINYINT UNSIGNED NOT NULL,
     daysPerWeek TINYINT UNSIGNED NOT NULL,
     startOn DATETIME NULL,
     dueOn DATETIME NULL,
     isPublic BOOL NOT NULL,
     PRIMARY KEY (host, id),
-    INDEX(host, isArchived, name, createdOn, id),
-    INDEX(host, isArchived, createdOn, name, id),
-    INDEX(host, isArchived, startOn, name, id),
-    INDEX(host, isArchived, dueOn, name, id),
-    INDEX(host, isArchived, isPublic, name, createdOn, id)
+    INDEX(host, isArchived, isPublic, name, createdOn, id),
+    INDEX(host, isArchived, isPublic, createdOn, name, id),
+    INDEX(host, isArchived, isPublic, startOn, name, id),
+    INDEX(host, isArchived, isPublic, dueOn, name, id)
 );
 
 DROP TABLE IF EXISTS tasks;
@@ -84,6 +84,10 @@ CREATE TABLE tasks(
     loggedTime BIGINT UNSIGNED NOT NULL,
     estimatedSubTime BIGINT UNSIGNED NOT NULL,
     loggedSubTime BIGINT UNSIGNED NOT NULL,
+    estimatedCost DECIMAL(13,4) UNSIGNED NOT NULL,
+    loggedCost DECIMAL(13,4) UNSIGNED NOT NULL,
+    estimatedSubCost DECIMAL(13,4) UNSIGNED NOT NULL,
+    loggedSubCost DECIMAL(13,4) UNSIGNED NOT NULL,
     fileCount BIGINT UNSIGNED NOT NULL,
     fileSize BIGINT UNSIGNED NOT NULL,
     subFileCount BIGINT UNSIGNED NOT NULL,

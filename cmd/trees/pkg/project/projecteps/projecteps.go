@@ -9,7 +9,9 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
+	"github.com/0xor1/tlbx/pkg/web/app/validate"
 )
 
 var (
@@ -23,20 +25,22 @@ var (
 			GetDefaultArgs: func() interface{} {
 				return &project.Create{
 					Base: project.Base{
-						HoursPerDay: 8,
-						DaysPerWeek: 5,
-						IsPublic:    false,
+						CurrencyCode: "USD",
+						HoursPerDay:  8,
+						DaysPerWeek:  5,
+						IsPublic:     false,
 					},
 				}
 			},
 			GetExampleArgs: func() interface{} {
 				return &project.Create{
 					Base: project.Base{
-						HoursPerDay: 8,
-						DaysPerWeek: 5,
-						StartOn:     ptr.Time(app.ExampleTime()),
-						DueOn:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-						IsPublic:    false,
+						CurrencyCode: "USD",
+						HoursPerDay:  8,
+						DaysPerWeek:  5,
+						StartOn:      ptr.Time(app.ExampleTime()),
+						DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+						IsPublic:     false,
 					},
 					Name: "My New Project",
 				}
@@ -58,11 +62,33 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.Create)
-				Println(args.Base)
+				me := me.Get(tlbx)
+				validate.Str("name", args.Name, tlbx, 1, nameMaxLen)
+				tlbx.BadReqIf(args.HoursPerDay < 1 || args.HoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
+				tlbx.BadReqIf(args.DaysPerWeek < 1 || args.HoursPerDay > 7, "invalid daysPerWeek must be > 0 and <= 7")
+				tlbx.BadReqIf(args.StartOn != nil && args.DueOn != nil && args.StartOn.After(*args.Base.DueOn), "invalid startOn must be before dueOn")
+				project := &project.Project{
+					Task: task.Task{
+						ID:         tlbx.NewID(),
+						Name:       args.Name,
+						CreatedOn:  NowMilli(),
+						IsParallel: true,
+					},
+					Base:       args.Base,
+					IsArchived: false,
+				}
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
+				tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, me, project.ID)
+				tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, project.ID, project.IsArchived, project.Name, project.CreatedOn, project.HoursPerDay, project.DaysPerWeek, project.StartOn, project.DueOn, project.IsPublic)
+				// TODO continue from here tomorrow
+				tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedCost, loggedCost, estimatedSubCost, loggedSubCost, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount, isParallel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, project.ID, project.ID, project.Name, project.CreatedOn, project.HoursPerDay, project.DaysPerWeek, project.StartOn, project.DueOn, project.IsPublic)
 				return nil
 			},
 		},
 	}
+	nameMaxLen  = 250
 	aliasMaxLen = 50
 )
 
