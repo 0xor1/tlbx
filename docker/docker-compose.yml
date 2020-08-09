@@ -1,25 +1,25 @@
 version: '3.7'
 services:
 
-  tlbx-sql-testall:
-    container_name: tlbx-sql-testall
+  tlbx-testall-sql:
+    container_name: tlbx-testall-sql
     build:
       context: ../.
       dockerfile: docker/sql.dockerfile
-    image: tlbx-sql-testall
+    image: tlbx-testall-sql
     environment:
       MYSQL_ROOT_PASSWORD: dev
     ports:
     - "3306:3306"
 
-  tlbx-redis-testall:
-    container_name: tlbx-redis-testall
+  tlbx-testall-redis:
+    container_name: tlbx-testall-redis
     image: redis:5.0.8-alpine
     ports:
     - "6379:6379"
 
-  tlbx-minio-testall:
-    container_name: tlbx-minio-testall
+  tlbx-testall-minio:
+    container_name: tlbx-testall-minio
     image: minio/minio:RELEASE.2020-08-05T21-34-13Z
     environment:
       MINIO_ACCESS_KEY: localtest

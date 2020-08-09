@@ -176,10 +176,6 @@ func NewRig(
 	}
 
 	if useUsers {
-
-		if r.store != nil {
-			r.store.MustCreateBucket("avatars", "public_read")
-		}
 		eps = append(
 			eps,
 			usereps.New(
@@ -193,7 +189,8 @@ func NewRig(
 				enableAvatars,
 				config.AvatarBucket,
 				config.AvatarPrefix,
-				onSetAvatar)...)
+				onSetAvatar,
+				config.Store)...)
 	}
 	go app.Run(func(c *app.Config) {
 		c.TlbxMwares = app.TlbxMwares{

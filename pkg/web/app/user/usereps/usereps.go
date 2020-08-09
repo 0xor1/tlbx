@@ -18,6 +18,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/crypt"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
@@ -38,6 +39,7 @@ func New(
 	enableAvatars bool,
 	avatarBucket, avatarPrefix string,
 	onSetAvatar func(app.Tlbx, ID, bool) error,
+	store store.Client,
 ) []*app.Endpoint {
 	eps := []*app.Endpoint{
 		{
@@ -557,6 +559,7 @@ func New(
 		})
 	}
 	if enableAvatars {
+		store.MustCreateBucket(avatarBucket, "public_read")
 		eps = append(eps,
 			&app.Endpoint{
 				Description:  "set avatar",

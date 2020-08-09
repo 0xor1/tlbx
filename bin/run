@@ -1,6 +1,6 @@
 #!/bin/bash
 docker ps --format '{{.Names}}' | grep "^tlbx-" | awk '{print $1}' | xargs -I {} docker stop {} && \
 tmux \
-new-session -stlbx-$1 "/bin/bash -c \"cd cmd/$1 && go run main.go ${@:2}\"" \; \
+new-session -stlbx-$1 "/bin/bash -c \"cd cmd/$1 && sleep 5 && go run main.go ${@:2}\"" \; \
 split-window -v "/bin/bash -c \"cd cmd/$1 && npm --prefix client i; npm --prefix client run serve; exec bash\"" \; \
 split-window -h "/bin/bash -c \"cd cmd/$1 && docker-compose up\"" \; \

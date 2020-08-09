@@ -1,19 +1,19 @@
 version: '3.7'
 services:
 
-  tlbx-sql-games:
-    container_name: tlbx-sql-games
+  tlbx-games-sql:
+    container_name: tlbx-games-sql
     build:
       context: ../../.
       dockerfile: cmd/games/sql.dockerfile
-    image: tlbx-sql-games
+    image: tlbx-games-sql
     environment:
       MYSQL_ROOT_PASSWORD: dev
     ports:
     - "3306:3306"
 
-  tlbx-redis-games:
-    container_name: tlbx-redis-games
+  tlbx-games-redis:
+    container_name: tlbx-games-redis
     image: redis:5.0.8-alpine
     ports:
     - "6379:6379"

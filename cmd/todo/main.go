@@ -40,7 +40,8 @@ func main() {
 						true,
 						config.AvatarBucket,
 						config.AvatarPrefix,
-						nil)...),
+						nil,
+						config.Store)...),
 				listeps.Eps...),
 			itemeps.Eps...)
 	})
