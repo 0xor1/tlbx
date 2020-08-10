@@ -31,14 +31,12 @@ func main() {
 					config.FromEmail,
 					config.ActivateFmtLink,
 					config.ConfirmChangeEmailFmtLink,
-					projecteps.OnActivate,
+					nil,
 					projecteps.OnDelete,
 					true,
 					nil,
-					true,
 					config.AvatarBucket,
 					config.AvatarPrefix,
-					nil,
 					config.Store)...),
 			projecteps.Eps...)
 	})

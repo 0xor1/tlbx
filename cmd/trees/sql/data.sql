@@ -54,7 +54,7 @@ CREATE TABLE projects(
     isArchived BOOL NOT NULL,
 	name VARCHAR(250) NOT NULL,
     createdOn DATETIME NOT NULL,
-    currencyCode VARCHAR NOT NULL, 
+    currencyCode VARCHAR(3) NOT NULL, 
     hoursPerDay TINYINT UNSIGNED NOT NULL,
     daysPerWeek TINYINT UNSIGNED NOT NULL,
     startOn DATETIME NULL,
@@ -78,6 +78,7 @@ CREATE TABLE tasks(
     user BINARY(16) NULL,
 	name VARCHAR(250) NOT NULL,
 	description VARCHAR(1250) NULL,
+    createdBy BINARY(16) NOT NULL,
     createdOn DATETIME NOT NULL,
     minimumRemainingTime BIGINT UNSIGNED NOT NULL,
     estimatedTime BIGINT UNSIGNED NOT NULL,
@@ -108,16 +109,35 @@ CREATE TABLE timeLogs(
 	project BINARY(16) NOT NULL,
     task BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
-    loggedBy BINARY(16) NOT NULL,
-    loggedOn DATETIME NOT NULL,
+    createdBy BINARY(16) NOT NULL,
+    createdOn DATETIME NOT NULL,
     taskHasBeenDeleted BOOL NOT NULL,
     taskName VARCHAR(250) NOT NULL,
     duration BIGINT UNSIGNED NOT NULL,
     note VARCHAR(250) NULL,
-    PRIMARY KEY(host, project, task, loggedOn, loggedBy),
+    PRIMARY KEY(host, project, task, createdOn, createdBy),
     UNIQUE INDEX(host, project, task, id),
-    UNIQUE INDEX(host, project, loggedBy, loggedOn, task),
-    UNIQUE INDEX(host, project, loggedOn, loggedBy, task)
+    UNIQUE INDEX(host, project, createdBy, createdOn, task),
+    UNIQUE INDEX(host, project, createdOn, createdBy, task)
+);
+
+DROP TABLE IF EXISTS costs;
+CREATE TABLE costs(
+	host BINARY(16) NOT NULL,
+	project BINARY(16) NOT NULL,
+    task BINARY(16) NOT NULL,
+    id BINARY(16) NOT NULL,
+    createdBy BINARY(16) NOT NULL,
+    createdOn DATETIME NOT NULL,
+    taskHasBeenDeleted BOOL NOT NULL,
+    taskName VARCHAR(250) NOT NULL,
+    paidOn DATETIME NOT NULL,
+    cost DECIMAL(13, 4) UNSIGNED NOT NULL,
+    note VARCHAR(250) NULL,
+    PRIMARY KEY(host, project, task, createdOn, createdBy),
+    UNIQUE INDEX(host, project, task, id),
+    UNIQUE INDEX(host, project, createdBy, createdOn, task),
+    UNIQUE INDEX(host, project, createdOn, createdBy, task)
 );
 
 DROP TABLE IF EXISTS files;
@@ -126,15 +146,15 @@ CREATE TABLE files(
 	project BINARY(16) NOT NULL,
     task BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
-    uploadedBy BINARY(16) NOT NULL,
-    uploadedOn DATETIME NOT NULL,
+    createdBy BINARY(16) NOT NULL,
+    createdOn DATETIME NOT NULL,
     size BIGINT UNSIGNED NOT NULL,
     taskHasBeenDeleted BOOL NOT NULL,
     taskName VARCHAR(250) NOT NULL,
     note VARCHAR(250) NULL,
-    PRIMARY KEY(host, project, task, uploadedOn, id),
+    PRIMARY KEY(host, project, task, createdOn, id),
     UNIQUE INDEX(host, project, task, id),
-    UNIQUE INDEX(host, project, task, uploadedBy, id)
+    UNIQUE INDEX(host, project, task, createdBy, id)
 );
 
 DROP TABLE IF EXISTS comments;

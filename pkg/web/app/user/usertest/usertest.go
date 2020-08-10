@@ -17,15 +17,26 @@ import (
 )
 
 func Everything(t *testing.T) {
-	r := test.NewRig(config.GetProcessed(config.GetBase()), nil, true, func(tlbx app.Tlbx, user *user.User) {}, func(tlbx app.Tlbx, id ID) {}, true, func(tlbx app.Tlbx, id ID, alias *string) error { return nil }, true, func(tlbx app.Tlbx, id ID, hasAvatar bool) error { return nil })
+	r := test.NewRig(
+		config.GetProcessed(config.GetBase()),
+		nil,
+		true,
+		func(tlbx app.Tlbx, user *user.User) {},
+		func(tlbx app.Tlbx, id ID) {},
+		true,
+		func(tlbx app.Tlbx, user *user.User) error { return nil })
 	defer r.CleanUp()
 
 	a := assert.New(t)
 	c := r.NewClient()
+	handle := "test_handle"
+	alias := "test 😂 alias"
 	email := Sprintf("test@test.localhost%d", r.Port())
 	pwd := "1aA$_t;3"
 
 	(&user.Register{
+		Handle:     ptr.String(handle),
+		Alias:      ptr.String(alias),
 		Email:      email,
 		Pwd:        pwd,
 		ConfirmPwd: pwd,
@@ -33,11 +44,21 @@ func Everything(t *testing.T) {
 
 	// check existing email err
 	err := (&user.Register{
+		Handle:     ptr.String("not_used"),
 		Email:      email,
 		Pwd:        pwd,
 		ConfirmPwd: pwd,
 	}).Do(c)
-	a.Equal(&app.ErrMsg{Status: 400, Msg: "email already registered"}, err)
+	a.Equal(&app.ErrMsg{Status: 400, Msg: "email or handle already registered"}, err)
+
+	// check existing handle err
+	err = (&user.Register{
+		Handle:     ptr.String(handle),
+		Email:      "email@email.test",
+		Pwd:        pwd,
+		ConfirmPwd: pwd,
+	}).Do(c)
+	a.Equal(&app.ErrMsg{Status: 400, Msg: "email or handle already registered"}, err)
 
 	(&user.ResendActivateLink{
 		Email: email,
@@ -110,12 +131,18 @@ func Everything(t *testing.T) {
 		Pwd:   newPwd,
 	}).MustDo(c)
 
-	alias := "shabba!"
+	handle = "new_test_handle"
+	(&user.SetHandle{
+		Handle: handle,
+	}).MustDo(c)
+
+	alias = "shabba!"
 	(&user.SetAlias{
 		Alias: ptr.String(alias),
 	}).MustDo(c)
 
 	me := (&user.Me{}).MustDo(c)
+	a.Equal(handle, *me.Handle)
 	a.Equal(alias, *me.Alias)
 	a.False(*me.HasAvatar)
 
@@ -177,6 +204,7 @@ func Everything(t *testing.T) {
 	}).MustDo(c)
 
 	(&user.Register{
+		Handle:     ptr.String(handle),
 		Email:      email,
 		Pwd:        pwd,
 		ConfirmPwd: pwd,

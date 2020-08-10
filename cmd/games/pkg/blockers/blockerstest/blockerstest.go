@@ -17,7 +17,13 @@ import (
 
 func Everything(t *testing.T) {
 	a := assert.New(t)
-	r := test.NewRig(config.Get(), append(game.Eps, blockerseps.Eps...), false, nil, nil, false, nil, false, nil)
+	r := test.NewRig(
+		config.Get(),
+		append(game.Eps, blockerseps.Eps...),
+		false,
+		nil, nil,
+		false,
+		nil)
 	defer r.CleanUp()
 
 	g2 := playGame(a, []*app.Client{

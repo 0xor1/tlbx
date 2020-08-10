@@ -7,6 +7,7 @@ import (
 
 type Register struct {
 	Alias      *string `json:"alias,omitempty"`
+	Handle     *string `json:"handle,omitempty"`
 	Email      string  `json:"email"`
 	Pwd        string  `json:"pwd"`
 	ConfirmPwd string  `json:"confirmPwd"`
@@ -117,6 +118,22 @@ func (a *ResetPwd) Do(c *app.Client) error {
 }
 
 func (a *ResetPwd) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
+
+type SetHandle struct {
+	Handle string `json:"handle"`
+}
+
+func (_ *SetHandle) Path() string {
+	return "/user/setHandle"
+}
+
+func (a *SetHandle) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *SetHandle) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
@@ -281,6 +298,7 @@ func (a *GetAvatar) MustDo(c *app.Client) *app.Stream {
 
 type User struct {
 	ID        ID      `json:"id"`
+	Handle    *string `json:"handle,omitempty"`
 	Alias     *string `json:"alias,omitempty"`
 	HasAvatar *bool   `json:"hasAvatar,omitempty"`
 }

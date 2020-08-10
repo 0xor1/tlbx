@@ -156,10 +156,8 @@ func NewRig(
 	useUsers bool,
 	onActivate func(app.Tlbx, *user.User),
 	onDelete func(app.Tlbx, ID),
-	enableAliases bool,
-	onSetAlias func(app.Tlbx, ID, *string) error,
-	enableAvatars bool,
-	onSetAvatar func(app.Tlbx, ID, bool) error,
+	enableSocials bool,
+	onSetSocials func(app.Tlbx, *user.User) error,
 ) Rig {
 	listener, err := net.Listen("tcp", ":0")
 	PanicOn(err)
@@ -184,12 +182,10 @@ func NewRig(
 				config.ConfirmChangeEmailFmtLink,
 				onActivate,
 				onDelete,
-				enableAliases,
-				onSetAlias,
-				enableAvatars,
+				enableSocials,
+				onSetSocials,
 				config.AvatarBucket,
 				config.AvatarPrefix,
-				onSetAvatar,
 				config.Store)...)
 	}
 	go app.Run(func(c *app.Config) {
@@ -243,12 +239,13 @@ func (r *rig) CleanUp() {
 	}
 }
 
-func (r *rig) createUser(alias, emailSuffix, pwd string) *testUser {
-	email := Sprintf("%s%s%d", alias, emailSuffix, r.port)
+func (r *rig) createUser(handleSuffix, emailSuffix, pwd string) *testUser {
+	email := Sprintf("%s%s%d", handleSuffix, emailSuffix, r.port)
 	c := r.NewClient()
 	if r.useAuth {
 		(&user.Register{
-			Alias:      ptr.String(alias),
+			Handle:     ptr.String(Sprintf("%s%d", handleSuffix, r.port)),
+			Alias:      ptr.String(handleSuffix),
 			Email:      email,
 			Pwd:        pwd,
 			ConfirmPwd: pwd,

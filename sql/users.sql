@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     id BINARY(16) NOT NULL,
 	email VARCHAR(250) NOT NULL,
+    handle VARCHAR(15) NULL,
     alias VARCHAR(50) NULL,
     hasAvatar BOOLEAN NULL,
     registeredOn DATETIME NOT NULL,
@@ -17,7 +18,8 @@ CREATE TABLE users (
 	changeEmailCode VARCHAR(250) NULL,
 	lastPwdResetOn DATETIME NULL,
     PRIMARY KEY email (email),
-    UNIQUE INDEX id (id)
+    UNIQUE INDEX id (id),
+    UNIQUE INDEX handle (handle)
 );
 
 DROP USER IF EXISTS 'users'@'%';

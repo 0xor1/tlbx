@@ -34,11 +34,9 @@ func New(
 	confirmChangeEmailFmtLink string,
 	onActivate func(app.Tlbx, *user.User),
 	onDelete func(app.Tlbx, ID),
-	enableAliases bool,
-	onSetAlias func(app.Tlbx, ID, *string) error,
-	enableAvatars bool,
+	enableSocials bool,
+	onSetSocials func(app.Tlbx, *user.User) error,
 	avatarBucket, avatarPrefix string,
-	onSetAvatar func(app.Tlbx, ID, bool) error,
 	store store.Client,
 ) []*app.Endpoint {
 	eps := []*app.Endpoint{
@@ -57,7 +55,8 @@ func New(
 					Pwd:        "J03-8l0-Gg5-Pwd",
 					ConfirmPwd: "J03-8l0-Gg5-Pwd",
 				}
-				if enableAliases {
+				if enableSocials {
+					ex.Handle = ptr.String("bloe_joggs")
 					ex.Alias = ptr.String("Joe Bloggs")
 				}
 				return ex
@@ -69,8 +68,17 @@ func New(
 				tlbx.BadReqIf(me.Exists(tlbx), "already logged in")
 				args := a.(*user.Register)
 				args.Email = strings.Trim(args.Email, " ")
-				if !enableAliases {
+				if !enableSocials {
+					args.Handle = nil
 					args.Alias = nil
+				}
+				tlbx.BadReqIf(enableSocials && args.Handle == nil, "social system requires a user handle")
+				if args.Handle != nil {
+					args.Handle = ptr.String(
+						strings.ReplaceAll(
+							strings.ToLower(
+								strings.Trim(*args.Handle, " ")), " ", "_"))
+					validate.Str("handle", *args.Handle, tlbx, handleMinLen, handleMaxLen, handleRegex)
 				}
 				if args.Alias != nil {
 					args.Alias = ptr.String(strings.Trim(*args.Alias, " "))
@@ -81,13 +89,13 @@ func New(
 				id := tlbx.NewID()
 				srv := service.Get(tlbx)
 				var hasAvatar *bool
-				if enableAvatars {
+				if enableSocials {
 					hasAvatar = ptr.Bool(false)
 				}
-				_, err := srv.User().Exec("INSERT INTO users (id, email, alias, hasAvatar, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?)", id, args.Email, args.Alias, hasAvatar, Now(), activateCode)
+				_, err := srv.User().Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, Now(), activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
-					tlbx.BadReqIf(ok && mySqlErr.Number == 1062, "email already registered")
+					tlbx.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
 					PanicOn(err)
 				}
 				setPwd(tlbx, id, args.Pwd, args.ConfirmPwd)
@@ -379,10 +387,9 @@ func New(
 				ex := &user.User{
 					ID: app.ExampleID(),
 				}
-				if enableAliases {
+				if enableSocials {
+					ex.Handle = ptr.String("bloe_joggs")
 					ex.Alias = ptr.String("Joe Bloggs")
-				}
-				if enableAvatars {
 					ex.HasAvatar = ptr.Bool(true)
 				}
 				return ex
@@ -446,10 +453,9 @@ func New(
 				ex := &user.User{
 					ID: app.ExampleID(),
 				}
-				if enableAliases {
+				if enableSocials {
+					ex.Handle = ptr.String("bloe_joggs")
 					ex.Alias = ptr.String("Joe Bloggs")
-				}
-				if enableAvatars {
 					ex.HasAvatar = ptr.Bool(true)
 				}
 				return ex
@@ -464,104 +470,129 @@ func New(
 			},
 		},
 	}
-	if enableAliases || enableAvatars {
-		eps = append(eps, &app.Endpoint{
-			Description:  "get users",
-			Path:         (&user.Get{}).Path(),
-			Timeout:      500,
-			MaxBodyBytes: app.KB,
-			IsPrivate:    false,
-			GetDefaultArgs: func() interface{} {
-				return &user.Get{}
-			},
-			GetExampleArgs: func() interface{} {
-				return &user.Get{
-					Users: []ID{app.ExampleID()},
-				}
-			},
-			GetExampleResponse: func() interface{} {
-				ex := []user.User{
-					{
-						ID: app.ExampleID(),
-					},
-				}
-				if enableAliases {
-					ex[0].Alias = ptr.String("Joe Bloggs")
-				}
-				if enableAvatars {
-					ex[0].HasAvatar = ptr.Bool(true)
-				}
-				return ex
-			},
-			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*user.Get)
-				if len(args.Users) == 0 {
-					return nil
-				}
-				validate.MaxIDs(tlbx, "users", args.Users, 100)
-				srv := service.Get(tlbx)
-				query := bytes.NewBufferString(`SELECT id, alias, hasAvatar FROM users WHERE id IN(?`)
-				queryArgs := make([]interface{}, 0, len(args.Users))
-				queryArgs = append(queryArgs, args.Users[0])
-				for _, id := range args.Users[1:] {
-					query.WriteString(`,?`)
-					queryArgs = append(queryArgs, id)
-				}
-				query.WriteString(`)`)
-				res := make([]*user.User, 0, len(args.Users))
-				srv.User().Query(func(rows isql.Rows) {
-					for rows.Next() {
-						u := &user.User{}
-						rows.Scan(&u.ID, &u.Alias, &u.HasAvatar)
-						res = append(res, u)
-					}
-				}, query.String(), queryArgs...)
-				return res
-			},
-		})
-	}
-	if enableAliases {
-		eps = append(eps, &app.Endpoint{
-			Description:  "set alias",
-			Path:         (&user.SetAlias{}).Path(),
-			Timeout:      500,
-			MaxBodyBytes: app.KB,
-			IsPrivate:    false,
-			GetDefaultArgs: func() interface{} {
-				return &user.SetAlias{}
-			},
-			GetExampleArgs: func() interface{} {
-				return &user.SetAlias{
-					Alias: ptr.String("Boe Jloggs"),
-				}
-			},
-			GetExampleResponse: func() interface{} {
-				return nil
-			},
-			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*user.SetAlias)
-				if args.Alias != nil {
-					validate.Str("alias", *args.Alias, tlbx, 0, aliasMaxLen)
-				}
-				srv := service.Get(tlbx)
-				me := me.Get(tlbx)
-				tx := srv.User().Begin()
-				defer tx.Rollback()
-				user := getUser(tx, nil, &me)
-				user.Alias = args.Alias
-				updateUser(tx, user)
-				if onSetAlias != nil {
-					PanicOn(onSetAlias(tlbx, me, user.Alias))
-				}
-				tx.Commit()
-				return nil
-			},
-		})
-	}
-	if enableAvatars {
+	if enableSocials {
 		store.MustCreateBucket(avatarBucket, "public_read")
 		eps = append(eps,
 			&app.Endpoint{
+				Description:  "get users",
+				Path:         (&user.Get{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: app.KB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return &user.Get{}
+				},
+				GetExampleArgs: func() interface{} {
+					return &user.Get{
+						Users: []ID{app.ExampleID()},
+					}
+				},
+				GetExampleResponse: func() interface{} {
+					ex := []user.User{
+						{
+							ID:        app.ExampleID(),
+							Handle:    ptr.String("bloe_joggs"),
+							Alias:     ptr.String("Joe Bloggs"),
+							HasAvatar: ptr.Bool(true),
+						},
+					}
+					return ex
+				},
+				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+					args := a.(*user.Get)
+					if len(args.Users) == 0 {
+						return nil
+					}
+					validate.MaxIDs(tlbx, "users", args.Users, 100)
+					srv := service.Get(tlbx)
+					query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar FROM users WHERE id IN(?`)
+					queryArgs := make([]interface{}, 0, len(args.Users))
+					queryArgs = append(queryArgs, args.Users[0])
+					for _, id := range args.Users[1:] {
+						query.WriteString(`,?`)
+						queryArgs = append(queryArgs, id)
+					}
+					query.WriteString(`)`)
+					res := make([]*user.User, 0, len(args.Users))
+					srv.User().Query(func(rows isql.Rows) {
+						for rows.Next() {
+							u := &user.User{}
+							rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar)
+							res = append(res, u)
+						}
+					}, query.String(), queryArgs...)
+					return res
+				},
+			}, &app.Endpoint{
+				Description:  "set handle",
+				Path:         (&user.SetHandle{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: app.KB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return &user.SetHandle{}
+				},
+				GetExampleArgs: func() interface{} {
+					return &user.SetHandle{
+						Handle: "joe_bloggs",
+					}
+				},
+				GetExampleResponse: func() interface{} {
+					return nil
+				},
+				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+					args := a.(*user.SetHandle)
+					validate.Str("handle", args.Handle, tlbx, handleMinLen, handleMaxLen, handleRegex)
+					srv := service.Get(tlbx)
+					me := me.Get(tlbx)
+					tx := srv.User().Begin()
+					defer tx.Rollback()
+					user := getUser(tx, nil, &me)
+					user.Handle = &args.Handle
+					tlbx.Log().Debug(*user.Handle)
+					updateUser(tx, user)
+					if onSetSocials != nil {
+						PanicOn(onSetSocials(tlbx, &user.User))
+					}
+					tx.Commit()
+					return nil
+				},
+			}, &app.Endpoint{
+				Description:  "set alias",
+				Path:         (&user.SetAlias{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: app.KB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return &user.SetAlias{}
+				},
+				GetExampleArgs: func() interface{} {
+					return &user.SetAlias{
+						Alias: ptr.String("Boe Jloggs"),
+					}
+				},
+				GetExampleResponse: func() interface{} {
+					return nil
+				},
+				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+					args := a.(*user.SetAlias)
+					if args.Alias != nil {
+						validate.Str("alias", *args.Alias, tlbx, 0, aliasMaxLen)
+					}
+					srv := service.Get(tlbx)
+					me := me.Get(tlbx)
+					tx := srv.User().Begin()
+					defer tx.Rollback()
+					user := getUser(tx, nil, &me)
+					user.Alias = args.Alias
+					updateUser(tx, user)
+					if onSetSocials != nil {
+						PanicOn(onSetSocials(tlbx, &user.User))
+					}
+					tx.Commit()
+					return nil
+				},
+			}, &app.Endpoint{
 				Description:  "set avatar",
 				Path:         (&user.SetAvatar{}).Path(),
 				Timeout:      500,
@@ -598,14 +629,25 @@ func New(
 						}
 						buff := &bytes.Buffer{}
 						PanicOn(png.Encode(buff, avatar))
-						srv.Store().MustPut(avatarBucket, avatarPrefix, me, args.Name, "image/png", int64(buff.Len()), true, false, bytes.NewReader(buff.Bytes()))
+						srv.Store().MustPut(
+							avatarBucket,
+							avatarPrefix,
+							me,
+							args.Name,
+							"image/png",
+							int64(buff.Len()),
+							true,
+							false,
+							bytes.NewReader(buff.Bytes()))
 					} else if *user.HasAvatar == true {
 						srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
 					}
 					nowHasAvatar := args.Size > 0
 					if *user.HasAvatar != nowHasAvatar {
 						user.HasAvatar = ptr.Bool(nowHasAvatar)
-						onSetAvatar(tlbx, user.ID, nowHasAvatar)
+						if onSetSocials != nil {
+							PanicOn(onSetSocials(tlbx, &user.User))
+						}
 					}
 					updateUser(tx, user)
 					tx.Commit()
@@ -647,10 +689,13 @@ func New(
 }
 
 var (
-	emailRegex  = regexp.MustCompile(`\A.+@.+\..+\z`)
-	emailMaxLen = 250
-	aliasMaxLen = 50
-	pwdRegexs   = []*regexp.Regexp{
+	handleRegex  = regexp.MustCompile(`[_a-z0-9]{1,15}`)
+	handleMinLen = 1
+	handleMaxLen = 15
+	emailRegex   = regexp.MustCompile(`\A.+@.+\..+\z`)
+	emailMaxLen  = 250
+	aliasMaxLen  = 50
+	pwdRegexs    = []*regexp.Regexp{
 		regexp.MustCompile(`[0-9]`),
 		regexp.MustCompile(`[a-z]`),
 		regexp.MustCompile(`[A-Z]`),
@@ -691,7 +736,7 @@ type fullUser struct {
 
 func getUser(tx service.Tx, email *string, id *ID) *fullUser {
 	PanicIf(email == nil && id == nil, "one of email or id must not be nil")
-	query := `SELECT id, email, alias, hasAvatar, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn FROM users WHERE `
+	query := `SELECT id, email, handle, alias, hasAvatar, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn FROM users WHERE `
 	var arg interface{}
 	if email != nil {
 		query += `email=?`
@@ -702,7 +747,7 @@ func getUser(tx service.Tx, email *string, id *ID) *fullUser {
 	}
 	row := tx.QueryRow(query, arg)
 	res := &fullUser{}
-	err := row.Scan(&res.ID, &res.Email, &res.Alias, &res.HasAvatar, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
+	err := row.Scan(&res.ID, &res.Email, &res.Handle, &res.Alias, &res.HasAvatar, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
 	if err == sql.ErrNoRows {
 		return nil
 	}
@@ -711,7 +756,7 @@ func getUser(tx service.Tx, email *string, id *ID) *fullUser {
 }
 
 func updateUser(tx service.Tx, user *fullUser) {
-	_, err := tx.Exec(`UPDATE users SET email=?, alias=?, hasAvatar=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.Alias, user.HasAvatar, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
+	_, err := tx.Exec(`UPDATE users SET email=?, handle=?, alias=?, hasAvatar=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.Handle, user.Alias, user.HasAvatar, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
 	PanicOn(err)
 }
 

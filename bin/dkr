@@ -2,7 +2,7 @@
 #!/bin/bash
 
 if [ "$1" == "reset" ]; then
-    docker-compose -f docker/docker-compose.yml down
+    docker-compose -f docker/docker-compose.yml down --rmi local
 fi
 docker ps --format '{{.Names}}' | grep "^tlbx-" | awk '{print $1}' | xargs -I {} docker stop {} && \
 docker-compose -f docker/docker-compose.yml up

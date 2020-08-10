@@ -67,7 +67,7 @@ var (
 				tlbx.BadReqIf(args.HoursPerDay < 1 || args.HoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
 				tlbx.BadReqIf(args.DaysPerWeek < 1 || args.HoursPerDay > 7, "invalid daysPerWeek must be > 0 and <= 7")
 				tlbx.BadReqIf(args.StartOn != nil && args.DueOn != nil && args.StartOn.After(*args.Base.DueOn), "invalid startOn must be before dueOn")
-				project := &project.Project{
+				p := &project.Project{
 					Task: task.Task{
 						ID:         tlbx.NewID(),
 						Name:       args.Name,
@@ -80,10 +80,10 @@ var (
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
-				tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, me, project.ID)
-				tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, project.ID, project.IsArchived, project.Name, project.CreatedOn, project.HoursPerDay, project.DaysPerWeek, project.StartOn, project.DueOn, project.IsPublic)
-				// TODO continue from here tomorrow
-				tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedCost, loggedCost, estimatedSubCost, loggedSubCost, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount, isParallel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, project.ID, project.ID, project.Name, project.CreatedOn, project.HoursPerDay, project.DaysPerWeek, project.StartOn, project.DueOn, project.IsPublic)
+				tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, me, p.ID)
+				tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
+				tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, createdBy, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedCost, loggedCost, estimatedSubCost, loggedSubCost, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount, isParallel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.CreatedBy, p.CreatedOn, p.MinimumRemainingTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedCost, p.LoggedCost, p.EstimatedSubCost, p.LoggedSubCost, p.FileCount, p.FileSize, p.SubFileCount, p.SubFileSize, p.ChildCount, p.DescendantCount, p.IsParallel)
+				tx.Commit()
 				return nil
 			},
 		},
@@ -92,13 +92,14 @@ var (
 	aliasMaxLen = 50
 )
 
-func OnActivate(tlbx app.Tlbx, me *user.User) {
+func OnSetSocials(tlbx app.Tlbx, user *user.User) error {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
 	// _, err := tx.Exec(`INSERT INTO accounts WHERE id=?`, me)
 	// PanicOn(err)
 	tx.Commit()
+	return nil
 }
 
 func OnDelete(tlbx app.Tlbx, me ID) {

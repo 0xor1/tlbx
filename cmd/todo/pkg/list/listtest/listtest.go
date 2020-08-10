@@ -17,7 +17,14 @@ import (
 
 func Everything(t *testing.T) {
 	a := assert.New(t)
-	r := test.NewRig(config.Get(), listeps.Eps, true, nil, listeps.OnDelete, true, func(tlbx app.Tlbx, id ID, alias *string) error { return nil }, true, func(tlbx app.Tlbx, id ID, hasAvatar bool) error { return nil })
+	r := test.NewRig(
+		config.Get(),
+		listeps.Eps,
+		true,
+		nil,
+		listeps.OnDelete,
+		true,
+		nil)
 	defer r.CleanUp()
 
 	name1 := "Test list 1"

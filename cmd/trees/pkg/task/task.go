@@ -15,6 +15,7 @@ type Task struct {
 	User                 *ID       `json:"user"`
 	Name                 string    `json:"name"`
 	Description          string    `json:"description"`
+	CreatedBy            ID        `json:"createdBy"`
 	CreatedOn            time.Time `json:"createdOn"`
 	MinimumRemainingTime uint64    `json:"minimumRemainingTime"`
 	EstimatedTime        uint64    `json:"estimatedTime"`
