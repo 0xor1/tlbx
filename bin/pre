@@ -1,4 +1,17 @@
 #!/bin/bash
+
+docker ps --format '{{.Names}}' | grep "^tlbx-" | awk '{print $1}' | xargs -I {} docker stop {}
+
+if [ "$1" == "reset" ]; then
+    docker-compose -f docker/docker-compose.yml down --rmi all
+fi
+
+docker-compose -f docker/docker-compose.yml up -d
+
+./bin/wait-for-it -t 5 127.0.0.1:6379 -- echo "redis ready"
+./bin/wait-for-it -t 5 127.0.0.1:9000 -- echo "minio ready"
+./bin/wait-for-it -t 60 127.0.0.1:3306 -- echo "mariadb ready"
+
 go fmt ./... && \
 go test -p=4 -coverprofile=coverage.out ./... && \
 go tool cover -html=coverage.out && \
