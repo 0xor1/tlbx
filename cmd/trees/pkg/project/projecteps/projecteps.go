@@ -119,6 +119,8 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM timeLogs WHERE host=?`, me)
 	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM costs WHERE host=?`, me)
+	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM files WHERE host=?`, me)
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM comments WHERE host=?`, me)
