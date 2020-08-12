@@ -53,7 +53,7 @@ func Mware(configs ...func(*Config)) func(app.Tlbx) {
 			tlbx.Resp().Header().Add("X-Rate-Limit-Remaining", strconv.Itoa(remaining))
 			tlbx.Resp().Header().Add("X-Rate-Limit-Reset", "60")
 
-			tlbx.ExitIf(remaining < 1, http.StatusTooManyRequests, "")
+			app.ReturnIf(remaining < 1, http.StatusTooManyRequests, "")
 		}()
 
 		key := c.KeyGen(tlbx)

@@ -150,7 +150,7 @@ func Run(configs ...func(*Config)) {
 		tlbx.resp.Header().Set("X-Version", c.Version)
 		// check method
 		method := tlbx.req.Method
-		tlbx.BadReqIf(method != http.MethodGet && method != http.MethodPut, "only GET and PUT methods are accepted")
+		BadReqIf(method != http.MethodGet && method != http.MethodPut, "only GET and PUT methods are accepted")
 		lPath := strings.ToLower(tlbx.req.URL.Path)
 		// tlbx mwares
 		for _, mware := range c.TlbxMwares {
@@ -173,7 +173,7 @@ func Run(configs ...func(*Config)) {
 			return
 		}
 		// check all requests have a X-Client header
-		tlbx.BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
+		BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
 		// do mdo
 		if lPath == mdoPath {
 			if c.MDoMaxBodyBytes > 0 {
@@ -181,7 +181,7 @@ func Run(configs ...func(*Config)) {
 			}
 			mDoReqs := map[string]*mDoReq{}
 			getJsonArgs(tlbx, &mDoReqs)
-			tlbx.BadReqIf(len(mDoReqs) > c.MDoMax, "too many mdo reqs, max reqs allowed: %d", c.MDoMax)
+			BadReqIf(len(mDoReqs) > c.MDoMax, "too many mdo reqs, max reqs allowed: %d", c.MDoMax)
 			fullMDoResp := map[string]*mDoResp{}
 			fullMDoRespMtx := &sync.Mutex{}
 			does := make([]func(), 0, len(mDoReqs))
@@ -217,7 +217,7 @@ func Run(configs ...func(*Config)) {
 		}
 		// endpoints
 		ep, exists := router[tlbx.req.URL.Path]
-		tlbx.ExitIf(!exists, http.StatusNotFound, "")
+		ReturnIf(!exists, http.StatusNotFound, "")
 
 		if ep.MaxBodyBytes > 0 {
 			tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, ep.MaxBodyBytes)
@@ -237,12 +237,12 @@ func Run(configs ...func(*Config)) {
 			// validation check
 			if tlbx.isSubMDo {
 				_, ok := ep.GetExampleResponse().(*Stream)
-				tlbx.BadReqIf(ok, "can not call stream endpoint in an mdo request")
+				BadReqIf(ok, "can not call stream endpoint in an mdo request")
 			}
 			// process args
 			args := ep.GetDefaultArgs()
 			s, isStream := args.(*Stream)
-			tlbx.BadReqIf(isStream && tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
+			BadReqIf(isStream && tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
 			if isStream {
 				s.Type = tlbx.req.Header.Get("Content-Type")
 				s.Size = tlbx.req.ContentLength
@@ -262,7 +262,7 @@ func Run(configs ...func(*Config)) {
 			// process response
 			if s, ok := res.(*Stream); ok {
 				defer s.Content.Close()
-				tlbx.BadReqIf(tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
+				BadReqIf(tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
 				tlbx.resp.Header().Add("Content-Type", s.Type)
 				tlbx.resp.Header().Add("Content-Length", Sprintf("%d", s.Size))
 				tlbx.resp.Header().Add("Content-Name", Sprintf("%s", s.Name))
@@ -290,7 +290,7 @@ func Run(configs ...func(*Config)) {
 			case <-ctx.Done():
 				return
 			case <-time.After(timeout):
-				tlbx.ExitIf(true, http.StatusServiceUnavailable, "processing request has exceeded endpoint timeout: %dms", ep.Timeout)
+				ReturnIf(true, http.StatusServiceUnavailable, "processing request has exceeded endpoint timeout: %dms", ep.Timeout)
 			}
 		} else {
 			do()
@@ -406,9 +406,6 @@ type Tlbx interface {
 	NewID() ID
 	Log() log.Log
 	LogActionStats(*ActionStats)
-	Redirect(status int, url string)
-	ExitIf(condition bool, status int, format string, args ...interface{})
-	BadReqIf(condition bool, format string, args ...interface{})
 	// add any extra arbitrary stuff with these
 	Get(key interface{}) interface{}
 	Set(key, value interface{})
@@ -456,14 +453,14 @@ func (t *tlbx) LogActionStats(as *ActionStats) {
 	t.actionStats = append(t.actionStats, as)
 }
 
-func (t *tlbx) Redirect(status int, url string) {
+func Redirect(status int, url string) {
 	PanicOn(&redirect{
 		status: status,
 		url:    url,
 	})
 }
 
-func (t *tlbx) ExitIf(condition bool, status int, format string, args ...interface{}) {
+func ReturnIf(condition bool, status int, format string, args ...interface{}) {
 	if format == "" {
 		format = http.StatusText(status)
 	}
@@ -475,8 +472,8 @@ func (t *tlbx) ExitIf(condition bool, status int, format string, args ...interfa
 	}
 }
 
-func (t *tlbx) BadReqIf(condition bool, format string, args ...interface{}) {
-	t.ExitIf(condition, http.StatusBadRequest, format, args...)
+func BadReqIf(condition bool, format string, args ...interface{}) {
+	ReturnIf(condition, http.StatusBadRequest, format, args...)
 }
 
 func (t *tlbx) Get(key interface{}) interface{} {
@@ -604,7 +601,7 @@ type endpointDoc struct {
 
 func checkErrForMaxBytes(tlbx *tlbx, err error) {
 	if err != nil {
-		tlbx.ExitIf(
+		ReturnIf(
 			err.Error() == "http: request body too large",
 			http.StatusRequestEntityTooLarge,
 			"request body too large")
@@ -624,7 +621,7 @@ func getJsonArgs(tlbx *tlbx, args interface{}) {
 	}
 	if len(argsBytes) > 0 {
 		err := json.Unmarshal(argsBytes, args)
-		tlbx.BadReqIf(err != nil, "error unmarshalling json: %s", err)
+		BadReqIf(err != nil, "error unmarshalling json: %s", err)
 	}
 }
 

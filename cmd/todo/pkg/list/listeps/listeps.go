@@ -119,7 +119,7 @@ var (
 					IDs:   IDs{args.ID},
 					Limit: ptr.Int(1),
 				})
-				tlbx.ExitIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
+				app.ReturnIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				list := getSetRes.Set[0]
 				list.Name = args.Name.V
 				srv := service.Get(tlbx)
@@ -192,17 +192,17 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 
 func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
-	tlbx.BadReqIf(
+	app.BadReqIf(
 		args.CreatedOnMin != nil &&
 			args.CreatedOnMax != nil &&
 			args.CreatedOnMin.After(*args.CreatedOnMax),
 		"createdOnMin must be before createdOnMax")
-	tlbx.BadReqIf(
+	app.BadReqIf(
 		args.TodoItemCountMin != nil &&
 			args.TodoItemCountMax != nil &&
 			*args.TodoItemCountMin > *args.TodoItemCountMax,
 		"todoItemCountMin must not be greater than todoItemCountMax")
-	tlbx.BadReqIf(
+	app.BadReqIf(
 		args.CompletedItemCountMin != nil &&
 			args.CompletedItemCountMax != nil &&
 			*args.CompletedItemCountMin > *args.CompletedItemCountMax,

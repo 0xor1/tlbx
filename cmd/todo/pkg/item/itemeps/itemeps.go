@@ -129,7 +129,7 @@ var (
 					IDs:   IDs{args.ID},
 					Limit: ptr.Int(1),
 				})
-				tlbx.ExitIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
+				app.ReturnIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				item := getSetRes.Set[0]
 				changeMade := false
 				todoItemCountOp := ""
@@ -221,7 +221,7 @@ var (
 
 func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
-	tlbx.BadReqIf(
+	app.BadReqIf(
 		args.CreatedOnMin != nil &&
 			args.CreatedOnMax != nil &&
 			args.CreatedOnMin.After(*args.CreatedOnMax),

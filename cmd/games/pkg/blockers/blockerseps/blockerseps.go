@@ -112,12 +112,12 @@ var (
 						}
 					} else {
 						// validate piece is in valid range
-						tlbx.BadReqIf(
+						app.BadReqIf(
 							args.Piece >= blockers.PiecesCount(),
 							"invalid piece value: %d, must be less than: %d", args.Piece, blockers.PiecesCount())
 
 						// validate piece is still available
-						tlbx.BadReqIf(
+						app.BadReqIf(
 							g.PieceSets[pieceSet*blockers.PiecesCount()+args.Piece] == 0,
 							"invalid piece, that piece has already been used")
 
@@ -163,7 +163,7 @@ var (
 
 						// validate piece is contained by board
 						x, y := iToXY(args.Position, boardDims)
-						tlbx.BadReqIf(
+						app.BadReqIf(
 							x+piece.BB[0] > uint8(boardDims) || y+piece.BB[1] > uint8(boardDims),
 							"piece/position/rotation combination is not contained on the board")
 
@@ -184,7 +184,7 @@ var (
 									cellY := posY + pieceY
 									cellI := xyToI(cellX, cellY, boardDims)
 
-									tlbx.BadReqIf(g.Board[cellI] != 4, "cell %d already occupied", cellI)
+									app.BadReqIf(g.Board[cellI] != 4, "cell %d already occupied", cellI)
 									insertIdxs = append(insertIdxs, cellI)
 
 									// check if this cell meets first corner constraint
@@ -212,7 +212,7 @@ var (
 												cornerConMet = cornerConMet ||
 													((offsetX != 0 || offsetY != 0) &&
 														g.Board[loopI] == pbit.Pbit(pieceSet))
-												tlbx.BadReqIf((offsetX == 0 || offsetY == 0) &&
+												app.BadReqIf((offsetX == 0 || offsetY == 0) &&
 													g.Board[loopI] == pbit.Pbit(pieceSet),
 													"face to face constraint not met, cell %d", loopI)
 											}
@@ -221,8 +221,8 @@ var (
 								}
 							}
 						}
-						tlbx.BadReqIf(!firstCornerConMet, "first corner constraint not met")
-						tlbx.BadReqIf(!cornerConMet, "corner touch constraint not met")
+						app.BadReqIf(!firstCornerConMet, "first corner constraint not met")
+						app.BadReqIf(!cornerConMet, "corner touch constraint not met")
 
 						// update the board with the new piece cells on it
 						for _, i := range insertIdxs {

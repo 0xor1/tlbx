@@ -113,8 +113,8 @@ func Join(tlbx app.Tlbx, maxPlayers uint8, gameType string, game ID, dst Game) G
 	defer tx.Rollback()
 	g := read(tlbx, tx, true, gameType, game, nil, dst)
 	b := g.GetBase()
-	tlbx.BadReqIf(!b.NotStarted(), "can't join a game that has already been started")
-	tlbx.BadReqIf(len(b.Players) >= int(maxPlayers), "game is already at max player limit: %d", maxPlayers)
+	app.BadReqIf(!b.NotStarted(), "can't join a game that has already been started")
+	app.BadReqIf(len(b.Players) >= int(maxPlayers), "game is already at max player limit: %d", maxPlayers)
 	// assign new session id for a new game so no clashes with old finished games
 	newUserID := tlbx.NewID()
 	b.Players = append(b.Players, newUserID)
@@ -132,9 +132,9 @@ func Start(tlbx app.Tlbx, minPlayers uint8, randomizePlayerOrder bool, gameType 
 	defer tx.Rollback()
 	g, _ := getUsersActiveGame(tlbx, tx, true, gameType, dst)
 	b := g.GetBase()
-	tlbx.BadReqIf(!b.NotStarted(), "can't start a game that has already been started")
-	tlbx.BadReqIf(len(b.Players) < int(minPlayers), "game hasn't met minimum player count requirement: %d", minPlayers)
-	tlbx.BadReqIf(!b.ID.Equal(me.Get(tlbx)), "only the creator can start the game")
+	app.BadReqIf(!b.NotStarted(), "can't start a game that has already been started")
+	app.BadReqIf(len(b.Players) < int(minPlayers), "game hasn't met minimum player count requirement: %d", minPlayers)
+	app.BadReqIf(!b.ID.Equal(me.Get(tlbx)), "only the creator can start the game")
 	if customSetup != nil {
 		customSetup(g)
 	}
@@ -159,10 +159,10 @@ func TakeTurn(tlbx app.Tlbx, gameType string, dst Game, takeTurn func(game Game)
 	tx := service.Get(tlbx).Data().Begin()
 	defer tx.Rollback()
 	g, _ := getUsersActiveGame(tlbx, tx, true, gameType, dst)
-	tlbx.BadReqIf(g == nil, "you are not in an active game")
+	app.BadReqIf(g == nil, "you are not in an active game")
 	b := g.GetBase()
-	tlbx.BadReqIf(!b.Started(), "game isn't started")
-	tlbx.BadReqIf(!g.IsMyTurn(), "it's not your turn")
+	app.BadReqIf(!b.Started(), "game isn't started")
+	app.BadReqIf(!g.IsMyTurn(), "it's not your turn")
 	takeTurn(g)
 	b.Turn++
 	update(tlbx, tx, gameType, g)
@@ -211,7 +211,7 @@ func read(tlbx app.Tlbx, tx service.Tx, forUpdate bool, gameType string, game ID
 		gotType = gameType
 	}
 	json.MustUnmarshal(serialized, dst)
-	tlbx.BadReqIf(gotType != gameType, "types do not match, got: %s, expected: %s", gotType, gameType)
+	app.BadReqIf(gotType != gameType, "types do not match, got: %s, expected: %s", gotType, gameType)
 	if updatedAfter != nil && !dst.GetBase().UpdatedOn.After(*updatedAfter) {
 		return nil
 	}
@@ -270,7 +270,7 @@ func getUsersActiveGame(tlbx app.Tlbx, tx service.Tx, forUpdate bool, gameType s
 		}
 		if len(buf) > 0 {
 			json.MustUnmarshal(buf, dst)
-			tlbx.BadReqIf(forUpdate && gotType != gameType, "types do not match, your active game: %s, expected game: %s", gotType, gameType)
+			app.BadReqIf(forUpdate && gotType != gameType, "types do not match, your active game: %s, expected game: %s", gotType, gameType)
 			dst.GetBase().setMyID(tlbx)
 			if dst.GetBase().IsActive() {
 				return dst, gotType
@@ -285,7 +285,7 @@ func validateUserIsntInAnActiveGame(tlbx app.Tlbx, verb string) {
 	if g == nil {
 		return
 	}
-	tlbx.BadReqIf(
+	app.BadReqIf(
 		true,
 		"can not %s a new game while you are still participating in an active game, id: %s, type: %s",
 		verb,

@@ -14,7 +14,7 @@ func Exists(tlbx app.Tlbx) bool {
 
 func Get(tlbx app.Tlbx) ID {
 	s := session.Get(tlbx)
-	tlbx.ExitIf(!s.Exists(), http.StatusUnauthorized, "")
+	app.ReturnIf(!s.Exists(), http.StatusUnauthorized, "")
 	id := &ID{}
 	PanicOn(id.UnmarshalBinary(s.Get()))
 	return *id

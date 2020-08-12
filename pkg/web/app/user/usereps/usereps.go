@@ -65,14 +65,14 @@ func New(
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				tlbx.BadReqIf(me.Exists(tlbx), "already logged in")
+				app.BadReqIf(me.Exists(tlbx), "already logged in")
 				args := a.(*user.Register)
 				args.Email = strings.Trim(args.Email, " ")
 				if !enableSocials {
 					args.Handle = nil
 					args.Alias = nil
 				}
-				tlbx.BadReqIf(enableSocials && args.Handle == nil, "social system requires a user handle")
+				app.BadReqIf(enableSocials && args.Handle == nil, "social system requires a user handle")
 				if args.Handle != nil {
 					args.Handle = ptr.String(
 						strings.ReplaceAll(
@@ -95,7 +95,7 @@ func New(
 				_, err := srv.User().Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, Now(), activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
-					tlbx.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
+					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
 					PanicOn(err)
 				}
 				setPwd(tlbx, id, args.Pwd, args.ConfirmPwd)
@@ -158,7 +158,7 @@ func New(
 				tx := srv.User().Begin()
 				defer tx.Rollback()
 				user := getUser(tx, &args.Email, nil)
-				tlbx.BadReqIf(*user.ActivateCode != args.Code, "")
+				app.BadReqIf(*user.ActivateCode != args.Code, "")
 				now := Now()
 				user.ActivatedOn = &now
 				user.ActivateCode = nil
@@ -197,7 +197,7 @@ func New(
 				tx := srv.User().Begin()
 				defer tx.Rollback()
 				existingUser := getUser(tx, &args.NewEmail, nil)
-				tlbx.BadReqIf(existingUser != nil, "email already registered")
+				app.BadReqIf(existingUser != nil, "email already registered")
 				fullUser := getUser(tx, nil, &me)
 				fullUser.NewEmail = &args.NewEmail
 				fullUser.ChangeEmailCode = &changeEmailCode
@@ -257,7 +257,7 @@ func New(
 				tx := srv.User().Begin()
 				defer tx.Rollback()
 				user := getUser(tx, nil, &args.Me)
-				tlbx.BadReqIf(*user.ChangeEmailCode != args.Code, "")
+				app.BadReqIf(*user.ChangeEmailCode != args.Code, "")
 				user.ChangeEmailCode = nil
 				user.Email = *user.NewEmail
 				user.NewEmail = nil
@@ -293,7 +293,7 @@ func New(
 					now := Now()
 					if user.LastPwdResetOn != nil {
 						mustWaitDur := (10 * time.Minute) - Now().Sub(*user.LastPwdResetOn)
-						tlbx.BadReqIf(mustWaitDur > 0, "must wait %d seconds before reseting pwd again", int64(math.Ceil(mustWaitDur.Seconds())))
+						app.BadReqIf(mustWaitDur > 0, "must wait %d seconds before reseting pwd again", int64(math.Ceil(mustWaitDur.Seconds())))
 					}
 					newPwd := `$aA1` + crypt.UrlSafeString(12)
 					setPwd(tlbx, user.ID, newPwd, newPwd)
@@ -329,7 +329,7 @@ func New(
 				srv := service.Get(tlbx)
 				me := me.Get(tlbx)
 				pwd := getPwd(srv, me)
-				tlbx.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.CurrentPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
+				app.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.CurrentPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
 				setPwd(tlbx, me, args.NewPwd, args.ConfirmNewPwd)
 				return nil
 			},
@@ -357,7 +357,7 @@ func New(
 				m := me.Get(tlbx)
 				me.Del(tlbx)
 				pwd := getPwd(srv, m)
-				tlbx.BadReqIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), "incorrect pwd")
+				app.BadReqIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), "incorrect pwd")
 				if onDelete != nil {
 					onDelete(tlbx, m)
 				}
@@ -396,7 +396,7 @@ func New(
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				emailOrPwdMismatch := func(condition bool) {
-					tlbx.ExitIf(condition, http.StatusNotFound, "email and/or pwd are not valid")
+					app.ReturnIf(condition, http.StatusNotFound, "email and/or pwd are not valid")
 				}
 				args := a.(*user.Login)
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
@@ -781,7 +781,7 @@ func getPwd(srv service.Layer, id ID) *pwd {
 }
 
 func setPwd(tlbx app.Tlbx, id ID, pwd, confirmPwd string) {
-	tlbx.BadReqIf(pwd != confirmPwd, "pwds do not match")
+	app.BadReqIf(pwd != confirmPwd, "pwds do not match")
 	validate.Str("pwd", pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
 	srv := service.Get(tlbx)
 	salt := crypt.Bytes(scryptSaltLen)

@@ -33,6 +33,8 @@ func main() {
 	fs.StringVar(&baseHref, "b", "", Sprintf("baseHref e.g. %s", exampleBaseHref))
 	var username string
 	fs.StringVar(&username, "u", "", Sprintf("username e.g. %s", exampleUsername))
+	var start string
+	fs.StringVar(&start, "s", "", "start date e.g. 2020-05-06")
 	var hour int
 	fs.IntVar(&hour, "h", 8, "hour e.g. 8")
 	var minutes int
@@ -56,13 +58,20 @@ func main() {
 	myID := mustDoReq(http.MethodGet, baseHref, "/me.json", username, pwd, nil).MustInt64("person", "id")
 	log.Info("myID: %d", myID)
 
-	// get last clockin
+	// get start clockin
 	now := Now()
 	clockin := time.Date(now.Year(), now.Month(), now.Day(), hour, minutes, 0, 0, time.Local)
-	resp := mustDoReq(http.MethodGet, baseHref, "/me/clockins.json?pageSize=1", username, pwd, nil)
-	if resp.Exists("clockIns", 0, "clockInDatetime") {
-		clockin = resp.MustTime("clockIns", 0, "clockInDatetime").Add(time.Hour * 24)
-		clockin = time.Date(clockin.Year(), clockin.Month(), clockin.Day(), hour, minutes, 0, 0, time.Local)
+
+	if start == "" {
+		resp := mustDoReq(http.MethodGet, baseHref, "/me/clockins.json?pageSize=1", username, pwd, nil)
+		if resp.Exists("clockIns", 0, "clockInDatetime") {
+			clockin = resp.MustTime("clockIns", 0, "clockInDatetime").Add(time.Hour * 24)
+			clockin = time.Date(clockin.Year(), clockin.Month(), clockin.Day(), hour, minutes, 0, 0, time.Local)
+		}
+	} else {
+		startDate, err := time.Parse("2006-01-02", start)
+		PanicOn(err)
+		clockin = startDate.Add((time.Duration(hour) * time.Hour) + (time.Duration(minutes) * time.Minute))
 	}
 	log.Info("starting at clockin: %s", clockin)
 	clockout := clockin.Add((8 * time.Hour) + (30 * time.Minute))

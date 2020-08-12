@@ -22,10 +22,10 @@ type Task struct {
 	LoggedTime           uint64    `json:"loggedTime"`
 	EstimatedSubTime     uint64    `json:"estimatedSubTime"`
 	LoggedSubTime        uint64    `json:"loggedSubTime"`
-	EstimatedCost        float64   `json:"estimatedCost"`
-	LoggedCost           float64   `json:"loggedCost"`
-	EstimatedSubCost     float64   `json:"estimatedSubCost"`
-	LoggedSubCost        float64   `json:"loggedSubCost"`
+	EstimatedExpense     uint64    `json:"estimatedExpense"`
+	LoggedExpense        uint64    `json:"loggedExpense"`
+	EstimatedSubExpense  uint64    `json:"estimatedSubExpense"`
+	LoggedSubExpense     uint64    `json:"loggedSubExpense"`
 	FileCount            uint64    `json:"fileCount"`
 	FileSize             uint64    `json:"fileSize"`
 	SubFileCount         uint64    `json:"subFileCount"`

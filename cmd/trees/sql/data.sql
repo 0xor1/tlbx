@@ -12,15 +12,22 @@ CREATE TABLE projectUsers(
 	host BINARY(16) NOT NULL,
 	project BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
+    handle VARCHAR(15) NOT NULL,
     alias VARCHAR(50) NOT NULL,
+    hasAvatar BOOL NOT NULL,
     isActive BOOL NOT NULL,
-    totalEstimatedTime BIGINT UNSIGNED NOT NULL,
-    totalLoggedTime BIGINT UNSIGNED NOT NULL,
+    estimatedTime BIGINT UNSIGNED NOT NULL,
+    loggedTime BIGINT UNSIGNED NOT NULL,
+    estimatedExpense BIGINT UNSIGNED NOT NULL,
+    loggedExpense BIGINT UNSIGNED NOT NULL,
+    fileCount BIGINT UNSIGNED NOT NULL,
+    fileSize BIGINT UNSIGNED NOT NULL,
     role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
     PRIMARY KEY (host, project, isActive, role, alias),
     UNIQUE INDEX (host, project, isActive, alias, role),
     UNIQUE INDEX (host, project, id),
-    UNIQUE INDEX (host, id, project)
+    UNIQUE INDEX (host, project, handle),
+    UNIQUE INDEX (id, project)
 );
 
 DROP TABLE IF EXISTS projectActivities;
@@ -30,9 +37,9 @@ CREATE TABLE projectActivities(
     occurredOn DATETIME NOT NULL,
     user BINARY(16) NOT NULL,
     item BINARY(16) NOT NULL,
-    itemType VARCHAR(100) NOT NULL,
+    itemType VARCHAR(50) NOT NULL,
     itemHasBeenDeleted BOOL NOT NULL,
-    action VARCHAR(100) NOT NULL,
+    action VARCHAR(50) NOT NULL,
     itemName VARCHAR(250) NULL,
     extraInfo VARCHAR(1250) NULL,
     PRIMARY KEY (host, project, occurredOn, item, user),
@@ -54,7 +61,7 @@ CREATE TABLE projects(
     isArchived BOOL NOT NULL,
 	name VARCHAR(250) NOT NULL,
     createdOn DATETIME NOT NULL,
-    currencyCode VARCHAR(3) NOT NULL, 
+    currencyCode VARCHAR(3) NOT NULL,
     hoursPerDay TINYINT UNSIGNED NOT NULL,
     daysPerWeek TINYINT UNSIGNED NOT NULL,
     startOn DATETIME NULL,
@@ -85,10 +92,10 @@ CREATE TABLE tasks(
     loggedTime BIGINT UNSIGNED NOT NULL,
     estimatedSubTime BIGINT UNSIGNED NOT NULL,
     loggedSubTime BIGINT UNSIGNED NOT NULL,
-    estimatedCost DECIMAL(13,4) UNSIGNED NOT NULL,
-    loggedCost DECIMAL(13,4) UNSIGNED NOT NULL,
-    estimatedSubCost DECIMAL(13,4) UNSIGNED NOT NULL,
-    loggedSubCost DECIMAL(13,4) UNSIGNED NOT NULL,
+    estimatedExpense BIGINT UNSIGNED NOT NULL,
+    loggedExpense BIGINT UNSIGNED NOT NULL,
+    estimatedSubExpense BIGINT UNSIGNED NOT NULL,
+    loggedSubExpense BIGINT UNSIGNED NOT NULL,
     fileCount BIGINT UNSIGNED NOT NULL,
     fileSize BIGINT UNSIGNED NOT NULL,
     subFileCount BIGINT UNSIGNED NOT NULL,
@@ -103,8 +110,8 @@ CREATE TABLE tasks(
     UNIQUE INDEX(host, project, user, id)
 );
 
-DROP TABLE IF EXISTS timeLogs;
-CREATE TABLE timeLogs(
+DROP TABLE IF EXISTS times;
+CREATE TABLE times(
 	host BINARY(16) NOT NULL,
 	project BINARY(16) NOT NULL,
     task BINARY(16) NOT NULL,
@@ -121,8 +128,8 @@ CREATE TABLE timeLogs(
     UNIQUE INDEX(host, project, createdOn, createdBy, task)
 );
 
-DROP TABLE IF EXISTS costs;
-CREATE TABLE costs(
+DROP TABLE IF EXISTS expenses;
+CREATE TABLE expenses(
 	host BINARY(16) NOT NULL,
 	project BINARY(16) NOT NULL,
     task BINARY(16) NOT NULL,
@@ -132,7 +139,7 @@ CREATE TABLE costs(
     taskHasBeenDeleted BOOL NOT NULL,
     taskName VARCHAR(250) NOT NULL,
     paidOn DATETIME NOT NULL,
-    cost DECIMAL(13, 4) UNSIGNED NOT NULL,
+    value BIGINT UNSIGNED NOT NULL,
     note VARCHAR(250) NULL,
     PRIMARY KEY(host, project, task, createdOn, createdBy),
     UNIQUE INDEX(host, project, task, id),
