@@ -8,6 +8,7 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/user"
 )
 
 type Project struct {
@@ -65,23 +66,20 @@ func (a *One) MustDo(c *app.Client) *Project {
 }
 
 type Get struct {
-	IDs                   IDs          `json:"ids,omitempty"`
-	NameStartsWith        *string      `json:"nameStartsWith,omitempty"`
-	IsArchived            bool         `json:"isArchived"`
-	CreatedOnMin          *time.Time   `json:"createdOnMin,omitempty"`
-	CreatedOnMax          *time.Time   `json:"createdOnMax,omitempty"`
-	StartOnMin            *time.Time   `json:"startOnMin,omitempty"`
-	StartOnMax            *time.Time   `json:"startOnMax,omitempty"`
-	DueOnMin              *time.Time   `json:"dueOnMin,omitempty"`
-	DueOnMax              *time.Time   `json:"dueOnMax,omitempty"`
-	TodoItemCountMin      *int         `json:"todoItemCountMin,omitempty"`
-	TodoItemCountMax      *int         `json:"todoItemCountMax,omitempty"`
-	CompletedItemCountMin *int         `json:"completedItemCountMin,omitempty"`
-	CompletedItemCountMax *int         `json:"completedItemCountMax,omitempty"`
-	After                 *ID          `json:"after,omitempty"`
-	Sort                  *consts.Sort `json:"sort,omitempty"`
-	Asc                   *bool        `json:"asc,omitempty"`
-	Limit                 *int         `json:"limit,omitempty"`
+	IDs            IDs         `json:"ids,omitempty"`
+	NameStartsWith *string     `json:"nameStartsWith,omitempty"`
+	IsArchived     bool        `json:"isArchived"`
+	IsPublic       *bool       `json:"isPublic,omitempty"`
+	CreatedOnMin   *time.Time  `json:"createdOnMin,omitempty"`
+	CreatedOnMax   *time.Time  `json:"createdOnMax,omitempty"`
+	StartOnMin     *time.Time  `json:"startOnMin,omitempty"`
+	StartOnMax     *time.Time  `json:"startOnMax,omitempty"`
+	DueOnMin       *time.Time  `json:"dueOnMin,omitempty"`
+	DueOnMax       *time.Time  `json:"dueOnMax,omitempty"`
+	After          *ID         `json:"after,omitempty"`
+	Sort           consts.Sort `json:"sort,omitempty"`
+	Asc            *bool       `json:"asc,omitempty"`
+	Limit          *int        `json:"limit,omitempty"`
 }
 
 type GetRes struct {
@@ -140,6 +138,11 @@ func (a *Delete) Do(c *app.Client) error {
 
 func (a *Delete) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
+}
+
+type User struct {
+	user.User
+	IsActive bool `json:"isActive"`
 }
 
 type Activity struct {

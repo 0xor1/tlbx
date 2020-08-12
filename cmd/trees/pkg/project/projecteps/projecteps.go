@@ -1,16 +1,19 @@
 package projecteps
 
 import (
+	"bytes"
 	"time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/consts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
+	"github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 )
@@ -95,17 +98,71 @@ var (
 				return nil
 			},
 		},
+		{
+			Description:  "Get a project set",
+			Path:         (&project.Get{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.Get{
+					IsArchived: false,
+					Sort:       consts.SortCreatedOn,
+					Asc:        ptr.Bool(true),
+					Limit:      ptr.Int(100),
+				}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.Get{
+					IsArchived:     false,
+					NameStartsWith: ptr.String("My Proj"),
+					CreatedOnMin:   ptr.Time(app.ExampleTime()),
+					CreatedOnMax:   ptr.Time(app.ExampleTime()),
+					After:          ptr.ID(app.ExampleID()),
+					Sort:           consts.SortName,
+					Asc:            ptr.Bool(true),
+					Limit:          ptr.Int(50),
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return &project.GetRes{
+					Set: []*project.Project{
+						exampleList,
+					},
+					More: true,
+				}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				return getSet(tlbx, a.(*project.Get))
+			},
+		},
 	}
 	nameMaxLen  = 250
 	aliasMaxLen = 50
+	exampleList = &project.Project{
+		Task: task.Task{
+			ID:        app.ExampleID(),
+			Name:      "My Project",
+			CreatedOn: app.ExampleTime(),
+		},
+		Base: project.Base{
+			CurrencyCode: "USD",
+			HoursPerDay:  8,
+			DaysPerWeek:  5,
+			StartOn:      nil,
+			DueOn:        nil,
+			IsPublic:     false,
+		},
+		IsArchived: false,
+	}
 )
 
 func OnSetSocials(tlbx app.Tlbx, user *user.User) error {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
-	// _, err := tx.Exec(`INSERT INTO accounts WHERE id=?`, me)
-	// PanicOn(err)
+	_, err := tx.Exec(`UPDATE projectUsers SET handle=?, alias=?, hasAvatar=? WHERE id=?`, user.Handle, user.Alias, user.HasAvatar, user.ID)
+	PanicOn(err)
 	tx.Commit()
 	return nil
 }
@@ -133,5 +190,106 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM comments WHERE host=?`, me)
 	PanicOn(err)
+	_, err = tx.Exec(`UPDATE projectUsers set isActive=FALSE WHERE id=?`, me)
+	PanicOn(err)
 	tx.Commit()
+}
+
+func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
+	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+	app.BadReqIf(
+		args.CreatedOnMin != nil &&
+			args.CreatedOnMax != nil &&
+			args.CreatedOnMin.After(*args.CreatedOnMax),
+		"createdOnMin must be before createdOnMax")
+	app.BadReqIf(
+		args.StartOnMin != nil &&
+			args.StartOnMax != nil &&
+			args.StartOnMin.After(*args.StartOnMax),
+		"startOnMin must be before startOnMax")
+	app.BadReqIf(
+		args.DueOnMin != nil &&
+			args.DueOnMax != nil &&
+			args.DueOnMin.After(*args.DueOnMax),
+		"dueOnMin must be before dueOnMax")
+	app.BadReqIf(
+		args.StartOnMin != nil &&
+			args.DueOnMin != nil &&
+			args.StartOnMin.After(*args.DueOnMax),
+		"startOnMin must be before dueOnMin")
+	app.BadReqIf(
+		args.StartOnMax != nil &&
+			args.DueOnMax != nil &&
+			args.StartOnMax.After(*args.DueOnMax),
+		"startOnMax must be before dueOnMax")
+	limit := sql.Limit(*args.Limit, 100)
+	me := me.Get(tlbx)
+	srv := service.Get(tlbx)
+	res := &project.GetRes{
+		Set: make([]*project.Project, 0, limit),
+	}
+	query := bytes.NewBufferString(`SELECT id, createdOn, name, todoItemCount, completedItemCount FROM lists WHERE user=?`)
+	queryArgs := make([]interface{}, 0, 10)
+	queryArgs = append(queryArgs, me)
+	idsLen := len(args.IDs)
+	if idsLen > 0 {
+		query.WriteString(sql.InCondition(true, `id`, idsLen))
+		query.WriteString(sql.OrderByField(`id`, idsLen))
+		queryArgs = append(queryArgs, args.IDs.ToIs()...)
+		queryArgs = append(queryArgs, args.IDs.ToIs()...)
+	} else {
+		if ptr.StringOr(args.NameStartsWith, "") != "" {
+			query.WriteString(` AND name LIKE ?`)
+			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
+		}
+		if args.CreatedOnMin != nil {
+			query.WriteString(` AND createdOn >= ?`)
+			queryArgs = append(queryArgs, *args.CreatedOnMin)
+		}
+		if args.CreatedOnMax != nil {
+			query.WriteString(` AND createdOn <= ?`)
+			queryArgs = append(queryArgs, *args.CreatedOnMax)
+		}
+		if args.TodoItemCountMin != nil {
+			query.WriteString(` AND todoItemCount >= ?`)
+			queryArgs = append(queryArgs, *args.TodoItemCountMin)
+		}
+		if args.TodoItemCountMax != nil {
+			query.WriteString(` AND todoItemCount <= ?`)
+			queryArgs = append(queryArgs, *args.TodoItemCountMax)
+		}
+		if args.CompletedItemCountMin != nil {
+			query.WriteString(` AND completedItemCount >= ?`)
+			queryArgs = append(queryArgs, *args.CompletedItemCountMin)
+		}
+		if args.CompletedItemCountMax != nil {
+			query.WriteString(` AND completedItemCount <= ?`)
+			queryArgs = append(queryArgs, *args.CompletedItemCountMax)
+		}
+		if args.After != nil {
+			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM lists WHERE user=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
+			queryArgs = append(queryArgs, me, *args.After, *args.After)
+			if args.Sort != consts.SortCreatedOn {
+				query.WriteString(Sprintf(` AND createdOn %s (SELECT createdOn FROM lists WHERE user=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
+				queryArgs = append(queryArgs, me, *args.After)
+			}
+		}
+		createdOnSecondarySort := ""
+		if args.Sort != consts.SortCreatedOn {
+			createdOnSecondarySort = ", createdOn"
+		}
+		query.WriteString(Sprintf(` ORDER BY %s%s %s, id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
+	}
+	srv.Data().Query(func(rows isql.Rows) {
+		for rows.Next() {
+			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
+				res.More = true
+				break
+			}
+			p := &project.Project{}
+			PanicOn(rows.Scan(&p.ID, &p.CreatedOn, &p.Name, &p.TodoItemCount, &p.CompletedItemCount))
+			res.Set = append(res.Set, p)
+		}
+	}, query.String(), queryArgs...)
+	return res
 }

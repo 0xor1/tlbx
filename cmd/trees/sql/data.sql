@@ -23,10 +23,9 @@ CREATE TABLE projectUsers(
     fileCount BIGINT UNSIGNED NOT NULL,
     fileSize BIGINT UNSIGNED NOT NULL,
     role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
-    PRIMARY KEY (host, project, isActive, role, alias),
-    UNIQUE INDEX (host, project, isActive, alias, role),
+    PRIMARY KEY (host, project, isActive, role, handle),
+    UNIQUE INDEX (host, project, isActive, handle, role),
     UNIQUE INDEX (host, project, id),
-    UNIQUE INDEX (host, project, handle),
     UNIQUE INDEX (id, project)
 );
 
