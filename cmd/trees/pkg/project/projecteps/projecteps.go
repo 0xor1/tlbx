@@ -259,7 +259,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
 		}
 		if args.CreatedOnMin != nil {
-			query.WriteString(` AND createdOn >= ?`)
+			query.WriteString(` AND createdOn >=?`)
 			queryArgs = append(queryArgs, *args.CreatedOnMin)
 		}
 		if args.CreatedOnMax != nil {
@@ -267,19 +267,19 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			queryArgs = append(queryArgs, *args.CreatedOnMax)
 		}
 		if args.StartOnMin != nil {
-			query.WriteString(` AND startOn >= ?`)
+			query.WriteString(` AND startOn >=?`)
 			queryArgs = append(queryArgs, *args.StartOnMin)
 		}
 		if args.StartOnMax != nil {
-			query.WriteString(` AND startOn <= ?`)
+			query.WriteString(` AND startOn <=?`)
 			queryArgs = append(queryArgs, *args.StartOnMax)
 		}
 		if args.DueOnMin != nil {
-			query.WriteString(` AND dueOn >= ?`)
+			query.WriteString(` AND dueOn >=?`)
 			queryArgs = append(queryArgs, *args.DueOnMin)
 		}
 		if args.DueOnMax != nil {
-			query.WriteString(` AND dueOn <= ?`)
+			query.WriteString(` AND dueOn <=?`)
 			queryArgs = append(queryArgs, *args.DueOnMax)
 		}
 		if args.After != nil {
