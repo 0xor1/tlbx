@@ -90,11 +90,16 @@ var (
 
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
-				tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, me, p.ID)
-				tx.Exec(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, consts.RoleAdmin)
-				tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
-				tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumRemainingTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.SubFileCount, p.SubFileSize, p.ChildCount, p.DescendantCount)
-				tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, NowMilli(), me, p.ID, consts.TypeProject, false, consts.ActionCreated, p.Name, nil)
+				_, err := tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, me, p.ID)
+				PanicOn(err)
+				_, err = tx.Exec(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, consts.RoleAdmin)
+				PanicOn(err)
+				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
+				PanicOn(err)
+				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumRemainingTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.SubFileCount, p.SubFileSize, p.ChildCount, p.DescendantCount)
+				PanicOn(err)
+				_, err = tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, NowMilli(), me, p.ID, consts.TypeProject, false, consts.ActionCreated, p.Name, nil)
+				PanicOn(err)
 				tx.Commit()
 				return p
 			},
@@ -235,68 +240,68 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	queryArgs = append(queryArgs, args.Host)
 	idsLen := len(args.IDs)
 	if !me.Equal(args.Host) {
-		query.WriteString(` AND (isPublic=TRUE OR id IN (SELECT project FROM projectUsers WHERE host=? AND isActive=true AND id=?))`)
+		query.WriteString(` AND (p.isPublic=TRUE OR p.id IN (SELECT pu.project FROM projectUsers pu WHERE pu.host=? AND pu.isActive=true AND pu.id=?))`)
 		queryArgs = append(queryArgs, args.Host, me)
 	}
 	if idsLen > 0 {
-		query.WriteString(sql.InCondition(true, `id`, idsLen))
-		query.WriteString(sql.OrderByField(`id`, idsLen))
+		query.WriteString(sql.InCondition(true, `p.id`, idsLen))
+		query.WriteString(sql.OrderByField(`p.id`, idsLen))
 		queryArgs = append(queryArgs, args.IDs.ToIs()...)
 		queryArgs = append(queryArgs, args.IDs.ToIs()...)
 	} else {
 		if ptr.StringOr(args.NameStartsWith, "") != "" {
-			query.WriteString(` AND name LIKE ?`)
+			query.WriteString(` AND p.name LIKE ?`)
 			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
 		}
-		query.WriteString(` AND isArchived=?`)
+		query.WriteString(` AND p.isArchived=?`)
 		queryArgs = append(queryArgs, args.IsArchived)
 		if args.IsPublic != nil {
-			query.WriteString(` AND isPublic=?`)
+			query.WriteString(` AND p.isPublic=?`)
 			queryArgs = append(queryArgs, *args.IsPublic)
 		}
 		if ptr.StringOr(args.NameStartsWith, "") != "" {
-			query.WriteString(` AND name LIKE ?`)
+			query.WriteString(` AND p.name LIKE ?`)
 			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
 		}
 		if args.CreatedOnMin != nil {
-			query.WriteString(` AND createdOn >=?`)
+			query.WriteString(` AND p.createdOn >=?`)
 			queryArgs = append(queryArgs, *args.CreatedOnMin)
 		}
 		if args.CreatedOnMax != nil {
-			query.WriteString(` AND createdOn <= ?`)
+			query.WriteString(` AND p.createdOn <= ?`)
 			queryArgs = append(queryArgs, *args.CreatedOnMax)
 		}
 		if args.StartOnMin != nil {
-			query.WriteString(` AND startOn >=?`)
+			query.WriteString(` AND p.startOn >=?`)
 			queryArgs = append(queryArgs, *args.StartOnMin)
 		}
 		if args.StartOnMax != nil {
-			query.WriteString(` AND startOn <=?`)
+			query.WriteString(` AND p.startOn <=?`)
 			queryArgs = append(queryArgs, *args.StartOnMax)
 		}
 		if args.DueOnMin != nil {
-			query.WriteString(` AND dueOn >=?`)
+			query.WriteString(` AND p.dueOn >=?`)
 			queryArgs = append(queryArgs, *args.DueOnMin)
 		}
 		if args.DueOnMax != nil {
-			query.WriteString(` AND dueOn <=?`)
+			query.WriteString(` AND p.dueOn <=?`)
 			queryArgs = append(queryArgs, *args.DueOnMax)
 		}
 		if args.After != nil {
-			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE host=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
+			query.WriteString(Sprintf(` AND %s %s= (SELECT p.%s FROM projects p WHERE p.host=? AND p.id=?) AND p.id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, args.Host, *args.After, *args.After)
 			if args.Sort != consts.SortCreatedOn {
-				query.WriteString(Sprintf(` AND createdOn %s (SELECT createdOn FROM projects WHERE host=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
+				query.WriteString(Sprintf(` AND p.createdOn %s (SELECT p.createdOn FROM projects p WHERE p.host=? AND p.id=?)`, sql.GtLtSymbol(*args.Asc)))
 				queryArgs = append(queryArgs, args.Host, *args.After)
 			}
 		}
 		createdOnSecondarySort := ""
 		if args.Sort != consts.SortCreatedOn {
-			createdOnSecondarySort = ", createdOn"
+			createdOnSecondarySort = ", p.createdOn"
 		}
-		query.WriteString(Sprintf(` ORDER BY %s%s %s, id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
+		query.WriteString(Sprintf(` ORDER BY %s%s %s, p.id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
 	}
-	srv.Data().Query(func(rows isql.Rows) {
+	PanicOn(srv.Data().Query(func(rows isql.Rows) {
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
 				res.More = true
@@ -306,6 +311,6 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			PanicOn(rows.Scan(&p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.DueOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumRemainingTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.SubFileCount, &p.SubFileSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
 			res.Set = append(res.Set, p)
 		}
-	}, query.String(), queryArgs...)
+	}, query.String(), queryArgs...))
 	return res
 }

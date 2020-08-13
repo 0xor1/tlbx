@@ -549,7 +549,6 @@ func New(
 					defer tx.Rollback()
 					user := getUser(tx, nil, &me)
 					user.Handle = &args.Handle
-					tlbx.Log().Debug(*user.Handle)
 					updateUser(tx, user)
 					if onSetSocials != nil {
 						PanicOn(onSetSocials(tlbx, &user.User))

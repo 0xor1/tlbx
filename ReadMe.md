@@ -9,7 +9,7 @@ tlbx
 to fmt and test everything.
 
 ```
-./bin/pre reset
+./bin/pre nuke
 ```
 to clear out all docker containers and rebuild before fmting and testing.
 

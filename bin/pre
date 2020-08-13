@@ -2,7 +2,7 @@
 
 docker ps --format '{{.Names}}' | grep "^tlbx-" | awk '{print $1}' | xargs -I {} docker stop {}
 
-if [ "$1" == "reset" ]; then
+if [ "$1" == "nuke" ]; then
     docker-compose -f docker/docker-compose.yml down --rmi all
 fi
 

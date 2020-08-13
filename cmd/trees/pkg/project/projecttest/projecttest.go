@@ -41,5 +41,37 @@ func Everything(t *testing.T) {
 
 	p = (&project.One{Host: r.Ali().ID(), ID: p.ID}).MustDo(r.Ali().Client())
 
-	a.NotNil(r)
+	p = (&project.Get{
+		Host:           r.Ali().ID(),
+		NameStartsWith: ptr.String("My New"),
+		IsArchived:     false,
+		IsPublic:       ptr.Bool(false),
+		CreatedOnMin:   &p.CreatedOn,
+		CreatedOnMax:   &p.CreatedOn,
+		StartOnMin:     ptr.Time(app.ExampleTime()),
+		StartOnMax:     ptr.Time(app.ExampleTime()),
+		DueOnMin:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		DueOnMax:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		After:          nil,
+		Sort:           consts.SortDueOn,
+		Asc:            ptr.Bool(false),
+		Limit:          ptr.Int(100),
+	}).MustDo(r.Ali().Client()).Set[0]
+
+	a.Zero(len((&project.Get{
+		Host:           p.ID,
+		NameStartsWith: ptr.String("My New"),
+		IsArchived:     false,
+		IsPublic:       ptr.Bool(false),
+		CreatedOnMin:   &p.CreatedOn,
+		CreatedOnMax:   &p.CreatedOn,
+		StartOnMin:     ptr.Time(app.ExampleTime()),
+		StartOnMax:     ptr.Time(app.ExampleTime()),
+		DueOnMin:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		DueOnMax:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		After:          ptr.ID(p.ID),
+		Sort:           consts.SortDueOn,
+		Asc:            ptr.Bool(true),
+		Limit:          ptr.Int(100),
+	}).MustDo(r.Ali().Client()).Set))
 }
