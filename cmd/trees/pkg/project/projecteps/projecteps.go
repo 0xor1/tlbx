@@ -75,6 +75,7 @@ var (
 					Task: task.Task{
 						ID:         tlbx.NewID(),
 						Name:       args.Name,
+						CreatedBy:  me,
 						CreatedOn:  NowMilli(),
 						IsParallel: true,
 					},
@@ -91,11 +92,11 @@ var (
 				defer tx.Rollback()
 				tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, me, p.ID)
 				tx.Exec(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, consts.RoleAdmin)
-				tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
+				tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
 				tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumRemainingTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.SubFileCount, p.SubFileSize, p.ChildCount, p.DescendantCount)
 				tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, NowMilli(), me, p.ID, consts.TypeProject, false, consts.ActionCreated, p.Name, nil)
 				tx.Commit()
-				return nil
+				return p
 			},
 		},
 		{
@@ -137,6 +138,7 @@ var (
 			},
 		},
 	}
+
 	nameMaxLen  = 250
 	aliasMaxLen = 50
 	exampleList = &project.Project{
@@ -149,8 +151,8 @@ var (
 			CurrencyCode: "USD",
 			HoursPerDay:  8,
 			DaysPerWeek:  5,
-			StartOn:      nil,
-			DueOn:        nil,
+			StartOn:      ptr.Time(app.ExampleTime()),
+			DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 			IsPublic:     false,
 		},
 		IsArchived: false,
@@ -170,13 +172,12 @@ func OnSetSocials(tlbx app.Tlbx, user *user.User) error {
 func OnDelete(tlbx app.Tlbx, me ID) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
-	// TODO delete all files from minio/s3
 	defer tx.Rollback()
-	_, err := tx.Exec(`DELETE FROM projectUsers WHERE host=?`, me)
+	_, err := tx.Exec(`DELETE FROM projectLocks WHERE host=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM projectUsers WHERE host=?`, me)
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM projectActivities WHERE host=?`, me)
-	PanicOn(err)
-	_, err = tx.Exec(`DELETE FROM projectLocks WHERE host=?`, me)
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM projects WHERE host=?`, me)
 	PanicOn(err)
@@ -192,6 +193,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	_, err = tx.Exec(`UPDATE projectUsers set isActive=FALSE WHERE id=?`, me)
 	PanicOn(err)
+	srv.Store().MustDeletePrefix(consts.FileBucket, me.String())
 	tx.Commit()
 }
 
@@ -228,16 +230,30 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	res := &project.GetRes{
 		Set: make([]*project.Project, 0, limit),
 	}
-	query := bytes.NewBufferString(`SELECT id, createdOn, name, todoItemCount, completedItemCount FROM lists WHERE user=?`)
-	queryArgs := make([]interface{}, 0, 10)
-	queryArgs = append(queryArgs, me)
+	query := bytes.NewBufferString(`SELECT p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.dueOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumRemainingTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.subFileCount, t.subFileSize, t.childCount, t.descendantCount, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE p.host=?`)
+	queryArgs := make([]interface{}, 0, 14)
+	queryArgs = append(queryArgs, args.Host)
 	idsLen := len(args.IDs)
+	if !me.Equal(args.Host) {
+		query.WriteString(` AND (isPublic=TRUE OR id IN (SELECT project FROM projectUsers WHERE host=? AND isActive=true AND id=?))`)
+		queryArgs = append(queryArgs, args.Host, me)
+	}
 	if idsLen > 0 {
 		query.WriteString(sql.InCondition(true, `id`, idsLen))
 		query.WriteString(sql.OrderByField(`id`, idsLen))
 		queryArgs = append(queryArgs, args.IDs.ToIs()...)
 		queryArgs = append(queryArgs, args.IDs.ToIs()...)
 	} else {
+		if ptr.StringOr(args.NameStartsWith, "") != "" {
+			query.WriteString(` AND name LIKE ?`)
+			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
+		}
+		query.WriteString(` AND isArchived=?`)
+		queryArgs = append(queryArgs, args.IsArchived)
+		if args.IsPublic != nil {
+			query.WriteString(` AND isPublic=?`)
+			queryArgs = append(queryArgs, *args.IsPublic)
+		}
 		if ptr.StringOr(args.NameStartsWith, "") != "" {
 			query.WriteString(` AND name LIKE ?`)
 			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
@@ -250,28 +266,28 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			query.WriteString(` AND createdOn <= ?`)
 			queryArgs = append(queryArgs, *args.CreatedOnMax)
 		}
-		if args.TodoItemCountMin != nil {
-			query.WriteString(` AND todoItemCount >= ?`)
-			queryArgs = append(queryArgs, *args.TodoItemCountMin)
+		if args.StartOnMin != nil {
+			query.WriteString(` AND startOn >= ?`)
+			queryArgs = append(queryArgs, *args.StartOnMin)
 		}
-		if args.TodoItemCountMax != nil {
-			query.WriteString(` AND todoItemCount <= ?`)
-			queryArgs = append(queryArgs, *args.TodoItemCountMax)
+		if args.StartOnMax != nil {
+			query.WriteString(` AND startOn <= ?`)
+			queryArgs = append(queryArgs, *args.StartOnMax)
 		}
-		if args.CompletedItemCountMin != nil {
-			query.WriteString(` AND completedItemCount >= ?`)
-			queryArgs = append(queryArgs, *args.CompletedItemCountMin)
+		if args.DueOnMin != nil {
+			query.WriteString(` AND dueOn >= ?`)
+			queryArgs = append(queryArgs, *args.DueOnMin)
 		}
-		if args.CompletedItemCountMax != nil {
-			query.WriteString(` AND completedItemCount <= ?`)
-			queryArgs = append(queryArgs, *args.CompletedItemCountMax)
+		if args.DueOnMax != nil {
+			query.WriteString(` AND dueOn <= ?`)
+			queryArgs = append(queryArgs, *args.DueOnMax)
 		}
 		if args.After != nil {
-			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM lists WHERE user=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
-			queryArgs = append(queryArgs, me, *args.After, *args.After)
+			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE host=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
+			queryArgs = append(queryArgs, args.Host, *args.After, *args.After)
 			if args.Sort != consts.SortCreatedOn {
-				query.WriteString(Sprintf(` AND createdOn %s (SELECT createdOn FROM lists WHERE user=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
-				queryArgs = append(queryArgs, me, *args.After)
+				query.WriteString(Sprintf(` AND createdOn %s (SELECT createdOn FROM projects WHERE host=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
+				queryArgs = append(queryArgs, args.Host, *args.After)
 			}
 		}
 		createdOnSecondarySort := ""
@@ -287,7 +303,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 				break
 			}
 			p := &project.Project{}
-			PanicOn(rows.Scan(&p.ID, &p.CreatedOn, &p.Name, &p.TodoItemCount, &p.CompletedItemCount))
+			PanicOn(rows.Scan(&p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.DueOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumRemainingTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.SubFileCount, &p.SubFileSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
 			res.Set = append(res.Set, p)
 		}
 	}, query.String(), queryArgs...)

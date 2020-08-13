@@ -158,6 +158,7 @@ func NewRig(
 	onDelete func(app.Tlbx, ID),
 	enableSocials bool,
 	onSetSocials func(app.Tlbx, *user.User) error,
+	buckets ...string,
 ) Rig {
 	listener, err := net.Listen("tcp", ":0")
 	PanicOn(err)
@@ -171,6 +172,10 @@ func NewRig(
 		pwd:     config.Pwd,
 		data:    config.Data,
 		useAuth: useUsers,
+	}
+
+	for _, bucket := range buckets {
+		r.store.MustCreateBucket(bucket, "private")
 	}
 
 	if useUsers {

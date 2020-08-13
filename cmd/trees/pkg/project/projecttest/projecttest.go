@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/consts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
 	"github.com/0xor1/tlbx/pkg/ptr"
@@ -22,10 +23,11 @@ func Everything(t *testing.T) {
 		nil,
 		projecteps.OnDelete,
 		true,
-		projecteps.OnSetSocials)
+		projecteps.OnSetSocials,
+		consts.FileBucket)
 	defer r.CleanUp()
 
-	(&project.Create{
+	p := (&project.Create{
 		Base: project.Base{
 			CurrencyCode: "USD",
 			HoursPerDay:  8,
@@ -36,6 +38,8 @@ func Everything(t *testing.T) {
 		},
 		Name: "My New Project",
 	}).MustDo(r.Ali().Client())
+
+	p = (&project.One{Host: r.Ali().ID(), ID: p.ID}).MustDo(r.Ali().Client())
 
 	a.NotNil(r)
 }

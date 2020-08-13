@@ -30,6 +30,8 @@ type Client interface {
 	MustPresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) string
 	Delete(bucket, prefix string, id ID) error
 	MustDelete(bucket, prefix string, id ID)
+	DeletePrefix(bucket, prefix string) error
+	MustDeletePrefix(bucket, prefix string)
 }
 
 func New(s3 *s3.S3) Client {
@@ -133,6 +135,39 @@ func (c *client) Delete(bucket, prefix string, id ID) error {
 
 func (c *client) MustDelete(bucket, prefix string, id ID) {
 	PanicOn(c.Delete(bucket, prefix, id))
+}
+
+func (c *client) DeletePrefix(bucket, prefix string) error {
+	for {
+		list, err := c.s3.ListObjectsV2(&s3.ListObjectsV2Input{
+			Bucket: ptr.String(bucket),
+			Prefix: ptr.String(prefix + "/"),
+		})
+		if err != nil {
+			return ToError(err)
+		}
+		if len(list.Contents) == 0 {
+			return nil
+		}
+		objs := make([]*s3.ObjectIdentifier, 0, len(list.Contents))
+		for _, content := range list.Contents {
+			objs = append(objs, &s3.ObjectIdentifier{
+				Key: content.Key,
+			})
+		}
+
+		_, err = c.s3.DeleteObjects(&s3.DeleteObjectsInput{
+			Bucket: ptr.String(bucket),
+			Delete: &s3.Delete{
+				Objects: objs,
+			},
+		})
+		return ToError(err)
+	}
+}
+
+func (c *client) MustDeletePrefix(bucket, prefix string) {
+	PanicOn(c.DeletePrefix(bucket, prefix))
 }
 
 func Key(prefix string, id ID) *string {

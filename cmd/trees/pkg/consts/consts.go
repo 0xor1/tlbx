@@ -8,6 +8,10 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
+const (
+	FileBucket = `files`
+)
+
 type Sort string
 
 const (

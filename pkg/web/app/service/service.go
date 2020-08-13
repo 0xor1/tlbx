@@ -266,13 +266,10 @@ type storeClient struct {
 }
 
 func (s *storeClient) CreateBucket(bucket, acl string) error {
-	start := NowUnixMilli()
-	err := s.store.CreateBucket(bucket, acl)
-	s.tlbx.LogActionStats(&app.ActionStats{
-		Milli:  NowUnixMilli() - start,
-		Type:   "STORE",
-		Action: Sprintf("%s %s %s", "CREATE_BUCKET", bucket, acl),
-	})
+	var err error
+	s.do(func() {
+		err = s.store.CreateBucket(bucket, acl)
+	}, Sprintf("%s %s %s", "CREATE_BUCKET", bucket, acl))
 	return err
 }
 
@@ -282,9 +279,9 @@ func (s *storeClient) MustCreateBucket(bucket, acl string) {
 
 func (s *storeClient) Put(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error {
 	var err error
-	s.do(func(bucket, prefix string, id ID) {
+	s.do(func() {
 		err = s.store.Put(bucket, prefix, id, name, mimeType, size, isPublic, isAttachment, content)
-	}, "PUT", bucket, prefix, id)
+	}, Sprintf("%s %s %s", "PUT", bucket, *store.Key(prefix, id)))
 	return err
 }
 
@@ -295,9 +292,9 @@ func (s *storeClient) MustPut(bucket, prefix string, id ID, name, mimeType strin
 func (s *storeClient) PresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) (string, error) {
 	var url string
 	var err error
-	s.do(func(bucket, prefix string, id ID) {
+	s.do(func() {
 		url, err = s.store.PresignedPutUrl(bucket, prefix, id, name, mimeType, size)
-	}, "PUT_PRESIGNED_URL", bucket, prefix, id)
+	}, Sprintf("%s %s %s", "PUT_PRESIGNED_URL", bucket, *store.Key(prefix, id)))
 	return url, err
 }
 
@@ -313,9 +310,9 @@ func (s *storeClient) Get(bucket, prefix string, id ID) (string, string, int64, 
 	var size int64
 	var content io.ReadCloser
 	var err error
-	s.do(func(bucket, prefix string, id ID) {
+	s.do(func() {
 		name, mimeType, size, content, err = s.store.Get(bucket, prefix, id)
-	}, "GET", bucket, prefix, id)
+	}, Sprintf("%s %s %s", "GET", bucket, *store.Key(prefix, id)))
 	return name, mimeType, size, content, err
 }
 
@@ -328,9 +325,9 @@ func (s *storeClient) MustGet(bucket, prefix string, id ID) (string, string, int
 func (s *storeClient) PresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) (string, error) {
 	var url string
 	var err error
-	s.do(func(bucket, prefix string, id ID) {
+	s.do(func() {
 		url, err = s.store.PresignedGetUrl(bucket, prefix, id, name, isAttachment)
-	}, "GET_PRESIGNED_URL", bucket, prefix, id)
+	}, Sprintf("%s %s %s", "GET_PRESIGNED_URL", bucket, *store.Key(prefix, id)))
 	return url, err
 }
 
@@ -342,9 +339,9 @@ func (s *storeClient) MustPresignedGetUrl(bucket, prefix string, id ID, name str
 
 func (s *storeClient) Delete(bucket, prefix string, id ID) error {
 	var err error
-	s.do(func(bucket, prefix string, id ID) {
+	s.do(func() {
 		err = s.store.Delete(bucket, prefix, id)
-	}, "DELETE", bucket, prefix, id)
+	}, Sprintf("%s %s %s", "DELETE", bucket, *store.Key(prefix, id)))
 	return err
 }
 
@@ -352,12 +349,24 @@ func (s *storeClient) MustDelete(bucket, prefix string, id ID) {
 	PanicOn(s.Delete(bucket, prefix, id))
 }
 
-func (s *storeClient) do(do func(bucket, prefix string, id ID), cmd, bucket, prefix string, id ID) {
+func (s *storeClient) DeletePrefix(bucket, prefix string) error {
+	var err error
+	s.do(func() {
+		err = s.store.DeletePrefix(bucket, prefix)
+	}, Sprintf("%s %s %s", "DELETE_PREFIX", bucket, prefix))
+	return err
+}
+
+func (s *storeClient) MustDeletePrefix(bucket, prefix string) {
+	PanicOn(s.DeletePrefix(bucket, prefix))
+}
+
+func (s *storeClient) do(do func(), action string) {
 	start := NowUnixMilli()
-	do(bucket, prefix, id)
+	do()
 	s.tlbx.LogActionStats(&app.ActionStats{
 		Milli:  NowUnixMilli() - start,
 		Type:   "STORE",
-		Action: Sprintf("%s %s %s", cmd, bucket, *store.Key(prefix, id)),
+		Action: action,
 	})
 }

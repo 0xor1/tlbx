@@ -48,11 +48,12 @@ func (a *Create) MustDo(c *app.Client) *Project {
 }
 
 type One struct {
-	ID ID `json:"id"`
+	Host ID `json:"host"`
+	ID   ID `json:"id"`
 }
 
 func (a *One) Do(c *app.Client) (*Project, error) {
-	res, err := (&Get{IDs: IDs{a.ID}}).Do(c)
+	res, err := (&Get{Host: a.Host, IDs: IDs{a.ID}}).Do(c)
 	if res != nil && len(res.Set) == 1 {
 		return res.Set[0], err
 	}
@@ -66,6 +67,7 @@ func (a *One) MustDo(c *app.Client) *Project {
 }
 
 type Get struct {
+	Host           ID          `json:"host"`
 	IDs            IDs         `json:"ids,omitempty"`
 	NameStartsWith *string     `json:"nameStartsWith,omitempty"`
 	IsArchived     bool        `json:"isArchived"`
@@ -88,7 +90,7 @@ type GetRes struct {
 }
 
 func (_ *Get) Path() string {
-	return "/list/get"
+	return "/project/get"
 }
 
 func (a *Get) Do(c *app.Client) (*GetRes, error) {
