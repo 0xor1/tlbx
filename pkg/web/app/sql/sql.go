@@ -10,12 +10,7 @@ import (
 )
 
 func ReturnNotFoundOrPanicOn(err error) {
-	if err != nil && err == sql.ErrNoRows {
-		PanicOn(&app.ErrMsg{
-			Status: http.StatusNotFound,
-			Msg:    http.StatusText(http.StatusNotFound),
-		})
-	}
+	app.ReturnIf(err != nil && err == sql.ErrNoRows, http.StatusNotFound, "")
 	PanicOn(err)
 }
 
@@ -45,7 +40,7 @@ func Limit(l, max int) int {
 	}
 }
 
-func LimitMax100(l int) int {
+func Limit100(l int) int {
 	return Limit(l, 100)
 }
 
@@ -54,7 +49,7 @@ func OrderLimit(field string, asc bool, l, max int) string {
 }
 
 func OrderLimitMax100(field string, asc bool, l int) string {
-	return Sprintf(` ORDER BY %s %s LIMIT %d`, field, Asc(asc), LimitMax100(l))
+	return Sprintf(` ORDER BY %s %s LIMIT %d`, field, Asc(asc), Limit100(l))
 }
 
 func InCondition(and bool, field string, setLen int) string {

@@ -8,6 +8,8 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/consts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
@@ -74,4 +76,29 @@ func Everything(t *testing.T) {
 		Asc:            ptr.Bool(true),
 		Limit:          ptr.Int(100),
 	}).MustDo(r.Ali().Client()).Set))
+
+	name := "renamed project"
+	cc := "EUR"
+	dpw := uint8(4)
+	startOn := NowMilli()
+	dueOn := startOn.Add(24 * time.Hour)
+	p = (&project.Update{
+		ID:           p.ID,
+		Name:         &field.String{V: name},
+		CurrencyCode: &field.String{V: cc},
+		HoursPerDay:  &field.UInt8{V: dpw},
+		DaysPerWeek:  &field.UInt8{V: dpw},
+		StartOn:      &field.TimePtr{V: &startOn},
+		DueOn:        &field.TimePtr{V: &dueOn},
+		IsArchived:   &field.Bool{V: false},
+		IsPublic:     &field.Bool{V: true},
+	}).MustDo(r.Ali().Client())
+	a.Equal(name, p.Name)
+	a.Equal(cc, p.CurrencyCode)
+	a.Equal(dpw, p.HoursPerDay)
+	a.Equal(dpw, p.DaysPerWeek)
+	a.Equal(startOn, *p.StartOn)
+	a.Equal(dueOn, *p.DueOn)
+	a.False(p.IsArchived)
+	a.True(p.IsPublic)
 }

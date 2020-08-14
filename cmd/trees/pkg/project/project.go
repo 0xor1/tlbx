@@ -106,12 +106,19 @@ func (a *Get) MustDo(c *app.Client) *GetRes {
 }
 
 type Update struct {
-	ID   ID           `json:"id"`
-	Name field.String `json:"name"`
+	ID           ID             `json:"id,omitempty"`
+	Name         *field.String  `json:"name,omitempty"`
+	CurrencyCode *field.String  `json:"currencyCode,omitempty"`
+	HoursPerDay  *field.UInt8   `json:"hoursPerDay,omitempty"`
+	DaysPerWeek  *field.UInt8   `json:"daysPerWeek,omitempty"`
+	StartOn      *field.TimePtr `json:"startOn,omitempty"`
+	DueOn        *field.TimePtr `json:"dueOn,omitempty"`
+	IsArchived   *field.Bool    `json:"isArchived,omitempty"`
+	IsPublic     *field.Bool    `json:"isPublic,omitempty"`
 }
 
 func (_ *Update) Path() string {
-	return "/list/update"
+	return "/project/update"
 }
 
 func (a *Update) Do(c *app.Client) (*Project, error) {
@@ -131,7 +138,7 @@ type Delete struct {
 }
 
 func (_ *Delete) Path() string {
-	return "/list/delete"
+	return "/project/delete"
 }
 
 func (a *Delete) Do(c *app.Client) error {

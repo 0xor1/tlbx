@@ -207,7 +207,7 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 			args.CompletedItemCountMax != nil &&
 			*args.CompletedItemCountMin > *args.CompletedItemCountMax,
 		"completedItemCountMin must not be greater than completedItemCountMax")
-	limit := sql.Limit(*args.Limit, 100)
+	limit := sql.Limit100(*args.Limit)
 	me := me.Get(tlbx)
 	srv := service.Get(tlbx)
 	res := &list.GetRes{

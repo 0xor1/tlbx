@@ -8,6 +8,7 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
@@ -50,27 +51,16 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return &project.Project{
-					Task: task.Task{
-						Name: "My New Project",
-					},
-					Base: project.Base{
-						HoursPerDay: 8,
-						DaysPerWeek: 5,
-						StartOn:     ptr.Time(app.ExampleTime()),
-						DueOn:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-						IsPublic:    false,
-					},
-					IsArchived: false,
-				}
+				return exampleProject
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.Create)
 				me := me.Get(tlbx)
-				validate.Str("name", args.Name, tlbx, 1, nameMaxLen)
+				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
+				validate.CurrencyCode(tlbx, args.CurrencyCode)
 				app.BadReqIf(args.HoursPerDay < 1 || args.HoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
 				app.BadReqIf(args.DaysPerWeek < 1 || args.DaysPerWeek > 7, "invalid daysPerWeek must be > 0 and <= 7")
-				app.BadReqIf(args.StartOn != nil && args.DueOn != nil && args.StartOn.After(*args.Base.DueOn), "invalid startOn must be before dueOn")
+				app.BadReqIf(args.StartOn != nil && args.DueOn != nil && args.StartOn.After(*args.DueOn), "invalid startOn must be before dueOn")
 				p := &project.Project{
 					Task: task.Task{
 						ID:         tlbx.NewID(),
@@ -133,7 +123,7 @@ var (
 			GetExampleResponse: func() interface{} {
 				return &project.GetRes{
 					Set: []*project.Project{
-						exampleList,
+						exampleProject,
 					},
 					More: true,
 				}
@@ -142,11 +132,90 @@ var (
 				return getSet(tlbx, a.(*project.Get))
 			},
 		},
+		{
+			Description:  "Update a project",
+			Path:         (&project.Update{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.Update{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.Update{
+					ID:           app.ExampleID(),
+					Name:         &field.String{V: "Renamed Project"},
+					CurrencyCode: &field.String{V: "EUR"},
+					HoursPerDay:  &field.UInt8{V: 6},
+					DaysPerWeek:  &field.UInt8{V: 4},
+					StartOn:      &field.TimePtr{V: ptr.Time(app.ExampleTime())},
+					DueOn:        &field.TimePtr{V: ptr.Time(app.ExampleTime().Add(24 * time.Hour))},
+					IsArchived:   &field.Bool{V: false},
+					IsPublic:     &field.Bool{V: true},
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return exampleProject
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*project.Update)
+				me := me.Get(tlbx)
+				p := getSet(tlbx, &project.Get{Host: me, IDs: IDs{args.ID}, Limit: ptr.Int(1)}).Set[0]
+				if args.CurrencyCode != nil {
+					validate.CurrencyCode(tlbx, args.CurrencyCode.V)
+					p.CurrencyCode = args.CurrencyCode.V
+				}
+				// validate name
+				if args.Name != nil {
+					validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
+					p.Name = args.Name.V
+				}
+				// validate startOn and dueOn
+				switch {
+				case args.StartOn != nil && args.DueOn != nil:
+					app.BadReqIf(args.StartOn.V != nil && args.DueOn.V != nil && args.StartOn.V.After(*args.DueOn.V), "1 invalid startOn must be before dueOn")
+				case args.StartOn != nil && p.DueOn != nil:
+					app.BadReqIf(args.StartOn.V != nil && p.DueOn != nil && args.StartOn.V.After(*p.DueOn), "2 invalid startOn must be before dueOn")
+				case args.DueOn != nil && p.StartOn != nil:
+					app.BadReqIf(p.StartOn != nil && args.DueOn.V != nil && p.StartOn.After(*args.DueOn.V), "3 invalid startOn must be before dueOn")
+				}
+				if args.StartOn != nil {
+					p.StartOn = args.StartOn.V
+				}
+				if args.DueOn != nil {
+					p.DueOn = args.DueOn.V
+				}
+				if args.HoursPerDay != nil {
+					app.BadReqIf(args.HoursPerDay.V < 1 || args.HoursPerDay.V > 24, "invalid hoursPerDay must be > 0 and <= 24")
+					p.HoursPerDay = args.HoursPerDay.V
+				}
+				if args.DaysPerWeek != nil {
+					app.BadReqIf(args.DaysPerWeek.V < 1 || args.DaysPerWeek.V > 7, "invalid daysPerWeek must be > 0 and <= 7")
+					p.DaysPerWeek = args.DaysPerWeek.V
+				}
+				if args.IsArchived != nil {
+					p.IsArchived = args.IsArchived.V
+				}
+				if args.IsPublic != nil {
+					p.IsPublic = args.IsPublic.V
+				}
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
+				_, err := tx.Exec(`UPDATE projects SET name=?, currencyCode=?, hoursPerDay=?, daysPerWeek=?, startOn=?, dueOn=?, isArchived=?, isPublic=? WHERE host=? AND id=?`, p.Name, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsArchived, p.IsPublic, me, p.ID)
+				PanicOn(err)
+				_, err = tx.Exec(`UPDATE tasks SET name=? WHERE host=? AND project=? AND id=?`, p.Name, me, p.ID, p.ID)
+				PanicOn(err)
+				tx.Commit()
+				return p
+			},
+		},
 	}
 
-	nameMaxLen  = 250
-	aliasMaxLen = 50
-	exampleList = &project.Project{
+	nameMinLen     = 1
+	nameMaxLen     = 250
+	aliasMaxLen    = 50
+	exampleProject = &project.Project{
 		Task: task.Task{
 			ID:        app.ExampleID(),
 			Name:      "My Project",
@@ -229,7 +298,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			args.DueOnMax != nil &&
 			args.StartOnMax.After(*args.DueOnMax),
 		"startOnMax must be before dueOnMax")
-	limit := sql.Limit(*args.Limit, 100)
+	limit := sql.Limit100(*args.Limit)
 	me := me.Get(tlbx)
 	srv := service.Get(tlbx)
 	res := &project.GetRes{

@@ -226,7 +226,7 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 			args.CreatedOnMax != nil &&
 			args.CreatedOnMin.After(*args.CreatedOnMax),
 		"createdOnMin must be before createdOnMax")
-	limit := sql.Limit(*args.Limit, 100)
+	limit := sql.Limit100(*args.Limit)
 	me := me.Get(tlbx)
 	srv := service.Get(tlbx)
 	res := &item.GetRes{
