@@ -42,6 +42,7 @@ func Everything(t *testing.T) {
 	}).MustDo(r.Ali().Client())
 
 	p = (&project.One{Host: r.Ali().ID(), ID: p.ID}).MustDo(r.Ali().Client())
+	a.NotNil(p)
 
 	p = (&project.Get{
 		Host:           r.Ali().ID(),
