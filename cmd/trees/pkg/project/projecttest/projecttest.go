@@ -13,6 +13,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
+	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,6 +41,10 @@ func Everything(t *testing.T) {
 		},
 		Name: "My New Project",
 	}).MustDo(r.Ali().Client())
+
+	// call it with a new client -> none logged in user (will only return public projects)
+	nilP := (&project.One{Host: r.Ali().ID(), ID: p.ID}).MustDo(r.NewClient())
+	a.Nil(nilP)
 
 	p = (&project.One{Host: r.Ali().ID(), ID: p.ID}).MustDo(r.Ali().Client())
 	a.NotNil(p)
@@ -102,4 +107,46 @@ func Everything(t *testing.T) {
 	a.Equal(dueOn, *p.DueOn)
 	a.False(p.IsArchived)
 	a.True(p.IsPublic)
+
+	// call it with a new client -> none logged in user (will only return public projects)
+	p = (&project.One{Host: r.Ali().ID(), ID: p.ID}).MustDo(r.NewClient())
+	a.NotNil(p)
+
+	// try to set startOn to same value as dueOn
+	nilP, err := (&project.Update{
+		ID:      p.ID,
+		StartOn: &field.TimePtr{V: &dueOn},
+	}).Do(r.Ali().Client())
+	a.Nil(nilP)
+	a.Contains(err.Error(), "invalid startOn must be before dueOn")
+
+	// try to set dueOn to same value as startOn
+	nilP, err = (&project.Update{
+		ID:    p.ID,
+		DueOn: &field.TimePtr{V: &startOn},
+	}).Do(r.Ali().Client())
+	a.Nil(nilP)
+	a.Contains(err.Error(), "invalid startOn must be before dueOn")
+
+	// create another project and get with a limit of 1 to test more: true response
+	p = (&project.Create{
+		Base: project.Base{
+			CurrencyCode: "USD",
+			HoursPerDay:  8,
+			DaysPerWeek:  5,
+			IsPublic:     false,
+		},
+		Name: "My 2nd Project",
+	}).MustDo(r.Ali().Client())
+	a.NotNil(p)
+
+	a.True((&project.Get{
+		Host:  r.Ali().ID(),
+		Limit: ptr.Int(1),
+	}).MustDo(r.Ali().Client()).More)
+
+	// trigger OnSetSocials code
+	(&user.SetHandle{
+		Handle: "ali_changed",
+	}).MustDo(r.Ali().Client())
 }

@@ -60,7 +60,7 @@ var (
 				validate.CurrencyCode(tlbx, args.CurrencyCode)
 				app.BadReqIf(args.HoursPerDay < 1 || args.HoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
 				app.BadReqIf(args.DaysPerWeek < 1 || args.DaysPerWeek > 7, "invalid daysPerWeek must be > 0 and <= 7")
-				app.BadReqIf(args.StartOn != nil && args.DueOn != nil && args.StartOn.After(*args.DueOn), "invalid startOn must be before dueOn")
+				app.BadReqIf(args.StartOn != nil && args.DueOn != nil && !args.StartOn.Before(*args.DueOn), "invalid startOn must be before dueOn")
 				p := &project.Project{
 					Task: task.Task{
 						ID:         tlbx.NewID(),
@@ -173,11 +173,11 @@ var (
 				// validate startOn and dueOn
 				switch {
 				case args.StartOn != nil && args.DueOn != nil:
-					app.BadReqIf(args.StartOn.V != nil && args.DueOn.V != nil && args.StartOn.V.After(*args.DueOn.V), "1 invalid startOn must be before dueOn")
+					app.BadReqIf(args.StartOn.V != nil && args.DueOn.V != nil && !args.StartOn.V.Before(*args.DueOn.V), "invalid startOn must be before dueOn")
 				case args.StartOn != nil && p.DueOn != nil:
-					app.BadReqIf(args.StartOn.V != nil && p.DueOn != nil && args.StartOn.V.After(*p.DueOn), "2 invalid startOn must be before dueOn")
+					app.BadReqIf(args.StartOn.V != nil && p.DueOn != nil && !args.StartOn.V.Before(*p.DueOn), "invalid startOn must be before dueOn")
 				case args.DueOn != nil && p.StartOn != nil:
-					app.BadReqIf(p.StartOn != nil && args.DueOn.V != nil && p.StartOn.After(*args.DueOn.V), "3 invalid startOn must be before dueOn")
+					app.BadReqIf(p.StartOn != nil && args.DueOn.V != nil && !p.StartOn.Before(*args.DueOn.V), "invalid startOn must be before dueOn")
 				}
 				if args.StartOn != nil {
 					p.StartOn = args.StartOn.V
@@ -299,7 +299,6 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			args.StartOnMax.After(*args.DueOnMax),
 		"startOnMax must be before dueOnMax")
 	limit := sql.Limit100(*args.Limit)
-	me := me.Get(tlbx)
 	srv := service.Get(tlbx)
 	res := &project.GetRes{
 		Set: make([]*project.Project, 0, limit),
@@ -308,15 +307,21 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	queryArgs := make([]interface{}, 0, 14)
 	queryArgs = append(queryArgs, args.Host)
 	idsLen := len(args.IDs)
-	if !me.Equal(args.Host) {
-		query.WriteString(` AND (p.isPublic=TRUE OR p.id IN (SELECT pu.project FROM projectUsers pu WHERE pu.host=? AND pu.isActive=true AND pu.id=?))`)
-		queryArgs = append(queryArgs, args.Host, me)
+	if me.Exists(tlbx) {
+		me := me.Get(tlbx)
+		if !me.Equal(args.Host) {
+			query.WriteString(` AND (p.isPublic=TRUE OR p.id IN (SELECT pu.project FROM projectUsers pu WHERE pu.host=? AND pu.isActive=true AND pu.id=?))`)
+			queryArgs = append(queryArgs, args.Host, me)
+		}
+	} else {
+		query.WriteString(` AND p.isPublic=TRUE`)
 	}
 	if idsLen > 0 {
 		query.WriteString(sql.InCondition(true, `p.id`, idsLen))
 		query.WriteString(sql.OrderByField(`p.id`, idsLen))
-		queryArgs = append(queryArgs, args.IDs.ToIs()...)
-		queryArgs = append(queryArgs, args.IDs.ToIs()...)
+		Is := args.IDs.ToIs()
+		queryArgs = append(queryArgs, Is...)
+		queryArgs = append(queryArgs, Is...)
 	} else {
 		if ptr.StringOr(args.NameStartsWith, "") != "" {
 			query.WriteString(` AND p.name LIKE ?`)
@@ -368,7 +373,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 		if args.Sort != consts.SortCreatedOn {
 			createdOnSecondarySort = ", p.createdOn"
 		}
-		query.WriteString(Sprintf(` ORDER BY %s%s %s, p.id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
+		query.WriteString(Sprintf(` ORDER BY p.%s%s %s, p.id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
 	}
 	PanicOn(srv.Data().Query(func(rows isql.Rows) {
 		for rows.Next() {
