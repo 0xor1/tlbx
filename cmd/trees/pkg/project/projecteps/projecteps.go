@@ -134,80 +134,158 @@ var (
 		},
 		{
 			Description:  "Update a project",
-			Path:         (&project.Update{}).Path(),
+			Path:         (&project.Updates{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &project.Update{}
+				return &project.Updates{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &project.Update{
-					ID:           app.ExampleID(),
-					Name:         &field.String{V: "Renamed Project"},
-					CurrencyCode: &field.String{V: "EUR"},
-					HoursPerDay:  &field.UInt8{V: 6},
-					DaysPerWeek:  &field.UInt8{V: 4},
-					StartOn:      &field.TimePtr{V: ptr.Time(app.ExampleTime())},
-					DueOn:        &field.TimePtr{V: ptr.Time(app.ExampleTime().Add(24 * time.Hour))},
-					IsArchived:   &field.Bool{V: false},
-					IsPublic:     &field.Bool{V: true},
+				return &project.Updates{
+					{
+						ID:           app.ExampleID(),
+						Name:         &field.String{V: "Renamed Project"},
+						CurrencyCode: &field.String{V: "EUR"},
+						HoursPerDay:  &field.UInt8{V: 6},
+						DaysPerWeek:  &field.UInt8{V: 4},
+						StartOn:      &field.TimePtr{V: ptr.Time(app.ExampleTime())},
+						DueOn:        &field.TimePtr{V: ptr.Time(app.ExampleTime().Add(24 * time.Hour))},
+						IsArchived:   &field.Bool{V: false},
+						IsPublic:     &field.Bool{V: true},
+					},
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleProject
+				return []*project.Project{
+					exampleProject,
+				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*project.Update)
+				args := *(a.(*project.Updates))
+				if len(args) == 0 {
+					return nil
+				}
+				app.BadReqIf(len(args) > 100, "can not update more than 100 projects at a time")
 				me := me.Get(tlbx)
-				p := getSet(tlbx, &project.Get{Host: me, IDs: IDs{args.ID}, Limit: ptr.Int(1)}).Set[0]
-				if args.CurrencyCode != nil {
-					validate.CurrencyCode(tlbx, args.CurrencyCode.V)
-					p.CurrencyCode = args.CurrencyCode.V
+				ids := make(IDs, len(args))
+				namesSet := make([]bool, len(args))
+				for i, u := range args {
+					ids[i] = u.ID
 				}
-				// validate name
-				if args.Name != nil {
-					validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
-					p.Name = args.Name.V
-				}
-				// validate startOn and dueOn
-				switch {
-				case args.StartOn != nil && args.DueOn != nil:
-					app.BadReqIf(args.StartOn.V != nil && args.DueOn.V != nil && !args.StartOn.V.Before(*args.DueOn.V), "invalid startOn must be before dueOn")
-				case args.StartOn != nil && p.DueOn != nil:
-					app.BadReqIf(args.StartOn.V != nil && p.DueOn != nil && !args.StartOn.V.Before(*p.DueOn), "invalid startOn must be before dueOn")
-				case args.DueOn != nil && p.StartOn != nil:
-					app.BadReqIf(p.StartOn != nil && args.DueOn.V != nil && !p.StartOn.Before(*args.DueOn.V), "invalid startOn must be before dueOn")
-				}
-				if args.StartOn != nil {
-					p.StartOn = args.StartOn.V
-				}
-				if args.DueOn != nil {
-					p.DueOn = args.DueOn.V
-				}
-				if args.HoursPerDay != nil {
-					app.BadReqIf(args.HoursPerDay.V < 1 || args.HoursPerDay.V > 24, "invalid hoursPerDay must be > 0 and <= 24")
-					p.HoursPerDay = args.HoursPerDay.V
-				}
-				if args.DaysPerWeek != nil {
-					app.BadReqIf(args.DaysPerWeek.V < 1 || args.DaysPerWeek.V > 7, "invalid daysPerWeek must be > 0 and <= 7")
-					p.DaysPerWeek = args.DaysPerWeek.V
-				}
-				if args.IsArchived != nil {
-					p.IsArchived = args.IsArchived.V
-				}
-				if args.IsPublic != nil {
-					p.IsPublic = args.IsPublic.V
+				ps := getSet(tlbx, &project.Get{Host: me, IDs: ids, Limit: ptr.Int(100)}).Set
+				for i, p := range ps {
+					a := args[i]
+					if a.CurrencyCode != nil {
+						validate.CurrencyCode(tlbx, a.CurrencyCode.V)
+						p.CurrencyCode = a.CurrencyCode.V
+					}
+					// validate name
+					if a.Name != nil {
+						validate.Str("name", a.Name.V, tlbx, nameMinLen, nameMaxLen)
+						p.Name = a.Name.V
+						namesSet[i] = true
+					}
+					// validate startOn and dueOn
+					switch {
+					case a.StartOn != nil && a.DueOn != nil:
+						app.BadReqIf(a.StartOn.V != nil && a.DueOn.V != nil && !a.StartOn.V.Before(*a.DueOn.V), "invalid startOn must be before dueOn")
+					case a.StartOn != nil && p.DueOn != nil:
+						app.BadReqIf(a.StartOn.V != nil && p.DueOn != nil && !a.StartOn.V.Before(*p.DueOn), "invalid startOn must be before dueOn")
+					case a.DueOn != nil && p.StartOn != nil:
+						app.BadReqIf(p.StartOn != nil && a.DueOn.V != nil && !p.StartOn.Before(*a.DueOn.V), "invalid startOn must be before dueOn")
+					}
+					if a.StartOn != nil {
+						p.StartOn = a.StartOn.V
+					}
+					if a.DueOn != nil {
+						p.DueOn = a.DueOn.V
+					}
+					if a.HoursPerDay != nil {
+						app.BadReqIf(a.HoursPerDay.V < 1 || a.HoursPerDay.V > 24, "invalid hoursPerDay must be > 0 and <= 24")
+						p.HoursPerDay = a.HoursPerDay.V
+					}
+					if a.DaysPerWeek != nil {
+						app.BadReqIf(a.DaysPerWeek.V < 1 || a.DaysPerWeek.V > 7, "invalid daysPerWeek must be > 0 and <= 7")
+						p.DaysPerWeek = a.DaysPerWeek.V
+					}
+					if a.IsArchived != nil {
+						p.IsArchived = a.IsArchived.V
+					}
+					if a.IsPublic != nil {
+						p.IsPublic = a.IsPublic.V
+					}
 				}
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
-				_, err := tx.Exec(`UPDATE projects SET name=?, currencyCode=?, hoursPerDay=?, daysPerWeek=?, startOn=?, dueOn=?, isArchived=?, isPublic=? WHERE host=? AND id=?`, p.Name, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsArchived, p.IsPublic, me, p.ID)
-				PanicOn(err)
-				_, err = tx.Exec(`UPDATE tasks SET name=? WHERE host=? AND project=? AND id=?`, p.Name, me, p.ID, p.ID)
-				PanicOn(err)
+				for i, p := range ps {
+					_, err := tx.Exec(`UPDATE projects SET name=?, currencyCode=?, hoursPerDay=?, daysPerWeek=?, startOn=?, dueOn=?, isArchived=?, isPublic=? WHERE host=? AND id=?`, p.Name, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsArchived, p.IsPublic, me, p.ID)
+					PanicOn(err)
+					if namesSet[i] {
+						_, err = tx.Exec(`UPDATE tasks SET name=? WHERE host=? AND project=? AND id=?`, p.Name, me, p.ID, p.ID)
+						PanicOn(err)
+					}
+				}
 				tx.Commit()
-				return p
+				return ps
+			},
+		},
+		{
+			Description:  "delete projects",
+			Path:         (&project.Delete{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.Delete{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.Delete{
+					app.ExampleID(),
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := *(a.(*project.Delete))
+				if len(args) == 0 {
+					return nil
+				}
+				app.BadReqIf(len(args) > 100, "can not delete more than 100 projects at a time")
+				me := me.Get(tlbx)
+				queryArgs := append([]interface{}{me}, IDs(args).ToIs()...)
+				inID := sql.InCondition(true, "id", len(args))
+				inProject := sql.InCondition(true, "project", len(args))
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
+				_, err := tx.Exec(Sprintf(`DELETE FROM projectLocks WHERE host=? %s`, inID), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Sprintf(`DELETE FROM projectUsers WHERE host=? %s`, inProject), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Sprintf(`DELETE FROM projectActivities WHERE host=? %s`, inProject), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Sprintf(`DELETE FROM projects WHERE host=? %s`, inID), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Sprintf(`DELETE FROM tasks WHERE host=? %s`, inProject), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Sprintf(`DELETE FROM times WHERE host=? %s`, inProject), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Sprintf(`DELETE FROM expenses WHERE host=? %s`, inProject), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Sprintf(`DELETE FROM files WHERE host=? %s`, inProject), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Sprintf(`DELETE FROM comments WHERE host=? %s`, inProject), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Sprintf(`UPDATE projectUsers set isActive=FALSE WHERE id=? %s`, inProject), queryArgs...)
+				PanicOn(err)
+				for _, p := range args {
+					srv.Store().MustDeletePrefix(consts.FileBucket, me.String()+"/"+p.String())
+				}
+				tx.Commit()
+				return nil
 			},
 		},
 	}

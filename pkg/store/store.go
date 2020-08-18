@@ -138,10 +138,13 @@ func (c *client) MustDelete(bucket, prefix string, id ID) {
 }
 
 func (c *client) DeletePrefix(bucket, prefix string) error {
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
 	for {
 		list, err := c.s3.ListObjectsV2(&s3.ListObjectsV2Input{
 			Bucket: ptr.String(bucket),
-			Prefix: ptr.String(prefix + "/"),
+			Prefix: ptr.String(prefix),
 		})
 		if err != nil {
 			return ToError(err)

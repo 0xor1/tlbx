@@ -117,14 +117,12 @@ type Update struct {
 	IsPublic     *field.Bool    `json:"isPublic,omitempty"`
 }
 
-func (_ *Update) Path() string {
-	return "/project/update"
-}
-
 func (a *Update) Do(c *app.Client) (*Project, error) {
-	res := &Project{}
-	err := app.Call(c, a.Path(), a, &res)
-	return res, err
+	res, err := (&Updates{a}).Do(c)
+	if len(res) == 1 {
+		return res[0], err
+	}
+	return nil, err
 }
 
 func (a *Update) MustDo(c *app.Client) *Project {
@@ -133,9 +131,28 @@ func (a *Update) MustDo(c *app.Client) *Project {
 	return res
 }
 
-type Delete struct {
-	IDs IDs `json:"ids"`
+type Updates []*Update
+
+func (_ *Updates) Path() string {
+	return "/project/update"
 }
+
+func (a *Updates) Do(c *app.Client) ([]*Project, error) {
+	res := &[]*Project{}
+	err := app.Call(c, a.Path(), a, &res)
+	if res == nil {
+		return nil, err
+	}
+	return *res, err
+}
+
+func (a *Updates) MustDo(c *app.Client) []*Project {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type Delete IDs
 
 func (_ *Delete) Path() string {
 	return "/project/delete"
