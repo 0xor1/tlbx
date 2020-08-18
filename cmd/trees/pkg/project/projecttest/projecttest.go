@@ -152,9 +152,11 @@ func Everything(t *testing.T) {
 		Handle: "ali_changed",
 	}).MustDo(ac)
 
+	// make empty update
+	ps := (&project.Updates{}).MustDo(ac)
+
 	// make multiple updates
 	dueOn = dueOn.Add(24 * time.Hour)
-	ps := (&project.Updates{}).MustDo(ac)
 	ps = (&project.Updates{
 		{
 			ID:    p1.ID,

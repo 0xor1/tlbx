@@ -1,8 +1,9 @@
 package test
 
 import (
-	"net"
 	"net/http"
+	"net/http/httptest"
+	"os"
 	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -20,19 +21,19 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
-	"github.com/0xor1/tlbx/pkg/web/server"
 	"github.com/tomasen/realip"
 )
 
 const (
-	baseHref    = "http://localhost:%d"
+	baseHref    = "http://localhost"
 	pwd         = "1aA$_t;3"
 	emailSuffix = "@test.localhost"
 )
 
 type Rig interface {
+	// unique
+	Unique() string
 	// http
-	Port() int
 	NewClient() *app.Client
 	// log
 	Log() log.Log
@@ -83,23 +84,24 @@ func (u *testUser) Pwd() string {
 }
 
 type rig struct {
-	port    int
-	ali     *testUser
-	bob     *testUser
-	cat     *testUser
-	dan     *testUser
-	log     log.Log
-	cache   iredis.Pool
-	user    isql.ReplicaSet
-	pwd     isql.ReplicaSet
-	data    isql.ReplicaSet
-	email   email.Client
-	store   store.Client
-	useAuth bool
+	rootHandler http.HandlerFunc
+	unique      string
+	ali         *testUser
+	bob         *testUser
+	cat         *testUser
+	dan         *testUser
+	log         log.Log
+	cache       iredis.Pool
+	user        isql.ReplicaSet
+	pwd         isql.ReplicaSet
+	data        isql.ReplicaSet
+	email       email.Client
+	store       store.Client
+	useAuth     bool
 }
 
-func (r *rig) Port() int {
-	return r.port
+func (r *rig) Unique() string {
+	return r.unique
 }
 
 func (r *rig) Log() log.Log {
@@ -147,7 +149,13 @@ func (r *rig) Store() store.Client {
 }
 
 func (r *rig) NewClient() *app.Client {
-	return app.NewClient(Sprintf(baseHref, r.Port()), &http.Client{Transport: &http.Transport{MaxIdleConnsPerHost: 200}})
+	return app.NewClient(baseHref, r)
+}
+
+func (r *rig) Do(req *http.Request) (*http.Response, error) {
+	rec := httptest.NewRecorder()
+	r.rootHandler(rec, req)
+	return rec.Result(), nil
 }
 
 func NewRig(
@@ -160,10 +168,8 @@ func NewRig(
 	onSetSocials func(app.Tlbx, *user.User) error,
 	buckets ...string,
 ) Rig {
-	listener, err := net.Listen("tcp", ":0")
-	PanicOn(err)
 	r := &rig{
-		port:    listener.Addr().(*net.TCPAddr).Port,
+		unique:  Sprintf("%d", os.Getpid()),
 		log:     config.Log,
 		cache:   config.Cache,
 		email:   config.Email,
@@ -211,14 +217,11 @@ func NewRig(
 		}
 		c.Endpoints = eps
 		c.Serve = func(h http.HandlerFunc) {
-			server.Run(func(servC *server.Config) {
-				servC.AppListener = listener
-				servC.Log = c.Log
-				servC.Handler = h
-			})
+			r.rootHandler = h
 		}
 	})
 
+	// sleep to ensure r.rootHandler has been passed to rig struct
 	time.Sleep(20 * time.Millisecond)
 	r.ali = r.createUser("ali", emailSuffix, pwd)
 	r.bob = r.createUser("bob", emailSuffix, pwd)
@@ -245,11 +248,11 @@ func (r *rig) CleanUp() {
 }
 
 func (r *rig) createUser(handleSuffix, emailSuffix, pwd string) *testUser {
-	email := Sprintf("%s%s%d", handleSuffix, emailSuffix, r.port)
+	email := Sprintf("%s%s%s", handleSuffix, emailSuffix, r.unique)
 	c := r.NewClient()
 	if r.useAuth {
 		(&user.Register{
-			Handle:     ptr.String(Sprintf("%s%d", handleSuffix, r.port)),
+			Handle:     ptr.String(Sprintf("%s%s", handleSuffix, r.unique)),
 			Alias:      ptr.String(handleSuffix),
 			Email:      email,
 			Pwd:        pwd,

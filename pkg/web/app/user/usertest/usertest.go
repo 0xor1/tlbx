@@ -31,7 +31,7 @@ func Everything(t *testing.T) {
 	c := r.NewClient()
 	handle := "test_handle"
 	alias := "test 😂 alias"
-	email := Sprintf("test@test.localhost%d", r.Port())
+	email := Sprintf("test@test.localhost%s", r.Unique())
 	pwd := "1aA$_t;3"
 
 	(&user.Register{
@@ -92,7 +92,7 @@ func Everything(t *testing.T) {
 	}()
 
 	(&user.ChangeEmail{
-		NewEmail: Sprintf("change@test.localhost%d", r.Port()),
+		NewEmail: Sprintf("change@test.localhost%s", r.Unique()),
 	}).MustDo(c)
 
 	(&user.ResendChangeEmailLink{}).MustDo(c)

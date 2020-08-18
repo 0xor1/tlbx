@@ -690,20 +690,24 @@ func (_ *Stream) MarshalJSON() ([]byte, error) {
 "Content-Id": "id_string"`)
 }
 
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type Client struct {
 	// protocol and host
 	baseHref string
-	http     *http.Client
+	http     httpClient
 	cookies  map[string]string
 }
 
-func NewClient(baseHref string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = &http.Client{}
+func NewClient(baseHref string, optClient ...httpClient) *Client {
+	if len(optClient) == 0 {
+		optClient = []httpClient{&http.Client{}}
 	}
 	return &Client{
 		baseHref: baseHref,
-		http:     httpClient,
+		http:     optClient[0],
 		cookies:  map[string]string{},
 	}
 }
@@ -717,7 +721,7 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 		if s != nil {
 			req, err = s.ToReq(method, url)
 		} else {
-			req, err = http.NewRequest(method, url, nil)
+			req, err = http.NewRequest(method, url, bytes.NewBuffer(nil))
 		}
 	} else if args != nil {
 		argsBytes, err := json.Marshal(args)
