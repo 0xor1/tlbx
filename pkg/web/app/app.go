@@ -717,20 +717,20 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 	method := http.MethodPut
 	var req *http.Request
 	var err error
-	if s, ok := args.(*Stream); ok {
-		if s != nil {
-			req, err = s.ToReq(method, url)
-		} else {
-			req, err = http.NewRequest(method, url, bytes.NewBuffer(nil))
+	switch a := args.(type) {
+	case *Stream:
+		if a != nil {
+			req, err = a.ToReq(method, url)
 		}
-	} else if args != nil {
+	default:
 		argsBytes, err := json.Marshal(args)
 		if err != nil {
 			return ToError(err)
 		}
 		req, err = http.NewRequest(method, url, bytes.NewBuffer(argsBytes))
-	} else {
-		req, err = http.NewRequest(method, url, nil)
+	}
+	if req == nil {
+		req, err = http.NewRequest(method, url, bytes.NewBuffer(nil))
 	}
 	if err != nil {
 		return ToError(err)
