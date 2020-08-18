@@ -21,7 +21,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
-	"github.com/tomasen/realip"
+	"github.com/0xor1/tlbx/pkg/web/server/realip"
 )
 
 const (

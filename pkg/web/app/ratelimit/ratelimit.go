@@ -9,8 +9,8 @@ import (
 	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
+	"github.com/0xor1/tlbx/pkg/web/server/realip"
 	"github.com/gomodule/redigo/redis"
-	"github.com/tomasen/realip"
 )
 
 func MeMware(cache iredis.Pool) func(app.Tlbx) {
