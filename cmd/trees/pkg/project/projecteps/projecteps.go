@@ -2,9 +2,11 @@ package projecteps
 
 import (
 	"bytes"
+	"strings"
 	"time"
 
-	"github.com/0xor1/tlbx/cmd/trees/pkg/consts"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/access"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -82,13 +84,13 @@ var (
 				defer tx.Rollback()
 				_, err := tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, me, p.ID)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, consts.RoleAdmin)
+				_, err = tx.Exec(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, cnsts.RoleAdmin)
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumRemainingTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.SubFileCount, p.SubFileSize, p.ChildCount, p.DescendantCount)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, NowMilli(), me, p.ID, consts.TypeProject, false, consts.ActionCreated, p.Name, nil)
+				_, err = tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, NowMilli(), me, p.ID, cnsts.TypeProject, false, cnsts.ActionCreated, p.Name, nil)
 				PanicOn(err)
 				tx.Commit()
 				return p
@@ -103,21 +105,21 @@ var (
 			GetDefaultArgs: func() interface{} {
 				return &project.Get{
 					IsArchived: false,
-					Sort:       consts.SortCreatedOn,
+					Sort:       cnsts.SortCreatedOn,
 					Asc:        ptr.Bool(true),
 					Limit:      ptr.Int(100),
 				}
 			},
 			GetExampleArgs: func() interface{} {
 				return &project.Get{
-					IsArchived:     false,
-					NameStartsWith: ptr.String("My Proj"),
-					CreatedOnMin:   ptr.Time(app.ExampleTime()),
-					CreatedOnMax:   ptr.Time(app.ExampleTime()),
-					After:          ptr.ID(app.ExampleID()),
-					Sort:           consts.SortName,
-					Asc:            ptr.Bool(true),
-					Limit:          ptr.Int(50),
+					IsArchived:   false,
+					NamePrefix:   ptr.String("My Proj"),
+					CreatedOnMin: ptr.Time(app.ExampleTime()),
+					CreatedOnMax: ptr.Time(app.ExampleTime()),
+					After:        ptr.ID(app.ExampleID()),
+					Sort:         cnsts.SortName,
+					Asc:          ptr.Bool(true),
+					Limit:        ptr.Int(50),
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -282,9 +284,73 @@ var (
 				_, err = tx.Exec(Sprintf(`UPDATE projectUsers set isActive=FALSE WHERE id=? %s`, inProject), queryArgs...)
 				PanicOn(err)
 				for _, p := range args {
-					srv.Store().MustDeletePrefix(consts.FileBucket, me.String()+"/"+p.String())
+					srv.Store().MustDeletePrefix(cnsts.FileBucket, me.String()+"/"+p.String())
 				}
 				tx.Commit()
+				return nil
+			},
+		},
+		{
+			Description:  "add project users",
+			Path:         (&project.AddUsers{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.AddUsers{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.AddUsers{
+					Project: app.ExampleID(),
+					Users: []*project.AddUser{
+						{
+							ID:   app.ExampleID(),
+							Role: cnsts.RoleAdmin,
+						},
+					},
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := *(a.(*project.AddUsers))
+				lenUsers := len(args.Users)
+				if lenUsers == 0 {
+					return nil
+				}
+				app.BadReqIf(lenUsers > 100, "can not add more than 100 users to a project at a time")
+				access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				srv := service.Get(tlbx)
+
+				// need two sets for id IN (?, ...) and ORDER BY FIELD (id, ?, ...)
+				ids := make([]interface{}, 0, 2*lenUsers)
+				for i := 0; i < 2; i++ {
+					for _, u := range args.Users {
+						ids = append(ids, u.ID)
+					}
+				}
+				// get userTx and lock all user rows, to ensure they are not changed whilst inserting into data db
+				userTx := srv.User().Begin()
+				defer userTx.Rollback()
+				users := make([]*user.User, 0, lenUsers)
+				userTx.Query(func(rows isql.Rows) {
+					for rows.Next() {
+						u := &user.User{}
+						PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
+						users = append(users, u)
+					}
+				}, Sprintf(`SELECT id, handle, alias, hasAvatar FROM users WHERE 1=1 %s %s FOR UPDATE`, sql.InCondition(true, `id`, lenUsers), sql.OrderByField(`id`, lenUsers)), ids...)
+
+				app.BadReqIf(len(users) != lenUsers, "users specified: %d, users found: %d", lenUsers, len(users))
+
+				queryArgs := make([]interface{}, 0, 7*lenUsers)
+				for i, u := range users {
+					queryArgs = append(queryArgs, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, args.Users[i].Role)
+				}
+				_, err := srv.Data().Exec(Sprintf(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, role) VALUES %s`, strings.Repeat(`(?, ?, ?, ?, ?, ?, ?)`, lenUsers)), queryArgs...)
+				PanicOn(err)
+				userTx.Commit()
 				return nil
 			},
 		},
@@ -345,7 +411,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	_, err = tx.Exec(`UPDATE projectUsers set isActive=FALSE WHERE id=?`, me)
 	PanicOn(err)
-	srv.Store().MustDeletePrefix(consts.FileBucket, me.String())
+	srv.Store().MustDeletePrefix(cnsts.FileBucket, me.String())
 	tx.Commit()
 }
 
@@ -401,19 +467,15 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 		queryArgs = append(queryArgs, Is...)
 		queryArgs = append(queryArgs, Is...)
 	} else {
-		if ptr.StringOr(args.NameStartsWith, "") != "" {
-			query.WriteString(` AND p.name LIKE ?`)
-			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
-		}
 		query.WriteString(` AND p.isArchived=?`)
 		queryArgs = append(queryArgs, args.IsArchived)
 		if args.IsPublic != nil {
 			query.WriteString(` AND p.isPublic=?`)
 			queryArgs = append(queryArgs, *args.IsPublic)
 		}
-		if ptr.StringOr(args.NameStartsWith, "") != "" {
+		if ptr.StringOr(args.NamePrefix, "") != "" {
 			query.WriteString(` AND p.name LIKE ?`)
-			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
+			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NamePrefix))
 		}
 		if args.CreatedOnMin != nil {
 			query.WriteString(` AND p.createdOn >=?`)
@@ -442,16 +504,75 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 		if args.After != nil {
 			query.WriteString(Sprintf(` AND %s %s= (SELECT p.%s FROM projects p WHERE p.host=? AND p.id=?) AND p.id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, args.Host, *args.After, *args.After)
-			if args.Sort != consts.SortCreatedOn {
+			if args.Sort != cnsts.SortCreatedOn {
 				query.WriteString(Sprintf(` AND p.createdOn %s (SELECT p.createdOn FROM projects p WHERE p.host=? AND p.id=?)`, sql.GtLtSymbol(*args.Asc)))
 				queryArgs = append(queryArgs, args.Host, *args.After)
 			}
 		}
 		createdOnSecondarySort := ""
-		if args.Sort != consts.SortCreatedOn {
+		if args.Sort != cnsts.SortCreatedOn {
 			createdOnSecondarySort = ", p.createdOn"
 		}
 		query.WriteString(Sprintf(` ORDER BY p.%s%s %s, p.id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
+	}
+	PanicOn(srv.Data().Query(func(rows isql.Rows) {
+		for rows.Next() {
+			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
+				res.More = true
+				break
+			}
+			p := &project.Project{}
+			PanicOn(rows.Scan(&p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.DueOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumRemainingTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.SubFileCount, &p.SubFileSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
+			res.Set = append(res.Set, p)
+		}
+	}, query.String(), queryArgs...))
+	return res
+}
+
+func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
+	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+	app.BadReqIf(args.HandlePrefix != nil && StrLen(*args.HandlePrefix) >= 15, "handlePrefix must be < 15 chars long")
+	limit := sql.Limit100(*args.Limit)
+	access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleReader)
+
+	srv := service.Get(tlbx)
+	res := &project.GetUsersRes{
+		Set: make([]*project.User, 0, limit),
+	}
+	query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role FROM projectUsers WHERE host=? AND project=?`)
+	queryArgs := make([]interface{}, 0, 14)
+	queryArgs = append(queryArgs, args.Host)
+	idsLen := len(args.IDs)
+	if idsLen > 0 {
+		query.WriteString(sql.InCondition(true, `id`, idsLen))
+		query.WriteString(sql.OrderByField(`id`, idsLen))
+		Is := args.IDs.ToIs()
+		queryArgs = append(queryArgs, Is...)
+		queryArgs = append(queryArgs, Is...)
+	} else {
+		if ptr.StringOr(args.HandlePrefix, "") != "" {
+			query.WriteString(` AND handle LIKE ?`)
+			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.HandlePrefix))
+		}
+		if args.Role != nil {
+			query.WriteString(` AND role=?`)
+			queryArgs = append(queryArgs, *args.Role)
+		}
+		if args.After != nil {
+			if args.HandlePrefix == nil {
+				query.WriteString(` AND role >= (SELECT role FROM projectUsers WHERE host=? AND project=? AND id=?)`)
+				queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
+			}
+			query.WriteString(` AND p.handle > (SELECT handle FROM projectUsers WHERE host=? AND project=? AND id=?)`)
+			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
+		}
+		if args.HandlePrefix == nil {
+			query.WriteString(` ORDER BY role ASC,`)
+
+		} else {
+			query.WriteString(` ORDER BY`)
+		}
+		query.WriteString(Sprintf(` handle ASC LIMIT %d`, limit))
 	}
 	PanicOn(srv.Data().Query(func(rows isql.Rows) {
 		for rows.Next() {

@@ -65,7 +65,7 @@ func (a *One) MustDo(c *app.Client) *List {
 
 type Get struct {
 	IDs                   IDs        `json:"ids,omitempty"`
-	NameStartsWith        *string    `json:"nameStartsWith,omitempty"`
+	NamePrefix            *string    `json:"namePrefix,omitempty"`
 	CreatedOnMin          *time.Time `json:"createdOnMin,omitempty"`
 	CreatedOnMax          *time.Time `json:"createdOnMax,omitempty"`
 	TodoItemCountMin      *int       `json:"todoItemCountMin,omitempty"`

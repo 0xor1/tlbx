@@ -62,7 +62,7 @@ func Everything(t *testing.T) {
 	a.False(getSet.More)
 
 	getSet = (&list.Get{
-		NameStartsWith:        ptr.String("Test l"),
+		NamePrefix:            ptr.String("Test l"),
 		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax:          ptr.Time(Now()),
 		TodoItemCountMin:      ptr.Int(0),
@@ -77,7 +77,7 @@ func Everything(t *testing.T) {
 	a.False(getSet.More)
 
 	getSet = (&list.Get{
-		NameStartsWith:        ptr.String("Test l"),
+		NamePrefix:            ptr.String("Test l"),
 		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax:          ptr.Time(Now()),
 		TodoItemCountMin:      ptr.Int(0),
@@ -93,7 +93,7 @@ func Everything(t *testing.T) {
 	a.False(getSet.More)
 
 	getSet = (&list.Get{
-		NameStartsWith:        ptr.String("Test l"),
+		NamePrefix:            ptr.String("Test l"),
 		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax:          ptr.Time(Now()),
 		TodoItemCountMin:      ptr.Int(0),

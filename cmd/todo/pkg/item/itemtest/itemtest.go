@@ -75,37 +75,37 @@ func Everything(t *testing.T) {
 	a.False(get.More)
 
 	get = (&item.Get{
-		List:           testList1.ID,
-		NameStartsWith: ptr.String("Test i"),
-		CreatedOnMin:   ptr.Time(Now().Add(-5 * time.Second)),
-		CreatedOnMax:   ptr.Time(Now()),
-		Asc:            ptr.Bool(false),
-		Limit:          ptr.Int(2),
+		List:         testList1.ID,
+		NamePrefix:   ptr.String("Test i"),
+		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnMax: ptr.Time(Now()),
+		Asc:          ptr.Bool(false),
+		Limit:        ptr.Int(2),
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem2, get.Set[0])
 	a.Equal(testItem1, get.Set[1])
 	a.False(get.More)
 
 	get = (&item.Get{
-		List:           testList1.ID,
-		NameStartsWith: ptr.String("Test i"),
-		CreatedOnMin:   ptr.Time(Now().Add(-5 * time.Second)),
-		CreatedOnMax:   ptr.Time(Now()),
-		After:          ptr.ID(testItem1.ID),
-		Sort:           item.SortName,
-		Asc:            ptr.Bool(true),
-		Limit:          ptr.Int(2),
+		List:         testList1.ID,
+		NamePrefix:   ptr.String("Test i"),
+		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnMax: ptr.Time(Now()),
+		After:        ptr.ID(testItem1.ID),
+		Sort:         item.SortName,
+		Asc:          ptr.Bool(true),
+		Limit:        ptr.Int(2),
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem2, get.Set[0])
 	a.False(get.More)
 
 	get = (&item.Get{
-		List:           testList1.ID,
-		NameStartsWith: ptr.String("Test i"),
-		CreatedOnMin:   ptr.Time(Now().Add(-5 * time.Second)),
-		CreatedOnMax:   ptr.Time(Now()),
-		Asc:            ptr.Bool(true),
-		Limit:          ptr.Int(1),
+		List:         testList1.ID,
+		NamePrefix:   ptr.String("Test i"),
+		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnMax: ptr.Time(Now()),
+		Asc:          ptr.Bool(true),
+		Limit:        ptr.Int(1),
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem1, get.Set[0])
 	a.True(get.More)

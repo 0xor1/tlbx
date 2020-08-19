@@ -9,9 +9,19 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
-func ReturnNotFoundOrPanicOn(err error) {
-	app.ReturnIf(err != nil && err == sql.ErrNoRows, http.StatusNotFound, "")
+func ReturnNotFoundIfIsNoRows(err error) {
+	app.ReturnIf(IsNoRows(err), http.StatusNotFound, "")
 	PanicOn(err)
+}
+
+func PanicIfIsntNoRows(err error) {
+	if !IsNoRows(err) {
+		PanicOn(err)
+	}
+}
+
+func IsNoRows(err error) bool {
+	return err != nil && err == sql.ErrNoRows
 }
 
 func Asc(asc bool) string {

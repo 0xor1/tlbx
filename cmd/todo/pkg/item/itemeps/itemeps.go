@@ -74,7 +74,7 @@ var (
 			GetExampleArgs: func() interface{} {
 				return &item.Get{
 					List:           app.ExampleID(),
-					NameStartsWith: ptr.String("My I"),
+					NamePrefix:     ptr.String("My I"),
 					CreatedOnMin:   ptr.Time(app.ExampleTime()),
 					CreatedOnMax:   ptr.Time(app.ExampleTime()),
 					Completed:      ptr.Bool(true),
@@ -256,9 +256,9 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 		} else {
 			query.WriteString(` AND completedOn = ?`)
 		}
-		if ptr.StringOr(args.NameStartsWith, "") != "" {
+		if ptr.StringOr(args.NamePrefix, "") != "" {
 			query.WriteString(` AND name LIKE ?`)
-			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NameStartsWith))
+			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NamePrefix))
 		}
 		if args.CreatedOnMin != nil {
 			query.WriteString(` AND createdOn >= ?`)

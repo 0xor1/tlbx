@@ -205,7 +205,7 @@ func read(tlbx app.Tlbx, tx service.Tx, forUpdate bool, gameType string, game ID
 		} else {
 			row = service.Get(tlbx).Data().QueryRow(query, game)
 		}
-		comsql.ReturnNotFoundOrPanicOn(row.Scan(&gotType, &serialized))
+		comsql.ReturnNotFoundIfIsNoRows(row.Scan(&gotType, &serialized))
 	} else {
 		// cache key was successful which includes gameType
 		gotType = gameType

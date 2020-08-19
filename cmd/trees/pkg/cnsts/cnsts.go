@@ -1,4 +1,4 @@
-package consts
+package cnsts
 
 import (
 	"strconv"

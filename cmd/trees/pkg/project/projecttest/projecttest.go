@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/consts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -27,7 +27,7 @@ func Everything(t *testing.T) {
 		projecteps.OnDelete,
 		true,
 		projecteps.OnSetSocials,
-		consts.FileBucket)
+		cnsts.FileBucket)
 	defer r.CleanUp()
 
 	ac := r.Ali().Client()
@@ -51,37 +51,37 @@ func Everything(t *testing.T) {
 	a.NotNil(p1)
 
 	p1 = (&project.Get{
-		Host:           r.Ali().ID(),
-		NameStartsWith: ptr.String("My New"),
-		IsArchived:     false,
-		IsPublic:       ptr.Bool(false),
-		CreatedOnMin:   &p1.CreatedOn,
-		CreatedOnMax:   &p1.CreatedOn,
-		StartOnMin:     ptr.Time(app.ExampleTime()),
-		StartOnMax:     ptr.Time(app.ExampleTime()),
-		DueOnMin:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-		DueOnMax:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-		After:          nil,
-		Sort:           consts.SortDueOn,
-		Asc:            ptr.Bool(false),
-		Limit:          ptr.Int(100),
+		Host:         r.Ali().ID(),
+		NamePrefix:   ptr.String("My New"),
+		IsArchived:   false,
+		IsPublic:     ptr.Bool(false),
+		CreatedOnMin: &p1.CreatedOn,
+		CreatedOnMax: &p1.CreatedOn,
+		StartOnMin:   ptr.Time(app.ExampleTime()),
+		StartOnMax:   ptr.Time(app.ExampleTime()),
+		DueOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		DueOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		After:        nil,
+		Sort:         cnsts.SortDueOn,
+		Asc:          ptr.Bool(false),
+		Limit:        ptr.Int(100),
 	}).MustDo(ac).Set[0]
 
 	a.Zero(len((&project.Get{
-		Host:           p1.ID,
-		NameStartsWith: ptr.String("My New"),
-		IsArchived:     false,
-		IsPublic:       ptr.Bool(false),
-		CreatedOnMin:   &p1.CreatedOn,
-		CreatedOnMax:   &p1.CreatedOn,
-		StartOnMin:     ptr.Time(app.ExampleTime()),
-		StartOnMax:     ptr.Time(app.ExampleTime()),
-		DueOnMin:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-		DueOnMax:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-		After:          ptr.ID(p1.ID),
-		Sort:           consts.SortDueOn,
-		Asc:            ptr.Bool(true),
-		Limit:          ptr.Int(100),
+		Host:         p1.ID,
+		NamePrefix:   ptr.String("My New"),
+		IsArchived:   false,
+		IsPublic:     ptr.Bool(false),
+		CreatedOnMin: &p1.CreatedOn,
+		CreatedOnMax: &p1.CreatedOn,
+		StartOnMin:   ptr.Time(app.ExampleTime()),
+		StartOnMax:   ptr.Time(app.ExampleTime()),
+		DueOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		DueOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		After:        ptr.ID(p1.ID),
+		Sort:         cnsts.SortDueOn,
+		Asc:          ptr.Bool(true),
+		Limit:        ptr.Int(100),
 	}).MustDo(ac).Set))
 
 	name1 := "renamed project"
