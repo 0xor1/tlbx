@@ -246,4 +246,5 @@ func Everything(t *testing.T) {
 	a.True(us.More)
 	a.Len(us.Set, 2)
 	a.True(us.Set[0].ID.Equal(r.Bob().ID()))
+	a.True(us.Set[1].ID.Equal(r.Cat().ID()))
 }
