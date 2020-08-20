@@ -214,8 +214,20 @@ func Everything(t *testing.T) {
 		},
 	}).MustDo(ac)
 
-	role := cnsts.RoleWriter
 	us := (&project.GetUsers{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		IDs: IDs{
+			r.Cat().ID(),
+			r.Dan().ID(),
+		},
+	}).MustDo(r.Dan().Client())
+	a.False(us.More)
+	a.Len(us.Set, 2)
+	a.True(us.Set[0].ID.Equal(r.Cat().ID()))
+
+	role := cnsts.RoleWriter
+	us = (&project.GetUsers{
 		Host:         r.Ali().ID(),
 		Project:      p1.ID,
 		Role:         &role,
@@ -224,4 +236,14 @@ func Everything(t *testing.T) {
 	a.False(us.More)
 	a.Len(us.Set, 1)
 	a.True(us.Set[0].ID.Equal(r.Cat().ID()))
+
+	us = (&project.GetUsers{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		After:   ptr.ID(r.Ali().ID()),
+		Limit:   ptr.Int(2),
+	}).MustDo(r.Dan().Client())
+	a.True(us.More)
+	a.Len(us.Set, 2)
+	a.True(us.Set[0].ID.Equal(r.Bob().ID()))
 }

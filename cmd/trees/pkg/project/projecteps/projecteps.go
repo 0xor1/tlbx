@@ -614,7 +614,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 				query.WriteString(` AND role >= (SELECT role FROM projectUsers WHERE host=? AND project=? AND id=?)`)
 				queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 			}
-			query.WriteString(` AND p.handle > (SELECT handle FROM projectUsers WHERE host=? AND project=? AND id=?)`)
+			query.WriteString(` AND handle > (SELECT handle FROM projectUsers WHERE host=? AND project=? AND id=?)`)
 			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 		}
 		query.WriteString(` ORDER BY`)
