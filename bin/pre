@@ -13,6 +13,6 @@ docker-compose -f docker/docker-compose.yml up -d
 ./bin/wait-for-it -t 60 127.0.0.1:3306 -- echo "mariadb ready"
 
 go fmt ./... && \
-go test -p=10 -coverprofile=coverage.out ./... && \
+go test -p=$(nproc) -coverprofile=coverage.out ./... && \
 go tool cover -html=coverage.out && \
 rm coverage.out

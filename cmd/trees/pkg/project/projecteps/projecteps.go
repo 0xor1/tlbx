@@ -314,7 +314,7 @@ var (
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := *(a.(*project.AddUsers))
+				args := a.(*project.AddUsers)
 				lenUsers := len(args.Users)
 				if lenUsers == 0 {
 					return nil
@@ -348,10 +348,45 @@ var (
 				for i, u := range users {
 					queryArgs = append(queryArgs, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, args.Users[i].Role)
 				}
-				_, err := srv.Data().Exec(Sprintf(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, role) VALUES %s`, strings.Repeat(`(?, ?, ?, ?, ?, ?, ?)`, lenUsers)), queryArgs...)
+				_, err := srv.Data().Exec(Sprintf(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, role) VALUES (?, ?, ?, ?, ?, ?, ?)%s`, strings.Repeat(`,(?, ?, ?, ?, ?, ?, ?)`, lenUsers-1)), queryArgs...)
 				PanicOn(err)
 				userTx.Commit()
 				return nil
+			},
+		},
+		{
+			Description:  "get project users",
+			Path:         (&project.GetUsers{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.GetUsers{
+					Limit: ptr.Int(100),
+				}
+			},
+			GetExampleArgs: func() interface{} {
+				r := cnsts.RoleReader
+				return &project.GetUsers{
+					Host:         app.ExampleID(),
+					Project:      app.ExampleID(),
+					IDs:          IDs{app.ExampleID()},
+					Role:         &r,
+					HandlePrefix: ptr.String("my_frien"),
+					After:        ptr.ID(app.ExampleID()),
+					Limit:        ptr.Int(100),
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return &project.GetUsersRes{
+					Set: []*project.User{
+						exampleUser,
+					},
+					More: true,
+				}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				return getUsers(tlbx, a.(*project.GetUsers))
 			},
 		},
 	}
@@ -374,6 +409,22 @@ var (
 			IsPublic:     false,
 		},
 		IsArchived: false,
+	}
+	exampleUser = &project.User{
+		User: user.User{
+			ID:        app.ExampleID(),
+			Handle:    ptr.String("joe_bloggs"),
+			Alias:     ptr.String("joe soap"),
+			HasAvatar: ptr.Bool(true),
+		},
+		Role:             cnsts.RoleReader,
+		IsActive:         true,
+		EstimatedTime:    123,
+		LoggedTime:       123,
+		EstimatedExpense: 123,
+		LoggedExpense:    123,
+		FileCount:        123,
+		FileSize:         123,
 	}
 )
 
@@ -541,7 +592,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	}
 	query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role FROM projectUsers WHERE host=? AND project=?`)
 	queryArgs := make([]interface{}, 0, 14)
-	queryArgs = append(queryArgs, args.Host)
+	queryArgs = append(queryArgs, args.Host, args.Project)
 	idsLen := len(args.IDs)
 	if idsLen > 0 {
 		query.WriteString(sql.InCondition(true, `id`, idsLen))
@@ -559,18 +610,16 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 			queryArgs = append(queryArgs, *args.Role)
 		}
 		if args.After != nil {
-			if args.HandlePrefix == nil {
+			if ptr.StringOr(args.HandlePrefix, "") == "" {
 				query.WriteString(` AND role >= (SELECT role FROM projectUsers WHERE host=? AND project=? AND id=?)`)
 				queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 			}
 			query.WriteString(` AND p.handle > (SELECT handle FROM projectUsers WHERE host=? AND project=? AND id=?)`)
 			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 		}
-		if args.HandlePrefix == nil {
-			query.WriteString(` ORDER BY role ASC,`)
-
-		} else {
-			query.WriteString(` ORDER BY`)
+		query.WriteString(` ORDER BY`)
+		if ptr.StringOr(args.HandlePrefix, "") == "" {
+			query.WriteString(` role ASC,`)
 		}
 		query.WriteString(Sprintf(` handle ASC LIMIT %d`, limit))
 	}
@@ -580,9 +629,9 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 				res.More = true
 				break
 			}
-			p := &project.Project{}
-			PanicOn(rows.Scan(&p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.DueOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumRemainingTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.SubFileCount, &p.SubFileSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
-			res.Set = append(res.Set, p)
+			u := &project.User{}
+			PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar, &u.IsActive, &u.EstimatedTime, &u.LoggedTime, &u.EstimatedExpense, &u.LoggedExpense, &u.FileCount, &u.FileSize, &u.Role))
+			res.Set = append(res.Set, u)
 		}
 	}, query.String(), queryArgs...))
 	return res

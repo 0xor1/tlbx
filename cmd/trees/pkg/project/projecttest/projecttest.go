@@ -176,4 +176,52 @@ func Everything(t *testing.T) {
 	(&project.Delete{}).MustDo(ac)
 	(&project.Delete{p1.ID, p2.ID}).MustDo(ac)
 	a.Zero(len((&project.Get{Host: r.Ali().ID()}).MustDo(ac).Set))
+
+	p1 = (&project.Create{
+		Base: project.Base{
+			CurrencyCode: "USD",
+			HoursPerDay:  8,
+			DaysPerWeek:  5,
+			StartOn:      ptr.Time(app.ExampleTime()),
+			DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+			IsPublic:     false,
+		},
+		Name: "My New Project",
+	}).MustDo(ac)
+
+	// test empty request
+	(&project.AddUsers{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+	}).MustDo(ac)
+
+	(&project.AddUsers{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		Users: []*project.AddUser{
+			{
+				ID:   r.Bob().ID(),
+				Role: cnsts.RoleAdmin,
+			},
+			{
+				ID:   r.Cat().ID(),
+				Role: cnsts.RoleWriter,
+			},
+			{
+				ID:   r.Dan().ID(),
+				Role: cnsts.RoleReader,
+			},
+		},
+	}).MustDo(ac)
+
+	role := cnsts.RoleWriter
+	us := (&project.GetUsers{
+		Host:         r.Ali().ID(),
+		Project:      p1.ID,
+		Role:         &role,
+		HandlePrefix: ptr.String("ca"),
+	}).MustDo(r.Dan().Client())
+	a.False(us.More)
+	a.Len(us.Set, 1)
+	a.True(us.Set[0].ID.Equal(r.Cat().ID()))
 }
