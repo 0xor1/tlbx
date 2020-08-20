@@ -2,6 +2,7 @@ package projecteps
 
 import (
 	"bytes"
+	"net/http"
 	"strings"
 	"time"
 
@@ -302,7 +303,7 @@ var (
 			GetExampleArgs: func() interface{} {
 				return &project.AddUsers{
 					Project: app.ExampleID(),
-					Users: []*project.AddUser{
+					Users: []*project.SendUser{
 						{
 							ID:   app.ExampleID(),
 							Role: cnsts.RoleAdmin,
@@ -387,6 +388,48 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				return getUsers(tlbx, a.(*project.GetUsers))
+			},
+		},
+		{
+			Description:  "set user roles",
+			Path:         (&project.SetUserRoles{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.SetUserRoles{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.SetUserRoles{
+					Project: app.ExampleID(),
+					Users: []*project.SendUser{
+						{
+							ID:   app.ExampleID(),
+							Role: cnsts.RoleAdmin,
+						},
+					},
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*project.SetUserRoles)
+				lenUsers := len(args.Users)
+				if lenUsers == 0 {
+					return nil
+				}
+				app.BadReqIf(lenUsers > 100, "can not set more than 100 user roles in a project at a time")
+				access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				srv := service.Get(tlbx)
+				for _, u := range args.Users {
+					res, err := srv.Data().Exec(`UPDATE projectUsers SET role=? WHERE host=? AND project=? AND id=?`, u.Role, args.Host, args.Project, u.ID)
+					PanicOn(err)
+					count, err := res.RowsAffected()
+					PanicOn(err)
+					app.ReturnIf(count != 1, http.StatusNotFound, "user: %s not found", u.ID)
+				}
+				return nil
 			},
 		},
 	}

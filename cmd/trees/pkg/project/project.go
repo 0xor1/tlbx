@@ -179,9 +179,14 @@ type User struct {
 }
 
 type AddUsers struct {
-	Host    ID         `json:"host"`
-	Project ID         `json:"project"`
-	Users   []*AddUser `json:"users"`
+	Host    ID          `json:"host"`
+	Project ID          `json:"project"`
+	Users   []*SendUser `json:"users"`
+}
+
+type SendUser struct {
+	ID   ID `json:"id"`
+	Role cnsts.Role
 }
 
 func (_ *AddUsers) Path() string {
@@ -227,9 +232,18 @@ func (a *GetUsers) MustDo(c *app.Client) *GetUsersRes {
 	return res
 }
 
-type AddUser struct {
-	ID   ID `json:"id"`
-	Role cnsts.Role
+type SetUserRoles AddUsers
+
+func (_ *SetUserRoles) Path() string {
+	return "/project/setUserRoles"
+}
+
+func (a *SetUserRoles) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *SetUserRoles) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
 }
 
 type Activity struct {

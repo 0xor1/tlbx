@@ -198,7 +198,7 @@ func Everything(t *testing.T) {
 	(&project.AddUsers{
 		Host:    r.Ali().ID(),
 		Project: p1.ID,
-		Users: []*project.AddUser{
+		Users: []*project.SendUser{
 			{
 				ID:   r.Bob().ID(),
 				Role: cnsts.RoleAdmin,
@@ -246,5 +246,46 @@ func Everything(t *testing.T) {
 	a.True(us.More)
 	a.Len(us.Set, 2)
 	a.True(us.Set[0].ID.Equal(r.Bob().ID()))
+	a.Equal(us.Set[0].Role, cnsts.RoleAdmin)
 	a.True(us.Set[1].ID.Equal(r.Cat().ID()))
+	a.Equal(us.Set[1].Role, cnsts.RoleWriter)
+
+	// send empty req
+	(&project.SetUserRoles{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+	}).MustDo(ac)
+
+	(&project.SetUserRoles{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		Users: []*project.SendUser{
+			{
+				ID:   r.Bob().ID(),
+				Role: cnsts.RoleReader,
+			},
+			{
+				ID:   r.Cat().ID(),
+				Role: cnsts.RoleReader,
+			},
+			{
+				ID:   r.Dan().ID(),
+				Role: cnsts.RoleAdmin,
+			},
+		},
+	}).MustDo(ac)
+
+	us = (&project.GetUsers{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		After:   ptr.ID(r.Ali().ID()),
+	}).MustDo(r.Dan().Client())
+	a.False(us.More)
+	a.Len(us.Set, 3)
+	a.True(us.Set[0].ID.Equal(r.Dan().ID()))
+	a.Equal(us.Set[0].Role, cnsts.RoleAdmin)
+	a.True(us.Set[1].ID.Equal(r.Bob().ID()))
+	a.Equal(us.Set[1].Role, cnsts.RoleReader)
+	a.True(us.Set[2].ID.Equal(r.Cat().ID()))
+	a.Equal(us.Set[2].Role, cnsts.RoleReader)
 }
