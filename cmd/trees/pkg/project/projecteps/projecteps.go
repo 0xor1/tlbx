@@ -422,13 +422,17 @@ var (
 				app.BadReqIf(lenUsers > 100, "can not set more than 100 user roles in a project at a time")
 				access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
 				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
 				for _, u := range args.Users {
-					res, err := srv.Data().Exec(`UPDATE projectUsers SET role=? WHERE host=? AND project=? AND id=?`, u.Role, args.Host, args.Project, u.ID)
+					app.ReturnIf(u.ID.Equal(args.Host), http.StatusForbidden, "can not set hosts role")
+					res, err := tx.Exec(`UPDATE projectUsers SET role=? WHERE host=? AND project=? AND id=?`, u.Role, args.Host, args.Project, u.ID)
 					PanicOn(err)
 					count, err := res.RowsAffected()
 					PanicOn(err)
 					app.ReturnIf(count != 1, http.StatusNotFound, "user: %s not found", u.ID)
 				}
+				tx.Commit()
 				return nil
 			},
 		},
