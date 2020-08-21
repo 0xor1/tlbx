@@ -3,7 +3,6 @@ package projecteps
 import (
 	"bytes"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/access"
@@ -13,6 +12,7 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/isql"
+	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
@@ -173,12 +173,34 @@ var (
 				me := me.Get(tlbx)
 				ids := make(IDs, len(args))
 				namesSet := make([]bool, len(args))
+				dupes := map[string]bool{}
+				for i := 0; i < len(args); i++ {
+					u := args[i]
+					idStr := u.ID.String()
+					app.BadReqIf(dupes[idStr], "duplicate entry detected")
+					dupes[idStr] = true
+					// if there are no changes to be made, remove this entry
+					if u.Name == nil &&
+						u.CurrencyCode == nil &&
+						u.HoursPerDay == nil &&
+						u.DaysPerWeek == nil &&
+						u.StartOn == nil &&
+						u.DueOn == nil &&
+						u.IsArchived == nil &&
+						u.IsPublic == nil {
+						copy(args[i:], args[i+1:])
+						args[len(args)-1] = nil
+						args = args[:len(args)-1]
+					}
+				}
 				for i, u := range args {
 					ids[i] = u.ID
 				}
+				extraInfos := map[string][]byte{}
 				ps := getSet(tlbx, &project.Get{Host: me, IDs: ids, Limit: ptr.Int(100)}).Set
 				for i, p := range ps {
 					a := args[i]
+					extraInfos[a.ID.String()] = json.MustMarshal(a)
 					if a.CurrencyCode != nil {
 						validate.CurrencyCode(tlbx, a.CurrencyCode.V)
 						p.CurrencyCode = a.CurrencyCode.V
@@ -229,6 +251,8 @@ var (
 						_, err = tx.Exec(`UPDATE tasks SET name=? WHERE host=? AND project=? AND id=?`, p.Name, me, p.ID, p.ID)
 						PanicOn(err)
 					}
+					_, err = tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, NowMilli(), me, p.ID, cnsts.TypeProject, false, cnsts.ActionUpdated, p.Name, extraInfos[p.ID.String()])
+					PanicOn(err)
 				}
 				tx.Commit()
 				return ps
@@ -345,13 +369,17 @@ var (
 
 				app.BadReqIf(len(users) != lenUsers, "users specified: %d, users found: %d", lenUsers, len(users))
 
-				queryArgs := make([]interface{}, 0, 7*lenUsers)
+				me := me.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
 				for i, u := range users {
 					app.BadReqIf(u.ID.Equal(args.Host), "can not add host to project")
-					queryArgs = append(queryArgs, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, args.Users[i].Role)
+					_, err := tx.Exec(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, args.Users[i].Role)
+					PanicOn(err)
+					_, err = tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, NowMilli(), me, u.ID, cnsts.TypeProjectUser, false, cnsts.ActionCreated, u.Handle, nil)
+					PanicOn(err)
 				}
-				_, err := srv.Data().Exec(Sprintf(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, role) VALUES (?, ?, ?, ?, ?, ?, ?)%s`, strings.Repeat(`,(?, ?, ?, ?, ?, ?, ?)`, lenUsers-1)), queryArgs...)
-				PanicOn(err)
+				tx.Commit()
 				userTx.Commit()
 				return nil
 			},

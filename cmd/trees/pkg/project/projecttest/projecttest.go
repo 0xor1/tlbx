@@ -159,6 +159,10 @@ func Everything(t *testing.T) {
 	dueOn = dueOn.Add(24 * time.Hour)
 	ps = (&project.Updates{
 		{
+			// send an empty update
+			ID: p1.ID,
+		},
+		{
 			ID:    p1.ID,
 			DueOn: &field.TimePtr{V: &dueOn},
 		},
@@ -167,8 +171,11 @@ func Everything(t *testing.T) {
 			DueOn: &field.TimePtr{V: &dueOn},
 		},
 	}).MustDo(ac)
+	a.Len(ps, 2)
+	a.True(p1.ID.Equal(ps[0].ID))
 	a.Equal(name1, ps[0].Name)
 	a.Equal(dueOn, *ps[0].DueOn)
+	a.True(p2.ID.Equal(ps[1].ID))
 	a.Equal(name2, ps[1].Name)
 	a.Equal(dueOn, *ps[1].DueOn)
 
