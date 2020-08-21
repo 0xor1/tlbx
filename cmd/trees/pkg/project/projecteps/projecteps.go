@@ -347,12 +347,41 @@ var (
 
 				queryArgs := make([]interface{}, 0, 7*lenUsers)
 				for i, u := range users {
+					app.BadReqIf(u.ID.Equal(args.Host), "can not add host to project")
 					queryArgs = append(queryArgs, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, args.Users[i].Role)
 				}
 				_, err := srv.Data().Exec(Sprintf(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, role) VALUES (?, ?, ?, ?, ?, ?, ?)%s`, strings.Repeat(`,(?, ?, ?, ?, ?, ?, ?)`, lenUsers-1)), queryArgs...)
 				PanicOn(err)
 				userTx.Commit()
 				return nil
+			},
+		},
+		{
+			Description:  "get my project user value",
+			Path:         (&project.Me{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.Me{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.Me{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return exampleUser
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*project.Me)
+				return getUsers(tlbx, &project.GetUsers{
+					Host:    args.Host,
+					Project: args.Project,
+					IDs:     IDs{me.Get(tlbx)},
+					Limit:   ptr.Int(1),
+				}).Set[0]
 			},
 		},
 		{
@@ -391,7 +420,7 @@ var (
 			},
 		},
 		{
-			Description:  "set user roles",
+			Description:  "set project user roles",
 			Path:         (&project.SetUserRoles{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
@@ -433,6 +462,44 @@ var (
 					app.ReturnIf(count != 1, http.StatusNotFound, "user: %s not found", u.ID)
 				}
 				tx.Commit()
+				return nil
+			},
+		},
+		{
+			Description:  "remove project users",
+			Path:         (&project.RemoveUsers{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.RemoveUsers{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.RemoveUsers{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					Users: IDs{
+						app.ExampleID(),
+					},
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*project.RemoveUsers)
+				if len(args.Users) == 0 {
+					return nil
+				}
+				access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				queryArgs := make([]interface{}, 0, len(args.Users)+2)
+				queryArgs = append(queryArgs, args.Host, args.Project)
+				for _, u := range args.Users {
+					app.BadReqIf(u.Equal(args.Host), "can not remove host from project")
+					queryArgs = append(queryArgs, u)
+				}
+				_, err := service.Get(tlbx).Data().Exec(Sprintf(`UPDATE projectUsers SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
+				PanicOn(err)
 				return nil
 			},
 		},
@@ -552,11 +619,11 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	if me.Exists(tlbx) {
 		me := me.Get(tlbx)
 		if !me.Equal(args.Host) {
-			query.WriteString(` AND (p.isPublic=TRUE OR p.id IN (SELECT pu.project FROM projectUsers pu WHERE pu.host=? AND pu.isActive=true AND pu.id=?))`)
+			query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT pu.project FROM projectUsers pu WHERE pu.host=? AND pu.isActive=true AND pu.id=?))`)
 			queryArgs = append(queryArgs, args.Host, me)
 		}
 	} else {
-		query.WriteString(` AND p.isPublic=TRUE`)
+		query.WriteString(` AND p.isPublic=1`)
 	}
 	if idsLen > 0 {
 		query.WriteString(sql.InCondition(true, `p.id`, idsLen))
@@ -630,9 +697,8 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	app.BadReqIf(args.HandlePrefix != nil && StrLen(*args.HandlePrefix) >= 15, "handlePrefix must be < 15 chars long")
-	limit := sql.Limit100(*args.Limit)
 	access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleReader)
-
+	limit := sql.Limit100(*args.Limit)
 	srv := service.Get(tlbx)
 	res := &project.GetUsersRes{
 		Set: make([]*project.User, 0, limit),
@@ -648,6 +714,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 		queryArgs = append(queryArgs, Is...)
 		queryArgs = append(queryArgs, Is...)
 	} else {
+		query.WriteString(` AND isActive=1`)
 		if ptr.StringOr(args.HandlePrefix, "") != "" {
 			query.WriteString(` AND handle LIKE ?`)
 			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.HandlePrefix))

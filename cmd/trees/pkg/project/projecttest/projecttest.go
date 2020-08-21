@@ -288,4 +288,31 @@ func Everything(t *testing.T) {
 	a.Equal(us.Set[1].Role, cnsts.RoleReader)
 	a.True(us.Set[2].ID.Equal(r.Cat().ID()))
 	a.Equal(us.Set[2].Role, cnsts.RoleReader)
+
+	me := (&project.Me{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+	}).MustDo(r.Dan().Client())
+	a.True(me.ID.Equal(r.Dan().ID()))
+
+	// send empty req
+	(&project.RemoveUsers{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+	}).MustDo(r.Dan().Client())
+	a.True(me.ID.Equal(r.Dan().ID()))
+
+	(&project.RemoveUsers{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		Users:   IDs{r.Bob().ID()},
+	}).MustDo(r.Dan().Client())
+	a.True(me.ID.Equal(r.Dan().ID()))
+
+	me, err = (&project.Me{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+	}).Do(r.Bob().Client())
+	a.Nil(me)
+	a.Contains(err.Error(), "Forbidden")
 }

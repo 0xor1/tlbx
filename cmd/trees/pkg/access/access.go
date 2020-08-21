@@ -29,7 +29,7 @@ func ProjectCheck(tlbx app.Tlbx, host, project ID, role cnsts.Role) {
 		app.ReturnIf(!iExist, http.StatusForbidden, "")
 	}
 
-	row := srv.Data().QueryRow(`SELECT TRUE FROM projectUsers WHERE host=? AND project=? AND id=? AND role<=?`, host, project, me.Get(tlbx), role)
+	row := srv.Data().QueryRow(`SELECT 1 FROM projectUsers WHERE host=? AND project=? AND id=? AND role<=? AND isActive=1`, host, project, me.Get(tlbx), role)
 	hasAccess := false
 	sql.PanicIfIsntNoRows(row.Scan(&hasAccess))
 	app.ReturnIf(!hasAccess, http.StatusForbidden, "")

@@ -201,6 +201,27 @@ func (a *AddUsers) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
+type Me struct {
+	Host    ID
+	Project ID
+}
+
+func (_ *Me) Path() string {
+	return "/project/me"
+}
+
+func (a *Me) Do(c *app.Client) (*User, error) {
+	res := &User{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *Me) MustDo(c *app.Client) *User {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
 type GetUsers struct {
 	Host         ID          `json:"host"`
 	Project      ID          `json:"project"`
@@ -243,6 +264,24 @@ func (a *SetUserRoles) Do(c *app.Client) error {
 }
 
 func (a *SetUserRoles) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
+
+type RemoveUsers struct {
+	Host    ID  `json:"host"`
+	Project ID  `json:"project"`
+	Users   IDs `json:"users"`
+}
+
+func (_ *RemoveUsers) Path() string {
+	return "/project/removeUsers"
+}
+
+func (a *RemoveUsers) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *RemoveUsers) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
