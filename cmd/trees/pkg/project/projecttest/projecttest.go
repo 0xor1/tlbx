@@ -64,7 +64,7 @@ func Everything(t *testing.T) {
 		After:        nil,
 		Sort:         cnsts.SortDueOn,
 		Asc:          ptr.Bool(false),
-		Limit:        ptr.Int(100),
+		Limit:        100,
 	}).MustDo(ac).Set[0]
 
 	a.Zero(len((&project.Get{
@@ -81,7 +81,7 @@ func Everything(t *testing.T) {
 		After:        ptr.ID(p1.ID),
 		Sort:         cnsts.SortDueOn,
 		Asc:          ptr.Bool(true),
-		Limit:        ptr.Int(100),
+		Limit:        100,
 	}).MustDo(ac).Set))
 
 	name1 := "renamed project"
@@ -144,7 +144,7 @@ func Everything(t *testing.T) {
 
 	a.True((&project.Get{
 		Host:  r.Ali().ID(),
-		Limit: ptr.Int(1),
+		Limit: 1,
 	}).MustDo(ac).More)
 
 	// trigger OnSetSocials code
@@ -248,7 +248,7 @@ func Everything(t *testing.T) {
 		Host:    r.Ali().ID(),
 		Project: p1.ID,
 		After:   ptr.ID(r.Ali().ID()),
-		Limit:   ptr.Int(2),
+		Limit:   2,
 	}).MustDo(r.Dan().Client())
 	a.True(us.More)
 	a.Len(us.Set, 2)
@@ -296,7 +296,7 @@ func Everything(t *testing.T) {
 	a.True(us.Set[2].ID.Equal(r.Cat().ID()))
 	a.Equal(us.Set[2].Role, cnsts.RoleReader)
 
-	me := (&project.Me{
+	me := (&project.GetMe{
 		Host:    r.Ali().ID(),
 		Project: p1.ID,
 	}).MustDo(r.Dan().Client())
@@ -316,7 +316,7 @@ func Everything(t *testing.T) {
 	}).MustDo(r.Dan().Client())
 	a.True(me.ID.Equal(r.Dan().ID()))
 
-	me, err = (&project.Me{
+	me, err = (&project.GetMe{
 		Host:    r.Ali().ID(),
 		Project: p1.ID,
 	}).Do(r.Bob().Client())

@@ -5,14 +5,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/0xor1/tlbx/cmd/trees/pkg/access"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/epsutil"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/isql"
-	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
@@ -91,8 +90,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumRemainingTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.SubFileCount, p.SubFileSize, p.ChildCount, p.DescendantCount)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, NowMilli(), me, p.ID, cnsts.TypeProject, false, cnsts.ActionCreated, p.Name, nil)
-				PanicOn(err)
+				epsutil.LogActivity(tlbx, tx, me, p.ID, p.ID, cnsts.TypeProject, cnsts.ActionCreated, ptr.String(p.Name), nil)
 				tx.Commit()
 				return p
 			},
@@ -108,7 +106,7 @@ var (
 					IsArchived: false,
 					Sort:       cnsts.SortCreatedOn,
 					Asc:        ptr.Bool(true),
-					Limit:      ptr.Int(100),
+					Limit:      100,
 				}
 			},
 			GetExampleArgs: func() interface{} {
@@ -120,7 +118,7 @@ var (
 					After:        ptr.ID(app.ExampleID()),
 					Sort:         cnsts.SortName,
 					Asc:          ptr.Bool(true),
-					Limit:        ptr.Int(50),
+					Limit:        50,
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -196,11 +194,9 @@ var (
 				for i, u := range args {
 					ids[i] = u.ID
 				}
-				extraInfos := map[string][]byte{}
-				ps := getSet(tlbx, &project.Get{Host: me, IDs: ids, Limit: ptr.Int(100)}).Set
+				ps := getSet(tlbx, &project.Get{Host: me, IDs: ids}).Set
 				for i, p := range ps {
 					a := args[i]
-					extraInfos[a.ID.String()] = json.MustMarshal(a)
 					if a.CurrencyCode != nil {
 						validate.CurrencyCode(tlbx, a.CurrencyCode.V)
 						p.CurrencyCode = a.CurrencyCode.V
@@ -250,9 +246,9 @@ var (
 					if namesSet[i] {
 						_, err = tx.Exec(`UPDATE tasks SET name=? WHERE host=? AND project=? AND id=?`, p.Name, me, p.ID, p.ID)
 						PanicOn(err)
+						epsutil.ActivityItemRename(tx, me, p.ID, p.ID, p.Name)
 					}
-					_, err = tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, NowMilli(), me, p.ID, cnsts.TypeProject, false, cnsts.ActionUpdated, p.Name, extraInfos[p.ID.String()])
-					PanicOn(err)
+					epsutil.LogActivity(tlbx, tx, me, p.ID, p.ID, cnsts.TypeProject, cnsts.ActionUpdated, ptr.String(p.Name), args[i])
 				}
 				tx.Commit()
 				return ps
@@ -309,7 +305,7 @@ var (
 				_, err = tx.Exec(Sprintf(`UPDATE projectUsers set isActive=FALSE WHERE id=? %s`, inProject), queryArgs...)
 				PanicOn(err)
 				for _, p := range args {
-					srv.Store().MustDeletePrefix(cnsts.FileBucket, me.String()+"/"+p.String())
+					srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me, p))
 				}
 				tx.Commit()
 				return nil
@@ -345,7 +341,7 @@ var (
 					return nil
 				}
 				app.BadReqIf(lenUsers > 100, "can not add more than 100 users to a project at a time")
-				access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
 				srv := service.Get(tlbx)
 
 				// need two sets for id IN (?, ...) and ORDER BY FIELD (id, ?, ...)
@@ -369,15 +365,13 @@ var (
 
 				app.BadReqIf(len(users) != lenUsers, "users specified: %d, users found: %d", lenUsers, len(users))
 
-				me := me.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
 				for i, u := range users {
 					app.BadReqIf(u.ID.Equal(args.Host), "can not add host to project")
 					_, err := tx.Exec(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, args.Users[i].Role)
 					PanicOn(err)
-					_, err = tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, NowMilli(), me, u.ID, cnsts.TypeProjectUser, false, cnsts.ActionCreated, u.Handle, nil)
-					PanicOn(err)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeProjectUser, cnsts.ActionCreated, nil, args.Users[i].Role)
 				}
 				tx.Commit()
 				userTx.Commit()
@@ -386,15 +380,15 @@ var (
 		},
 		{
 			Description:  "get my project user value",
-			Path:         (&project.Me{}).Path(),
+			Path:         (&project.GetMe{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &project.Me{}
+				return &project.GetMe{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &project.Me{
+				return &project.GetMe{
 					Host:    app.ExampleID(),
 					Project: app.ExampleID(),
 				}
@@ -403,12 +397,11 @@ var (
 				return exampleUser
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*project.Me)
+				args := a.(*project.GetMe)
 				return getUsers(tlbx, &project.GetUsers{
 					Host:    args.Host,
 					Project: args.Project,
 					IDs:     IDs{me.Get(tlbx)},
-					Limit:   ptr.Int(1),
 				}).Set[0]
 			},
 		},
@@ -420,7 +413,7 @@ var (
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
 				return &project.GetUsers{
-					Limit: ptr.Int(100),
+					Limit: 100,
 				}
 			},
 			GetExampleArgs: func() interface{} {
@@ -432,7 +425,7 @@ var (
 					Role:         &r,
 					HandlePrefix: ptr.String("my_frien"),
 					After:        ptr.ID(app.ExampleID()),
-					Limit:        ptr.Int(100),
+					Limit:        100,
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -477,7 +470,7 @@ var (
 					return nil
 				}
 				app.BadReqIf(lenUsers > 100, "can not set more than 100 user roles in a project at a time")
-				access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
@@ -488,6 +481,7 @@ var (
 					count, err := res.RowsAffected()
 					PanicOn(err)
 					app.ReturnIf(count != 1, http.StatusNotFound, "user: %s not found", u.ID)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeProjectUser, cnsts.ActionUpdated, nil, u.Role)
 				}
 				tx.Commit()
 				return nil
@@ -519,16 +513,104 @@ var (
 				if len(args.Users) == 0 {
 					return nil
 				}
-				access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
 				queryArgs := make([]interface{}, 0, len(args.Users)+2)
 				queryArgs = append(queryArgs, args.Host, args.Project)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
 				for _, u := range args.Users {
 					app.BadReqIf(u.Equal(args.Host), "can not remove host from project")
 					queryArgs = append(queryArgs, u)
 				}
-				_, err := service.Get(tlbx).Data().Exec(Sprintf(`UPDATE projectUsers SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
+				_, err := tx.Exec(Sprintf(`UPDATE projectUsers SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
 				PanicOn(err)
+				for _, u := range args.Users {
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u, cnsts.TypeProjectUser, cnsts.ActionDeleted, nil, nil)
+				}
+				tx.Commit()
 				return nil
+			},
+		},
+		{
+			Description:  "get project activities",
+			Path:         (&project.GetActivities{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.GetActivities{
+					Limit: 100,
+				}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.GetActivities{
+					Host:          app.ExampleID(),
+					Project:       app.ExampleID(),
+					Item:          ptr.ID(app.ExampleID()),
+					User:          ptr.ID(app.ExampleID()),
+					OccuredAfter:  ptr.Time(app.ExampleTime()),
+					OccuredBefore: ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+					Limit:         100,
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return &project.GetActivitiesRes{
+					Set: []*project.Activity{
+						{
+							OccurredOn:         app.ExampleTime(),
+							User:               app.ExampleID(),
+							Item:               app.ExampleID(),
+							ItemType:           cnsts.TypeTask,
+							ItemHasBeenDeleted: false,
+							Action:             cnsts.ActionUpdated,
+							ItemName:           ptr.String("my task"),
+							ExtraInfo:          ptr.String(`{"isParallel":true}`),
+						},
+					},
+				}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*project.GetActivities)
+				args.Limit = sql.Limit100(args.Limit)
+				app.BadReqIf(args.OccuredAfter != nil && args.OccuredBefore != nil, "only one of occurredBefore or occurredAfter may be used")
+				query := bytes.NewBufferString(`SELECT occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo FROM projectActivities WHERE host=? AND project=?`)
+				queryArgs := make([]interface{}, 0, 7)
+				queryArgs = append(queryArgs, args.Host, args.Project)
+				if args.Item != nil {
+					query.WriteString(` AND item=?`)
+					queryArgs = append(queryArgs, *args.Item)
+				}
+				if args.User != nil {
+					query.WriteString(` AND user=?`)
+					queryArgs = append(queryArgs, *args.User)
+				}
+				asc := false
+				if args.OccuredAfter != nil {
+					asc = true
+					query.WriteString(` AND occurredOn>?`)
+					queryArgs = append(queryArgs, *args.OccuredAfter)
+				}
+				if args.OccuredBefore != nil {
+					query.WriteString(` AND occurredOn<?`)
+					queryArgs = append(queryArgs, *args.OccuredBefore)
+				}
+				query.WriteString(sql.OrderLimit100(`occurredOn`, asc, args.Limit))
+				res := &project.GetActivitiesRes{
+					Set: make([]*project.Activity, 0, args.Limit),
+				}
+				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+					iLimit := int(args.Limit)
+					for rows.Next() {
+						if len(res.Set)+1 == iLimit {
+							res.More = true
+							break
+						}
+						pa := &project.Activity{}
+						rows.Scan(&pa.OccurredOn, &pa.User, &pa.Item, &pa.ItemType, &pa.ItemHasBeenDeleted, &pa.Action, &pa.ItemName, &pa.ExtraInfo)
+						res.Set = append(res.Set, pa)
+					}
+				}, query.String(), queryArgs...))
+				return res
 			},
 		},
 	}
@@ -604,7 +686,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	_, err = tx.Exec(`UPDATE projectUsers set isActive=FALSE WHERE id=?`, me)
 	PanicOn(err)
-	srv.Store().MustDeletePrefix(cnsts.FileBucket, me.String())
+	srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me))
 	tx.Commit()
 }
 
@@ -635,10 +717,10 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			args.DueOnMax != nil &&
 			args.StartOnMax.After(*args.DueOnMax),
 		"startOnMax must be before dueOnMax")
-	limit := sql.Limit100(*args.Limit)
+	args.Limit = sql.Limit100(args.Limit)
 	srv := service.Get(tlbx)
 	res := &project.GetRes{
-		Set: make([]*project.Project, 0, limit),
+		Set: make([]*project.Project, 0, args.Limit),
 	}
 	query := bytes.NewBufferString(`SELECT p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.dueOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumRemainingTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.subFileCount, t.subFileSize, t.childCount, t.descendantCount, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE p.host=?`)
 	queryArgs := make([]interface{}, 0, 14)
@@ -702,15 +784,16 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 				queryArgs = append(queryArgs, args.Host, *args.After)
 			}
 		}
-		createdOnSecondarySort := ""
+		createdOnSecondarySort := ", p.id"
 		if args.Sort != cnsts.SortCreatedOn {
-			createdOnSecondarySort = ", p.createdOn"
+			createdOnSecondarySort = ", p.createdOn, p.id"
 		}
-		query.WriteString(Sprintf(` ORDER BY p.%s%s %s, p.id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
+		query.WriteString(sql.OrderLimit100("p."+string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
 	}
 	PanicOn(srv.Data().Query(func(rows isql.Rows) {
+		iLimit := int(args.Limit)
 		for rows.Next() {
-			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
+			if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
 				res.More = true
 				break
 			}
@@ -725,8 +808,8 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	app.BadReqIf(args.HandlePrefix != nil && StrLen(*args.HandlePrefix) >= 15, "handlePrefix must be < 15 chars long")
-	access.ProjectCheck(tlbx, args.Host, args.Project, cnsts.RoleReader)
-	limit := sql.Limit100(*args.Limit)
+	epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+	limit := sql.Limit100(args.Limit)
 	srv := service.Get(tlbx)
 	res := &project.GetUsersRes{
 		Set: make([]*project.User, 0, limit),
@@ -767,7 +850,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	}
 	PanicOn(srv.Data().Query(func(rows isql.Rows) {
 		for rows.Next() {
-			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
+			if len(args.IDs) == 0 && len(res.Set)+1 == int(limit) {
 				res.More = true
 				break
 			}

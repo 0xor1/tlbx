@@ -39,18 +39,17 @@ func (s *Sort) UnmarshalJSON(raw []byte) error {
 type Type string
 
 const (
-	TypeProject         Type = "project"
-	TypeProjectActivity Type = "project_activity"
-	TypeProjectUser     Type = "project_user"
-	TypeTask            Type = "task"
-	TypeTime            Type = "time"
-	TypeExpense         Type = "expense"
-	TypeFile            Type = "file"
-	TypeComment         Type = "comment"
+	TypeProject     Type = "project"
+	TypeProjectUser Type = "project_user"
+	TypeTask        Type = "task"
+	TypeTime        Type = "time"
+	TypeExpense     Type = "expense"
+	TypeFile        Type = "file"
+	TypeComment     Type = "comment"
 )
 
 func (t *Type) Validate() {
-	app.BadReqIf(t != nil && !(*t == TypeProject || *t == TypeProjectActivity || *t == TypeProjectUser || *t == TypeTask || *t == TypeTime || *t == TypeExpense || *t == TypeFile || *t == TypeComment), "invalid type")
+	app.BadReqIf(t != nil && !(*t == TypeProject || *t == TypeProjectUser || *t == TypeTask || *t == TypeTime || *t == TypeExpense || *t == TypeFile || *t == TypeComment), "invalid type")
 }
 
 func (t *Type) String() string {

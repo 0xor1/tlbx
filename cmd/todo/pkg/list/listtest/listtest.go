@@ -70,7 +70,7 @@ func Everything(t *testing.T) {
 		CompletedItemCountMin: ptr.Int(0),
 		CompletedItemCountMax: ptr.Int(1),
 		Asc:                   ptr.Bool(false),
-		Limit:                 ptr.Int(2),
+		Limit:                 2,
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList2, getSet.Set[0])
 	a.Equal(testList1, getSet.Set[1])
@@ -87,7 +87,7 @@ func Everything(t *testing.T) {
 		After:                 ptr.ID(testList1.ID),
 		Sort:                  list.SortTodoItemCount,
 		Asc:                   ptr.Bool(true),
-		Limit:                 ptr.Int(2),
+		Limit:                 2,
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList2, getSet.Set[0])
 	a.False(getSet.More)
@@ -101,7 +101,7 @@ func Everything(t *testing.T) {
 		CompletedItemCountMin: ptr.Int(0),
 		CompletedItemCountMax: ptr.Int(1),
 		Asc:                   ptr.Bool(true),
-		Limit:                 ptr.Int(1),
+		Limit:                 1,
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList1, getSet.Set[0])
 	a.True(getSet.More)

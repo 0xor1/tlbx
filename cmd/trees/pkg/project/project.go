@@ -27,8 +27,8 @@ type Base struct {
 }
 
 type Create struct {
-	Name string `json:"name"`
 	Base
+	Name string `json:"name"`
 }
 
 func (_ *Create) Path() string {
@@ -81,7 +81,7 @@ type Get struct {
 	After        *ID        `json:"after,omitempty"`
 	Sort         cnsts.Sort `json:"sort,omitempty"`
 	Asc          *bool      `json:"asc,omitempty"`
-	Limit        *int       `json:"limit,omitempty"`
+	Limit        uint16     `json:"limit,omitempty"`
 }
 
 type GetRes struct {
@@ -185,8 +185,8 @@ type AddUsers struct {
 }
 
 type SendUser struct {
-	ID   ID `json:"id"`
-	Role cnsts.Role
+	ID   ID         `json:"id"`
+	Role cnsts.Role `json:"role"`
 }
 
 func (_ *AddUsers) Path() string {
@@ -201,22 +201,22 @@ func (a *AddUsers) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
-type Me struct {
-	Host    ID
-	Project ID
+type GetMe struct {
+	Host    ID `json:"host"`
+	Project ID `json:"project"`
 }
 
-func (_ *Me) Path() string {
-	return "/project/me"
+func (_ *GetMe) Path() string {
+	return "/project/getMe"
 }
 
-func (a *Me) Do(c *app.Client) (*User, error) {
+func (a *GetMe) Do(c *app.Client) (*User, error) {
 	res := &User{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Me) MustDo(c *app.Client) *User {
+func (a *GetMe) MustDo(c *app.Client) *User {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -229,7 +229,7 @@ type GetUsers struct {
 	Role         *cnsts.Role `json:"role,omitempty"`
 	HandlePrefix *string     `json:"handlePrefix,omitempty"`
 	After        *ID         `json:"after,omitempty"`
-	Limit        *int        `json:"limit,omitempty"`
+	Limit        uint16      `json:"limit,omitempty"`
 }
 
 type GetUsersRes struct {
@@ -283,6 +283,37 @@ func (a *RemoveUsers) Do(c *app.Client) error {
 
 func (a *RemoveUsers) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
+}
+
+type GetActivities struct {
+	Host          ID         `json:"host"`
+	Project       ID         `json:"project"`
+	Item          *ID        `json:"item,omitempty"`
+	User          *ID        `json:"user,omitempty"`
+	OccuredAfter  *time.Time `json:"occurredAfter,omitempty"`
+	OccuredBefore *time.Time `json:"occurredBefore,omitempty"`
+	Limit         uint16     `json:"limit,omitempty"`
+}
+
+func (_ *GetActivities) Path() string {
+	return "/project/activities"
+}
+
+func (a *GetActivities) Do(c *app.Client) (*GetActivitiesRes, error) {
+	res := &GetActivitiesRes{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *GetActivities) MustDo(c *app.Client) *GetActivitiesRes {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type GetActivitiesRes struct {
+	Set  []*Activity `json:"set"`
+	More bool        `json:"more"`
 }
 
 type Activity struct {

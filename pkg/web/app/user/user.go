@@ -238,19 +238,19 @@ func (a *Logout) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
-type Me struct{}
+type GetMe struct{}
 
-func (_ *Me) Path() string {
+func (_ *GetMe) Path() string {
 	return "/user/me"
 }
 
-func (a *Me) Do(c *app.Client) (*User, error) {
+func (a *GetMe) Do(c *app.Client) (*User, error) {
 	res := &User{}
 	err := app.Call(c, a.Path(), nil, &res)
 	return res, err
 }
 
-func (a *Me) MustDo(c *app.Client) *User {
+func (a *GetMe) MustDo(c *app.Client) *User {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res

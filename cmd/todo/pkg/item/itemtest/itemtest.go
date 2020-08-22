@@ -80,7 +80,7 @@ func Everything(t *testing.T) {
 		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax: ptr.Time(Now()),
 		Asc:          ptr.Bool(false),
-		Limit:        ptr.Int(2),
+		Limit:        2,
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem2, get.Set[0])
 	a.Equal(testItem1, get.Set[1])
@@ -94,7 +94,7 @@ func Everything(t *testing.T) {
 		After:        ptr.ID(testItem1.ID),
 		Sort:         item.SortName,
 		Asc:          ptr.Bool(true),
-		Limit:        ptr.Int(2),
+		Limit:        2,
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem2, get.Set[0])
 	a.False(get.More)
@@ -105,7 +105,7 @@ func Everything(t *testing.T) {
 		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax: ptr.Time(Now()),
 		Asc:          ptr.Bool(true),
-		Limit:        ptr.Int(1),
+		Limit:        1,
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem1, get.Set[0])
 	a.True(get.More)

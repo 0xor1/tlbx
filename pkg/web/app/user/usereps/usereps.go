@@ -439,7 +439,7 @@ func New(
 		},
 		{
 			Description:  "get me",
-			Path:         (&user.Me{}).Path(),
+			Path:         (&user.GetMe{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,

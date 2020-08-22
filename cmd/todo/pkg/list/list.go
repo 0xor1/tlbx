@@ -75,7 +75,7 @@ type Get struct {
 	After                 *ID        `json:"after,omitempty"`
 	Sort                  sort       `json:"sort,omitempty"`
 	Asc                   *bool      `json:"asc,omitempty"`
-	Limit                 *int       `json:"limit,omitempty"`
+	Limit                 uint16     `json:"limit,omitempty"`
 }
 
 type GetRes struct {

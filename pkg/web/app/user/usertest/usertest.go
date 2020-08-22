@@ -141,7 +141,7 @@ func Everything(t *testing.T) {
 		Alias: ptr.String(alias),
 	}).MustDo(c)
 
-	me := (&user.Me{}).MustDo(c)
+	me := (&user.GetMe{}).MustDo(c)
 	a.Equal(handle, *me.Handle)
 	a.Equal(alias, *me.Alias)
 	a.False(*me.HasAvatar)
@@ -156,7 +156,7 @@ func Everything(t *testing.T) {
 		},
 	}).MustDo(c)
 
-	me = (&user.Me{}).MustDo(c)
+	me = (&user.GetMe{}).MustDo(c)
 	a.True(*me.HasAvatar)
 
 	avatar := (&user.GetAvatar{
@@ -178,14 +178,14 @@ func Everything(t *testing.T) {
 		},
 	}).MustDo(c)
 
-	me = (&user.Me{}).MustDo(c)
+	me = (&user.GetMe{}).MustDo(c)
 	a.True(*me.HasAvatar)
 
 	(&user.SetAvatar{
 		Avatar: nil,
 	}).MustDo(c)
 
-	me = (&user.Me{}).MustDo(c)
+	me = (&user.GetMe{}).MustDo(c)
 	a.False(*me.HasAvatar)
 
 	users := (&user.Get{
@@ -222,7 +222,7 @@ func Everything(t *testing.T) {
 		Email: email,
 		Pwd:   pwd,
 	}).MustDo(c).ID
-	a.Equal(id, (&user.Me{}).MustDo(c).ID)
+	a.Equal(id, (&user.GetMe{}).MustDo(c).ID)
 
 	defer func() {
 		_, err = r.User().Primary().Exec(`DELETE FROM users WHERE id=?`, id)

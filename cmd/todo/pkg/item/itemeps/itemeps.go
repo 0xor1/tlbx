@@ -68,7 +68,7 @@ var (
 					Completed: ptr.Bool(false),
 					Sort:      item.SortCreatedOn,
 					Asc:       ptr.Bool(true),
-					Limit:     ptr.Int(100),
+					Limit:     100,
 				}
 			},
 			GetExampleArgs: func() interface{} {
@@ -83,7 +83,7 @@ var (
 					After:          ptr.ID(app.ExampleID()),
 					Sort:           item.SortName,
 					Asc:            ptr.Bool(true),
-					Limit:          ptr.Int(50),
+					Limit:          50,
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -125,9 +125,8 @@ var (
 				}
 				me := me.Get(tlbx)
 				getSetRes := getSet(tlbx, &item.Get{
-					List:  args.List,
-					IDs:   IDs{args.ID},
-					Limit: ptr.Int(1),
+					List: args.List,
+					IDs:  IDs{args.ID},
 				})
 				app.ReturnIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				item := getSetRes.Set[0]
@@ -226,11 +225,11 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 			args.CreatedOnMax != nil &&
 			args.CreatedOnMin.After(*args.CreatedOnMax),
 		"createdOnMin must be before createdOnMax")
-	limit := sql.Limit100(*args.Limit)
+	args.Limit = sql.Limit100(args.Limit)
 	me := me.Get(tlbx)
 	srv := service.Get(tlbx)
 	res := &item.GetRes{
-		Set: make([]*item.Item, 0, limit),
+		Set: make([]*item.Item, 0, args.Limit),
 	}
 	query := bytes.NewBufferString(`SELECT id, createdOn, name, completedOn FROM items WHERE user=? AND list=?`)
 	queryArgs := make([]interface{}, 0, 10)
@@ -281,11 +280,13 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 		if args.Sort != item.SortCreatedOn {
 			createdOnSecondarySort = ", createdOn"
 		}
-		query.WriteString(Sprintf(` ORDER BY %s%s %s, id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
+
+		query.WriteString(sql.OrderLimit100(string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
 	}
 	srv.Data().Query(func(rows isql.Rows) {
+		iLimit := int(args.Limit)
 		for rows.Next() {
-			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
+			if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
 				res.More = true
 				break
 			}

@@ -64,7 +64,7 @@ var (
 				return &list.Get{
 					Sort:  list.SortCreatedOn,
 					Asc:   ptr.Bool(true),
-					Limit: ptr.Int(100),
+					Limit: 100,
 				}
 			},
 			GetExampleArgs: func() interface{} {
@@ -79,7 +79,7 @@ var (
 					After:                 ptr.ID(app.ExampleID()),
 					Sort:                  list.SortName,
 					Asc:                   ptr.Bool(true),
-					Limit:                 ptr.Int(50),
+					Limit:                 50,
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -116,8 +116,7 @@ var (
 				args := a.(*list.Update)
 				validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
 				getSetRes := getSet(tlbx, &list.Get{
-					IDs:   IDs{args.ID},
-					Limit: ptr.Int(1),
+					IDs: IDs{args.ID},
 				})
 				app.ReturnIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				list := getSetRes.Set[0]
@@ -207,11 +206,11 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 			args.CompletedItemCountMax != nil &&
 			*args.CompletedItemCountMin > *args.CompletedItemCountMax,
 		"completedItemCountMin must not be greater than completedItemCountMax")
-	limit := sql.Limit100(*args.Limit)
+	args.Limit = sql.Limit100(args.Limit)
 	me := me.Get(tlbx)
 	srv := service.Get(tlbx)
 	res := &list.GetRes{
-		Set: make([]*list.List, 0, limit),
+		Set: make([]*list.List, 0, args.Limit),
 	}
 	query := bytes.NewBufferString(`SELECT id, createdOn, name, todoItemCount, completedItemCount FROM lists WHERE user=?`)
 	queryArgs := make([]interface{}, 0, 10)
@@ -263,11 +262,13 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 		if args.Sort != list.SortCreatedOn {
 			createdOnSecondarySort = ", createdOn"
 		}
-		query.WriteString(Sprintf(` ORDER BY %s%s %s, id LIMIT %d`, args.Sort, createdOnSecondarySort, sql.Asc(*args.Asc), limit))
+
+		query.WriteString(sql.OrderLimit100(string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
 	}
 	srv.Data().Query(func(rows isql.Rows) {
+		iLimit := int(args.Limit)
 		for rows.Next() {
-			if len(args.IDs) == 0 && len(res.Set)+1 == limit {
+			if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
 				res.More = true
 				break
 			}

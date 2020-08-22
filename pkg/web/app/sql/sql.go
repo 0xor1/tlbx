@@ -39,7 +39,7 @@ func GtLtSymbol(asc bool) string {
 	}
 }
 
-func Limit(l, max int) int {
+func Limit(l, max uint16) uint16 {
 	switch {
 	case l >= max:
 		return max + 1
@@ -50,16 +50,16 @@ func Limit(l, max int) int {
 	}
 }
 
-func Limit100(l int) int {
+func Limit100(l uint16) uint16 {
 	return Limit(l, 100)
 }
 
-func OrderLimit(field string, asc bool, l, max int) string {
+func OrderLimit(field string, asc bool, l, max uint16) string {
 	return Sprintf(` ORDER BY %s %s LIMIT %d`, field, Asc(asc), Limit(l, max))
 }
 
-func OrderLimitMax100(field string, asc bool, l int) string {
-	return Sprintf(` ORDER BY %s %s LIMIT %d`, field, Asc(asc), Limit100(l))
+func OrderLimit100(field string, asc bool, l uint16) string {
+	return OrderLimit(field, asc, l, 100)
 }
 
 func InCondition(and bool, field string, setLen int) string {
