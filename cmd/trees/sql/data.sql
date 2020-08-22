@@ -7,8 +7,8 @@ USE trees_data;
 #BIGINT UNSIGNED duration values are all in units of minutes
 #BIGINT UNSIGNED fileSize values are all in units of bytes
 
-DROP TABLE IF EXISTS projectUsers;
-CREATE TABLE projectUsers(
+DROP TABLE IF EXISTS users;
+CREATE TABLE users(
 	host BINARY(16) NOT NULL,
 	project BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,

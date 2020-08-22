@@ -84,7 +84,7 @@ var (
 				defer tx.Rollback()
 				_, err := tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, me, p.ID)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, cnsts.RoleAdmin)
+				_, err = tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, cnsts.RoleAdmin)
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
 				PanicOn(err)
@@ -286,7 +286,7 @@ var (
 				defer tx.Rollback()
 				_, err := tx.Exec(Sprintf(`DELETE FROM projectLocks WHERE host=? %s`, inID), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`DELETE FROM projectUsers WHERE host=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Sprintf(`DELETE FROM users WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
 				_, err = tx.Exec(Sprintf(`DELETE FROM projectActivities WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
@@ -302,7 +302,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(Sprintf(`DELETE FROM comments WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`UPDATE projectUsers set isActive=FALSE WHERE id=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Sprintf(`UPDATE users set isActive=FALSE WHERE id=? %s`, inProject), queryArgs...)
 				PanicOn(err)
 				for _, p := range args {
 					srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me, p))
@@ -369,9 +369,9 @@ var (
 				defer tx.Rollback()
 				for i, u := range users {
 					app.BadReqIf(u.ID.Equal(args.Host), "can not add host to project")
-					_, err := tx.Exec(`INSERT INTO projectUsers (host, project, id, handle, alias, hasAvatar, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, args.Users[i].Role)
+					_, err := tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, args.Users[i].Role)
 					PanicOn(err)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeProjectUser, cnsts.ActionCreated, nil, args.Users[i].Role)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionCreated, nil, args.Users[i].Role)
 				}
 				tx.Commit()
 				userTx.Commit()
@@ -476,12 +476,12 @@ var (
 				defer tx.Rollback()
 				for _, u := range args.Users {
 					app.ReturnIf(u.ID.Equal(args.Host), http.StatusForbidden, "can not set hosts role")
-					res, err := tx.Exec(`UPDATE projectUsers SET role=? WHERE host=? AND project=? AND id=?`, u.Role, args.Host, args.Project, u.ID)
+					res, err := tx.Exec(`UPDATE users SET role=? WHERE host=? AND project=? AND id=?`, u.Role, args.Host, args.Project, u.ID)
 					PanicOn(err)
 					count, err := res.RowsAffected()
 					PanicOn(err)
 					app.ReturnIf(count != 1, http.StatusNotFound, "user: %s not found", u.ID)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeProjectUser, cnsts.ActionUpdated, nil, u.Role)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionUpdated, nil, u.Role)
 				}
 				tx.Commit()
 				return nil
@@ -522,10 +522,10 @@ var (
 					app.BadReqIf(u.Equal(args.Host), "can not remove host from project")
 					queryArgs = append(queryArgs, u)
 				}
-				_, err := tx.Exec(Sprintf(`UPDATE projectUsers SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
+				_, err := tx.Exec(Sprintf(`UPDATE users SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
 				PanicOn(err)
 				for _, u := range args.Users {
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u, cnsts.TypeProjectUser, cnsts.ActionDeleted, nil, nil)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil)
 				}
 				tx.Commit()
 				return nil
@@ -656,7 +656,7 @@ func OnSetSocials(tlbx app.Tlbx, user *user.User) error {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
 	defer tx.Rollback()
-	_, err := tx.Exec(`UPDATE projectUsers SET handle=?, alias=?, hasAvatar=? WHERE id=?`, user.Handle, user.Alias, user.HasAvatar, user.ID)
+	_, err := tx.Exec(`UPDATE users SET handle=?, alias=?, hasAvatar=? WHERE id=?`, user.Handle, user.Alias, user.HasAvatar, user.ID)
 	PanicOn(err)
 	tx.Commit()
 	return nil
@@ -668,7 +668,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	defer tx.Rollback()
 	_, err := tx.Exec(`DELETE FROM projectLocks WHERE host=?`, me)
 	PanicOn(err)
-	_, err = tx.Exec(`DELETE FROM projectUsers WHERE host=?`, me)
+	_, err = tx.Exec(`DELETE FROM users WHERE host=?`, me)
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM projectActivities WHERE host=?`, me)
 	PanicOn(err)
@@ -684,7 +684,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM comments WHERE host=?`, me)
 	PanicOn(err)
-	_, err = tx.Exec(`UPDATE projectUsers set isActive=FALSE WHERE id=?`, me)
+	_, err = tx.Exec(`UPDATE users set isActive=FALSE WHERE id=?`, me)
 	PanicOn(err)
 	srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me))
 	tx.Commit()
@@ -729,7 +729,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	if me.Exists(tlbx) {
 		me := me.Get(tlbx)
 		if !me.Equal(args.Host) {
-			query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT pu.project FROM projectUsers pu WHERE pu.host=? AND pu.isActive=true AND pu.id=?))`)
+			query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT pu.project FROM users pu WHERE pu.host=? AND pu.isActive=true AND pu.id=?))`)
 			queryArgs = append(queryArgs, args.Host, me)
 		}
 	} else {
@@ -814,7 +814,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	res := &project.GetUsersRes{
 		Set: make([]*project.User, 0, limit),
 	}
-	query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role FROM projectUsers WHERE host=? AND project=?`)
+	query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role FROM users WHERE host=? AND project=?`)
 	queryArgs := make([]interface{}, 0, 14)
 	queryArgs = append(queryArgs, args.Host, args.Project)
 	idsLen := len(args.IDs)
@@ -836,10 +836,10 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 		}
 		if args.After != nil {
 			if ptr.StringOr(args.HandlePrefix, "") == "" {
-				query.WriteString(` AND role >= (SELECT role FROM projectUsers WHERE host=? AND project=? AND id=?)`)
+				query.WriteString(` AND role >= (SELECT role FROM users WHERE host=? AND project=? AND id=?)`)
 				queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 			}
-			query.WriteString(` AND handle > (SELECT handle FROM projectUsers WHERE host=? AND project=? AND id=?)`)
+			query.WriteString(` AND handle > (SELECT handle FROM users WHERE host=? AND project=? AND id=?)`)
 			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 		}
 		query.WriteString(` ORDER BY`)

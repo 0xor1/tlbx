@@ -322,4 +322,50 @@ func Everything(t *testing.T) {
 	}).Do(r.Bob().Client())
 	a.Nil(me)
 	a.Contains(err.Error(), "Forbidden")
+
+	// dan removed one user => only 1 activity
+	as := (&project.GetActivities{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		User:    ptr.ID(r.Dan().ID()),
+	}).MustDo(ac)
+	a.Len(as.Set, 1)
+	a.False(as.More)
+
+	as = (&project.GetActivities{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		Item:    ptr.ID(p1.ID),
+	}).MustDo(ac)
+	a.Len(as.Set, 1)
+	a.False(as.More)
+
+	as = (&project.GetActivities{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+	}).MustDo(ac)
+	a.Len(as.Set, 8)
+	a.False(as.More)
+	item1OccuredOn := as.Set[0].OccurredOn
+	item2OccuredOn := as.Set[1].OccurredOn
+
+	as = (&project.GetActivities{
+		Host:          r.Ali().ID(),
+		Project:       p1.ID,
+		OccuredBefore: &as.Set[0].OccurredOn,
+		Limit:         2,
+	}).MustDo(ac)
+	a.Equal(item2OccuredOn, as.Set[0].OccurredOn)
+	a.Len(as.Set, 2)
+	a.True(as.More)
+
+	as = (&project.GetActivities{
+		Host:         r.Ali().ID(),
+		Project:      p1.ID,
+		OccuredAfter: &as.Set[0].OccurredOn,
+		Limit:        2,
+	}).MustDo(ac)
+	a.Equal(item1OccuredOn, as.Set[0].OccurredOn)
+	a.Len(as.Set, 1)
+	a.False(as.More)
 }
