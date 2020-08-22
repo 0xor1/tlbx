@@ -29,9 +29,9 @@ func Everything(t *testing.T) {
 
 	a := assert.New(t)
 	c := r.NewClient()
-	handle := "test_handle"
+	handle := "test_" + r.Unique()
 	alias := "test 😂 alias"
-	email := Sprintf("test@test.localhost%s", r.Unique())
+	email := "test@test.localhost%s" + r.Unique()
 	pwd := "1aA$_t;3"
 
 	(&user.Register{
@@ -131,7 +131,7 @@ func Everything(t *testing.T) {
 		Pwd:   newPwd,
 	}).MustDo(c)
 
-	handle = "new_test_handle"
+	handle = "new_" + r.Unique()
 	(&user.SetHandle{
 		Handle: handle,
 	}).MustDo(c)
