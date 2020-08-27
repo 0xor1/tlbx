@@ -1,3 +1,4 @@
+SET GLOBAL max_recursive_iterations=2000;
 DROP DATABASE IF EXISTS games_data;
 CREATE DATABASE games_data
 CHARACTER SET = 'utf8mb4'

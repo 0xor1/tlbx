@@ -573,6 +573,7 @@ var (
 				args := a.(*project.GetActivities)
 				args.Limit = sql.Limit100(args.Limit)
 				app.BadReqIf(args.OccuredAfter != nil && args.OccuredBefore != nil, "only one of occurredBefore or occurredAfter may be used")
+				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 				query := bytes.NewBufferString(`SELECT occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo FROM projectActivities WHERE host=? AND project=?`)
 				queryArgs := make([]interface{}, 0, 7)
 				queryArgs = append(queryArgs, args.Host, args.Project)
