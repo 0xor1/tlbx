@@ -17,7 +17,7 @@ func main() {
 		c.ContentSecurityPolicies = config.ContentSecurityPolicies
 		c.Name = "games"
 		c.Description = "a web app to play turn based multiplayer games"
-		c.TlbxMwares = app.TlbxMwares{
+		c.TlbxSetup = app.TlbxMwares{
 			session.BasicMware(config.SessionAuthKey64s, config.SessionEncrKey32s, config.IsLocal),
 			ratelimit.MeMware(config.Cache),
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),

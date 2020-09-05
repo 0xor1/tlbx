@@ -30,8 +30,8 @@ CREATE TABLE users(
     UNIQUE INDEX (id, project)
 );
 
-DROP TABLE IF EXISTS projectActivities;
-CREATE TABLE projectActivities(
+DROP TABLE IF EXISTS activities;
+CREATE TABLE activities(
 	host BINARY(16) NOT NULL,
     project BINARY(16) NOT NULL,
     occurredOn DATETIME(3) NOT NULL,

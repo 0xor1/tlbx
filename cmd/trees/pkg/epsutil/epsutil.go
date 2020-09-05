@@ -56,17 +56,17 @@ func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project, item ID, itemType 
 		ei = &eiStr
 	}
 	itemHasBeenDeleted := action == cnsts.ActionDeleted
-	_, err := tx.Exec(`INSERT INTO projectActivities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, host, project, NowMilli(), me, item, itemType, itemHasBeenDeleted, action, itemName, ei)
+	_, err := tx.Exec(`INSERT INTO activities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, host, project, NowMilli(), me, item, itemType, itemHasBeenDeleted, action, itemName, ei)
 	PanicOn(err)
 	if itemHasBeenDeleted {
 		// if this is deleting an item we need to update all previous activities on this item to have itemHasBeenDeleted
-		_, err = tx.Exec(`UPDATE projectActivities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND item=?`, host, project, item)
+		_, err = tx.Exec(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND item=?`, host, project, item)
 		PanicOn(err)
 	}
 }
 
 func ActivityItemRename(tx service.Tx, host, project, item ID, newItemName string) {
 	// keep all projectActivity entries itemName values up to date
-	_, err := tx.Exec(`UPDATE projectActivities SET itemName=? WHERE host=? AND project=? AND item=?`, newItemName, host, project, item)
+	_, err := tx.Exec(`UPDATE activities SET itemName=? WHERE host=? AND project=? AND item=?`, newItemName, host, project, item)
 	PanicOn(err)
 }

@@ -149,7 +149,7 @@ func Everything(t *testing.T) {
 
 	// trigger OnSetSocials code
 	(&user.SetHandle{
-		Handle: "ali_changed",
+		Handle: "ali_" + r.Unique(),
 	}).MustDo(ac)
 
 	// make empty update

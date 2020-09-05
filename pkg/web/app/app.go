@@ -40,7 +40,8 @@ type Config struct {
 	MDoMax          int
 	MDoMaxBodyBytes int64
 	// tlbx
-	TlbxMwares []func(Tlbx)
+	TlbxSetup   TlbxMwares
+	TlbxCleanup TlbxMwares
 	// app
 	Name        string
 	Description string
@@ -103,11 +104,11 @@ func Run(configs ...func(*Config)) {
 	// Handle requests!
 	var root http.HandlerFunc
 	root = func(w http.ResponseWriter, r *http.Request) {
-		start := NowUnixMilli()
 		// tlbx
 		tlbx := &tlbx{
 			resp:           &responseWrapper{w: w},
 			req:            r,
+			start:          NowUnixMilli(),
 			idGenPool:      idGenPool,
 			isSubMDo:       isSubMDo(r),
 			log:            c.Log,
@@ -125,7 +126,7 @@ func Run(configs ...func(*Config)) {
 			tlbx.actionStatsMtx.Lock()
 			defer tlbx.actionStatsMtx.Unlock()
 			tlbx.log.Stats(&reqStats{
-				Milli:   NowUnixMilli() - start,
+				Milli:   NowUnixMilli() - tlbx.start,
 				Status:  tlbx.resp.status,
 				Method:  tlbx.req.Method,
 				Path:    tlbx.req.URL.Path,
@@ -153,9 +154,14 @@ func Run(configs ...func(*Config)) {
 		BadReqIf(method != http.MethodGet && method != http.MethodPut, "only GET and PUT methods are accepted")
 		lPath := strings.ToLower(tlbx.req.URL.Path)
 		// tlbx mwares
-		for _, mware := range c.TlbxMwares {
-			mware(tlbx)
+		for _, setup := range c.TlbxSetup {
+			setup(tlbx)
 		}
+		defer func() {
+			for _, cleanup := range c.TlbxCleanup {
+				cleanup(tlbx)
+			}
+		}()
 		// serve static file
 		if method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefixSegment) {
 			// set common headers
@@ -402,6 +408,7 @@ func (r *responseWrapper) WriteHeader(status int) {
 type Tlbx interface {
 	Req() *http.Request
 	Resp() http.ResponseWriter
+	Start() int64
 	Ctx() context.Context
 	NewID() ID
 	Log() log.Log
@@ -414,6 +421,7 @@ type Tlbx interface {
 type tlbx struct {
 	resp           *responseWrapper
 	req            *http.Request
+	start          int64
 	idGenPool      IDGenPool
 	idGen          IDGen
 	isSubMDo       bool
@@ -430,6 +438,10 @@ func (t *tlbx) Req() *http.Request {
 
 func (t *tlbx) Resp() http.ResponseWriter {
 	return t.resp
+}
+
+func (t *tlbx) Start() int64 {
+	return t.start
 }
 
 func (t *tlbx) Ctx() context.Context {

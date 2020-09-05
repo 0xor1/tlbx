@@ -19,7 +19,7 @@ func main() {
 		c.ContentSecurityPolicies = config.ContentSecurityPolicies
 		c.Name = "Todo"
 		c.Description = "A simple Todo list application, create multiple lists with many items which can be marked complete or uncomplete"
-		c.TlbxMwares = app.TlbxMwares{
+		c.TlbxSetup = app.TlbxMwares{
 			session.BasicMware(config.SessionAuthKey64s, config.SessionEncrKey32s, config.IsLocal),
 			ratelimit.MeMware(config.Cache),
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),

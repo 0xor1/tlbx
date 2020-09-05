@@ -18,7 +18,7 @@ func main() {
 		c.ContentSecurityPolicies = config.ContentSecurityPolicies
 		c.Name = "Trees"
 		c.Description = "A simple project management app which stores tasks in trees"
-		c.TlbxMwares = app.TlbxMwares{
+		c.TlbxSetup = app.TlbxMwares{
 			session.BasicMware(config.SessionAuthKey64s, config.SessionEncrKey32s, config.IsLocal),
 			ratelimit.MeMware(config.Cache),
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),

@@ -200,7 +200,7 @@ func NewRig(
 				config.Store)...)
 	}
 	go app.Run(func(c *app.Config) {
-		c.TlbxMwares = app.TlbxMwares{
+		c.TlbxSetup = app.TlbxMwares{
 			session.BasicMware(config.SessionAuthKey64s, config.SessionEncrKey32s, config.IsLocal),
 			ratelimit.Mware(func(c *ratelimit.Config) {
 				c.KeyGen = func(tlbx app.Tlbx) string {
