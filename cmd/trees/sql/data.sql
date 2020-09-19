@@ -68,6 +68,7 @@ CREATE TABLE projects(
     dueOn DATETIME(3) NULL,
     isPublic BOOL NOT NULL,
     PRIMARY KEY (host, id),
+    INDEX(id),
     INDEX(host, isArchived, isPublic, name, createdOn, id),
     INDEX(host, isArchived, isPublic, createdOn, name, id),
     INDEX(host, isArchived, isPublic, startOn, name, id),

@@ -72,6 +72,7 @@ var (
 						IsParallel: true,
 					},
 					Base:       args.Base,
+					Host:       me,
 					IsArchived: false,
 				}
 				srv := service.Get(tlbx)
@@ -82,13 +83,13 @@ var (
 
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
-				_, err := tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, me, p.ID)
+				_, err := tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, p.Host, p.ID)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, cnsts.RoleAdmin)
+				_, err = tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, cnsts.RoleAdmin)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
+				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, me, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumRemainingTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.SubFileCount, p.SubFileSize, p.ChildCount, p.DescendantCount)
+				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumRemainingTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumRemainingTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.SubFileCount, p.SubFileSize, p.ChildCount, p.DescendantCount)
 				PanicOn(err)
 				epsutil.LogActivity(tlbx, tx, me, p.ID, p.ID, cnsts.TypeProject, cnsts.ActionCreated, ptr.String(p.Name), nil)
 				tx.Commit()
@@ -194,7 +195,7 @@ var (
 				for i, u := range args {
 					ids[i] = u.ID
 				}
-				ps := getSet(tlbx, &project.Get{Host: me, IDs: ids}).Set
+				ps := getSet(tlbx, &project.Get{Host: &me, IDs: ids}).Set
 				for i, p := range ps {
 					a := args[i]
 					if a.CurrencyCode != nil {
@@ -302,7 +303,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(Sprintf(`DELETE FROM comments WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`UPDATE users set isActive=FALSE WHERE id=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Sprintf(`UPDATE users set isActive=0 WHERE id=? %s`, inProject), queryArgs...)
 				PanicOn(err)
 				for _, p := range args {
 					srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me, p))
@@ -633,6 +634,7 @@ var (
 			DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 			IsPublic:     false,
 		},
+		Host:       app.ExampleID(),
 		IsArchived: false,
 	}
 	exampleUser = &project.User{
@@ -685,7 +687,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM comments WHERE host=?`, me)
 	PanicOn(err)
-	_, err = tx.Exec(`UPDATE users set isActive=FALSE WHERE id=?`, me)
+	_, err = tx.Exec(`UPDATE users set isActive=0 WHERE id=?`, me)
 	PanicOn(err)
 	srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me))
 	tx.Commit()
@@ -723,18 +725,25 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	res := &project.GetRes{
 		Set: make([]*project.Project, 0, args.Limit),
 	}
-	query := bytes.NewBufferString(`SELECT p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.dueOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumRemainingTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.subFileCount, t.subFileSize, t.childCount, t.descendantCount, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE p.host=?`)
+	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.dueOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumRemainingTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.subFileCount, t.subFileSize, t.childCount, t.descendantCount, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
 	queryArgs := make([]interface{}, 0, 14)
-	queryArgs = append(queryArgs, args.Host)
 	idsLen := len(args.IDs)
-	if me.Exists(tlbx) {
-		me := me.Get(tlbx)
-		if !me.Equal(args.Host) {
-			query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT pu.project FROM users pu WHERE pu.host=? AND pu.isActive=true AND pu.id=?))`)
-			queryArgs = append(queryArgs, args.Host, me)
+	if args.Host != nil {
+		query.WriteString(` p.host=?`)
+		queryArgs = append(queryArgs, args.Host)
+		if me.Exists(tlbx) {
+			me := me.Get(tlbx)
+			if !me.Equal(*args.Host) {
+				query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT pu.project FROM users pu WHERE pu.host=? AND pu.isActive=1 AND pu.id=?))`)
+				queryArgs = append(queryArgs, args.Host, me)
+			}
+		} else {
+			query.WriteString(` AND p.isPublic=1`)
 		}
 	} else {
-		query.WriteString(` AND p.isPublic=1`)
+		PanicIf(!me.Exists(tlbx), "if no host is specified, the request must come from an active user session")
+		query.WriteString(` p.id IN (SELECT pu.project FROM users pu WHERE pu.isActive=1 AND pu.id=?)`)
+		queryArgs = append(queryArgs, me.Get(tlbx))
 	}
 	if idsLen > 0 {
 		query.WriteString(sql.InCondition(true, `p.id`, idsLen))
@@ -799,7 +808,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 				break
 			}
 			p := &project.Project{}
-			PanicOn(rows.Scan(&p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.DueOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumRemainingTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.SubFileCount, &p.SubFileSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
+			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.DueOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumRemainingTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.SubFileCount, &p.SubFileSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
 			res.Set = append(res.Set, p)
 		}
 	}, query.String(), queryArgs...))

@@ -14,6 +14,7 @@ import (
 type Project struct {
 	task.Task
 	Base
+	Host       ID   `json:"host"`
 	IsArchived bool `json:"isArchived"`
 }
 
@@ -53,7 +54,7 @@ type One struct {
 }
 
 func (a *One) Do(c *app.Client) (*Project, error) {
-	res, err := (&Get{Host: a.Host, IDs: IDs{a.ID}}).Do(c)
+	res, err := (&Get{Host: &a.Host, IDs: IDs{a.ID}}).Do(c)
 	if res != nil && len(res.Set) == 1 {
 		return res.Set[0], err
 	}
@@ -67,7 +68,7 @@ func (a *One) MustDo(c *app.Client) *Project {
 }
 
 type Get struct {
-	Host         ID         `json:"host"`
+	Host         *ID        `json:"host,omitempty"`
 	IDs          IDs        `json:"ids,omitempty"`
 	NamePrefix   *string    `json:"namePrefix,omitempty"`
 	IsArchived   bool       `json:"isArchived"`

@@ -51,7 +51,24 @@ func Everything(t *testing.T) {
 	a.NotNil(p1)
 
 	p1 = (&project.Get{
-		Host:         r.Ali().ID(),
+		Host:         ptr.ID(r.Ali().ID()),
+		NamePrefix:   ptr.String("My New"),
+		IsArchived:   false,
+		IsPublic:     ptr.Bool(false),
+		CreatedOnMin: &p1.CreatedOn,
+		CreatedOnMax: &p1.CreatedOn,
+		StartOnMin:   ptr.Time(app.ExampleTime()),
+		StartOnMax:   ptr.Time(app.ExampleTime()),
+		DueOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		DueOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		After:        nil,
+		Sort:         cnsts.SortDueOn,
+		Asc:          ptr.Bool(false),
+		Limit:        100,
+	}).MustDo(ac).Set[0]
+
+	// getwithout specifying host
+	p1 = (&project.Get{
 		NamePrefix:   ptr.String("My New"),
 		IsArchived:   false,
 		IsPublic:     ptr.Bool(false),
@@ -68,7 +85,7 @@ func Everything(t *testing.T) {
 	}).MustDo(ac).Set[0]
 
 	a.Zero(len((&project.Get{
-		Host:         p1.ID,
+		Host:         ptr.ID(p1.ID),
 		NamePrefix:   ptr.String("My New"),
 		IsArchived:   false,
 		IsPublic:     ptr.Bool(false),
@@ -143,7 +160,7 @@ func Everything(t *testing.T) {
 	a.NotNil(p2)
 
 	a.True((&project.Get{
-		Host:  r.Ali().ID(),
+		Host:  ptr.ID(r.Ali().ID()),
 		Limit: 1,
 	}).MustDo(ac).More)
 
@@ -182,7 +199,7 @@ func Everything(t *testing.T) {
 	// delete projects
 	(&project.Delete{}).MustDo(ac)
 	(&project.Delete{p1.ID, p2.ID}).MustDo(ac)
-	a.Zero(len((&project.Get{Host: r.Ali().ID()}).MustDo(ac).Set))
+	a.Zero(len((&project.Get{Host: ptr.ID(r.Ali().ID())}).MustDo(ac).Set))
 
 	p1 = (&project.Create{
 		Base: project.Base{
