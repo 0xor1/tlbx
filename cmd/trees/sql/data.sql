@@ -27,7 +27,8 @@ CREATE TABLE users(
     PRIMARY KEY (host, project, isActive, role, handle),
     UNIQUE INDEX (host, project, isActive, handle, role),
     UNIQUE INDEX (host, project, id),
-    UNIQUE INDEX (id, project)
+    UNIQUE INDEX (id, project),
+    UNIQUE INDEX (id, isActive, host, project)
 );
 
 DROP TABLE IF EXISTS activities;

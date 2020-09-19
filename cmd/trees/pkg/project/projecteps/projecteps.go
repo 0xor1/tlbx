@@ -734,7 +734,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 		if me.Exists(tlbx) {
 			me := me.Get(tlbx)
 			if !me.Equal(*args.Host) {
-				query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT pu.project FROM users pu WHERE pu.host=? AND pu.isActive=1 AND pu.id=?))`)
+				query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT u.project FROM users u WHERE u.host=? AND u.isActive=1 AND u.id=?))`)
 				queryArgs = append(queryArgs, args.Host, me)
 			}
 		} else {
@@ -742,8 +742,9 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 		}
 	} else {
 		PanicIf(!me.Exists(tlbx), "if no host is specified, the request must come from an active user session")
-		query.WriteString(` p.id IN (SELECT pu.project FROM users pu WHERE pu.isActive=1 AND pu.id=?)`)
-		queryArgs = append(queryArgs, me.Get(tlbx))
+		query.WriteString(` (p.host=? OR p.id IN (SELECT u.project FROM users u WHERE u.isActive=1 AND u.id=? AND u.host<>?))`)
+		me := me.Get(tlbx)
+		queryArgs = append(queryArgs, me, me, me)
 	}
 	if idsLen > 0 {
 		query.WriteString(sql.InCondition(true, `p.id`, idsLen))
