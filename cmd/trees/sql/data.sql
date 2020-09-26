@@ -89,7 +89,7 @@ CREATE TABLE tasks(
 	description VARCHAR(1250) NULL,
     createdBy BINARY(16) NOT NULL,
     createdOn DATETIME(3) NOT NULL,
-    minimumRemainingTime BIGINT UNSIGNED NOT NULL,
+    minimumTime BIGINT UNSIGNED NOT NULL,
     estimatedTime BIGINT UNSIGNED NOT NULL,
     loggedTime BIGINT UNSIGNED NOT NULL,
     estimatedSubTime BIGINT UNSIGNED NOT NULL,

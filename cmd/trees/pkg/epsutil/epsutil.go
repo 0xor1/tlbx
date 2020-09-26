@@ -36,6 +36,13 @@ func MustHaveAccess(tlbx app.Tlbx, host, project ID, role cnsts.Role) {
 	app.ReturnIf(!hasAccess, http.StatusForbidden, "")
 }
 
+func MustLockProject(tlbx app.Tlbx, tx service.Tx, host, project ID) {
+	projectExists := false
+	row := tx.QueryRow(`SELECT COUNT(*)=1 FROM projectLocks WHERE host=? AND project=? FOR UPDATE`)
+	sql.PanicIfIsntNoRows(row.Scan(&projectExists))
+	app.ReturnIf(!projectExists, http.StatusNotFound, "no such project")
+}
+
 func StorePrefix(host ID, projectAndOrTask ...ID) string {
 	prefix := host.String()
 	if len(projectAndOrTask) > 0 {
