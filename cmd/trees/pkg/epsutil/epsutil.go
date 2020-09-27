@@ -12,14 +12,14 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/sql"
 )
 
-func MustHaveAccess(tlbx app.Tlbx, host, project ID, role cnsts.Role) {
-	iExist := me.Exists(tlbx)
-	if iExist && me.Get(tlbx).Equal(host) {
+func MustHaveAccess(tlbx app.Tlbx, host, project ID, user *ID, role cnsts.Role) {
+	userExist := user != nil
+	if userExist && user.Equal(host) {
 		return
 	}
 
 	srv := service.Get(tlbx)
-	if !iExist || role == cnsts.RoleReader {
+	if !userExist || role == cnsts.RoleReader {
 		row := srv.Data().QueryRow(`SELECT isPublic FROM projects WHERE host=? AND id=?`, host, project)
 		isPublic := false
 		sql.PanicIfIsntNoRows(row.Scan(&isPublic))
@@ -27,13 +27,23 @@ func MustHaveAccess(tlbx app.Tlbx, host, project ID, role cnsts.Role) {
 			return
 		}
 		// at this point project isnt public so if no active session return 403
-		app.ReturnIf(!iExist, http.StatusForbidden, "")
+		app.ReturnIf(!userExist, http.StatusForbidden, "")
 	}
 
-	row := srv.Data().QueryRow(`SELECT 1 FROM users WHERE host=? AND project=? AND id=? AND role<=? AND isActive=1`, host, project, me.Get(tlbx), role)
+	row := srv.Data().QueryRow(`SELECT 1 FROM users WHERE host=? AND project=? AND id=? AND role<=? AND isActive=1`, host, project, *user, role)
 	hasAccess := false
 	sql.PanicIfIsntNoRows(row.Scan(&hasAccess))
 	app.ReturnIf(!hasAccess, http.StatusForbidden, "")
+}
+
+func IMustHaveAccess(tlbx app.Tlbx, host, project ID, role cnsts.Role) {
+	iExist := me.Exists(tlbx)
+	var mePtr *ID
+	if iExist {
+		meID := me.Get(tlbx)
+		mePtr = &meID
+	}
+	MustHaveAccess(tlbx, host, project, mePtr, role)
 }
 
 func MustLockProject(tlbx app.Tlbx, tx service.Tx, host, project ID) {

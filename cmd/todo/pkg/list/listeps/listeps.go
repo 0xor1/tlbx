@@ -265,7 +265,7 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 
 		query.WriteString(sql.OrderLimit100(string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
 	}
-	srv.Data().Query(func(rows isql.Rows) {
+	PanicOn(srv.Data().Query(func(rows isql.Rows) {
 		iLimit := int(args.Limit)
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
@@ -276,6 +276,6 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 			PanicOn(rows.Scan(&l.ID, &l.CreatedOn, &l.Name, &l.TodoItemCount, &l.CompletedItemCount))
 			res.Set = append(res.Set, l)
 		}
-	}, query.String(), queryArgs...)
+	}, query.String(), queryArgs...))
 	return res
 }

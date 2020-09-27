@@ -514,13 +514,13 @@ func New(
 					}
 					query.WriteString(`)`)
 					res := make([]*user.User, 0, len(args.Users))
-					srv.User().Query(func(rows isql.Rows) {
+					PanicOn(srv.User().Query(func(rows isql.Rows) {
 						for rows.Next() {
 							u := &user.User{}
-							rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar)
+							PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
 							res = append(res, u)
 						}
-					}, query.String(), queryArgs...)
+					}, query.String(), queryArgs...))
 					return res
 				},
 			}, &app.Endpoint{

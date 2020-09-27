@@ -340,7 +340,7 @@ var (
 					return nil
 				}
 				app.BadReqIf(lenUsers > 100, "can not add more than 100 users to a project at a time")
-				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
 				srv := service.Get(tlbx)
 
 				// need two sets for id IN (?, ...) and ORDER BY FIELD (id, ?, ...)
@@ -354,13 +354,13 @@ var (
 				userTx := srv.User().Begin()
 				defer userTx.Rollback()
 				users := make([]*user.User, 0, lenUsers)
-				userTx.Query(func(rows isql.Rows) {
+				PanicOn(userTx.Query(func(rows isql.Rows) {
 					for rows.Next() {
 						u := &user.User{}
 						PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
 						users = append(users, u)
 					}
-				}, Sprintf(`SELECT id, handle, alias, hasAvatar FROM users WHERE 1=1 %s %s FOR UPDATE`, sql.InCondition(true, `id`, lenUsers), sql.OrderByField(`id`, lenUsers)), ids...)
+				}, Sprintf(`SELECT id, handle, alias, hasAvatar FROM users WHERE 1=1 %s %s FOR UPDATE`, sql.InCondition(true, `id`, lenUsers), sql.OrderByField(`id`, lenUsers)), ids...))
 
 				app.BadReqIf(len(users) != lenUsers, "users specified: %d, users found: %d", lenUsers, len(users))
 
@@ -469,7 +469,7 @@ var (
 					return nil
 				}
 				app.BadReqIf(lenUsers > 100, "can not set more than 100 user roles in a project at a time")
-				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
@@ -512,7 +512,7 @@ var (
 				if len(args.Users) == 0 {
 					return nil
 				}
-				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
 				queryArgs := make([]interface{}, 0, len(args.Users)+2)
 				queryArgs = append(queryArgs, args.Host, args.Project)
 				tx := service.Get(tlbx).Data().Begin()
@@ -572,7 +572,7 @@ var (
 				args := a.(*project.GetActivities)
 				args.Limit = sql.Limit100(args.Limit)
 				app.BadReqIf(args.OccuredAfter != nil && args.OccuredBefore != nil, "only one of occurredBefore or occurredAfter may be used")
-				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 				query := bytes.NewBufferString(`SELECT occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo FROM activities WHERE host=? AND project=?`)
 				queryArgs := make([]interface{}, 0, 7)
 				queryArgs = append(queryArgs, args.Host, args.Project)
@@ -606,7 +606,7 @@ var (
 							break
 						}
 						pa := &project.Activity{}
-						rows.Scan(&pa.OccurredOn, &pa.User, &pa.Item, &pa.ItemType, &pa.ItemHasBeenDeleted, &pa.Action, &pa.ItemName, &pa.ExtraInfo)
+						PanicOn(rows.Scan(&pa.OccurredOn, &pa.User, &pa.Item, &pa.ItemType, &pa.ItemHasBeenDeleted, &pa.Action, &pa.ItemName, &pa.ExtraInfo))
 						res.Set = append(res.Set, pa)
 					}
 				}, query.String(), queryArgs...))
@@ -816,7 +816,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	app.BadReqIf(args.HandlePrefix != nil && StrLen(*args.HandlePrefix) >= 15, "handlePrefix must be < 15 chars long")
-	epsutil.MustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+	epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 	limit := sql.Limit100(args.Limit)
 	srv := service.Get(tlbx)
 	res := &project.GetUsersRes{
