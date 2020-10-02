@@ -28,8 +28,13 @@ type Base struct {
 }
 
 type Create struct {
-	Base
-	Name string `json:"name"`
+	CurrencyCode string     `json:"currencyCode,omitempty"`
+	HoursPerDay  uint8      `json:"hoursPerDay,omitempty"`
+	DaysPerWeek  uint8      `json:"daysPerWeek,omitempty"`
+	StartOn      *time.Time `json:"startOn"`
+	DueOn        *time.Time `json:"dueOn"`
+	IsPublic     bool       `json:"isPublic"`
+	Name         string     `json:"name"`
 }
 
 func (_ *Create) Path() string {

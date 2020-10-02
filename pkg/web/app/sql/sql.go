@@ -63,9 +63,7 @@ func OrderLimit100(field string, asc bool, l uint16) string {
 }
 
 func InCondition(and bool, field string, setLen int) string {
-	if setLen <= 0 {
-		return ``
-	}
+	PanicIf(setLen <= 0, "setLen must be > 0")
 	op := `AND`
 	if !and {
 		op = `OR`

@@ -92,8 +92,9 @@ var (
 				defer tx.Rollback()
 				// lock project, required for any action that will change aggregate values nad/or tree structure
 				epsutil.MustLockProject(tlbx, tx, args.Host, args.Project)
-				// get full ancestor list, for updating aggregate values,
-				ancestors := getAncestorIDs(tlbx, tx, args.Host, args.Project, args.Parent, false)
+				// get ancestors ids for updating descendantCounts below,
+				ancestors := getAncestorIDs(tlbx, tx, args.Host, args.Project, args.Parent)
+				// get parent for updating child/descendant counts and firstChild if required
 				parent := getOne(tlbx, tx, args.Host, args.Project, args.Parent)
 				// get correct next sibling value from either previousSibling if
 				// specified or parent.FirstChild otherwise. Then update previousSiblings nextSibling value
@@ -110,30 +111,33 @@ var (
 					parent.FirstChild = &t.ID
 				}
 				// insert new task
-				_, err := tx.Exec(Sprintf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.IsParallel, t.CreatedBy, t.CreatedOn, t.MinimumTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.SubFileCount, t.SubFileSize, t.ChildCount, t.DescendantCount)
+				_, err := tx.Exec(Sprintf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.MinimumTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.SubFileCount, t.SubFileSize, t.ChildCount, t.DescendantCount, t.IsParallel)
 				PanicOn(err)
 				// update all updated tasks
 				if previousSibling != nil {
-					_, err = tx.Exec(`UPDATE tasks SET nextSibling=? WHERE host=? AND project=? AND id=?`, *previousSibling.NextSibling, args.Host, args.Project, t.ID)
-					PanicOn(err)
-					_, err = tx.Exec(`UPDATE tasks SET count=count+1, descendantCount=descendantCount+1 WHERE host=? AND project=? AND id=?`, *previousSibling.NextSibling, args.Host, args.Project, t.ID)
+					// update previous sibling if there is one
+					_, err = tx.Exec(`UPDATE tasks SET nextSibling=? WHERE host=? AND project=? AND id=?`, t.ID, args.Host, args.Project, previousSibling.ID)
 					PanicOn(err)
 				}
 				// increment parents child and descendant counters and firstChild pointer incase that was changed
-				_, err = tx.Exec(`UPDATE tasks SET firstChild=?, count=count+1, descendantCount=descendantCount+1 WHERE host=? AND project=? AND id=?`, *parent.FirstChild, args.Host, args.Project, parent.ID)
+				_, err = tx.Exec(`UPDATE tasks SET firstChild=?, childCount=childCount+1, descendantCount=descendantCount+1 WHERE host=? AND project=? AND id=?`, *parent.FirstChild, args.Host, args.Project, parent.ID)
 				PanicOn(err)
+				// at this point the tree structure has been updated and all tasks are pointing to the correct new positions
+				// all that remains to do is update the descendant count properties up the ancestor tree
+				// increment all ancestors descendant counters
+				// N.B. it should be possible to run this update query with the slect ancestors recursive cte embedded in it
+				// so we dont need to call getAncestorIDs at all above so as to inject them into this query here.
+				// but mariadb currently only supports CTEs in SELECT queries not updates, https://jira.mariadb.org/browse/MDEV-18511
+				// fix is targeted for mariadb 10.6
 				if len(ancestors) > 0 {
-					// increment all ancestors descendant counters
 					queryArgs := make([]interface{}, 0, len(ancestors)+2)
 					queryArgs = append(queryArgs, args.Host, args.Project)
 					queryArgs = append(queryArgs, ancestors.ToIs()...)
-					_, err = tx.Exec(Sprintf(`UPDATE tasks SET descendantCount=descendantCount+1 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(ancestors))), queryArgs...)
+					_, err = tx.Exec(Sprintf(`UPDATE tasks t SET t.descendantCount=t.descendantCount+1 WHERE t.host=? AND t.project=? %s`, sql.InCondition(true, `t.id`, len(ancestors))), queryArgs...)
 					PanicOn(err)
 				}
-				// at this point the tree structure has been updated and all tasks are pointing to the correct new positions
-				// all that remains to do is update the child and descendant count properties up the tree
 				tx.Commit()
-				return nil
+				return t
 			},
 		},
 	}
@@ -171,7 +175,7 @@ var (
 	}
 )
 
-func getAncestorIDs(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, includeOfTask bool) IDs {
+func getAncestorIDs(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID) IDs {
 	ancestors := make(IDs, 0, 20)
 	PanicOn(tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
@@ -179,16 +183,11 @@ func getAncestorIDs(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, incl
 			PanicOn(rows.Scan(&i))
 			ancestors = append(ancestors, i)
 		}
-	}, Sprintf(`%s SELECT a.id FROM ancestors a ORDER BY a.n DESC`, sql_ancestors_cte), host, project, ofTask, host, project))
-	lenA := len(ancestors)
-	if lenA > 0 && !includeOfTask {
-		ancestors[lenA-1] = ID{}
-		ancestors = ancestors[:lenA-1]
-	}
+	}, Sprintf(`%s SELECT id FROM ancestors ORDER BY n DESC`, sql_ancestors_cte), host, project, host, project, ofTask, host, project))
 	return ancestors
 }
 
-func getAncestors(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, includeOfTask bool) []*task.Task {
+func getAncestors(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, after *ID, limit int) []*task.Task {
 	ancestors := make([]*task.Task, 0, 20)
 	PanicOn(tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
@@ -196,12 +195,7 @@ func getAncestors(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, includ
 			PanicOn(rows.Scan(&t.ID, &t.Parent, &t.FirstChild, &t.NextSibling, &t.User, &t.Name, &t.Description, &t.CreatedBy, &t.CreatedOn, &t.MinimumTime, &t.EstimatedTime, &t.LoggedTime, &t.EstimatedSubTime, &t.LoggedSubTime, &t.EstimatedExpense, &t.LoggedExpense, &t.EstimatedSubExpense, &t.LoggedSubExpense, &t.FileCount, &t.FileSize, &t.SubFileCount, &t.SubFileSize, &t.ChildCount, &t.DescendantCount, &t.IsParallel))
 			ancestors = append(ancestors, t)
 		}
-	}, Sprintf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n DESC`, sql_ancestors_cte, sql_task_columns_prefixed), host, project, ofTask, host, project, host, project))
-	lenA := len(ancestors)
-	if lenA > 0 && !includeOfTask {
-		ancestors[lenA-1] = nil
-		ancestors = ancestors[:lenA-1]
-	}
+	}, Sprintf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n DESC`, sql_ancestors_cte, sql_task_columns_prefixed), host, project, host, project, ofTask, host, project, host, project))
 	return ancestors
 }
 
@@ -216,5 +210,5 @@ func getOne(tlbx app.Tlbx, tx service.Tx, host, project, one ID) *task.Task {
 var (
 	sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.subFileCount, t.subFileSize, t.childCount, t.descendantCount, t.isParallel`
 	sql_task_columns          = `id, parent, firstChild, nextSibling, user, name, description, createdBy, createdOn, minimumTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, subFileCount, subFileSize, childCount, descendantCount, isParallel`
-	sql_ancestors_cte         = `WITH RECURSIVE ancestors AS (SELECT 0 AS n, id,	parent FROM	tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1 AS n, t.id, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.parent)`
+	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id, parent) AS (SELECT 0, id, parent FROM tasks WHERE host=? AND project=? AND id=(SELECT parent FROM tasks WHERE host=? AND project=? AND id=?) UNION SELECT a.n + 1, t.id, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.parent) CYCLE id RESTRICT`
 )

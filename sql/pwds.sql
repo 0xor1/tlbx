@@ -1,4 +1,3 @@
-SET GLOBAL max_recursive_iterations=2000;
 DROP DATABASE IF EXISTS pwds;
 CREATE DATABASE pwds
 CHARACTER SET = 'utf8mb4'

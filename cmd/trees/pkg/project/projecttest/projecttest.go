@@ -32,15 +32,13 @@ func Everything(t *testing.T) {
 
 	ac := r.Ali().Client()
 	p1 := (&project.Create{
-		Base: project.Base{
-			CurrencyCode: "USD",
-			HoursPerDay:  8,
-			DaysPerWeek:  5,
-			StartOn:      ptr.Time(app.ExampleTime()),
-			DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-			IsPublic:     false,
-		},
-		Name: "My New Project",
+		CurrencyCode: "USD",
+		HoursPerDay:  8,
+		DaysPerWeek:  5,
+		StartOn:      ptr.Time(app.ExampleTime()),
+		DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		IsPublic:     false,
+		Name:         "My New Project",
 	}).MustDo(ac)
 
 	// call it with a new client -> none logged in user (will only return public projects)
@@ -149,13 +147,11 @@ func Everything(t *testing.T) {
 	// create another project and get with a limit of 1 to test more: true response
 	name2 := "My 2nd Project"
 	p2 := (&project.Create{
-		Base: project.Base{
-			CurrencyCode: "USD",
-			HoursPerDay:  8,
-			DaysPerWeek:  5,
-			IsPublic:     false,
-		},
-		Name: name2,
+		CurrencyCode: "USD",
+		HoursPerDay:  8,
+		DaysPerWeek:  5,
+		IsPublic:     false,
+		Name:         name2,
 	}).MustDo(ac)
 	a.NotNil(p2)
 
@@ -202,15 +198,13 @@ func Everything(t *testing.T) {
 	a.Zero(len((&project.Get{Host: ptr.ID(r.Ali().ID())}).MustDo(ac).Set))
 
 	p1 = (&project.Create{
-		Base: project.Base{
-			CurrencyCode: "USD",
-			HoursPerDay:  8,
-			DaysPerWeek:  5,
-			StartOn:      ptr.Time(app.ExampleTime()),
-			DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-			IsPublic:     false,
-		},
-		Name: "My New Project",
+		CurrencyCode: "USD",
+		HoursPerDay:  8,
+		DaysPerWeek:  5,
+		StartOn:      ptr.Time(app.ExampleTime()),
+		DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		IsPublic:     false,
+		Name:         "My New Project",
 	}).MustDo(ac)
 
 	// test empty request

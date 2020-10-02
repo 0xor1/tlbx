@@ -19,7 +19,7 @@ func SetupMware() func(app.Tlbx) {
 	}
 }
 
-func CleanupMware(authKey64s, encrKey32s [][]byte, isLocal bool) func(app.Tlbx) {
+func CleanupMware() func(app.Tlbx) {
 	return func(tlbx app.Tlbx) {
 		tlbx.Get(tlbxKey{})
 	}

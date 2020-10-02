@@ -31,25 +31,21 @@ var (
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
 				return &project.Create{
-					Base: project.Base{
-						CurrencyCode: "USD",
-						HoursPerDay:  8,
-						DaysPerWeek:  5,
-						IsPublic:     false,
-					},
+					CurrencyCode: "USD",
+					HoursPerDay:  8,
+					DaysPerWeek:  5,
+					IsPublic:     false,
 				}
 			},
 			GetExampleArgs: func() interface{} {
 				return &project.Create{
-					Base: project.Base{
-						CurrencyCode: "USD",
-						HoursPerDay:  8,
-						DaysPerWeek:  5,
-						StartOn:      ptr.Time(app.ExampleTime()),
-						DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-						IsPublic:     false,
-					},
-					Name: "My New Project",
+					CurrencyCode: "USD",
+					HoursPerDay:  8,
+					DaysPerWeek:  5,
+					StartOn:      ptr.Time(app.ExampleTime()),
+					DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+					IsPublic:     false,
+					Name:         "My New Project",
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -59,6 +55,9 @@ var (
 				args := a.(*project.Create)
 				me := me.Get(tlbx)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
+				if args.CurrencyCode == "" {
+					args.CurrencyCode = "USD"
+				}
 				validate.CurrencyCode(tlbx, args.CurrencyCode)
 				app.BadReqIf(args.HoursPerDay < 1 || args.HoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
 				app.BadReqIf(args.DaysPerWeek < 1 || args.DaysPerWeek > 7, "invalid daysPerWeek must be > 0 and <= 7")
@@ -71,7 +70,14 @@ var (
 						CreatedOn:  NowMilli(),
 						IsParallel: true,
 					},
-					Base:       args.Base,
+					Base: project.Base{
+						CurrencyCode: args.CurrencyCode,
+						HoursPerDay:  args.HoursPerDay,
+						DaysPerWeek:  args.DaysPerWeek,
+						StartOn:      args.StartOn,
+						DueOn:        args.DueOn,
+						IsPublic:     args.IsPublic,
+					},
 					Host:       me,
 					IsArchived: false,
 				}

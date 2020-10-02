@@ -46,9 +46,9 @@ func IMustHaveAccess(tlbx app.Tlbx, host, project ID, role cnsts.Role) {
 	MustHaveAccess(tlbx, host, project, mePtr, role)
 }
 
-func MustLockProject(tlbx app.Tlbx, tx service.Tx, host, project ID) {
+func MustLockProject(tlbx app.Tlbx, tx service.Tx, host, id ID) {
 	projectExists := false
-	row := tx.QueryRow(`SELECT COUNT(*)=1 FROM projectLocks WHERE host=? AND project=? FOR UPDATE`)
+	row := tx.QueryRow(`SELECT COUNT(*)=1 FROM projectLocks WHERE host=? AND id=? FOR UPDATE`, host, id)
 	sql.PanicIfIsntNoRows(row.Scan(&projectExists))
 	app.ReturnIf(!projectExists, http.StatusNotFound, "no such project")
 }

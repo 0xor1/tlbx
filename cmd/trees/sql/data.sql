@@ -1,4 +1,3 @@
-SET GLOBAL max_recursive_iterations=2000;
 DROP DATABASE IF EXISTS trees_data;
 CREATE DATABASE trees_data
 CHARACTER SET = 'utf8mb4'
