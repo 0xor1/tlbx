@@ -28,8 +28,8 @@ type Task struct {
 	LoggedSubExpense    uint64    `json:"loggedSubExpense"`
 	FileCount           uint64    `json:"fileCount"`
 	FileSize            uint64    `json:"fileSize"`
-	SubFileCount        uint64    `json:"subFileCount"`
-	SubFileSize         uint64    `json:"subFileSize"`
+	FileSubCount        uint64    `json:"fileSubCount"`
+	FileSubSize         uint64    `json:"fileSubSize"`
 	ChildCount          uint64    `json:"childCount"`
 	DescendantCount     uint64    `json:"descendantCount"`
 	IsParallel          bool      `json:"isParallel"`
