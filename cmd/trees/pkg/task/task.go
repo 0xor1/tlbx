@@ -36,15 +36,16 @@ type Task struct {
 }
 
 type Create struct {
-	Host            ID      `json:"host"`
-	Project         ID      `json:"project"`
-	Parent          ID      `json:"parent"`
-	PreviousSibling *ID     `json:"previousSibling,omitempty"`
-	Name            string  `json:"name"`
-	Description     *string `json:"description,omitempty"`
-	IsParallel      bool    `json:"isParallel"`
-	User            *ID     `json:"user,omitempty"`
-	EstimatedTime   uint64  `json:"estiamtedTime"`
+	Host             ID      `json:"host"`
+	Project          ID      `json:"project"`
+	Parent           ID      `json:"parent"`
+	PreviousSibling  *ID     `json:"previousSibling,omitempty"`
+	Name             string  `json:"name"`
+	Description      *string `json:"description,omitempty"`
+	IsParallel       bool    `json:"isParallel"`
+	User             *ID     `json:"user,omitempty"`
+	EstimatedTime    uint64  `json:"estimatedTime"`
+	EstimatedExpense uint64  `json:"estimatedExpense"`
 }
 
 func (_ *Create) Path() string {

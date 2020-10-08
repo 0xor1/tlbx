@@ -182,6 +182,151 @@ CREATE TABLE comments(
   UNIQUE INDEX(host, project, task, createdBy, id)
 );
 
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+#********************************MAGIC PROCEDURE WARNING*********************************#
+# THIS PROCEDURE MUST ONLY BE CALLED INTERNALLY BY 
+# taskeps.go func setAncestralChainAggregateValuesFromTask                                                                                           #
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+DROP PROCEDURE IF EXISTS setAncestralChainAggregateValuesFromTask;
+CREATE PROCEDURE setAncestralChainAggregateValuesFromTask(_host BINARY(16), _project BINARY(16), _task BINARY(16))
+BEGIN
+  
+  DECLARE currentParent BINARY(16) DEFAULT NULL;
+  DECLARE currentMinimumTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentEstimatedSubTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentLoggedSubTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentEstimatedSubExpense BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentLoggedSubExpense BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentFileSubCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentFileSubSize BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentChildCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentDescendantCount BIGINT UNSIGNED DEFAULT 0;
+
+  DECLARE newMinimumTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newEstimatedSubTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newLoggedSubTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newEstimatedSubExpense BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newLoggedSubExpense BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newFileSubCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newFileSubSize BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newChildCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newDescendantCount BIGINT UNSIGNED DEFAULT 0;
+
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+  CREATE TEMPORARY TABLE tempUpdatedIds(
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+  );
+
+  WHILE _task IS NOT NULL DO
+    
+    SELECT
+      t.parent,
+      t.minimumTime,
+      t.estimatedSubTime,
+      t.loggedSubTime,
+      t.estimatedSubExpense,
+      t.loggedSubExpense,
+      t.fileSubCount,
+      t.fileSubSize,
+      t.childCount,
+      t.descendantCount,
+      t.estimatedTime + CASE t.isParallel
+        WHEN 0 THEN COALESCE(Sum(c.minimumTime), 0)
+        WHEN 1 THEN COALESCE(MAX(c.minimumTime), 0)
+      END,
+      COALESCE(MAX(c.minimumTime), 0),
+      COALESCE(SUM(c.loggedTime + c.loggedSubTime), 0),
+      COALESCE(SUM(c.estimatedExpense + c.estimatedSubExpense), 0),
+      COALESCE(SUM(c.loggedExpense + c.loggedSubExpense), 0),
+      COALESCE(SUM(c.fileCount + c.fileSubCount), 0),
+      COALESCE(SUM(c.fileSize + c.fileSubSize), 0),
+      COALESCE(COUNT(DISTINCT c.id), 0),
+      COALESCE(COALESCE(COUNT(DISTINCT c.id), 0) + COALESCE(SUM(c.descendantCount), 0), 0)
+    INTO
+      currentParent,
+      currentMinimumTime,
+      currentEstimatedSubTime,
+      currentLoggedSubTime,
+      currentEstimatedSubExpense,
+      currentLoggedSubExpense,
+      currentFileSubCount,
+      currentFileSubSize,
+      currentChildCount,
+      currentDescendantCount,
+      newMinimumTime,
+      newEstimatedSubTime,
+      newLoggedSubTime,
+      newEstimatedSubExpense,
+      newLoggedSubExpense,
+      newFileSubCount,
+      newFileSubSize,
+      newChildCount,
+      newDescendantCount
+    FROM
+      tasks t
+    LEFT JOIN
+      tasks c
+    ON
+      c.host=_host
+    AND
+      c.project=_project
+    AND
+      c.parent=_task
+    WHERE
+      t.host=_host
+    AND
+      t.project=_project
+    AND
+      t.id=_task
+    GROUP BY
+      t.id;
+
+    IF currentMinimumTime <> newMinimumTime OR
+      currentEstimatedSubTime <> newEstimatedSubTime OR
+      currentLoggedSubTime <> newLoggedSubTime OR
+      currentEstimatedSubExpense <> newEstimatedSubExpense OR
+      currentLoggedSubExpense <> newLoggedSubExpense OR
+      currentFileSubCount <> newFileSubCount OR
+      currentFileSubSize <> newFileSubSize OR
+      currentChildCount <> newChildCount OR
+      currentDescendantCount <> newDescendantCount THEN
+
+      UPDATE
+        tasks
+      SET
+        minimumTime=newMinimumTime,
+        estimatedSubTime=newEstimatedSubTime,
+        loggedSubTime=newLoggedSubTime,
+        estimatedSubExpense=newEstimatedSubExpense,
+        loggedSubExpense=newLoggedSubExpense,
+        fileSubCount=newFileSubCount,
+        fileSubSize=newFileSubSize,
+        childCount=newChildCount,
+        descendantCount=newDescendantCount
+      WHERE
+        host=_host
+      AND
+        project=_project
+      AND
+        id=_task;
+
+      INSERT INTO tempUpdatedIds VALUES (_task);
+      
+      SET _task = currentParent;
+    
+    ELSE
+
+      SET _task = NULL;
+
+    END IF;
+
+  END WHILE;
+
+  SELECT id FROM tempUpdatedIds;
+END;
+
+
 DROP USER IF EXISTS 'trees_data'@'%';
 CREATE USER 'trees_data'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
 GRANT SELECT ON trees_data.* TO 'trees_data'@'%';

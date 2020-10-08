@@ -65,11 +65,11 @@ var (
 					CreatedBy:           me,
 					CreatedOn:           NowMilli(),
 					MinimumTime:         0,
-					EstimatedTime:       0,
+					EstimatedTime:       args.EstimatedTime,
 					LoggedTime:          0,
 					EstimatedSubTime:    0,
 					LoggedSubTime:       0,
-					EstimatedExpense:    0,
+					EstimatedExpense:    args.EstimatedExpense,
 					LoggedExpense:       0,
 					EstimatedSubExpense: 0,
 					LoggedSubExpense:    0,
@@ -123,7 +123,7 @@ var (
 				// at this point the tree structure has been updated and all tasks are pointing to the correct new positions
 				// all that remains to do is update the descendant count properties up the ancestor tree
 				// increment all ancestors descendant counters
-				//setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, t.ID)
+				setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, t.ID)
 				tx.Commit()
 				return t
 			},
@@ -163,16 +163,15 @@ var (
 	}
 )
 
-func setAncestralChainAggregateValuesFromTask(tlbx, tx, host, project, task ID) {
-	// updated := make(IDs, 0, 20)
-	// PanicOn(tx.Query(func(rows isql.Rows) {
-	// 	for rows.Next() {
-	// 		i := ID{}
-	// 		PanicOn(rows.Scan(&i))
-	// 		ancestors = append(ancestors, i)
-	// 	}
-	// }, Sprintf(`%s SELECT id FROM ancestors ORDER BY n DESC`, sql_ancestors_cte), host, project, host, project, ofTask, host, project))
-
+func setAncestralChainAggregateValuesFromTask(tlbx app.Tlbx, tx service.Tx, host, project, task ID) {
+	ancestorChain := make(IDs, 0, 20)
+	PanicOn(tx.Query(func(rows isql.Rows) {
+		for rows.Next() {
+			i := ID{}
+			PanicOn(rows.Scan(&i))
+			ancestorChain = append(ancestorChain, i)
+		}
+	}, `CALL setAncestralChainAggregateValuesFromTask(?, ?, ?)`, host, project, task))
 }
 
 func getAncestors(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, after *ID, limit int) []*task.Task {
@@ -183,7 +182,7 @@ func getAncestors(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, after 
 			PanicOn(rows.Scan(&t.ID, &t.Parent, &t.FirstChild, &t.NextSibling, &t.User, &t.Name, &t.Description, &t.CreatedBy, &t.CreatedOn, &t.MinimumTime, &t.EstimatedTime, &t.LoggedTime, &t.EstimatedSubTime, &t.LoggedSubTime, &t.EstimatedExpense, &t.LoggedExpense, &t.EstimatedSubExpense, &t.LoggedSubExpense, &t.FileCount, &t.FileSize, &t.FileSubCount, &t.FileSubSize, &t.ChildCount, &t.DescendantCount, &t.IsParallel))
 			ancestors = append(ancestors, t)
 		}
-	}, Sprintf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n DESC`, sql_ancestors_cte, sql_task_columns_prefixed), host, project, host, project, ofTask, host, project, host, project))
+	}, Sprintf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n ASC`, sql_ancestors_cte, sql_task_columns_prefixed), host, project, ofTask, host, project, host, project))
 	return ancestors
 }
 
@@ -198,25 +197,5 @@ func getOne(tlbx app.Tlbx, tx service.Tx, host, project, one ID) *task.Task {
 var (
 	sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel`
 	sql_task_columns          = `id, parent, firstChild, nextSibling, user, name, description, createdBy, createdOn, minimumTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, fileSubCount, fileSubSize, childCount, descendantCount, isParallel`
-	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id, parent) AS (SELECT 0, id, parent FROM tasks WHERE host=? AND project=? AND id=(SELECT parent FROM tasks WHERE host=? AND project=? AND id=?) UNION SELECT a.n + 1, t.id, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.parent) CYCLE id RESTRICT`
-	sql_temp                  = `
-UPDATE 
-	tasks t, tasks c
-  SET
-	t.minimumTime = CASE
-				  WHEN t.isParallel = 1 THEN t.estimatedTime + COALESCE(MAX(c.minimumTime), 0)
-				  ELSE t.estimatedTime + COALESCE(SUM(c.minimumTime), 0),
-	t.estimatedSubTime = COALESCE(SUM(c.estimatedTime + c.estimatedSubTime), 0),
-	t.loggedSubTime = COALESCE(SUM(c.loggedTime + c.loggedSubTime), 0),
-	t.estimatedSubExpense = COALESCE(SUM(c.estimatedExpense + c.estimatedSubExpense), 0),
-	t.loggedSubExpense = COALESCE(SUM(c.loggedExpense + c.loggedSubExpense), 0),
-	t.fileSubCount = COALESCE(SUM(c.fileCount + c.fileSubCount), 0),
-	t.fileSubSize = COALESCE(SUM(c.fileSize + c.fileSubSize), 0),
-	t.childCount = COALESCE(COUNT(c.id), 0),
-	t.descendantCount = COALESCE(SUM(c.id) + SUM(c.descendantCount), 0)
-  WHERE
-	t.id = c.parent
-  AND
-	t.id IN (?, ?, ?, ...)
-  ORDER BY FIELD(id, ?, ?, ?, ...)`
+	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id, parent) AS (SELECT 0, id, parent FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1, t.id, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.parent) CYCLE id RESTRICT`
 )
