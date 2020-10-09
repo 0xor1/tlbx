@@ -188,6 +188,7 @@ CREATE TABLE comments(
 # taskeps.go func setAncestralChainAggregateValuesFromTask                                                                                           #
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 DROP PROCEDURE IF EXISTS setAncestralChainAggregateValuesFromTask;
+DELIMITER //
 CREATE PROCEDURE setAncestralChainAggregateValuesFromTask(_host BINARY(16), _project BINARY(16), _task BINARY(16))
 BEGIN
   
@@ -324,8 +325,8 @@ BEGIN
   END WHILE;
 
   SELECT id FROM tempUpdatedIds;
-END;
-
+END //
+DELIMITER ;
 
 DROP USER IF EXISTS 'trees_data'@'%';
 CREATE USER 'trees_data'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';

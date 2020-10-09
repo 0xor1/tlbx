@@ -2,6 +2,7 @@ package taskeps
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/epsutil"
@@ -92,8 +93,6 @@ var (
 				defer tx.Rollback()
 				// lock project, required for any action that will change aggregate values nad/or tree structure
 				epsutil.MustLockProject(tlbx, tx, args.Host, args.Project)
-				// get parent for updating child/descendant counts and firstChild if required
-				parent := getOne(tlbx, tx, args.Host, args.Project, args.Parent)
 				// get correct next sibling value from either previousSibling if
 				// specified or parent.FirstChild otherwise. Then update previousSiblings nextSibling value
 				// or parents firstChild value depending on the scenario.
@@ -102,27 +101,24 @@ var (
 					previousSibling = getOne(tlbx, tx, args.Host, args.Project, *args.PreviousSibling)
 					t.NextSibling = previousSibling.NextSibling
 					previousSibling.NextSibling = &t.ID
+					// point previous sibling at new task
+					_, err := tx.Exec(`UPDATE tasks SET nextSibling=? WHERE host=? AND project=? AND id=?`, t.ID, args.Host, args.Project, previousSibling.ID)
+					PanicOn(err)
 				} else {
 					// else newTask is being inserted as firstChild, so set any current firstChild
 					// as newTask's NextSibling
+					// get parent for updating child/descendant counts and firstChild if required
+					parent := getOne(tlbx, tx, args.Host, args.Project, args.Parent)
 					t.NextSibling = parent.FirstChild
-					parent.FirstChild = &t.ID
+					// increment parents child and descendant counters and firstChild pointer incase that was changed
+					_, err := tx.Exec(`UPDATE tasks SET firstChild=?, childCount=childCount+1, descendantCount=descendantCount+1 WHERE host=? AND project=? AND id=?`, t.ID, args.Host, args.Project, t.Parent)
+					PanicOn(err)
 				}
 				// insert new task
 				_, err := tx.Exec(Sprintf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.MinimumTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.FileSubCount, t.FileSubSize, t.ChildCount, t.DescendantCount, t.IsParallel)
 				PanicOn(err)
-				// update all updated tasks
-				if previousSibling != nil {
-					// update previous sibling if there is one
-					_, err = tx.Exec(`UPDATE tasks SET nextSibling=? WHERE host=? AND project=? AND id=?`, t.ID, args.Host, args.Project, previousSibling.ID)
-					PanicOn(err)
-				}
-				// increment parents child and descendant counters and firstChild pointer incase that was changed
-				_, err = tx.Exec(`UPDATE tasks SET firstChild=?, childCount=childCount+1, descendantCount=descendantCount+1 WHERE host=? AND project=? AND id=?`, *parent.FirstChild, args.Host, args.Project, parent.ID)
-				PanicOn(err)
-				// at this point the tree structure has been updated and all tasks are pointing to the correct new positions
-				// all that remains to do is update the descendant count properties up the ancestor tree
-				// increment all ancestors descendant counters
+				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
+				// all that remains to do is update aggregate values
 				setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, args.Parent)
 				tx.Commit()
 				return t
@@ -178,24 +174,59 @@ func getAncestors(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, after 
 	ancestors := make([]*task.Task, 0, 20)
 	PanicOn(tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
-			t := &task.Task{}
-			PanicOn(rows.Scan(&t.ID, &t.Parent, &t.FirstChild, &t.NextSibling, &t.User, &t.Name, &t.Description, &t.CreatedBy, &t.CreatedOn, &t.MinimumTime, &t.EstimatedTime, &t.LoggedTime, &t.EstimatedSubTime, &t.LoggedSubTime, &t.EstimatedExpense, &t.LoggedExpense, &t.EstimatedSubExpense, &t.LoggedSubExpense, &t.FileCount, &t.FileSize, &t.FileSubCount, &t.FileSubSize, &t.ChildCount, &t.DescendantCount, &t.IsParallel))
+			t, err := scan(rows)
+			PanicOn(err)
 			ancestors = append(ancestors, t)
 		}
-	}, Sprintf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n ASC`, sql_ancestors_cte, sql_task_columns_prefixed), host, project, ofTask, host, project, host, project))
+	}, Sprintf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? AND a.n <> 0 ORDER BY a.n ASC`, sql_ancestors_cte, sql_task_columns_prefixed), host, project, ofTask, host, project, host, project))
 	return ancestors
 }
 
 func getOne(tlbx app.Tlbx, tx service.Tx, host, project, one ID) *task.Task {
 	row := tx.QueryRow(Sprintf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.id=?`, sql_task_columns_prefixed), host, project, one)
-	t := &task.Task{}
-	sql.PanicIfIsntNoRows(row.Scan(&t.ID, &t.Parent, &t.FirstChild, &t.NextSibling, &t.User, &t.Name, &t.Description, &t.CreatedBy, &t.CreatedOn, &t.MinimumTime, &t.EstimatedTime, &t.LoggedTime, &t.EstimatedSubTime, &t.LoggedSubTime, &t.EstimatedExpense, &t.LoggedExpense, &t.EstimatedSubExpense, &t.LoggedSubExpense, &t.FileCount, &t.FileSize, &t.FileSubCount, &t.FileSubSize, &t.ChildCount, &t.DescendantCount, &t.IsParallel))
+	t, err := scan(row)
+	sql.PanicIfIsntNoRows(err)
 	app.ReturnIf(t.ID.IsZero(), http.StatusNotFound, "")
 	return t
 }
 
+type taskScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func scan(ts taskScanner) (*task.Task, error) {
+	t := &task.Task{}
+	err := ts.Scan(
+		&t.ID,
+		&t.Parent,
+		&t.FirstChild,
+		&t.NextSibling,
+		&t.User,
+		&t.Name,
+		&t.Description,
+		&t.CreatedBy,
+		&t.CreatedOn,
+		&t.MinimumTime,
+		&t.EstimatedTime,
+		&t.LoggedTime,
+		&t.EstimatedSubTime,
+		&t.LoggedSubTime,
+		&t.EstimatedExpense,
+		&t.LoggedExpense,
+		&t.EstimatedSubExpense,
+		&t.LoggedSubExpense,
+		&t.FileCount,
+		&t.FileSize,
+		&t.FileSubCount,
+		&t.FileSubSize,
+		&t.ChildCount,
+		&t.DescendantCount,
+		&t.IsParallel)
+	return t, err
+}
+
 var (
 	sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel`
-	sql_task_columns          = `id, parent, firstChild, nextSibling, user, name, description, createdBy, createdOn, minimumTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, fileSubCount, fileSubSize, childCount, descendantCount, isParallel`
+	sql_task_columns          = strings.ReplaceAll(sql_task_columns_prefixed, `t.`, ``)
 	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id, parent) AS (SELECT 0, id, parent FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1, t.id, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.parent) CYCLE id RESTRICT`
 )
