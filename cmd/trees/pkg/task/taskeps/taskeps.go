@@ -64,7 +64,7 @@ var (
 					Description:         args.Description,
 					CreatedBy:           me,
 					CreatedOn:           NowMilli(),
-					MinimumTime:         0,
+					MinimumTime:         args.EstimatedTime,
 					EstimatedTime:       args.EstimatedTime,
 					LoggedTime:          0,
 					EstimatedSubTime:    0,
@@ -123,7 +123,7 @@ var (
 				// at this point the tree structure has been updated and all tasks are pointing to the correct new positions
 				// all that remains to do is update the descendant count properties up the ancestor tree
 				// increment all ancestors descendant counters
-				setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, t.ID)
+				setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, args.Parent)
 				tx.Commit()
 				return t
 			},
