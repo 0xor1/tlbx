@@ -3,15 +3,15 @@ package field
 import (
 	"time"
 
-	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/core"
 )
 
-type Id struct {
-	V ID `json:"v"`
+type ID struct {
+	V core.ID `json:"v"`
 }
 
-type IdPtr struct {
-	V *ID `json:"v"`
+type IDPtr struct {
+	V *core.ID `json:"v"`
 }
 
 type Bool struct {

@@ -8,6 +8,7 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/epsutil"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
@@ -42,7 +43,7 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return nil
+				return exampleTask
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Create)
@@ -122,6 +123,42 @@ var (
 				setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, args.Parent)
 				tx.Commit()
 				return t
+			},
+		},
+		{
+			Description:  "Update a task",
+			Path:         (&task.Update{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &task.Update{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &task.Update{
+					Host:             app.ExampleID(),
+					Project:          app.ExampleID(),
+					ID:               app.ExampleID(),
+					Parent:           &field.ID{V: app.ExampleID()},
+					PreviousSibling:  &field.IDPtr{V: ptr.ID(app.ExampleID())},
+					Name:             &field.String{V: "new name"},
+					Description:      &field.StringPtr{V: ptr.String("new description")},
+					IsParallel:       &field.Bool{V: true},
+					User:             &field.IDPtr{V: ptr.ID(app.ExampleID())},
+					EstimatedTime:    &field.UInt64{V: 123},
+					EstimatedExpense: &field.UInt64{V: 123},
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return exampleTask
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				// args := a.(*task.Update)
+				// me := me.Get(tlbx)
+				// todo
+
+				// return t
+				return nil
 			},
 		},
 	}

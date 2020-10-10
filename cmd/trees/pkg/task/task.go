@@ -4,6 +4,7 @@ import (
 	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
@@ -59,6 +60,36 @@ func (a *Create) Do(c *app.Client) (*Task, error) {
 }
 
 func (a *Create) MustDo(c *app.Client) *Task {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type Update struct {
+	Host             ID               `json:"host"`
+	Project          ID               `json:"project"`
+	ID               ID               `json:"id"`
+	Parent           *field.ID        `json:"parent,omitempty"`
+	PreviousSibling  *field.IDPtr     `json:"previousSibling,omitempty"`
+	Name             *field.String    `json:"name,omitempty"`
+	Description      *field.StringPtr `json:"description,omitempty"`
+	IsParallel       *field.Bool      `json:"isParallel,omitempty"`
+	User             *field.IDPtr     `json:"user,omitempty"`
+	EstimatedTime    *field.UInt64    `json:"estimatedTime,omitempty"`
+	EstimatedExpense *field.UInt64    `json:"estimatedExpense,omitempty"`
+}
+
+func (_ *Update) Path() string {
+	return "/task/update"
+}
+
+func (a *Update) Do(c *app.Client) (*Task, error) {
+	res := &Task{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *Update) MustDo(c *app.Client) *Task {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
