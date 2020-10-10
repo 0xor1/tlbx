@@ -68,11 +68,11 @@ CREATE TABLE projects(
   dueOn DATETIME(3) NULL,
   isPublic BOOL NOT NULL,
   PRIMARY KEY (host, id),
-  INDEX(id),
-  INDEX(host, isArchived, isPublic, name, createdOn, id),
-  INDEX(host, isArchived, isPublic, createdOn, name, id),
-  INDEX(host, isArchived, isPublic, startOn, name, id),
-  INDEX(host, isArchived, isPublic, dueOn, name, id)
+  UNIQUE INDEX(id),
+  UNIQUE INDEX(host, isArchived, isPublic, name, createdOn, id),
+  UNIQUE INDEX(host, isArchived, isPublic, createdOn, name, id),
+  UNIQUE INDEX(host, isArchived, isPublic, startOn, name, id),
+  UNIQUE INDEX(host, isArchived, isPublic, dueOn, name, id)
 );
 
 DROP TABLE IF EXISTS tasks;
@@ -160,9 +160,10 @@ CREATE TABLE files(
   taskHasBeenDeleted BOOL NOT NULL,
   taskName VARCHAR(250) NOT NULL,
   note VARCHAR(250) NULL,
-  PRIMARY KEY(host, project, task, createdOn, id),
+  PRIMARY KEY(host, project, task, createdOn, createdBy, id),
   UNIQUE INDEX(host, project, task, id),
-  UNIQUE INDEX(host, project, task, createdBy, id)
+  UNIQUE INDEX(host, project, createdBy, createdOn, task, id),
+  UNIQUE INDEX(host, project, createdOn, createdBy, task, id)
 );
 
 DROP TABLE IF EXISTS comments;
@@ -177,9 +178,10 @@ CREATE TABLE comments(
   taskHasBeenDeleted BOOL NOT NULL,
   taskName VARCHAR(250) NOT NULL,
   note VARCHAR(250) NULL,
-  PRIMARY KEY(host, project, task, createdOn, id),
+  PRIMARY KEY(host, project, task, createdOn, createdBy, id),
   UNIQUE INDEX(host, project, task, id),
-  UNIQUE INDEX(host, project, task, createdBy, id)
+  UNIQUE INDEX(host, project, createdBy, createdOn, task, id),
+  UNIQUE INDEX(host, project, createdOn, createdBy, task, id)
 );
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
