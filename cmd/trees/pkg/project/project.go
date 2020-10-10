@@ -174,14 +174,8 @@ func (a *Delete) MustDo(c *app.Client) {
 
 type User struct {
 	user.User
-	Role             cnsts.Role `json:"role"`
-	IsActive         bool       `json:"isActive"`
-	EstimatedTime    uint64     `json:"estimatedTime"`
-	LoggedTime       uint64     `json:"loggedTime"`
-	EstimatedExpense uint64     `json:"estimatedExpense"`
-	LoggedExpense    uint64     `json:"loggedExpense"`
-	FileCount        uint64     `json:"fileCount"`
-	FileSize         uint64     `json:"fileSize"`
+	Role     cnsts.Role `json:"role"`
+	IsActive bool       `json:"isActive"`
 }
 
 type AddUsers struct {

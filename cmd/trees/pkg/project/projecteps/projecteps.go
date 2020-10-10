@@ -91,7 +91,7 @@ var (
 				defer tx.Rollback()
 				_, err := tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, p.Host, p.ID)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, 0, 0, 0, 0, 0, 0, cnsts.RoleAdmin)
+				_, err = tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, cnsts.RoleAdmin)
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
 				PanicOn(err)
@@ -359,11 +359,12 @@ var (
 				// get userTx and lock all user rows, to ensure they are not changed whilst inserting into data db
 				userTx := srv.User().Begin()
 				defer userTx.Rollback()
-				users := make([]*user.User, 0, lenUsers)
+				users := make([]*project.User, 0, lenUsers)
 				PanicOn(userTx.Query(func(rows isql.Rows) {
 					for rows.Next() {
-						u := &user.User{}
+						u := &project.User{}
 						PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
+						u.IsActive = true
 						users = append(users, u)
 					}
 				}, Strf(`SELECT id, handle, alias, hasAvatar FROM users WHERE 1=1 %s %s FOR UPDATE`, sql.InCondition(true, `id`, lenUsers), sql.OrderByField(`id`, lenUsers)), ids...))
@@ -374,9 +375,10 @@ var (
 				defer tx.Rollback()
 				for i, u := range users {
 					app.BadReqIf(u.ID.Equal(args.Host), "can not add host to project")
-					_, err := tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, args.Users[i].Role)
+					u.Role = args.Users[i].Role
+					_, err := tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, u.IsActive, u.Role)
 					PanicOn(err)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionCreated, nil, args.Users[i].Role)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionCreated, nil, u.Role)
 				}
 				tx.Commit()
 				userTx.Commit()
@@ -647,14 +649,8 @@ var (
 			Alias:     ptr.String("joe soap"),
 			HasAvatar: ptr.Bool(true),
 		},
-		Role:             cnsts.RoleReader,
-		IsActive:         true,
-		EstimatedTime:    123,
-		LoggedTime:       123,
-		EstimatedExpense: 123,
-		LoggedExpense:    123,
-		FileCount:        123,
-		FileSize:         123,
+		Role:     cnsts.RoleReader,
+		IsActive: true,
 	}
 )
 
@@ -828,7 +824,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	res := &project.GetUsersRes{
 		Set: make([]*project.User, 0, limit),
 	}
-	query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar, isActive, estimatedTime, loggedTime, estimatedExpense, loggedExpense, fileCount, fileSize, role FROM users WHERE host=? AND project=?`)
+	query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar, isActive, role FROM users WHERE host=? AND project=?`)
 	queryArgs := make([]interface{}, 0, 14)
 	queryArgs = append(queryArgs, args.Host, args.Project)
 	idsLen := len(args.IDs)
@@ -869,7 +865,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 				break
 			}
 			u := &project.User{}
-			PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar, &u.IsActive, &u.EstimatedTime, &u.LoggedTime, &u.EstimatedExpense, &u.LoggedExpense, &u.FileCount, &u.FileSize, &u.Role))
+			PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar, &u.IsActive, &u.Role))
 			res.Set = append(res.Set, u)
 		}
 	}, query.String(), queryArgs...))

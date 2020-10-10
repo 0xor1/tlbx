@@ -16,12 +16,6 @@ CREATE TABLE users(
   alias VARCHAR(50) NOT NULL,
   hasAvatar BOOL NOT NULL,
   isActive BOOL NOT NULL DEFAULT 1,
-  estimatedTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
-  loggedTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
-  estimatedExpense BIGINT UNSIGNED NOT NULL DEFAULT 0,
-  loggedExpense BIGINT UNSIGNED NOT NULL DEFAULT 0,
-  fileCount BIGINT UNSIGNED NOT NULL DEFAULT 0,
-  fileSize BIGINT UNSIGNED NOT NULL DEFAULT 0,
   role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
   PRIMARY KEY (host, project, isActive, role, handle),
   UNIQUE INDEX (host, project, isActive, handle, role),
