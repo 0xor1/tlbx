@@ -20,7 +20,7 @@ func MeMware(cache iredis.Pool) func(app.Tlbx) {
 			if me.Exists(tlbx) {
 				key = me.Get(tlbx).String()
 			}
-			return Sprintf("rate-limiter-%s-%s", realip.RealIP(tlbx.Req()), key)
+			return Strf("rate-limiter-%s-%s", realip.RealIP(tlbx.Req()), key)
 		}
 		c.Pool = cache
 	})

@@ -92,7 +92,7 @@ func Everything(t *testing.T) {
 	}()
 
 	(&user.ChangeEmail{
-		NewEmail: Sprintf("change@test.localhost%s", r.Unique()),
+		NewEmail: Strf("change@test.localhost%s", r.Unique()),
 	}).MustDo(c)
 
 	(&user.ResendChangeEmailLink{}).MustDo(c)

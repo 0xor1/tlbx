@@ -97,7 +97,7 @@ func (l *log) message(level level, f string, args ...interface{}) {
 	l.l(&Entry{
 		Time:    Now(),
 		Level:   level,
-		Message: Sprintf(f, args...),
+		Message: Strf(f, args...),
 	})
 }
 

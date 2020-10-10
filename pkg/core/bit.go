@@ -16,7 +16,7 @@ func (b Bit) MarshalBinary() ([]byte, error) {
 	case 1:
 		return []byte(`1`), nil
 	default:
-		return nil, Errorf("invalid value %d, Bit only accepts 0 or 1", b)
+		return nil, Err("invalid value %d, Bit only accepts 0 or 1", b)
 	}
 }
 
@@ -28,7 +28,7 @@ func (b *Bit) UnmarshalBinary(d []byte) error {
 	case `1`:
 		*b = 1
 	default:
-		return Errorf("invalid value %s, Bit only accepts 0 or 1", strD)
+		return Err("invalid value %s, Bit only accepts 0 or 1", strD)
 	}
 	return nil
 }
@@ -60,7 +60,7 @@ func (bs Bits) MarshalBinary() ([]byte, error) {
 		case 1:
 			buf.WriteString(`1`)
 		default:
-			return nil, Errorf("invalid value %d, Bits only accepts 0s and 1s", b)
+			return nil, Err("invalid value %d, Bits only accepts 0s and 1s", b)
 		}
 	}
 	return buf.Bytes(), nil
@@ -76,7 +76,7 @@ func (bs *Bits) UnmarshalBinary(ds []byte) error {
 		case `1`:
 			res = append(res, 1)
 		default:
-			return Errorf("invalid value %s, Bits only accepts 0s and 1s", dStr)
+			return Err("invalid value %s, Bits only accepts 0s and 1s", dStr)
 		}
 	}
 	*bs = res

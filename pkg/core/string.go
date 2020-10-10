@@ -9,20 +9,20 @@ func StrLen(s string) int {
 	return utf8.RuneCountInString(s)
 }
 
-func Errorf(f string, args ...interface{}) error {
+func Err(f string, args ...interface{}) error {
 	// return Error for stacktrace
 	return ToError(fmt.Errorf(f, args...))
 }
 
-func Sprint(args ...interface{}) string {
+func Str(args ...interface{}) string {
 	return fmt.Sprint(args...)
 }
 
-func Sprintf(f string, args ...interface{}) string {
+func Strf(f string, args ...interface{}) string {
 	return fmt.Sprintf(f, args...)
 }
 
-func Sprintln(args ...interface{}) string {
+func Strln(args ...interface{}) string {
 	return fmt.Sprintln(args...)
 }
 

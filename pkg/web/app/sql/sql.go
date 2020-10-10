@@ -55,7 +55,7 @@ func Limit100(l uint16) uint16 {
 }
 
 func OrderLimit(field string, asc bool, l, max uint16) string {
-	return Sprintf(` ORDER BY %s %s LIMIT %d`, field, Asc(asc), Limit(l, max))
+	return Strf(` ORDER BY %s %s LIMIT %d`, field, Asc(asc), Limit(l, max))
 }
 
 func OrderLimit100(field string, asc bool, l uint16) string {
@@ -68,12 +68,17 @@ func InCondition(and bool, field string, setLen int) string {
 	if !and {
 		op = `OR`
 	}
-	return Sprintf(` %s %s IN (?%s)`, op, field, strings.Repeat(`,?`, setLen-1))
+	return Strf(` %s %s IN (%s)`, op, field, PList(setLen))
 }
 
 func OrderByField(field string, setLen int) string {
 	if setLen <= 0 {
 		return ``
 	}
-	return Sprintf(` ORDER BY FIELD (%s,?%s)`, field, strings.Repeat(`,?`, setLen-1))
+	return Strf(` ORDER BY FIELD (%s,%s)`, field, PList(setLen))
+}
+
+func PList(count int) string {
+	PanicIf(count < 1, `count must be >= 1`)
+	return `?` + strings.Repeat(`,?`, count-1)
 }

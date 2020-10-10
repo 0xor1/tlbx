@@ -1066,7 +1066,7 @@ func (j *Json) Uint64SliceOrDefault(pathThenDefault ...interface{}) []uint64 {
 
 func splitPathThenValue(pathThenValue []interface{}) ([]interface{}, interface{}, error) {
 	if len(pathThenValue) == 0 {
-		return nil, nil, Errorf("no value supplied")
+		return nil, nil, Err("no value supplied")
 	}
 	return pathThenValue[:len(pathThenValue)-1], pathThenValue[len(pathThenValue)-1], nil
 }
@@ -1083,5 +1083,5 @@ type jsonPathError struct {
 }
 
 func (e *jsonPathError) Error() string {
-	return Sprintf("found: %v missing: %v", e.FoundPath, e.MissingPath)
+	return Strf("found: %v missing: %v", e.FoundPath, e.MissingPath)
 }

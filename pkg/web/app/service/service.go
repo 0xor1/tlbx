@@ -256,7 +256,7 @@ func (w *redisConnWrapper) do(do func(string, ...interface{}), cmd string, args 
 	w.tlbx.LogActionStats(&app.ActionStats{
 		Milli:  NowUnixMilli() - start,
 		Type:   "REDIS",
-		Action: Sprint(append([]interface{}{cmd, " ", args[0], " ..."})...),
+		Action: Str(append([]interface{}{cmd, " ", args[0], " ..."})...),
 	})
 }
 
@@ -269,7 +269,7 @@ func (s *storeClient) CreateBucket(bucket, acl string) error {
 	var err error
 	s.do(func() {
 		err = s.store.CreateBucket(bucket, acl)
-	}, Sprintf("%s %s %s", "CREATE_BUCKET", bucket, acl))
+	}, Strf("%s %s %s", "CREATE_BUCKET", bucket, acl))
 	return err
 }
 
@@ -281,7 +281,7 @@ func (s *storeClient) Put(bucket, prefix string, id ID, name, mimeType string, s
 	var err error
 	s.do(func() {
 		err = s.store.Put(bucket, prefix, id, name, mimeType, size, isPublic, isAttachment, content)
-	}, Sprintf("%s %s %s", "PUT", bucket, *store.Key(prefix, id)))
+	}, Strf("%s %s %s", "PUT", bucket, *store.Key(prefix, id)))
 	return err
 }
 
@@ -294,7 +294,7 @@ func (s *storeClient) PresignedPutUrl(bucket, prefix string, id ID, name, mimeTy
 	var err error
 	s.do(func() {
 		url, err = s.store.PresignedPutUrl(bucket, prefix, id, name, mimeType, size)
-	}, Sprintf("%s %s %s", "PUT_PRESIGNED_URL", bucket, *store.Key(prefix, id)))
+	}, Strf("%s %s %s", "PUT_PRESIGNED_URL", bucket, *store.Key(prefix, id)))
 	return url, err
 }
 
@@ -312,7 +312,7 @@ func (s *storeClient) Get(bucket, prefix string, id ID) (string, string, int64, 
 	var err error
 	s.do(func() {
 		name, mimeType, size, content, err = s.store.Get(bucket, prefix, id)
-	}, Sprintf("%s %s %s", "GET", bucket, *store.Key(prefix, id)))
+	}, Strf("%s %s %s", "GET", bucket, *store.Key(prefix, id)))
 	return name, mimeType, size, content, err
 }
 
@@ -327,7 +327,7 @@ func (s *storeClient) PresignedGetUrl(bucket, prefix string, id ID, name string,
 	var err error
 	s.do(func() {
 		url, err = s.store.PresignedGetUrl(bucket, prefix, id, name, isAttachment)
-	}, Sprintf("%s %s %s", "GET_PRESIGNED_URL", bucket, *store.Key(prefix, id)))
+	}, Strf("%s %s %s", "GET_PRESIGNED_URL", bucket, *store.Key(prefix, id)))
 	return url, err
 }
 
@@ -341,7 +341,7 @@ func (s *storeClient) Delete(bucket, prefix string, id ID) error {
 	var err error
 	s.do(func() {
 		err = s.store.Delete(bucket, prefix, id)
-	}, Sprintf("%s %s %s", "DELETE", bucket, *store.Key(prefix, id)))
+	}, Strf("%s %s %s", "DELETE", bucket, *store.Key(prefix, id)))
 	return err
 }
 
@@ -353,7 +353,7 @@ func (s *storeClient) DeletePrefix(bucket, prefix string) error {
 	var err error
 	s.do(func() {
 		err = s.store.DeletePrefix(bucket, prefix)
-	}, Sprintf("%s %s %s", "DELETE_PREFIX", bucket, prefix))
+	}, Strf("%s %s %s", "DELETE_PREFIX", bucket, prefix))
 	return err
 }
 

@@ -99,7 +99,7 @@ func New(
 					PanicOn(err)
 				}
 				setPwd(tlbx, id, args.Pwd, args.ConfirmPwd)
-				sendActivateEmail(srv, args.Email, fromEmail, Sprintf(activateFmtLink, args.Email, activateCode))
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, args.Email, activateCode))
 				return nil
 			},
 		},
@@ -130,7 +130,7 @@ func New(
 				if fullUser == nil || fullUser.ActivateCode == nil {
 					return nil
 				}
-				sendActivateEmail(srv, args.Email, fromEmail, Sprintf(activateFmtLink, args.Email, *fullUser.ActivateCode))
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, args.Email, *fullUser.ActivateCode))
 				return nil
 			},
 		},
@@ -203,7 +203,7 @@ func New(
 				fullUser.ChangeEmailCode = &changeEmailCode
 				updateUser(tx, fullUser)
 				tx.Commit()
-				sendConfirmChangeEmailEmail(srv, args.NewEmail, fromEmail, Sprintf(confirmChangeEmailFmtLink, me, changeEmailCode))
+				sendConfirmChangeEmailEmail(srv, args.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, me, changeEmailCode))
 				return nil
 			},
 		},
@@ -229,7 +229,7 @@ func New(
 				defer tx.Rollback()
 				fullUser := getUser(tx, nil, &me)
 				tx.Commit()
-				sendConfirmChangeEmailEmail(srv, *fullUser.NewEmail, fromEmail, Sprintf(confirmChangeEmailFmtLink, me, *fullUser.ChangeEmailCode))
+				sendConfirmChangeEmailEmail(srv, *fullUser.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, me, *fullUser.ChangeEmailCode))
 				return nil
 			},
 		},

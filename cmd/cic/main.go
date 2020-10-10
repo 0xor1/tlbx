@@ -30,9 +30,9 @@ func main() {
 
 	fs := flag.NewFlagSet("tlbx_tw_clockin_catchup", flag.ExitOnError)
 	var baseHref string
-	fs.StringVar(&baseHref, "b", "", Sprintf("baseHref e.g. %s", exampleBaseHref))
+	fs.StringVar(&baseHref, "b", "", Strf("baseHref e.g. %s", exampleBaseHref))
 	var username string
-	fs.StringVar(&username, "u", "", Sprintf("username e.g. %s", exampleUsername))
+	fs.StringVar(&username, "u", "", Strf("username e.g. %s", exampleUsername))
 	var start string
 	fs.StringVar(&start, "s", "", "start date e.g. 2020-05-06")
 	var hour int

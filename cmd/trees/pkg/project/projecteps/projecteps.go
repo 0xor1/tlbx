@@ -291,23 +291,23 @@ var (
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
-				_, err := tx.Exec(Sprintf(`DELETE FROM projectLocks WHERE host=? %s`, inID), queryArgs...)
+				_, err := tx.Exec(Strf(`DELETE FROM projectLocks WHERE host=? %s`, inID), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`DELETE FROM users WHERE host=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM users WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`DELETE FROM activities WHERE host=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM activities WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`DELETE FROM projects WHERE host=? %s`, inID), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM projects WHERE host=? %s`, inID), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`DELETE FROM tasks WHERE host=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM tasks WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`DELETE FROM times WHERE host=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM times WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`DELETE FROM expenses WHERE host=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM expenses WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`DELETE FROM files WHERE host=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM files WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Sprintf(`DELETE FROM comments WHERE host=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM comments WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
 				for _, p := range args {
 					srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me, p))
@@ -366,7 +366,7 @@ var (
 						PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
 						users = append(users, u)
 					}
-				}, Sprintf(`SELECT id, handle, alias, hasAvatar FROM users WHERE 1=1 %s %s FOR UPDATE`, sql.InCondition(true, `id`, lenUsers), sql.OrderByField(`id`, lenUsers)), ids...))
+				}, Strf(`SELECT id, handle, alias, hasAvatar FROM users WHERE 1=1 %s %s FOR UPDATE`, sql.InCondition(true, `id`, lenUsers), sql.OrderByField(`id`, lenUsers)), ids...))
 
 				app.BadReqIf(len(users) != lenUsers, "users specified: %d, users found: %d", lenUsers, len(users))
 
@@ -527,7 +527,7 @@ var (
 					app.BadReqIf(u.Equal(args.Host), "can not remove host from project")
 					queryArgs = append(queryArgs, u)
 				}
-				_, err := tx.Exec(Sprintf(`UPDATE users SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
+				_, err := tx.Exec(Strf(`UPDATE users SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
 				PanicOn(err)
 				for _, u := range args.Users {
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil)
@@ -764,7 +764,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 		}
 		if ptr.StringOr(args.NamePrefix, "") != "" {
 			query.WriteString(` AND p.name LIKE ?`)
-			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NamePrefix))
+			queryArgs = append(queryArgs, Strf(`%s%%`, *args.NamePrefix))
 		}
 		if args.CreatedOnMin != nil {
 			query.WriteString(` AND p.createdOn >=?`)
@@ -791,10 +791,10 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			queryArgs = append(queryArgs, *args.DueOnMax)
 		}
 		if args.After != nil {
-			query.WriteString(Sprintf(` AND %s %s= (SELECT p.%s FROM projects p WHERE p.host=? AND p.id=?) AND p.id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
+			query.WriteString(Strf(` AND %s %s= (SELECT p.%s FROM projects p WHERE p.host=? AND p.id=?) AND p.id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, args.Host, *args.After, *args.After)
 			if args.Sort != cnsts.SortCreatedOn {
-				query.WriteString(Sprintf(` AND p.createdOn %s (SELECT p.createdOn FROM projects p WHERE p.host=? AND p.id=?)`, sql.GtLtSymbol(*args.Asc)))
+				query.WriteString(Strf(` AND p.createdOn %s (SELECT p.createdOn FROM projects p WHERE p.host=? AND p.id=?)`, sql.GtLtSymbol(*args.Asc)))
 				queryArgs = append(queryArgs, args.Host, *args.After)
 			}
 		}
@@ -842,7 +842,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 		query.WriteString(` AND isActive=1`)
 		if ptr.StringOr(args.HandlePrefix, "") != "" {
 			query.WriteString(` AND handle LIKE ?`)
-			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.HandlePrefix))
+			queryArgs = append(queryArgs, Strf(`%s%%`, *args.HandlePrefix))
 		}
 		if args.Role != nil {
 			query.WriteString(` AND role=?`)
@@ -860,7 +860,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 		if ptr.StringOr(args.HandlePrefix, "") == "" {
 			query.WriteString(` role ASC,`)
 		}
-		query.WriteString(Sprintf(` handle ASC LIMIT %d`, limit))
+		query.WriteString(Strf(` handle ASC LIMIT %d`, limit))
 	}
 	PanicOn(srv.Data().Query(func(rows isql.Rows) {
 		for rows.Next() {

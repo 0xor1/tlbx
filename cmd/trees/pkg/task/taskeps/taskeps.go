@@ -115,7 +115,7 @@ var (
 					PanicOn(err)
 				}
 				// insert new task
-				_, err := tx.Exec(Sprintf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.MinimumTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.FileSubCount, t.FileSubSize, t.ChildCount, t.DescendantCount, t.IsParallel)
+				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.MinimumTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.FileSubCount, t.FileSubSize, t.ChildCount, t.DescendantCount, t.IsParallel)
 				PanicOn(err)
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
 				// all that remains to do is update aggregate values
@@ -178,12 +178,12 @@ func getAncestors(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, after 
 			PanicOn(err)
 			ancestors = append(ancestors, t)
 		}
-	}, Sprintf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? AND a.n <> 0 ORDER BY a.n ASC`, sql_ancestors_cte, sql_task_columns_prefixed), host, project, ofTask, host, project, host, project))
+	}, Strf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? AND a.n <> 0 ORDER BY a.n ASC`, sql_ancestors_cte, sql_task_columns_prefixed), host, project, ofTask, host, project, host, project))
 	return ancestors
 }
 
 func getOne(tlbx app.Tlbx, tx service.Tx, host, project, one ID) *task.Task {
-	row := tx.QueryRow(Sprintf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.id=?`, sql_task_columns_prefixed), host, project, one)
+	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.id=?`, sql_task_columns_prefixed), host, project, one)
 	t, err := scan(row)
 	sql.PanicIfIsntNoRows(err)
 	app.ReturnIf(t.ID.IsZero(), http.StatusNotFound, "")

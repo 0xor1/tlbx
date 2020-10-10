@@ -224,7 +224,7 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 	} else {
 		if ptr.StringOr(args.NamePrefix, "") != "" {
 			query.WriteString(` AND name LIKE ?`)
-			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NamePrefix))
+			queryArgs = append(queryArgs, Strf(`%s%%`, *args.NamePrefix))
 		}
 		if args.CreatedOnMin != nil {
 			query.WriteString(` AND createdOn >= ?`)
@@ -251,10 +251,10 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 			queryArgs = append(queryArgs, *args.CompletedItemCountMax)
 		}
 		if args.After != nil {
-			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM lists WHERE user=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
+			query.WriteString(Strf(` AND %s %s= (SELECT %s FROM lists WHERE user=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, me, *args.After, *args.After)
 			if args.Sort != list.SortCreatedOn {
-				query.WriteString(Sprintf(` AND createdOn %s (SELECT createdOn FROM lists WHERE user=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
+				query.WriteString(Strf(` AND createdOn %s (SELECT createdOn FROM lists WHERE user=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
 				queryArgs = append(queryArgs, me, *args.After)
 			}
 		}

@@ -26,7 +26,7 @@ func (es Errors) Error() string {
 	for _, err := range es {
 		errStrs = append(errStrs, err.Error())
 	}
-	return Sprintf("errors:\n%s", strings.Join(errStrs, ""))
+	return Strf("errors:\n%s", strings.Join(errStrs, ""))
 }
 
 func (es Errors) String() string {
@@ -40,7 +40,7 @@ type err struct {
 }
 
 func (e *err) Error() string {
-	return Sprintf("message: %s\nstackTrace: %s", e.Message_, e.StackTrace_)
+	return Strf("message: %s\nstackTrace: %s", e.Message_, e.StackTrace_)
 }
 
 func (e *err) String() string {
@@ -74,7 +74,7 @@ func ToError(i interface{}) Error {
 	case string:
 		msg = v
 	default:
-		msg = Sprintf("type: %T, value: %#v", i, i)
+		msg = Strf("type: %T, value: %#v", i, i)
 	}
 
 	return &err{
@@ -92,7 +92,7 @@ func ExitOn(i interface{}) {
 
 func ExitIf(condition bool, format string, args ...interface{}) {
 	if condition {
-		ExitOn(Sprintf(format, args...))
+		ExitOn(Strf(format, args...))
 	}
 }
 
@@ -104,7 +104,7 @@ func PanicOn(i interface{}) {
 
 func PanicIf(condition bool, format string, args ...interface{}) {
 	if condition {
-		PanicOn(Sprintf(format, args...))
+		PanicOn(Strf(format, args...))
 	}
 }
 

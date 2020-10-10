@@ -169,7 +169,7 @@ func NewRig(
 	buckets ...string,
 ) Rig {
 	r := &rig{
-		unique:  Sprintf("%d", os.Getpid()),
+		unique:  Strf("%d", os.Getpid()),
 		log:     config.Log,
 		cache:   config.Cache,
 		email:   config.Email,
@@ -208,7 +208,7 @@ func NewRig(
 					if me.Exists(tlbx) {
 						key = me.Get(tlbx).String()
 					}
-					return Sprintf("rate-limiter-%s-%s", realip.RealIP(tlbx.Req()), key)
+					return Strf("rate-limiter-%s-%s", realip.RealIP(tlbx.Req()), key)
 				}
 				c.Pool = r.cache
 				c.PerMinute = 1000000 // when running batch tests 120 rate limit is easily exceeded
@@ -248,11 +248,11 @@ func (r *rig) CleanUp() {
 }
 
 func (r *rig) createUser(handleSuffix, emailSuffix, pwd string) *testUser {
-	email := Sprintf("%s%s%s", handleSuffix, emailSuffix, r.unique)
+	email := Strf("%s%s%s", handleSuffix, emailSuffix, r.unique)
 	c := r.NewClient()
 	if r.useAuth {
 		(&user.Register{
-			Handle:     ptr.String(Sprintf("%s%s", handleSuffix, r.unique)),
+			Handle:     ptr.String(Strf("%s%s", handleSuffix, r.unique)),
 			Alias:      ptr.String(handleSuffix),
 			Email:      email,
 			Pwd:        pwd,

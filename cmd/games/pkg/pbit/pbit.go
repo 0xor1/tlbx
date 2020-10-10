@@ -21,7 +21,7 @@ func (p Pbit) MarshalBinary() ([]byte, error) {
 	case 4:
 		return []byte(`4`), nil
 	default:
-		return nil, Errorf("invalid value %d, Pbit only accepts 0, 1, 2, 3 or 4", p)
+		return nil, Err("invalid value %d, Pbit only accepts 0, 1, 2, 3 or 4", p)
 	}
 }
 
@@ -39,7 +39,7 @@ func (p *Pbit) UnmarshalBinary(d []byte) error {
 	case `4`:
 		*p = 4
 	default:
-		return Errorf("invalid value %s, Pbit only accepts 0, 1, 2, 3 or 4", strD)
+		return Err("invalid value %s, Pbit only accepts 0, 1, 2, 3 or 4", strD)
 	}
 	return nil
 }
@@ -77,7 +77,7 @@ func (ps Pbits) MarshalBinary() ([]byte, error) {
 		case 4:
 			buf.WriteString(`4`)
 		default:
-			return nil, Errorf("invalid value %d, Pbits only accepts 0s, 1s, 2s, 3s and 4s", p)
+			return nil, Err("invalid value %d, Pbits only accepts 0s, 1s, 2s, 3s and 4s", p)
 		}
 	}
 	return buf.Bytes(), nil
@@ -99,7 +99,7 @@ func (ps *Pbits) UnmarshalBinary(ds []byte) error {
 		case `4`:
 			res = append(res, 4)
 		default:
-			return Errorf("invalid value %s, Pbits only accepts 0s, 1s, 2s, 3s and 4s", dStr)
+			return Err("invalid value %s, Pbits only accepts 0s, 1s, 2s, 3s and 4s", dStr)
 		}
 	}
 	*ps = res

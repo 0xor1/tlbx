@@ -26,7 +26,7 @@ func main() {
 		}
 	} else {
 		for i := 0; i < n; i++ {
-			Println(Sprintf("%s", base64.RawURLEncoding.EncodeToString(crypt.Bytes(l))))
+			Println(Strf("%s", base64.RawURLEncoding.EncodeToString(crypt.Bytes(l))))
 		}
 	}
 }

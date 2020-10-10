@@ -270,11 +270,11 @@ func Run(configs ...func(*Config)) {
 				defer s.Content.Close()
 				BadReqIf(tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
 				tlbx.resp.Header().Add("Content-Type", s.Type)
-				tlbx.resp.Header().Add("Content-Length", Sprintf("%d", s.Size))
-				tlbx.resp.Header().Add("Content-Name", Sprintf("%s", s.Name))
-				tlbx.resp.Header().Add("Content-Id", Sprintf("%s", s.ID))
+				tlbx.resp.Header().Add("Content-Length", Strf("%d", s.Size))
+				tlbx.resp.Header().Add("Content-Name", Strf("%s", s.Name))
+				tlbx.resp.Header().Add("Content-Id", Strf("%s", s.ID))
 				if s.IsDownload {
-					tlbx.resp.Header().Add("Content-Disposition", Sprintf(`attachment; filename="%s"`, s.Name))
+					tlbx.resp.Header().Add("Content-Disposition", Strf(`attachment; filename="%s"`, s.Name))
 				}
 				tlbx.resp.WriteHeader(http.StatusOK)
 				_, err = io.Copy(tlbx.resp, s.Content)
@@ -373,15 +373,15 @@ type reqStats struct {
 }
 
 func (r *reqStats) String() string {
-	basic := Sprintf("%dms\t%d\t%s\t%s", r.Milli, r.Status, r.Method, r.Path)
+	basic := Strf("%dms\t%d\t%s\t%s", r.Milli, r.Status, r.Method, r.Path)
 	if len(r.Queries) == 0 {
 		return basic
 	}
 	queries := make([]string, 0, len(r.Queries))
 	for _, q := range r.Queries {
-		queries = append(queries, Sprintf("%s\t%dms\t%s", q.Type, q.Milli, q.Action))
+		queries = append(queries, Strf("%s\t%dms\t%s", q.Type, q.Milli, q.Action))
 	}
-	return Sprintf("%s\n%s", basic, strings.Join(queries, "\n"))
+	return Strf("%s\n%s", basic, strings.Join(queries, "\n"))
 }
 
 type responseWrapper struct {
@@ -479,7 +479,7 @@ func ReturnIf(condition bool, status int, format string, args ...interface{}) {
 	if condition {
 		PanicOn(&ErrMsg{
 			Status: status,
-			Msg:    Sprintf(format, args...),
+			Msg:    Strf(format, args...),
 		})
 	}
 }
@@ -511,7 +511,7 @@ type ErrMsg struct {
 }
 
 func (e *ErrMsg) Error() string {
-	return Sprintf("status: %d, message: %s", e.Status, e.Msg)
+	return Strf("status: %d, message: %s", e.Status, e.Msg)
 }
 
 func writeJsonOk(w http.ResponseWriter, body interface{}) {
@@ -564,9 +564,9 @@ func (r *mDoResp) MarshalJSON() ([]byte, error) {
 	if r.returnHeaders {
 		h, err := json.Marshal(r.header)
 		PanicOn(err)
-		return []byte(Sprintf(`{"status":%d,"header":%s,"body":%s}`, r.status, h, r.body)), nil
+		return []byte(Strf(`{"status":%d,"header":%s,"body":%s}`, r.status, h, r.body)), nil
 	} else {
-		return []byte(Sprintf(`{"status":%d,"body":%s}`, r.status, r.body)), nil
+		return []byte(Strf(`{"status":%d,"body":%s}`, r.status, r.body)), nil
 	}
 }
 
@@ -659,7 +659,7 @@ func (s *Stream) ToReq(method, url string) (*http.Request, error) {
 	r.Header.Add("Content-Name", s.Name)
 	r.Header.Add("Content-Id", s.ID.String())
 	if s.IsDownload {
-		r.Header.Add("Content-Disposition", Sprintf(`attachment; filename="%s"`, s.Name))
+		r.Header.Add("Content-Disposition", Strf(`attachment; filename="%s"`, s.Name))
 	}
 	return r, nil
 }

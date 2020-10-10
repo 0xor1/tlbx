@@ -160,7 +160,7 @@ var (
 					rowsEffected, err := sqlRes.RowsAffected()
 					PanicOn(err)
 					if rowsEffected == 1 && todoItemCountOp != "" {
-						_, err := tx.Exec(Sprintf(`UPDATE lists SET todoItemCount = todoItemCount %s 1, completedItemCount = completedItemCount %s 1 WHERE user=? AND id=?`, todoItemCountOp, completedItemCountOp), me, args.List)
+						_, err := tx.Exec(Strf(`UPDATE lists SET todoItemCount = todoItemCount %s 1, completedItemCount = completedItemCount %s 1 WHERE user=? AND id=?`, todoItemCountOp, completedItemCountOp), me, args.List)
 						PanicOn(err)
 					}
 					tx.Commit()
@@ -257,7 +257,7 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 		}
 		if ptr.StringOr(args.NamePrefix, "") != "" {
 			query.WriteString(` AND name LIKE ?`)
-			queryArgs = append(queryArgs, Sprintf(`%s%%`, *args.NamePrefix))
+			queryArgs = append(queryArgs, Strf(`%s%%`, *args.NamePrefix))
 		}
 		if args.CreatedOnMin != nil {
 			query.WriteString(` AND createdOn >= ?`)
@@ -268,10 +268,10 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 			queryArgs = append(queryArgs, *args.CreatedOnMax)
 		}
 		if args.After != nil {
-			query.WriteString(Sprintf(` AND %s %s= (SELECT %s FROM items WHERE user=? AND list=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
+			query.WriteString(Strf(` AND %s %s= (SELECT %s FROM items WHERE user=? AND list=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, me, args.List, *args.After, *args.After)
 			if args.Sort != item.SortCreatedOn {
-				query.WriteString(Sprintf(` AND createdOn %s (SELECT createdOn FROM items WHERE user=? AND list=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
+				query.WriteString(Strf(` AND createdOn %s (SELECT createdOn FROM items WHERE user=? AND list=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
 				queryArgs = append(queryArgs, me, args.List, *args.After)
 
 			}

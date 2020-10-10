@@ -631,7 +631,7 @@ func printBoard(g *blockers.Game) {
 		if rowStart < 10 {
 			row += " "
 		}
-		row = Sprintf(row, rowStart)
+		row = Strf(row, rowStart)
 		for x := 0; x < 20; x++ {
 			color := aurora.White
 			switch g.Board[20*y+x] {
@@ -646,7 +646,7 @@ func printBoard(g *blockers.Game) {
 			}
 			row += aurora.Sprintf(color(`■ `))
 		}
-		row += Sprintf(" %d", 20*(y+1)-1)
+		row += Strf(" %d", 20*(y+1)-1)
 		Println(row)
 	}
 }

@@ -176,7 +176,7 @@ func (c *client) MustDeletePrefix(bucket, prefix string) {
 func Key(prefix string, id ID) *string {
 	key := id.String()
 	if prefix != "" {
-		key = Sprintf("%s/%s", prefix, key)
+		key = Strf("%s/%s", prefix, key)
 	}
 	return ptr.String(key)
 }
@@ -184,7 +184,7 @@ func Key(prefix string, id ID) *string {
 func contentDisposition(name string, isAttachment bool) *string {
 	contentDisposition := "inline"
 	if isAttachment {
-		contentDisposition = Sprintf("%s%s", attachmentPrefix, name)
+		contentDisposition = Strf("%s%s", attachmentPrefix, name)
 	}
 	return ptr.String(contentDisposition)
 }

@@ -875,7 +875,7 @@ func Test_ID(t *testing.T) {
 	a.Nil(err)
 
 	id = idGen.MustNew()
-	obj = MustFromString(Sprintf(`{"a": "%s"}`, id.String()))
+	obj = MustFromString(Strf(`{"a": "%s"}`, id.String()))
 	id, err = obj.ID("a")
 	a.Nil(err)
 }
