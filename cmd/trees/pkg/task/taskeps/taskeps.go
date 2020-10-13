@@ -100,6 +100,7 @@ var (
 				var previousSibling *task.Task
 				if args.PreviousSibling != nil {
 					previousSibling = getOne(tlbx, tx, args.Host, args.Project, *args.PreviousSibling)
+					app.ReturnIf(previousSibling == nil, http.StatusNotFound, "previousSibling not found")
 					t.NextSibling = previousSibling.NextSibling
 					previousSibling.NextSibling = &t.ID
 					// point previous sibling at new task
@@ -110,9 +111,10 @@ var (
 					// as newTask's NextSibling
 					// get parent for updating child/descendant counts and firstChild if required
 					parent := getOne(tlbx, tx, args.Host, args.Project, args.Parent)
+					app.ReturnIf(parent == nil, http.StatusNotFound, "parent not found")
 					t.NextSibling = parent.FirstChild
 					// increment parents child and descendant counters and firstChild pointer incase that was changed
-					_, err := tx.Exec(`UPDATE tasks SET firstChild=?, childCount=childCount+1, descendantCount=descendantCount+1 WHERE host=? AND project=? AND id=?`, t.ID, args.Host, args.Project, t.Parent)
+					_, err := tx.Exec(`UPDATE tasks SET firstChild=? WHERE host=? AND project=? AND id=?`, t.ID, args.Host, args.Project, t.Parent)
 					PanicOn(err)
 				}
 				// insert new task
@@ -153,12 +155,146 @@ var (
 				return exampleTask
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				// args := a.(*task.Update)
-				// me := me.Get(tlbx)
-				// todo
-
-				// return t
-				return nil
+				args := a.(*task.Update)
+				me := me.Get(tlbx)
+				if args.ID.Equal(args.Project) {
+					app.ReturnIf(!me.Equal(args.Host), http.StatusForbidden, "only the host may edit the project root node")
+					app.ReturnIf(args.User != nil, http.StatusForbidden, "user value is not settable on the project root node")
+					app.ReturnIf(args.Parent != nil, http.StatusForbidden, "parent value is not settable on the project root node")
+					app.ReturnIf(args.PreviousSibling != nil, http.StatusForbidden, "previousSibling value is not settable on the project root node")
+				} else {
+					epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
+				}
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				treeUpdateRequired := false
+				if args.Parent != nil ||
+					args.PreviousSibling != nil ||
+					args.EstimatedExpense != nil ||
+					args.EstimatedTime != nil ||
+					args.IsParallel != nil {
+					// if moving the task or setting an aggregate value effecting property
+					// we must lock
+					epsutil.MustLockProject(tlbx, tx, args.Host, args.Project)
+					treeUpdateRequired = true
+				}
+				t := getOne(tlbx, tx, args.Host, args.Project, args.ID)
+				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
+				var newParent, newPreviousSibling, currentParent, currentPreviousSibling *task.Task
+				if args.Parent != nil {
+					if !args.Parent.V.Equal(*t.Parent) {
+						var newNextSibling *ID
+						// validate new parent exists
+						newParent = getOne(tlbx, tx, args.Host, args.Project, args.Parent.V)
+						app.ReturnIf(newParent == nil, http.StatusNotFound, "parent not found")
+						// we must ensure we dont allow recursive loops
+						row := tx.QueryRow(Strf("%s SELECT COUNT(*)=1 FROM ancestors a WHERE id=?", sql_ancestors_cte), args.Host, args.Project, args.Parent.V, args.Host, args.Project, args.ID)
+						ancestorLoopDetected := false
+						PanicOn(row.Scan(&ancestorLoopDetected))
+						app.BadReqIf(ancestorLoopDetected, "ancestor loop detected, invalid parent value")
+						if args.PreviousSibling != nil && args.PreviousSibling.V != nil {
+							newPreviousSibling = getOne(tlbx, tx, args.Host, args.Project, *args.PreviousSibling.V)
+							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
+							app.BadReqIf(!newPreviousSibling.Parent.Equal(args.Parent.V), "previousSiblings parent does not match the specified parent arg")
+							newNextSibling = newPreviousSibling.NextSibling
+							newPreviousSibling.NextSibling = &t.ID
+						} else {
+							newNextSibling = newParent.FirstChild
+							newParent.FirstChild = &t.ID
+						}
+						// need to reconnect currentPreviousSibling with current nextSibling
+						currentPreviousSibling = getPreviousSibling(tlbx, tx, args.Host, args.Project, args.ID)
+						if currentPreviousSibling != nil {
+							currentPreviousSibling.NextSibling = t.NextSibling
+						} else {
+							// need to update currentParent firstChild as t is it
+							currentParent = getOne(tlbx, tx, args.Host, args.Project, *t.Parent)
+							currentParent.FirstChild = t.NextSibling
+						}
+						t.Parent = &newParent.ID
+						t.NextSibling = newNextSibling
+					} else {
+						// if args.Parent is set and it's equal to the current value
+						// i.e. no change is being made then let's just nil it out
+						args.Parent = nil
+					}
+				}
+				if args.Parent == nil && args.PreviousSibling != nil {
+					// we now know we are doing a purely horizontal move, i.e. not changing parent node
+					// get current previousSibling
+					currentPreviousSibling = getPreviousSibling(tlbx, tx, args.Host, args.Project, args.ID)
+					if !((currentPreviousSibling == nil && args.PreviousSibling.V == nil) ||
+						(currentPreviousSibling != nil && args.PreviousSibling.V != nil &&
+							currentPreviousSibling.ID.Equal(*args.PreviousSibling.V))) {
+						var newNextSibling *ID
+						// here we know that an actual change is being attempted
+						if args.PreviousSibling.V != nil {
+							// moving to a non first child position
+							newPreviousSibling = getOne(tlbx, tx, args.Host, args.Project, *args.PreviousSibling.V)
+							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
+							app.BadReqIf(!newPreviousSibling.Parent.Equal(*t.Parent), "previousSiblings parent does not match the current tasks parent")
+							newNextSibling = newPreviousSibling.NextSibling
+							newPreviousSibling.NextSibling = &t.ID
+						} else {
+							// moving to the first child position
+							currentParent = getOne(tlbx, tx, args.Host, args.Project, *t.Parent)
+							PanicIf(currentParent == nil, "currentParent not found")
+							newNextSibling = currentParent.FirstChild
+							currentParent.FirstChild = &t.ID
+						}
+						// need to reconnect currentPreviousSibling with current nextSibling
+						if currentPreviousSibling != nil {
+							currentPreviousSibling.NextSibling = t.NextSibling
+						}
+						t.NextSibling = newNextSibling
+					} else {
+						// here we know no change is being made so nil out currentPreviousSibling to save a sql update call
+						currentPreviousSibling = nil
+					}
+				}
+				// at this point all the moving has been done
+				if args.Name != nil {
+					validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
+					t.Name = args.Name.V
+				}
+				if args.Description != nil {
+					if args.Description.V != nil {
+						validate.Str("description", *args.Description.V, tlbx, descriptionMinLen, descriptionMaxLen)
+					}
+					t.Description = args.Description.V
+				}
+				if args.IsParallel != nil {
+					t.IsParallel = args.IsParallel.V
+				}
+				if args.User != nil {
+					if args.User.V != nil && !args.User.V.Equal(me) {
+						epsutil.MustHaveAccess(tlbx, args.Host, args.Project, args.User.V, cnsts.RoleWriter)
+					}
+					t.User = args.User.V
+				}
+				if args.EstimatedTime != nil {
+					t.EstimatedTime = args.EstimatedTime.V
+				}
+				if args.EstimatedExpense != nil {
+					t.EstimatedExpense = args.EstimatedExpense.V
+				}
+				update := func(ts ...*task.Task) {
+					for _, t := range ts {
+						if t != nil {
+							tx.Exec(`UPDATE tasks SET parent=?, firstChild=?, nextSibling=?, name=?, description=?, isParallel=?, user=?, estimatedTime=?, estimatedExpense=? WHERE host=? AND project=? AND task=?`, t.Parent, t.FirstChild, t.NextSibling, t.Name, t.Description, t.IsParallel, t.User, t.EstimatedTime, t.EstimatedExpense, args.Host, args.Project, t.ID)
+						}
+					}
+				}
+				update(t, currentParent, currentPreviousSibling, newParent, newPreviousSibling)
+				if treeUpdateRequired {
+					if currentParent != nil {
+						// if we moved parent we must recalculate aggregate values on the old parents ancestral chain
+						setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, currentParent.ID)
+					}
+					setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, t.ID)
+				}
+				tx.Commit()
+				return t
 			},
 		},
 	}
@@ -223,7 +359,13 @@ func getOne(tlbx app.Tlbx, tx service.Tx, host, project, one ID) *task.Task {
 	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.id=?`, sql_task_columns_prefixed), host, project, one)
 	t, err := scan(row)
 	sql.PanicIfIsntNoRows(err)
-	app.ReturnIf(t.ID.IsZero(), http.StatusNotFound, "")
+	return t
+}
+
+func getPreviousSibling(tlbx app.Tlbx, tx service.Tx, host, project, nextSibling ID) *task.Task {
+	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.nextSibling=?`, sql_task_columns_prefixed), host, project, nextSibling)
+	t, err := scan(row)
+	sql.PanicIfIsntNoRows(err)
 	return t
 }
 
@@ -259,6 +401,9 @@ func scan(ts taskScanner) (*task.Task, error) {
 		&t.ChildCount,
 		&t.DescendantCount,
 		&t.IsParallel)
+	if t.ID.IsZero() {
+		t = nil
+	}
 	return t, err
 }
 

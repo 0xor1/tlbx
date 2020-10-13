@@ -66,6 +66,7 @@ var (
 					Task: task.Task{
 						ID:         tlbx.NewID(),
 						Name:       args.Name,
+						User:       ptr.ID(me),
 						CreatedBy:  me,
 						CreatedOn:  NowMilli(),
 						IsParallel: true,
@@ -176,7 +177,7 @@ var (
 				}
 				app.BadReqIf(len(args) > 100, "can not update more than 100 projects at a time")
 				me := me.Get(tlbx)
-				ids := make(IDs, len(args))
+				ids := make(IDs, 0, len(args))
 				namesSet := make([]bool, len(args))
 				dupes := map[string]bool{}
 				for i := 0; i < len(args); i++ {
@@ -196,10 +197,9 @@ var (
 						copy(args[i:], args[i+1:])
 						args[len(args)-1] = nil
 						args = args[:len(args)-1]
+					} else {
+						ids = append(ids, u.ID)
 					}
-				}
-				for i, u := range args {
-					ids[i] = u.ID
 				}
 				ps := getSet(tlbx, &project.Get{Host: &me, IDs: ids}).Set
 				for i, p := range ps {
