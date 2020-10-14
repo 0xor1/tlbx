@@ -157,6 +157,17 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Update)
 				me := me.Get(tlbx)
+				if args.Parent == nil &&
+					args.PreviousSibling == nil &&
+					args.Name == nil &&
+					args.Description == nil &&
+					args.IsParallel == nil &&
+					args.User == nil &&
+					args.EstimatedTime == nil &&
+					args.EstimatedExpense == nil {
+					// nothing to update
+					return nil
+				}
 				if args.ID.Equal(args.Project) {
 					app.ReturnIf(!me.Equal(args.Host), http.StatusForbidden, "only the host may edit the project root node")
 					app.ReturnIf(args.User != nil, http.StatusForbidden, "user value is not settable on the project root node")
@@ -204,11 +215,12 @@ var (
 						}
 						// need to reconnect currentPreviousSibling with current nextSibling
 						currentPreviousSibling = getPreviousSibling(tlbx, tx, args.Host, args.Project, args.ID)
+						// need to get current parent for ancestor value updates
+						currentParent = getOne(tlbx, tx, args.Host, args.Project, *t.Parent)
 						if currentPreviousSibling != nil {
 							currentPreviousSibling.NextSibling = t.NextSibling
 						} else {
 							// need to update currentParent firstChild as t is it
-							currentParent = getOne(tlbx, tx, args.Host, args.Project, *t.Parent)
 							currentParent.FirstChild = t.NextSibling
 						}
 						t.Parent = &newParent.ID
@@ -300,7 +312,8 @@ var (
 				update := func(ts ...*task.Task) {
 					for _, t := range ts {
 						if t != nil {
-							tx.Exec(`UPDATE tasks SET parent=?, firstChild=?, nextSibling=?, name=?, description=?, isParallel=?, user=?, estimatedTime=?, estimatedExpense=? WHERE host=? AND project=? AND task=?`, t.Parent, t.FirstChild, t.NextSibling, t.Name, t.Description, t.IsParallel, t.User, t.EstimatedTime, t.EstimatedExpense, args.Host, args.Project, t.ID)
+							_, err := tx.Exec(`UPDATE tasks SET parent=?, firstChild=?, nextSibling=?, name=?, description=?, isParallel=?, user=?, estimatedTime=?, estimatedExpense=? WHERE host=? AND project=? AND id=?`, t.Parent, t.FirstChild, t.NextSibling, t.Name, t.Description, t.IsParallel, t.User, t.EstimatedTime, t.EstimatedExpense, args.Host, args.Project, t.ID)
+							PanicOn(err)
 						}
 					}
 				}

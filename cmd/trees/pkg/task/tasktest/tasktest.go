@@ -8,6 +8,8 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
+	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/stretchr/testify/assert"
@@ -74,6 +76,21 @@ func Everything(t *testing.T) {
 		EstimatedTime:   100,
 	}).MustDo(ac)
 	a.NotNil(t2p0)
+
+	t1p1 = (&task.Update{
+		Host:             r.Ali().ID(),
+		Project:          p.ID,
+		ID:               t1p1.ID,
+		Parent:           &field.ID{V: t2p0.ID},
+		PreviousSibling:  nil,
+		Name:             &field.String{V: "1.1 - updated"},
+		Description:      &field.StringPtr{V: ptr.String("an actual description")},
+		IsParallel:       &field.Bool{V: false},
+		User:             &field.IDPtr{V: nil},
+		EstimatedTime:    &field.UInt64{V: 50},
+		EstimatedExpense: &field.UInt64{V: 50},
+	}).MustDo(ac)
+	a.NotNil(t1p1)
 
 	p = (&project.One{
 		Host: r.Ali().ID(),

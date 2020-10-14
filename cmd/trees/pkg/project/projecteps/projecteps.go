@@ -182,9 +182,6 @@ var (
 				dupes := map[string]bool{}
 				for i := 0; i < len(args); i++ {
 					u := args[i]
-					idStr := u.ID.String()
-					app.BadReqIf(dupes[idStr], "duplicate entry detected")
-					dupes[idStr] = true
 					// if there are no changes to be made, remove this entry
 					if u.Name == nil &&
 						u.CurrencyCode == nil &&
@@ -197,7 +194,11 @@ var (
 						copy(args[i:], args[i+1:])
 						args[len(args)-1] = nil
 						args = args[:len(args)-1]
+						i--
 					} else {
+						idStr := u.ID.String()
+						app.BadReqIf(dupes[idStr], "duplicate entry detected")
+						dupes[idStr] = true
 						ids = append(ids, u.ID)
 					}
 				}
