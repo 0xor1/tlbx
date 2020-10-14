@@ -250,6 +250,8 @@ var (
 					} else {
 						// here we know no change is being made so nil out currentPreviousSibling to save a sql update call
 						currentPreviousSibling = nil
+						// and nil this out to remove redundant data from activity entry
+						args.PreviousSibling = nil
 					}
 				}
 				// at this point all the moving has been done
