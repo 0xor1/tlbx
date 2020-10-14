@@ -324,6 +324,10 @@ BEGIN
 END //
 DELIMITER ;
 
+#useful helper query for manual verifying/debugging test results
+#SELECT  t1.name, t2.name AS parent, t3.name AS nextSibling, t4.name AS firstChild, t1.description, t1.minimumTime, t1.estimatedTime, t1.loggedTime, t1.estimatedSubTime, t1.loggedSubTime, t1.estimatedExpense, t1.loggedExpense, t1.estimatedSubExpense, t1.loggedSubExpense, t1.childCount, t1.descendantCount FROM trees_data.tasks t1 LEFT JOIN trees_data.tasks t2 ON t1.parent = t2.id LEFT JOIN trees_data.tasks t3 ON t1.nextSibling = t3.id LEFT JOIN trees_data.tasks t4 ON t1.firstChild = t4.id ORDER BY t1.name;
+
+
 DROP USER IF EXISTS 'trees_data'@'%';
 CREATE USER 'trees_data'@'%' IDENTIFIED BY 'C0-Mm-0n-Da-Ta';
 GRANT SELECT ON trees_data.* TO 'trees_data'@'%';
