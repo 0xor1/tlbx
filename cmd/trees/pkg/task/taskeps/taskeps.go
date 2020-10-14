@@ -168,6 +168,7 @@ var (
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				treeUpdateRequired := false
+				simpleUpdateRequired := false
 				if args.Parent != nil ||
 					args.PreviousSibling != nil ||
 					args.EstimatedExpense != nil ||
@@ -176,7 +177,6 @@ var (
 					// if moving the task or setting an aggregate value effecting property
 					// we must lock
 					epsutil.MustLockProject(tlbx, tx, args.Host, args.Project)
-					treeUpdateRequired = true
 				}
 				t := getOne(tlbx, tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
@@ -213,6 +213,7 @@ var (
 						}
 						t.Parent = &newParent.ID
 						t.NextSibling = newNextSibling
+						treeUpdateRequired = true
 					} else {
 						// if args.Parent is set and it's equal to the current value
 						// i.e. no change is being made then let's just nil it out
@@ -247,6 +248,7 @@ var (
 							currentPreviousSibling.NextSibling = t.NextSibling
 						}
 						t.NextSibling = newNextSibling
+						treeUpdateRequired = true
 					} else {
 						// here we know no change is being made so nil out currentPreviousSibling to save a sql update call
 						currentPreviousSibling = nil
@@ -255,30 +257,45 @@ var (
 					}
 				}
 				// at this point all the moving has been done
-				if args.Name != nil {
+				if args.Name != nil && t.Name != args.Name.V {
 					validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
 					t.Name = args.Name.V
+					simpleUpdateRequired = true
 				}
-				if args.Description != nil {
+				if args.Description != nil && args.Description.V != nil && *args.Description.V == "" {
+					args.Description.V = nil
+				}
+				if args.Description != nil &&
+					((args.Description.V == nil && t.Description != nil) ||
+						(args.Description.V != nil && t.Description == nil) ||
+						(args.Description.V != nil && t.Description != nil && t.Description != args.Description.V)) {
 					if args.Description.V != nil {
 						validate.Str("description", *args.Description.V, tlbx, descriptionMinLen, descriptionMaxLen)
 					}
 					t.Description = args.Description.V
+					simpleUpdateRequired = true
 				}
-				if args.IsParallel != nil {
+				if args.IsParallel != nil && t.IsParallel != args.IsParallel.V {
 					t.IsParallel = args.IsParallel.V
+					treeUpdateRequired = true
 				}
-				if args.User != nil {
+				if args.User != nil &&
+					((args.User.V == nil && t.User != nil) ||
+						(args.User.V != nil && t.User == nil) ||
+						(args.User.V != nil && t.User != nil && !t.User.Equal(*args.User.V))) {
 					if args.User.V != nil && !args.User.V.Equal(me) {
 						epsutil.MustHaveAccess(tlbx, args.Host, args.Project, args.User.V, cnsts.RoleWriter)
 					}
 					t.User = args.User.V
+					simpleUpdateRequired = true
 				}
-				if args.EstimatedTime != nil {
+				if args.EstimatedTime != nil && t.EstimatedTime != args.EstimatedTime.V {
 					t.EstimatedTime = args.EstimatedTime.V
+					treeUpdateRequired = true
 				}
-				if args.EstimatedExpense != nil {
+				if args.EstimatedExpense != nil && t.EstimatedExpense != args.EstimatedExpense.V {
 					t.EstimatedExpense = args.EstimatedExpense.V
+					treeUpdateRequired = true
 				}
 				update := func(ts ...*task.Task) {
 					for _, t := range ts {
@@ -287,7 +304,10 @@ var (
 						}
 					}
 				}
-				update(t, currentParent, currentPreviousSibling, newParent, newPreviousSibling)
+				if simpleUpdateRequired || treeUpdateRequired {
+					update(t, currentParent, currentPreviousSibling, newParent, newPreviousSibling)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.ID, cnsts.TypeTask, cnsts.ActionUpdated, &t.Name, args)
+				}
 				if treeUpdateRequired {
 					if currentParent != nil {
 						// if we moved parent we must recalculate aggregate values on the old parents ancestral chain
