@@ -8,7 +8,6 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
-	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
@@ -98,3 +97,13 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.NotNil(p)
 }
+
+// only suitable for small test trees for visual validation
+// whilst writing/debugging unit tests
+// func getAndPrintFullTree(host, project ID, c app.Client) {
+// 	p := (&task.One{
+// 		Host:    host,
+// 		Project: project,
+// 		ID:      project,
+// 	}).MustDo(c)
+// }

@@ -332,6 +332,46 @@ var (
 				return t
 			},
 		},
+		{
+			Description:  "Delete tasks, admins may delete multiple tasks at once, writers may only delete one task at time and only if it is less than an hour old and has no children",
+			Path:         (&task.Delete{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &task.Delete{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &task.Delete{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					IDs:     IDs{app.ExampleID()},
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*task.Delete)
+				if len(args.IDs) == 0 {
+					return nil
+				}
+				me := me.Get(tlbx)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
+				app.ReturnIf(len(args.IDs) > 1 && role != cnsts.RoleAdmin, http.StatusForbidden, "you must be an admin to delete multiple tasks in one request")
+				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "you don't have permission to delete a task")
+				epsutil.MustLockProject(tlbx, tx, args.Host, args.Project)
+				// at this point we need to get the tasks
+				ts := get(tlbx, tx, args.Host, args.Project, args.IDs)
+				for _, t := range ts {
+					Println(t)
+				}
+				tx.Commit()
+				return nil
+			},
+		},
 	}
 
 	nameMinLen        = 1
@@ -390,11 +430,30 @@ func getAncestors(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, after 
 	return ancestors
 }
 
-func getOne(tlbx app.Tlbx, tx service.Tx, host, project, one ID) *task.Task {
-	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.id=?`, sql_task_columns_prefixed), host, project, one)
-	t, err := scan(row)
-	sql.PanicIfIsntNoRows(err)
-	return t
+func getOne(tlbx app.Tlbx, tx service.Tx, host, project, id ID) *task.Task {
+	ts := get(tlbx, tx, host, project, IDs{id})
+	if len(ts) == 0 {
+		return nil
+	}
+	return ts[0]
+}
+
+func get(tlbx app.Tlbx, tx service.Tx, host, project ID, ids IDs) []*task.Task {
+	if len(ids) == 0 {
+		return nil
+	}
+	ts := make([]*task.Task, 0, len(ids))
+	queryArgs := make([]interface{}, 0, len(ids)+2)
+	queryArgs = append(queryArgs, host, project)
+	queryArgs = append(queryArgs, ids.ToIs()...)
+	PanicOn(tx.Query(func(rows isql.Rows) {
+		for rows.Next() {
+			t, err := scan(rows)
+			PanicOn(err)
+			ts = append(ts, t)
+		}
+	}, Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? %s`, sql_task_columns_prefixed, sql.InCondition(true, `t.id`, len(ids))), queryArgs...))
+	return ts
 }
 
 func getPreviousSibling(tlbx app.Tlbx, tx service.Tx, host, project, nextSibling ID) *task.Task {

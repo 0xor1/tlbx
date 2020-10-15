@@ -12,6 +12,15 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/sql"
 )
 
+func MustGetRole(tlbx app.Tlbx, tx service.Tx, host, project ID, user ID) cnsts.Role {
+	var role cnsts.Role
+	row := tx.QueryRow(`SELECT role FROM users WHERE host=? AND project=? AND id=? AND isActive=1`, host, project, user)
+	err := row.Scan(&role)
+	app.ReturnIf(sql.IsNoRows(err), http.StatusForbidden, "")
+	PanicOn(err)
+	return role
+}
+
 func MustHaveAccess(tlbx app.Tlbx, host, project ID, user *ID, role cnsts.Role) {
 	userExist := user != nil
 	if userExist && user.Equal(host) {

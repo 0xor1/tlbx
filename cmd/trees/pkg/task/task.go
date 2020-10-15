@@ -94,3 +94,22 @@ func (a *Update) MustDo(c *app.Client) *Task {
 	PanicOn(err)
 	return res
 }
+
+type Delete struct {
+	Host    ID  `json:"host"`
+	Project ID  `json:"project"`
+	IDs     IDs `json:"ids"`
+}
+
+func (_ *Delete) Path() string {
+	return "/task/delete"
+}
+
+func (a *Delete) Do(c *app.Client) error {
+	err := app.Call(c, a.Path(), a, nil)
+	return err
+}
+
+func (a *Delete) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
