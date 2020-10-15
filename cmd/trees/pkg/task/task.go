@@ -96,9 +96,9 @@ func (a *Update) MustDo(c *app.Client) *Task {
 }
 
 type Delete struct {
-	Host    ID  `json:"host"`
-	Project ID  `json:"project"`
-	IDs     IDs `json:"ids"`
+	Host    ID `json:"host"`
+	Project ID `json:"project"`
+	ID      ID `json:"id"`
 }
 
 func (_ *Delete) Path() string {

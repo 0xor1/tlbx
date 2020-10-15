@@ -3,6 +3,7 @@ package taskeps
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/epsutil"
@@ -333,7 +334,7 @@ var (
 			},
 		},
 		{
-			Description:  "Delete tasks, admins may delete multiple tasks at once, writers may only delete one task at time and only if it is less than an hour old and has no children",
+			Description:  "Delete tasks",
 			Path:         (&task.Delete{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
@@ -345,7 +346,7 @@ var (
 				return &task.Delete{
 					Host:    app.ExampleID(),
 					Project: app.ExampleID(),
-					IDs:     IDs{app.ExampleID()},
+					ID:      app.ExampleID(),
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -353,21 +354,27 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Delete)
-				if len(args.IDs) == 0 {
-					return nil
-				}
+				app.BadReqIf(args.ID.Equal(args.Project), "use project delete endpoint to delete a project node")
 				me := me.Get(tlbx)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
-				app.ReturnIf(len(args.IDs) > 1 && role != cnsts.RoleAdmin, http.StatusForbidden, "you must be an admin to delete multiple tasks in one request")
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "you don't have permission to delete a task")
 				epsutil.MustLockProject(tlbx, tx, args.Host, args.Project)
 				// at this point we need to get the tasks
-				ts := get(tlbx, tx, args.Host, args.Project, args.IDs)
-				for _, t := range ts {
-					Println(t)
-				}
+				t := getOne(tlbx, tx, args.Host, args.Project, args.ID)
+				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
+				app.ReturnIf(role == cnsts.RoleWriter && (t.DescendantCount > 5 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "an admin must delete this task")
+				// need to check for mariadb 10.6 to see if CTEs work in update/delete queries so we can skip this intermediate step altogether
+				queryArgs := make([]interface{}, 0, 3+t.DescendantCount)
+				queryArgs = append(queryArgs, args.Host, args.Project)
+				PanicOn(tx.Query(func(rows isql.Rows) {
+					i := ID{}
+					PanicOn(rows.Scan(&i))
+					queryArgs = append(queryArgs, i)
+				}, `WITH RECURSIVE descendants (id) AS (SELECT id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id FROM tasks t, descendants d WHERE t.host=? AND t.project=? AND t.parent=d.id) CYCLE id restrict SELECT id FROM descendants`, args.Host, args.Project, args.ID, args.Host, args.Project))
+				_, err := tx.Exec(Strf(`DELETE FROM tasks WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(queryArgs)-2)), queryArgs...)
+				PanicOn(err)
 				tx.Commit()
 				return nil
 			},
