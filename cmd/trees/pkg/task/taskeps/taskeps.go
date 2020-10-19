@@ -442,11 +442,11 @@ var (
 							res.More = true
 							break
 						}
-						t, err := scan(rows)
+						t, err := Scan(rows)
 						PanicOn(err)
 						res.Set = append(res.Set, t)
 					}
-				}, Strf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n ASC`, sql_ancestors_cte, sql_task_columns_prefixed), args.Host, args.Project, args.ID, args.Host, args.Project, args.Host, args.Project))
+				}, Strf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n ASC`, sql_ancestors_cte, Sql_task_columns_prefixed), args.Host, args.Project, args.ID, args.Host, args.Project, args.Host, args.Project))
 				return res
 			},
 		},
@@ -502,11 +502,11 @@ var (
 							res.More = true
 							break
 						}
-						t, err := scan(rows)
+						t, err := Scan(rows)
 						PanicOn(err)
 						res.Set = append(res.Set, t)
 					}
-				}, Strf(`WITH RECURSIVE siblings (n, id) AS (SELECT 0, nextSibling FROM tasks WHERE host=? AND project=? AND %s UNION SELECT a.n + 1, t.nextSibling FROM tasks t, siblings s WHERE t.host=? AND t.project=? AND t.id = s.id) CYCLE id RESTRICT SELECT %s FROM tasks t JOIN siblings s ON t.id = s.id WHERE t.host=? AND t.project=? ORDER BY s.n ASC`, sql_filter, sql_task_columns_prefixed), queryArgs...))
+				}, Strf(`WITH RECURSIVE siblings (n, id) AS (SELECT 0, nextSibling FROM tasks WHERE host=? AND project=? AND %s UNION SELECT a.n + 1, t.nextSibling FROM tasks t, siblings s WHERE t.host=? AND t.project=? AND t.id = s.id) CYCLE id RESTRICT SELECT %s FROM tasks t JOIN siblings s ON t.id = s.id WHERE t.host=? AND t.project=? ORDER BY s.n ASC`, sql_filter, Sql_task_columns_prefixed), queryArgs...))
 				return res
 			},
 		},
@@ -557,15 +557,15 @@ func setAncestralChainAggregateValuesFromTask(tx service.Tx, host, project, task
 }
 
 func getOne(tx service.Tx, host, project, id ID) *task.Task {
-	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND id=?`, sql_task_columns_prefixed), host, project, id)
-	t, err := scan(row)
+	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND id=?`, Sql_task_columns_prefixed), host, project, id)
+	t, err := Scan(row)
 	sql.PanicIfIsntNoRows(err)
 	return t
 }
 
 func getPreviousSibling(tx service.Tx, host, project, nextSibling ID) *task.Task {
-	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.nextSibling=?`, sql_task_columns_prefixed), host, project, nextSibling)
-	t, err := scan(row)
+	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.nextSibling=?`, Sql_task_columns_prefixed), host, project, nextSibling)
+	t, err := Scan(row)
 	sql.PanicIfIsntNoRows(err)
 	return t
 }
@@ -574,7 +574,7 @@ type taskScanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func scan(ts taskScanner) (*task.Task, error) {
+func Scan(ts taskScanner) (*task.Task, error) {
 	t := &task.Task{}
 	err := ts.Scan(
 		&t.ID,
@@ -609,7 +609,7 @@ func scan(ts taskScanner) (*task.Task, error) {
 }
 
 var (
-	sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel`
-	sql_task_columns          = strings.ReplaceAll(sql_task_columns_prefixed, `t.`, ``)
+	Sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel`
+	sql_task_columns          = strings.ReplaceAll(Sql_task_columns_prefixed, `t.`, ``)
 	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id) AS (SELECT 0, parent FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.id) CYCLE id RESTRICT`
 )
