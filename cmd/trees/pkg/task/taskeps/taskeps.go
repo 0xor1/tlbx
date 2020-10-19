@@ -100,7 +100,7 @@ var (
 				// or parents firstChild value depending on the scenario.
 				var previousSibling *task.Task
 				if args.PreviousSibling != nil {
-					previousSibling = getOne(tlbx, tx, args.Host, args.Project, *args.PreviousSibling)
+					previousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling)
 					app.ReturnIf(previousSibling == nil, http.StatusNotFound, "previousSibling not found")
 					t.NextSibling = previousSibling.NextSibling
 					previousSibling.NextSibling = &t.ID
@@ -111,7 +111,7 @@ var (
 					// else newTask is being inserted as firstChild, so set any current firstChild
 					// as newTask's NextSibling
 					// get parent for updating child/descendant counts and firstChild if required
-					parent := getOne(tlbx, tx, args.Host, args.Project, args.Parent)
+					parent := getOne(tx, args.Host, args.Project, args.Parent)
 					app.ReturnIf(parent == nil, http.StatusNotFound, "parent not found")
 					t.NextSibling = parent.FirstChild
 					// increment parents child and descendant counters and firstChild pointer incase that was changed
@@ -123,7 +123,7 @@ var (
 				PanicOn(err)
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
 				// all that remains to do is update aggregate values
-				setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, args.Parent)
+				setAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Parent)
 				tx.Commit()
 				return t
 			},
@@ -190,14 +190,14 @@ var (
 					// we must lock
 					epsutil.MustLockProject(tlbx, tx, args.Host, args.Project)
 				}
-				t := getOne(tlbx, tx, args.Host, args.Project, args.ID)
+				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				var newParent, newPreviousSibling, currentParent, currentPreviousSibling *task.Task
 				if args.Parent != nil {
 					if !args.Parent.V.Equal(*t.Parent) {
 						var newNextSibling *ID
 						// validate new parent exists
-						newParent = getOne(tlbx, tx, args.Host, args.Project, args.Parent.V)
+						newParent = getOne(tx, args.Host, args.Project, args.Parent.V)
 						app.ReturnIf(newParent == nil, http.StatusNotFound, "parent not found")
 						// we must ensure we dont allow recursive loops
 						row := tx.QueryRow(Strf("%s SELECT COUNT(*)=1 FROM ancestors a WHERE id=?", sql_ancestors_cte), args.Host, args.Project, args.Parent.V, args.Host, args.Project, args.ID)
@@ -205,7 +205,7 @@ var (
 						PanicOn(row.Scan(&ancestorLoopDetected))
 						app.BadReqIf(ancestorLoopDetected, "ancestor loop detected, invalid parent value")
 						if args.PreviousSibling != nil && args.PreviousSibling.V != nil {
-							newPreviousSibling = getOne(tlbx, tx, args.Host, args.Project, *args.PreviousSibling.V)
+							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
 							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
 							app.BadReqIf(!newPreviousSibling.Parent.Equal(args.Parent.V), "previousSiblings parent does not match the specified parent arg")
 							newNextSibling = newPreviousSibling.NextSibling
@@ -215,9 +215,10 @@ var (
 							newParent.FirstChild = &t.ID
 						}
 						// need to reconnect currentPreviousSibling with current nextSibling
-						currentPreviousSibling = getPreviousSibling(tlbx, tx, args.Host, args.Project, args.ID)
+						currentPreviousSibling = getPreviousSibling(tx, args.Host, args.Project, args.ID)
 						// need to get current parent for ancestor value updates
-						currentParent = getOne(tlbx, tx, args.Host, args.Project, *t.Parent)
+						currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
+						app.ReturnIf(currentParent == nil, http.StatusNotFound, "currentParent not found")
 						if currentPreviousSibling != nil {
 							currentPreviousSibling.NextSibling = t.NextSibling
 						} else {
@@ -236,7 +237,7 @@ var (
 				if args.Parent == nil && args.PreviousSibling != nil {
 					// we now know we are doing a purely horizontal move, i.e. not changing parent node
 					// get current previousSibling
-					currentPreviousSibling = getPreviousSibling(tlbx, tx, args.Host, args.Project, args.ID)
+					currentPreviousSibling = getPreviousSibling(tx, args.Host, args.Project, args.ID)
 					if !((currentPreviousSibling == nil && args.PreviousSibling.V == nil) ||
 						(currentPreviousSibling != nil && args.PreviousSibling.V != nil &&
 							currentPreviousSibling.ID.Equal(*args.PreviousSibling.V))) {
@@ -244,14 +245,14 @@ var (
 						// here we know that an actual change is being attempted
 						if args.PreviousSibling.V != nil {
 							// moving to a non first child position
-							newPreviousSibling = getOne(tlbx, tx, args.Host, args.Project, *args.PreviousSibling.V)
+							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
 							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
 							app.BadReqIf(!newPreviousSibling.Parent.Equal(*t.Parent), "previousSiblings parent does not match the current tasks parent")
 							newNextSibling = newPreviousSibling.NextSibling
 							newPreviousSibling.NextSibling = &t.ID
 						} else {
 							// moving to the first child position
-							currentParent = getOne(tlbx, tx, args.Host, args.Project, *t.Parent)
+							currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
 							PanicIf(currentParent == nil, "currentParent not found")
 							newNextSibling = currentParent.FirstChild
 							currentParent.FirstChild = &t.ID
@@ -325,9 +326,9 @@ var (
 				if treeUpdateRequired {
 					if currentParent != nil {
 						// if we moved parent we must recalculate aggregate values on the old parents ancestral chain
-						setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, currentParent.ID)
+						setAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, currentParent.ID)
 					}
-					setAncestralChainAggregateValuesFromTask(tlbx, tx, args.Host, args.Project, t.ID)
+					setAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, t.ID)
 				}
 				tx.Commit()
 				return t
@@ -361,22 +362,152 @@ var (
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "you don't have permission to delete a task")
 				epsutil.MustLockProject(tlbx, tx, args.Host, args.Project)
-				// at this point we need to get the tasks
-				t := getOne(tlbx, tx, args.Host, args.Project, args.ID)
+				// at this point we need to get the task
+				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				app.ReturnIf(role == cnsts.RoleWriter && (t.DescendantCount > 5 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "an admin must delete this task")
-				// need to check for mariadb 10.6 to see if CTEs work in update/delete queries so we can skip this intermediate step altogether
-				queryArgs := make([]interface{}, 0, 3+t.DescendantCount)
-				queryArgs = append(queryArgs, args.Host, args.Project)
-				PanicOn(tx.Query(func(rows isql.Rows) {
-					i := ID{}
-					PanicOn(rows.Scan(&i))
-					queryArgs = append(queryArgs, i)
-				}, `WITH RECURSIVE descendants (id) AS (SELECT id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id FROM tasks t, descendants d WHERE t.host=? AND t.project=? AND t.parent=d.id) CYCLE id restrict SELECT id FROM descendants`, args.Host, args.Project, args.ID, args.Host, args.Project))
-				_, err := tx.Exec(Strf(`DELETE FROM tasks WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(queryArgs)-2)), queryArgs...)
+				_, err := tx.Exec(`DELETE FROM tasks WHERE host=? AND project=? AND id IN (WITH RECURSIVE descendants (id) AS (SELECT id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id FROM tasks t, descendatns d WHERE t.host=? AND t.project=? AND t.parent=d.id) SELECT id FROM descendants)`, args.Host, args.Project, args.Host, args.Project, args.ID, args.Host, args.Project)
 				PanicOn(err)
 				tx.Commit()
 				return nil
+			},
+		},
+		{
+			Description:  "get a task",
+			Path:         (&task.Get{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &task.Get{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &task.Get{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					ID:      app.ExampleID(),
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return exampleTask
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*task.Get)
+				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				t := getOne(tx, args.Host, args.Project, args.ID)
+				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
+				tx.Commit()
+				return nil
+			},
+		},
+		{
+			Description:  "get task ancestors",
+			Path:         (&task.GetAncestors{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &task.GetAncestors{
+					Limit: 10,
+				}
+			},
+			GetExampleArgs: func() interface{} {
+				return &task.GetAncestors{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					ID:      app.ExampleID(),
+					Limit:   20,
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return &task.GetSetRes{
+					Set:  []*task.Task{exampleTask},
+					More: true,
+				}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*task.GetAncestors)
+				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				args.Limit = sql.Limit100(args.Limit)
+				res := &task.GetSetRes{
+					Set:  make([]*task.Task, 0, args.Limit),
+					More: false,
+				}
+				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+					iLimit := int(args.Limit)
+					for rows.Next() {
+						if len(res.Set)+1 == iLimit {
+							res.More = true
+							break
+						}
+						t, err := scan(rows)
+						PanicOn(err)
+						res.Set = append(res.Set, t)
+					}
+				}, Strf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n ASC`, sql_ancestors_cte, sql_task_columns_prefixed), args.Host, args.Project, args.ID, args.Host, args.Project, args.Host, args.Project))
+				return res
+			},
+		},
+		{
+			Description:  "get task children",
+			Path:         (&task.GetChildren{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &task.GetChildren{
+					Limit: 10,
+				}
+			},
+			GetExampleArgs: func() interface{} {
+				return &task.GetChildren{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					ID:      app.ExampleID(),
+					After:   ptr.ID(app.ExampleID()),
+					Limit:   20,
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return &task.GetSetRes{
+					Set:  []*task.Task{exampleTask},
+					More: true,
+				}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*task.GetChildren)
+				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				args.Limit = sql.Limit100(args.Limit)
+				res := &task.GetSetRes{
+					Set:  make([]*task.Task, 0, args.Limit),
+					More: false,
+				}
+				var sql_filter string
+				queryArgs := make([]interface{}, 0, 10)
+				queryArgs = append(queryArgs, args.Host, args.Project)
+				if args.After == nil {
+					sql_filter = `id=(SELECT firstChild FROM tasks WHERE host=? AND project=? AND id=?)`
+					queryArgs = append(queryArgs, args.Host, args.Project, args.ID)
+				} else {
+					sql_filter = `parent=? AND id=?`
+					queryArgs = append(queryArgs, args.ID, *args.After)
+				}
+				queryArgs = append(queryArgs, args.Host, args.Project, args.Host, args.Project)
+				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+					iLimit := int(args.Limit)
+					for rows.Next() {
+						if len(res.Set)+1 == iLimit {
+							res.More = true
+							break
+						}
+						t, err := scan(rows)
+						PanicOn(err)
+						res.Set = append(res.Set, t)
+					}
+				}, Strf(`WITH RECURSIVE siblings (n, id) AS (SELECT 0, nextSibling FROM tasks WHERE host=? AND project=? AND %s UNION SELECT a.n + 1, t.nextSibling FROM tasks t, siblings s WHERE t.host=? AND t.project=? AND t.id = s.id) CYCLE id RESTRICT SELECT %s FROM tasks t JOIN siblings s ON t.id = s.id WHERE t.host=? AND t.project=? ORDER BY s.n ASC`, sql_filter, sql_task_columns_prefixed), queryArgs...))
+				return res
 			},
 		},
 	}
@@ -414,7 +545,7 @@ var (
 	}
 )
 
-func setAncestralChainAggregateValuesFromTask(tlbx app.Tlbx, tx service.Tx, host, project, task ID) {
+func setAncestralChainAggregateValuesFromTask(tx service.Tx, host, project, task ID) {
 	ancestorChain := make(IDs, 0, 20)
 	PanicOn(tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
@@ -425,45 +556,14 @@ func setAncestralChainAggregateValuesFromTask(tlbx app.Tlbx, tx service.Tx, host
 	}, `CALL setAncestralChainAggregateValuesFromTask(?, ?, ?)`, host, project, task))
 }
 
-func getAncestors(tlbx app.Tlbx, tx service.Tx, host, project, ofTask ID, after *ID, limit int) []*task.Task {
-	ancestors := make([]*task.Task, 0, 20)
-	PanicOn(tx.Query(func(rows isql.Rows) {
-		for rows.Next() {
-			t, err := scan(rows)
-			PanicOn(err)
-			ancestors = append(ancestors, t)
-		}
-	}, Strf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? AND a.n <> 0 ORDER BY a.n ASC`, sql_ancestors_cte, sql_task_columns_prefixed), host, project, ofTask, host, project, host, project))
-	return ancestors
+func getOne(tx service.Tx, host, project, id ID) *task.Task {
+	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND id=?`, sql_task_columns_prefixed), host, project, id)
+	t, err := scan(row)
+	sql.PanicIfIsntNoRows(err)
+	return t
 }
 
-func getOne(tlbx app.Tlbx, tx service.Tx, host, project, id ID) *task.Task {
-	ts := get(tlbx, tx, host, project, IDs{id})
-	if len(ts) == 0 {
-		return nil
-	}
-	return ts[0]
-}
-
-func get(tlbx app.Tlbx, tx service.Tx, host, project ID, ids IDs) []*task.Task {
-	if len(ids) == 0 {
-		return nil
-	}
-	ts := make([]*task.Task, 0, len(ids))
-	queryArgs := make([]interface{}, 0, len(ids)+2)
-	queryArgs = append(queryArgs, host, project)
-	queryArgs = append(queryArgs, ids.ToIs()...)
-	PanicOn(tx.Query(func(rows isql.Rows) {
-		for rows.Next() {
-			t, err := scan(rows)
-			PanicOn(err)
-			ts = append(ts, t)
-		}
-	}, Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? %s`, sql_task_columns_prefixed, sql.InCondition(true, `t.id`, len(ids))), queryArgs...))
-	return ts
-}
-
-func getPreviousSibling(tlbx app.Tlbx, tx service.Tx, host, project, nextSibling ID) *task.Task {
+func getPreviousSibling(tx service.Tx, host, project, nextSibling ID) *task.Task {
 	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.nextSibling=?`, sql_task_columns_prefixed), host, project, nextSibling)
 	t, err := scan(row)
 	sql.PanicIfIsntNoRows(err)
@@ -511,5 +611,5 @@ func scan(ts taskScanner) (*task.Task, error) {
 var (
 	sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel`
 	sql_task_columns          = strings.ReplaceAll(sql_task_columns_prefixed, `t.`, ``)
-	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id, parent) AS (SELECT 0, id, parent FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1, t.id, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.parent) CYCLE id RESTRICT`
+	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id) AS (SELECT 0, parent FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.id) CYCLE id RESTRICT`
 )

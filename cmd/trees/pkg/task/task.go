@@ -95,11 +95,26 @@ func (a *Update) MustDo(c *app.Client) *Task {
 	return res
 }
 
-type Delete struct {
+type Get struct {
 	Host    ID `json:"host"`
 	Project ID `json:"project"`
 	ID      ID `json:"id"`
 }
+
+func (_ *Get) Path() string {
+	return "/task/get"
+}
+
+func (a *Get) Do(c *app.Client) error {
+	err := app.Call(c, a.Path(), a, nil)
+	return err
+}
+
+func (a *Get) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
+
+type Delete Get
 
 func (_ *Delete) Path() string {
 	return "/task/delete"
@@ -112,4 +127,56 @@ func (a *Delete) Do(c *app.Client) error {
 
 func (a *Delete) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
+}
+
+type GetSetRes struct {
+	Set  []*Task `json:"set"`
+	More bool    `json:"more"`
+}
+
+type GetAncestors struct {
+	Host    ID     `json:"host"`
+	Project ID     `json:"project"`
+	ID      ID     `json:"id"`
+	Limit   uint16 `json:"limit,omitempty"`
+}
+
+func (_ *GetAncestors) Path() string {
+	return "/task/getAncestors"
+}
+
+func (a *GetAncestors) Do(c *app.Client) (*GetSetRes, error) {
+	res := &GetSetRes{}
+	err := app.Call(c, a.Path(), a, res)
+	return res, err
+}
+
+func (a *GetAncestors) MustDo(c *app.Client) *GetSetRes {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type GetChildren struct {
+	Host    ID     `json:"host"`
+	Project ID     `json:"project"`
+	ID      ID     `json:"id"`
+	After   *ID    `json:"after,omitempty"`
+	Limit   uint16 `json:"limit"`
+}
+
+func (_ *GetChildren) Path() string {
+	return "/task/getChildren"
+}
+
+func (a *GetChildren) Do(c *app.Client) (*GetSetRes, error) {
+	res := &GetSetRes{}
+	err := app.Call(c, a.Path(), a, res)
+	return res, err
+}
+
+func (a *GetChildren) MustDo(c *app.Client) *GetSetRes {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
 }
