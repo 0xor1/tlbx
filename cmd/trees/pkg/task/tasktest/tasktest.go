@@ -1,7 +1,6 @@
 package tasktest
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
@@ -10,6 +9,7 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/stretchr/testify/assert"
@@ -90,20 +90,46 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.NotNil(t3p0)
 
-	// t1p1 = (&task.Update{
-	// 	Host:             r.Ali().ID(),
-	// 	Project:          p.ID,
-	// 	ID:               t1p1.ID,
-	// 	Parent:           &field.ID{V: t2p0.ID},
-	// 	PreviousSibling:  nil,
-	// 	Name:             &field.String{V: "1.1 - updated"},
-	// 	Description:      &field.StringPtr{V: ptr.String("an actual description")},
-	// 	IsParallel:       &field.Bool{V: false},
-	// 	User:             &field.IDPtr{V: nil},
-	// 	EstimatedTime:    &field.UInt64{V: 50},
-	// 	EstimatedExpense: &field.UInt64{V: 50},
-	// }).MustDo(ac)
-	// a.NotNil(t1p1)
+	t4p0 := (&task.Create{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		Parent:          t1p1.ID,
+		PreviousSibling: nil,
+		Name:            "4.0",
+		Description:     nil,
+		IsParallel:      true,
+		User:            ptr.ID(r.Ali().ID()),
+		EstimatedTime:   100,
+	}).MustDo(ac)
+	a.NotNil(t4p0)
+
+	t1p2 := (&task.Create{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		Parent:          p.ID,
+		PreviousSibling: ptr.ID(t1p0.ID),
+		Name:            "1.2",
+		Description:     nil,
+		IsParallel:      true,
+		User:            ptr.ID(r.Ali().ID()),
+		EstimatedTime:   100,
+	}).MustDo(ac)
+	a.NotNil(t1p2)
+
+	t1p1 = (&task.Update{
+		Host:             r.Ali().ID(),
+		Project:          p.ID,
+		ID:               t1p1.ID,
+		Parent:           &field.ID{V: t2p0.ID},
+		PreviousSibling:  nil,
+		Name:             &field.String{V: "1.1 - updated"},
+		Description:      &field.StringPtr{V: ptr.String("an actual description")},
+		IsParallel:       &field.Bool{V: false},
+		User:             &field.IDPtr{V: nil},
+		EstimatedTime:    &field.UInt64{V: 50},
+		EstimatedExpense: &field.UInt64{V: 50},
+	}).MustDo(ac)
+	a.NotNil(t1p1)
 
 	printFullTree(r, r.Ali().ID(), p.ID)
 }
@@ -123,31 +149,40 @@ func printFullTree(r test.Rig, host, project ID) {
 		ts[t.ID.String()] = t
 	}
 
-	var print func(t *task.Task, hs []int)
-	print = func(t *task.Task, hs []int) {
-		currentH := 0
-		if len(hs) > 0 {
-			currentH = hs[len(hs)-1]
+	var print func(t *task.Task, as []*task.Task)
+	print = func(t *task.Task, as []*task.Task) {
+		p := 0
+		if t.IsParallel {
+			p = 1
+		}
+		v := Strf(`[n: %s, p: %d, m: %d, e: %d, es: %d]`, t.Name, p, t.MinimumTime, t.EstimatedTime, t.EstimatedSubTime)
+		if len(as) > 0 {
 			pre := ``
-			for i, h := range hs {
-				useH := h
-				if i > 0 {
-					useH = h - hs[i-1]
+			for _, a := range as[1:] {
+				if a.NextSibling != nil {
+					pre += `|    `
+				} else {
+					pre += `     `
 				}
-				useH++
-				pre += Strf(`%s|`, strings.Repeat(` `, (useH-1)*4))
 			}
-			Println(Strf(`%s`, pre))
-			Println(Strf(`%s____%s`, pre, t.Name))
+			Println(Strf(`%s|`, pre))
+			Println(Strf(`%s|`, pre))
+			Println(Strf(`%s|____%s`, pre, v))
 		} else {
-			Println(t.Name)
+			Println(v)
 		}
 		if t.FirstChild != nil {
-			print(ts[t.FirstChild.String()], append(hs, currentH+1))
+			print(ts[t.FirstChild.String()], append(as, t))
 		}
 		if t.NextSibling != nil {
-			print(ts[t.NextSibling.String()], hs)
+			print(ts[t.NextSibling.String()], as)
 		}
 	}
-	print(ts[project.String()], []int{0})
+	println("n: name")
+	println("p: isParallel")
+	println("m: minimumTime")
+	println("e: estimatedTime")
+	println("es: estimatedSubTime")
+	println()
+	print(ts[project.String()], nil)
 }

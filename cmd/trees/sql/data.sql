@@ -232,7 +232,7 @@ BEGIN
         WHEN 0 THEN COALESCE(Sum(c.minimumTime), 0)
         WHEN 1 THEN COALESCE(MAX(c.minimumTime), 0)
       END,
-      COALESCE(MAX(c.minimumTime), 0),
+      COALESCE(SUM(c.estimatedTime + c.estimatedSubTime), 0),
       COALESCE(SUM(c.loggedTime + c.loggedSubTime), 0),
       COALESCE(SUM(c.estimatedExpense + c.estimatedSubExpense), 0),
       COALESCE(SUM(c.loggedExpense + c.loggedSubExpense), 0),
