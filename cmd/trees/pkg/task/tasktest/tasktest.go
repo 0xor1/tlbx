@@ -3,6 +3,7 @@ package tasktest
 import (
 	"testing"
 
+	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
@@ -38,15 +39,26 @@ func Everything(t *testing.T) {
 		(&project.Delete{p.ID}).MustDo(ac)
 	}()
 
+	(&project.AddUsers{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Users: []*project.SendUser{
+			{
+				ID:   r.Bob().ID(),
+				Role: cnsts.RoleWriter,
+			},
+		},
+	}).MustDo(ac)
+
 	t1p0 := (&task.Create{
 		Host:            r.Ali().ID(),
 		Project:         p.ID,
 		Parent:          p.ID,
 		PreviousSibling: nil,
 		Name:            "1.0",
-		Description:     nil,
+		Description:     ptr.String(""),
 		IsParallel:      true,
-		User:            ptr.ID(r.Ali().ID()),
+		User:            ptr.ID(r.Bob().ID()),
 		EstimatedTime:   100,
 	}).MustDo(ac)
 	a.NotNil(t1p0)
@@ -57,7 +69,7 @@ func Everything(t *testing.T) {
 		Parent:          p.ID,
 		PreviousSibling: ptr.ID(t1p0.ID),
 		Name:            "1.1",
-		Description:     nil,
+		Description:     ptr.String("1.1"),
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
 		EstimatedTime:   100,
@@ -130,6 +142,23 @@ func Everything(t *testing.T) {
 		EstimatedExpense: &field.UInt64{V: 50},
 	}).MustDo(ac)
 	a.NotNil(t1p1)
+
+	tp := (&task.Update{
+		Host:             r.Ali().ID(),
+		Project:          p.ID,
+		ID:               p.ID,
+		IsParallel:       &field.Bool{V: false},
+		EstimatedTime:    &field.UInt64{V: 50},
+		EstimatedExpense: &field.UInt64{V: 50},
+	}).MustDo(ac)
+	a.NotNil(tp)
+
+	tNil := (&task.Update{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      p.ID,
+	}).MustDo(ac)
+	a.Nil(tNil)
 
 	printFullTree(r, r.Ali().ID(), p.ID)
 }
