@@ -17,6 +17,8 @@ import (
 )
 
 func Everything(t *testing.T) {
+	defer printFullTree()
+
 	a := assert.New(t)
 	r := test.NewRig(
 		config.Get(),
@@ -160,24 +162,117 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.Nil(tNil)
 
-	printFullTree(r, r.Ali().ID(), p.ID)
+	// try to move 2.0 to be a child of itself
+	tNil, err := (&task.Update{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t2p0.ID,
+		Parent:  &field.ID{V: t2p0.ID},
+	}).Do(ac)
+	a.Nil(tNil)
+	a.Error(err, "ancestor loop detected, invalid parent value")
+
+	// try to move 2.0 to be a descendant of itself
+	tNil, err = (&task.Update{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t2p0.ID,
+		Parent:  &field.ID{V: t4p0.ID},
+	}).Do(ac)
+	a.Nil(tNil)
+	a.Error(err, "ancestor loop detected, invalid parent value")
+
+	t4p0 = (&task.Update{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		ID:              t4p0.ID,
+		Parent:          &field.ID{V: t2p0.ID},
+		PreviousSibling: &field.IDPtr{V: ptr.ID(t1p1.ID)},
+	}).MustDo(ac)
+	a.NotNil(t4p0)
+
+	t4p0 = (&task.Update{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		ID:              t4p0.ID,
+		Parent:          &field.ID{V: p.ID},
+		PreviousSibling: &field.IDPtr{V: ptr.ID(t1p2.ID)},
+	}).MustDo(ac)
+	a.NotNil(t4p0)
+
+	// illegal horizontal move
+	tNil, err = (&task.Update{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		ID:              t4p0.ID,
+		Parent:          &field.ID{V: p.ID},
+		PreviousSibling: &field.IDPtr{V: ptr.ID(t4p0.ID)},
+	}).Do(ac)
+	a.Nil(tNil)
+	a.Error(err, "sibling loop detected, invalid previousSibling value")
+
+	// horizontal move
+	t4p0 = (&task.Update{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		ID:              t4p0.ID,
+		Parent:          &field.ID{V: p.ID},
+		PreviousSibling: &field.IDPtr{V: ptr.ID(t1p0.ID)},
+	}).MustDo(ac)
+	a.NotNil(t4p0)
+
+	// horizontal move to first position
+	t4p0 = (&task.Update{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		ID:              t4p0.ID,
+		Parent:          &field.ID{V: p.ID},
+		PreviousSibling: &field.IDPtr{V: nil},
+	}).MustDo(ac)
+	a.NotNil(t4p0)
+
+	t1p0 = (&task.Update{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		ID:              t1p0.ID,
+		PreviousSibling: &field.IDPtr{V: &t1p2.ID},
+	}).MustDo(ac)
+	a.NotNil(t1p0)
+
+	// repeat call should not change anything
+	t1p0 = (&task.Update{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		ID:              t1p0.ID,
+		PreviousSibling: &field.IDPtr{V: &t1p2.ID},
+	}).MustDo(ac)
+	a.NotNil(t1p0)
+
+	grabFullTree(r, r.Ali().ID(), p.ID)
 }
+
+var (
+	fullTree = map[string]*task.Task{}
+	pID      ID
+)
 
 // only suitable for small test trees for visual validation
 // whilst writing/debugging unit tests
-func printFullTree(r test.Rig, host, project ID) {
+func grabFullTree(r test.Rig, host, project ID) {
+	pID = project
 	rows, err := r.Data().Primary().Query(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.Project=?`, taskeps.Sql_task_columns_prefixed), host, project)
 	if rows != nil {
 		defer rows.Close()
 	}
 	PanicOn(err)
-	ts := map[string]*task.Task{}
 	for rows.Next() {
 		t, err := taskeps.Scan(rows)
 		PanicOn(err)
-		ts[t.ID.String()] = t
+		fullTree[t.ID.String()] = t
 	}
+}
 
+func printFullTree() {
 	var print func(t *task.Task, as []*task.Task)
 	print = func(t *task.Task, as []*task.Task) {
 		p := 0
@@ -201,10 +296,10 @@ func printFullTree(r test.Rig, host, project ID) {
 			Println(v)
 		}
 		if t.FirstChild != nil {
-			print(ts[t.FirstChild.String()], append(as, t))
+			print(fullTree[t.FirstChild.String()], append(as, t))
 		}
 		if t.NextSibling != nil {
-			print(ts[t.NextSibling.String()], as)
+			print(fullTree[t.NextSibling.String()], as)
 		}
 	}
 	println("n: name")
@@ -213,5 +308,5 @@ func printFullTree(r test.Rig, host, project ID) {
 	println("e: estimatedTime")
 	println("es: estimatedSubTime")
 	println()
-	print(ts[project.String()], nil)
+	print(fullTree[pID.String()], nil)
 }

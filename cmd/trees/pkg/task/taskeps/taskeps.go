@@ -203,8 +203,9 @@ var (
 						row := tx.QueryRow(Strf("%s SELECT COUNT(*)=1 FROM ancestors a WHERE id=?", sql_ancestors_cte), args.Host, args.Project, args.Parent.V, args.Host, args.Project, args.ID)
 						ancestorLoopDetected := false
 						PanicOn(row.Scan(&ancestorLoopDetected))
-						app.BadReqIf(ancestorLoopDetected, "ancestor loop detected, invalid parent value")
+						app.BadReqIf(ancestorLoopDetected || t.ID.Equal(args.Parent.V), "ancestor loop detected, invalid parent value")
 						if args.PreviousSibling != nil && args.PreviousSibling.V != nil {
+							app.BadReqIf(args.PreviousSibling.V.Equal(args.ID), "sibling loop detected, invalid previousSibling value")
 							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
 							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
 							app.BadReqIf(!newPreviousSibling.Parent.Equal(args.Parent.V), "previousSiblings parent does not match the specified parent arg")
@@ -217,7 +218,12 @@ var (
 						// need to reconnect currentPreviousSibling with current nextSibling
 						currentPreviousSibling = getPreviousSibling(tx, args.Host, args.Project, args.ID)
 						// need to get current parent for ancestor value updates
-						currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
+						// !!!SPECIAL CASE!! currentParent may be the newPreviousSibling
+						if newPreviousSibling != nil && newPreviousSibling.ID.Equal(*t.Parent) {
+							currentParent = newPreviousSibling
+						} else {
+							currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
+						}
 						app.ReturnIf(currentParent == nil, http.StatusNotFound, "currentParent not found")
 						if currentPreviousSibling != nil {
 							currentPreviousSibling.NextSibling = t.NextSibling
@@ -245,6 +251,7 @@ var (
 						// here we know that an actual change is being attempted
 						if args.PreviousSibling.V != nil {
 							// moving to a non first child position
+							app.BadReqIf(args.PreviousSibling.V.Equal(args.ID), "sibling loop detected, invalid previousSibling value")
 							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
 							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
 							app.BadReqIf(!newPreviousSibling.Parent.Equal(*t.Parent), "previousSiblings parent does not match the current tasks parent")
@@ -312,10 +319,17 @@ var (
 					treeUpdateRequired = true
 				}
 				update := func(ts ...*task.Task) {
+					updated := map[string]bool{}
 					for _, t := range ts {
 						if t != nil {
-							_, err := tx.Exec(`UPDATE tasks SET parent=?, firstChild=?, nextSibling=?, name=?, description=?, isParallel=?, user=?, estimatedTime=?, estimatedExpense=? WHERE host=? AND project=? AND id=?`, t.Parent, t.FirstChild, t.NextSibling, t.Name, t.Description, t.IsParallel, t.User, t.EstimatedTime, t.EstimatedExpense, args.Host, args.Project, t.ID)
-							PanicOn(err)
+							idStr := t.ID.String()
+							// this check is for the one special case that newPreviousSibling may also be the currentParent
+							// thus saving a duplicated update query
+							if !updated[idStr] {
+								updated[idStr] = true
+								_, err := tx.Exec(`UPDATE tasks SET parent=?, firstChild=?, nextSibling=?, name=?, description=?, isParallel=?, user=?, estimatedTime=?, estimatedExpense=? WHERE host=? AND project=? AND id=?`, t.Parent, t.FirstChild, t.NextSibling, t.Name, t.Description, t.IsParallel, t.User, t.EstimatedTime, t.EstimatedExpense, args.Host, args.Project, t.ID)
+								PanicOn(err)
+							}
 						}
 					}
 				}

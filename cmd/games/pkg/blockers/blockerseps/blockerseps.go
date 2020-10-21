@@ -127,9 +127,9 @@ var (
 
 						// flip the piece if directed to, can think of this as reversing each row
 						//
-						//	■■□   □■■
-						//  □■■ → ■■□
-						//	□□■   ■□□
+						// ■■□   □■■
+						// □■■ → ■■□
+						// □□■   ■□□
 						//
 						if args.Flip.Bool() {
 							flippedShape := make(Bits, len(piece.Shape))
