@@ -105,13 +105,16 @@ func (_ *Get) Path() string {
 	return "/task/get"
 }
 
-func (a *Get) Do(c *app.Client) error {
-	err := app.Call(c, a.Path(), a, nil)
-	return err
+func (a *Get) Do(c *app.Client) (*Task, error) {
+	res := &Task{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
 }
 
-func (a *Get) MustDo(c *app.Client) {
-	PanicOn(a.Do(c))
+func (a *Get) MustDo(c *app.Client) *Task {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
 }
 
 type Delete Get
@@ -162,7 +165,7 @@ type GetChildren struct {
 	Project ID     `json:"project"`
 	ID      ID     `json:"id"`
 	After   *ID    `json:"after,omitempty"`
-	Limit   uint16 `json:"limit"`
+	Limit   uint16 `json:"limit,omitempty"`
 }
 
 func (_ *GetChildren) Path() string {

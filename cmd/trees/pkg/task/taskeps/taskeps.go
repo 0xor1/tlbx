@@ -380,7 +380,17 @@ var (
 				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				app.ReturnIf(role == cnsts.RoleWriter && (t.DescendantCount > 5 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "an admin must delete this task")
-				_, err := tx.Exec(`DELETE FROM tasks WHERE host=? AND project=? AND id IN (WITH RECURSIVE descendants (id) AS (SELECT id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id FROM tasks t, descendatns d WHERE t.host=? AND t.project=? AND t.parent=d.id) SELECT id FROM descendants)`, args.Host, args.Project, args.Host, args.Project, args.ID, args.Host, args.Project)
+				previousNode := getPreviousSibling(tx, args.Host, args.Project, args.ID)
+				if previousNode == nil {
+					previousNode = getOne(tx, args.Host, args.Project, *t.Parent)
+					PanicIf(!previousNode.FirstChild.Equal(t.ID), "invalid data detected, deleting task %s", t.ID)
+					previousNode.FirstChild = t.NextSibling
+				} else {
+					previousNode.NextSibling = t.NextSibling
+				}
+				_, err := tx.Exec(`DELETE FROM tasks WHERE host=? AND project=? AND id IN (WITH RECURSIVE descendants (id) AS (SELECT id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id FROM tasks t, descendants d WHERE t.host=? AND t.project=? AND t.parent=d.id) SELECT id FROM descendants)`, args.Host, args.Project, args.Host, args.Project, args.ID, args.Host, args.Project)
+				PanicOn(err)
+				_, err = tx.Exec(`UPDATE tasks SET firstChild=?, nextSibling=? WHERE host=? AND project=? AND id=?`, previousNode.FirstChild, previousNode.NextSibling, args.Host, args.Project, previousNode.ID)
 				PanicOn(err)
 				tx.Commit()
 				return nil
@@ -413,7 +423,7 @@ var (
 				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				tx.Commit()
-				return nil
+				return t
 			},
 		},
 		{
@@ -460,7 +470,7 @@ var (
 						PanicOn(err)
 						res.Set = append(res.Set, t)
 					}
-				}, Strf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n ASC`, sql_ancestors_cte, Sql_task_columns_prefixed), args.Host, args.Project, args.ID, args.Host, args.Project, args.Host, args.Project))
+				}, Strf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n ASC LIMIT ?`, sql_ancestors_cte, Sql_task_columns_prefixed), args.Host, args.Project, args.ID, args.Host, args.Project, args.Host, args.Project, args.Limit))
 				return res
 			},
 		},
@@ -502,13 +512,13 @@ var (
 				queryArgs := make([]interface{}, 0, 10)
 				queryArgs = append(queryArgs, args.Host, args.Project)
 				if args.After == nil {
-					sql_filter = `id=(SELECT firstChild FROM tasks WHERE host=? AND project=? AND id=?)`
-					queryArgs = append(queryArgs, args.Host, args.Project, args.ID)
+					sql_filter = `firstChild`
+					queryArgs = append(queryArgs, args.ID)
 				} else {
-					sql_filter = `parent=? AND id=?`
-					queryArgs = append(queryArgs, args.ID, *args.After)
+					sql_filter = `nextSibling`
+					queryArgs = append(queryArgs, *args.After)
 				}
-				queryArgs = append(queryArgs, args.Host, args.Project, args.Host, args.Project)
+				queryArgs = append(queryArgs, args.Host, args.Project, args.Host, args.Project, args.Limit)
 				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
@@ -520,7 +530,7 @@ var (
 						PanicOn(err)
 						res.Set = append(res.Set, t)
 					}
-				}, Strf(`WITH RECURSIVE siblings (n, id) AS (SELECT 0, nextSibling FROM tasks WHERE host=? AND project=? AND %s UNION SELECT a.n + 1, t.nextSibling FROM tasks t, siblings s WHERE t.host=? AND t.project=? AND t.id = s.id) CYCLE id RESTRICT SELECT %s FROM tasks t JOIN siblings s ON t.id = s.id WHERE t.host=? AND t.project=? ORDER BY s.n ASC`, sql_filter, Sql_task_columns_prefixed), queryArgs...))
+				}, Strf(`WITH RECURSIVE siblings (n, id) AS (SELECT 0 AS n, %s AS id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT s.n + 1 AS n, t.nextSibling AS id FROM tasks t, siblings s WHERE t.host=? AND t.project=? AND t.id = s.id) CYCLE id RESTRICT SELECT %s FROM tasks t JOIN siblings s ON t.id = s.id WHERE t.host=? AND t.project=? ORDER BY s.n ASC LIMIT ?`, sql_filter, Sql_task_columns_prefixed), queryArgs...))
 				return res
 			},
 		},

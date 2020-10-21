@@ -228,6 +228,7 @@ func Everything(t *testing.T) {
 		ID:              t4p0.ID,
 		Parent:          &field.ID{V: p.ID},
 		PreviousSibling: &field.IDPtr{V: nil},
+		User:            &field.IDPtr{V: ptr.ID(r.Bob().ID())},
 	}).MustDo(ac)
 	a.NotNil(t4p0)
 
@@ -236,6 +237,7 @@ func Everything(t *testing.T) {
 		Project:         p.ID,
 		ID:              t1p0.ID,
 		PreviousSibling: &field.IDPtr{V: &t1p2.ID},
+		Description:     &field.StringPtr{V: ptr.String("")},
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 
@@ -247,6 +249,74 @@ func Everything(t *testing.T) {
 		PreviousSibling: &field.IDPtr{V: &t1p2.ID},
 	}).MustDo(ac)
 	a.NotNil(t1p0)
+
+	(&task.Delete{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t3p0.ID,
+	}).MustDo(ac)
+
+	t1p0Get := (&task.Get{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t1p0.ID,
+	}).MustDo(ac)
+	a.Equal(*t1p0, *t1p0Get)
+
+	t1p1Ancestors := (&task.GetAncestors{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t1p1.ID,
+	}).MustDo(ac)
+	a.Equal(t2p0.ID, t1p1Ancestors.Set[0].ID)
+	a.Equal(t1p0.ID, t1p1Ancestors.Set[1].ID)
+	a.Equal(p.ID, t1p1Ancestors.Set[2].ID)
+	a.False(t1p1Ancestors.More)
+
+	t1p1Ancestors = (&task.GetAncestors{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t1p1.ID,
+		Limit:   1,
+	}).MustDo(ac)
+	a.Equal(t2p0.ID, t1p1Ancestors.Set[0].ID)
+	a.True(t1p1Ancestors.More)
+
+	pChildren := (&task.GetChildren{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      p.ID,
+	}).MustDo(ac)
+	a.Equal(t4p0.ID, pChildren.Set[0].ID)
+	a.Equal(t1p2.ID, pChildren.Set[1].ID)
+	a.Equal(t1p0.ID, pChildren.Set[2].ID)
+	a.False(pChildren.More)
+
+	pChildren = (&task.GetChildren{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      p.ID,
+		After:   ptr.ID(t4p0.ID),
+	}).MustDo(ac)
+	a.Equal(t1p2.ID, pChildren.Set[0].ID)
+	a.Equal(t1p0.ID, pChildren.Set[1].ID)
+	a.False(pChildren.More)
+
+	pChildren = (&task.GetChildren{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      p.ID,
+		After:   ptr.ID(t4p0.ID),
+		Limit:   1,
+	}).MustDo(ac)
+	a.Equal(t1p2.ID, pChildren.Set[0].ID)
+	a.True(pChildren.More)
+
+	(&task.Delete{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t4p0.ID,
+	}).MustDo(ac)
 
 	grabFullTree(r, r.Ali().ID(), p.ID)
 }
