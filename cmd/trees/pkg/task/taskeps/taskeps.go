@@ -121,9 +121,10 @@ var (
 				// insert new task
 				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.MinimumTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.FileSubCount, t.FileSubSize, t.ChildCount, t.DescendantCount, t.IsParallel)
 				PanicOn(err)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, t.ID, cnsts.TypeTask, cnsts.ActionCreated, &t.Name, nil)
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
 				// all that remains to do is update aggregate values
-				setAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Parent)
+				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Parent)
 				tx.Commit()
 				return t
 			},
@@ -340,9 +341,9 @@ var (
 				if treeUpdateRequired {
 					if currentParent != nil {
 						// if we moved parent we must recalculate aggregate values on the old parents ancestral chain
-						setAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, currentParent.ID)
+						epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, currentParent.ID)
 					}
-					setAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, t.ID)
+					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, t.ID)
 				}
 				tx.Commit()
 				return t
@@ -379,7 +380,7 @@ var (
 				// at this point we need to get the task
 				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
-				app.ReturnIf(role == cnsts.RoleWriter && (t.DescendantCount > 5 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "an admin must delete this task")
+				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.DescendantCount > 0 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own tasks within an hour of creating them and they must have no children")
 				previousNode := getPreviousSibling(tx, args.Host, args.Project, args.ID)
 				if previousNode == nil {
 					previousNode = getOne(tx, args.Host, args.Project, *t.Parent)
@@ -388,10 +389,58 @@ var (
 				} else {
 					previousNode.NextSibling = t.NextSibling
 				}
-				_, err := tx.Exec(`DELETE FROM tasks WHERE host=? AND project=? AND id IN (WITH RECURSIVE descendants (id) AS (SELECT id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id FROM tasks t, descendants d WHERE t.host=? AND t.project=? AND t.parent=d.id) SELECT id FROM descendants)`, args.Host, args.Project, args.Host, args.Project, args.ID, args.Host, args.Project)
-				PanicOn(err)
-				_, err = tx.Exec(`UPDATE tasks SET firstChild=?, nextSibling=? WHERE host=? AND project=? AND id=?`, previousNode.FirstChild, previousNode.NextSibling, args.Host, args.Project, previousNode.ID)
-				PanicOn(err)
+				tasksToDelete := make(IDs, 0, t.DescendantCount+1)
+				tx.Query(func(rows isql.Rows) {
+					for rows.Next() {
+						i := ID{}
+						PanicOn(rows.Scan(&i))
+						tasksToDelete = append(tasksToDelete, i)
+					}
+				}, `WITH RECURSIVE descendants (id) AS (SELECT id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id FROM tasks t, descendants d WHERE t.host=? AND t.project=? AND t.parent=d.id) SELECT id FROM descendants`, args.Host, args.Project, args.ID, args.Host, args.Project)
+				if len(tasksToDelete) > 0 {
+					queryArgs := make([]interface{}, 0, len(tasksToDelete)+2)
+					queryArgs = append(queryArgs, args.Host, args.Project)
+					queryArgs = append(queryArgs, tasksToDelete.ToIs()...)
+					_, err := tx.Exec(Strf(`DELETE FROM tasks WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(tasksToDelete))), queryArgs...)
+					PanicOn(err)
+					_, err = tx.Exec(`UPDATE tasks SET firstChild=?, nextSibling=? WHERE host=? AND project=? AND id=?`, previousNode.FirstChild, previousNode.NextSibling, args.Host, args.Project, previousNode.ID)
+					PanicOn(err)
+					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.ID)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, &t.Name, nil)
+
+					// first get all time/expense/file/comment ids being deleted then
+					sql_in_tasks := sql.InCondition(true, `task`, len(tasksToDelete))
+					toDelete := make(IDs, 0, 50)
+					scanToToDelete := func(rows isql.Rows) {
+						for rows.Next() {
+							i := ID{}
+							PanicOn(rows.Scan(&i))
+							toDelete = append(toDelete, i)
+						}
+					}
+					tx.Query(scanToToDelete, Strf(`SELECT id FROM times WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					_, err = tx.Exec(Strf(`DELETE FROM times WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					PanicOn(err)
+					tx.Query(scanToToDelete, Strf(`SELECT id FROM expenses WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					_, err = tx.Exec(Strf(`DELETE FROM expenses WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					PanicOn(err)
+					tx.Query(scanToToDelete, Strf(`SELECT id FROM files WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					_, err = tx.Exec(Strf(`DELETE FROM files WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					PanicOn(err)
+					tx.Query(scanToToDelete, Strf(`SELECT id FROM comments WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					_, err = tx.Exec(Strf(`DELETE FROM comments WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					PanicOn(err)
+
+					// set all activity logs as itemHasBeenDeleted=1
+					queryArgs = append(queryArgs, toDelete.ToIs()...)
+					_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? %s`, sql.InCondition(true, `item`, len(queryArgs)-2)), queryArgs...)
+					PanicOn(err)
+
+					srv := service.Get(tlbx)
+					for _, t := range tasksToDelete {
+						srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(args.Host, args.Project, t))
+					}
+				}
 				tx.Commit()
 				return nil
 			},
@@ -568,17 +617,6 @@ var (
 		IsParallel:          true,
 	}
 )
-
-func setAncestralChainAggregateValuesFromTask(tx service.Tx, host, project, task ID) {
-	ancestorChain := make(IDs, 0, 20)
-	PanicOn(tx.Query(func(rows isql.Rows) {
-		for rows.Next() {
-			i := ID{}
-			PanicOn(rows.Scan(&i))
-			ancestorChain = append(ancestorChain, i)
-		}
-	}, `CALL setAncestralChainAggregateValuesFromTask(?, ?, ?)`, host, project, task))
-}
 
 func getOne(tx service.Tx, host, project, id ID) *task.Task {
 	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND id=?`, Sql_task_columns_prefixed), host, project, id)

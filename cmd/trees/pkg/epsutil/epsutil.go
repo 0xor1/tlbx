@@ -5,12 +5,25 @@ import (
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/sql"
 )
+
+func SetAncestralChainAggregateValuesFromTask(tx service.Tx, host, project, task ID) IDs {
+	ancestorChain := make(IDs, 0, 20)
+	PanicOn(tx.Query(func(rows isql.Rows) {
+		for rows.Next() {
+			i := ID{}
+			PanicOn(rows.Scan(&i))
+			ancestorChain = append(ancestorChain, i)
+		}
+	}, `CALL setAncestralChainAggregateValuesFromTask(?, ?, ?)`, host, project, task))
+	return ancestorChain
+}
 
 func MustGetRole(tlbx app.Tlbx, tx service.Tx, host, project ID, user ID) cnsts.Role {
 	var role cnsts.Role
