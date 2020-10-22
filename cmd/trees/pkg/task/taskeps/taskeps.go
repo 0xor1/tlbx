@@ -352,7 +352,7 @@ var (
 		{
 			Description:  "Delete tasks",
 			Path:         (&task.Delete{}).Path(),
-			Timeout:      500,
+			Timeout:      5000,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
@@ -372,7 +372,8 @@ var (
 				args := a.(*task.Delete)
 				app.BadReqIf(args.ID.Equal(args.Project), "use project delete endpoint to delete a project node")
 				me := me.Get(tlbx)
-				tx := service.Get(tlbx).Data().Begin()
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "you don't have permission to delete a task")
@@ -380,6 +381,7 @@ var (
 				// at this point we need to get the task
 				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
+				app.BadReqIf(t.DescendantCount > 100, "may not delete more than 100 task per delete action")
 				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.DescendantCount > 0 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own tasks within an hour of creating them and they must have no children")
 				previousNode := getPreviousSibling(tx, args.Host, args.Project, args.ID)
 				if previousNode == nil {
@@ -389,14 +391,19 @@ var (
 				} else {
 					previousNode.NextSibling = t.NextSibling
 				}
+				tasksWithFiles := make(IDs, 0, t.DescendantCount+1)
 				tasksToDelete := make(IDs, 0, t.DescendantCount+1)
 				tx.Query(func(rows isql.Rows) {
 					for rows.Next() {
 						i := ID{}
-						PanicOn(rows.Scan(&i))
+						hasFiles := false
+						PanicOn(rows.Scan(&i, &hasFiles))
 						tasksToDelete = append(tasksToDelete, i)
+						if hasFiles {
+							tasksWithFiles = append(tasksWithFiles, i)
+						}
 					}
-				}, `WITH RECURSIVE descendants (id) AS (SELECT id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id FROM tasks t, descendants d WHERE t.host=? AND t.project=? AND t.parent=d.id) SELECT id FROM descendants`, args.Host, args.Project, args.ID, args.Host, args.Project)
+				}, `WITH RECURSIVE descendants (id, hasFiles) AS (SELECT id, fileCount > 0 AS hasFiles  FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id, t.fileCount > 0 AS hasFiles FROM tasks t, descendants d WHERE t.host=? AND t.project=? AND t.parent=d.id) CYCLE id RESTRICT SELECT id, hasFiles FROM descendants`, args.Host, args.Project, args.ID, args.Host, args.Project)
 				if len(tasksToDelete) > 0 {
 					queryArgs := make([]interface{}, 0, len(tasksToDelete)+2)
 					queryArgs = append(queryArgs, args.Host, args.Project)
@@ -411,33 +418,38 @@ var (
 					// first get all time/expense/file/comment ids being deleted then
 					sql_in_tasks := sql.InCondition(true, `task`, len(tasksToDelete))
 					toDelete := make(IDs, 0, 50)
-					scanToToDelete := func(rows isql.Rows) {
+					scanToDelete := func(rows isql.Rows) {
 						for rows.Next() {
 							i := ID{}
 							PanicOn(rows.Scan(&i))
 							toDelete = append(toDelete, i)
 						}
 					}
-					tx.Query(scanToToDelete, Strf(`SELECT id FROM times WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM times WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...))
 					_, err = tx.Exec(Strf(`DELETE FROM times WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
-					tx.Query(scanToToDelete, Strf(`SELECT id FROM expenses WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM expenses WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...))
 					_, err = tx.Exec(Strf(`DELETE FROM expenses WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
-					tx.Query(scanToToDelete, Strf(`SELECT id FROM files WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
-					_, err = tx.Exec(Strf(`DELETE FROM files WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
-					PanicOn(err)
-					tx.Query(scanToToDelete, Strf(`SELECT id FROM comments WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					if len(tasksWithFiles) > 0 {
+						filesArgs := make([]interface{}, 0, len(tasksWithFiles)+2)
+						filesArgs = append(queryArgs, args.Host, args.Project)
+						filesArgs = append(queryArgs, tasksWithFiles.ToIs()...)
+						sql_in_tasks_with_files := sql.InCondition(true, `task`, len(tasksWithFiles))
+						PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM files WHERE host=? AND project=? %s`, sql_in_tasks_with_files), filesArgs...))
+						_, err = tx.Exec(Strf(`DELETE FROM files WHERE host=? AND project=? %s`, sql_in_tasks_with_files), filesArgs...)
+						PanicOn(err)
+					}
+					PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM comments WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...))
 					_, err = tx.Exec(Strf(`DELETE FROM comments WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
 
-					// set all activity logs as itemHasBeenDeleted=1
+					// set all relevant activity logs as itemHasBeenDeleted=1
 					queryArgs = append(queryArgs, toDelete.ToIs()...)
 					_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? %s`, sql.InCondition(true, `item`, len(queryArgs)-2)), queryArgs...)
 					PanicOn(err)
 
-					srv := service.Get(tlbx)
-					for _, t := range tasksToDelete {
+					for _, t := range tasksWithFiles {
 						srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(args.Host, args.Project, t))
 					}
 				}
