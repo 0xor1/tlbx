@@ -116,6 +116,7 @@ CREATE TABLE times(
   duration BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NULL,
   PRIMARY KEY(host, project, task, createdOn, createdBy),
+  UNIQUE INDEX(host, project, id),
   UNIQUE INDEX(host, project, task, id),
   UNIQUE INDEX(host, project, createdBy, createdOn, task),
   UNIQUE INDEX(host, project, createdOn, createdBy, task)
