@@ -81,7 +81,7 @@ func Run(configs ...func(*Config)) {
 		PanicIf(ep.GetExampleResponse == nil,
 			"endpoint: %q, missing GetExampleResponse", ep.Path)
 		ep.Path = ApiPathPrefix + ep.Path
-		path := strings.ToLower(ep.Path)
+		path := StrLower(ep.Path)
 		_, exists := router[path]
 		PanicIf(exists, "duplicate endpoint path: %q", path)
 		router[path] = ep
@@ -152,7 +152,7 @@ func Run(configs ...func(*Config)) {
 		// check method
 		method := tlbx.req.Method
 		BadReqIf(method != http.MethodGet && method != http.MethodPut, "only GET and PUT methods are accepted")
-		lPath := strings.ToLower(tlbx.req.URL.Path)
+		lPath := StrLower(tlbx.req.URL.Path)
 		// tlbx mwares
 		for _, setup := range c.TlbxSetup {
 			setup(tlbx)
@@ -196,7 +196,7 @@ func Run(configs ...func(*Config)) {
 					return func() {
 						argsBytes, err := json.Marshal(mdoReq.Args)
 						PanicOn(err)
-						subReq, err := http.NewRequest(http.MethodPut, strings.ToLower(mdoReq.Path)+"?isSubMDo=true", bytes.NewReader(argsBytes))
+						subReq, err := http.NewRequest(http.MethodPut, StrLower(mdoReq.Path)+"?isSubMDo=true", bytes.NewReader(argsBytes))
 						PanicOn(err)
 						PanicIf(subReq.URL.Path == mdoPath, "can't have mdo request inside an mdo request")
 						for _, c := range tlbx.req.Cookies() {

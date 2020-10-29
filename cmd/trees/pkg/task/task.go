@@ -15,7 +15,7 @@ type Task struct {
 	NextSibling         *ID       `json:"nextSibling"`
 	User                *ID       `json:"user"`
 	Name                string    `json:"name"`
-	Description         *string   `json:"description"`
+	Description         string    `json:"description"`
 	CreatedBy           ID        `json:"createdBy"`
 	CreatedOn           time.Time `json:"createdOn"`
 	MinimumTime         uint64    `json:"minimumTime"`
@@ -37,16 +37,16 @@ type Task struct {
 }
 
 type Create struct {
-	Host             ID      `json:"host"`
-	Project          ID      `json:"project"`
-	Parent           ID      `json:"parent"`
-	PreviousSibling  *ID     `json:"previousSibling,omitempty"`
-	Name             string  `json:"name"`
-	Description      *string `json:"description,omitempty"`
-	IsParallel       bool    `json:"isParallel"`
-	User             *ID     `json:"user,omitempty"`
-	EstimatedTime    uint64  `json:"estimatedTime"`
-	EstimatedExpense uint64  `json:"estimatedExpense"`
+	Host             ID     `json:"host"`
+	Project          ID     `json:"project"`
+	Parent           ID     `json:"parent"`
+	PreviousSibling  *ID    `json:"previousSibling,omitempty"`
+	Name             string `json:"name"`
+	Description      string `json:"description"`
+	IsParallel       bool   `json:"isParallel"`
+	User             *ID    `json:"user,omitempty"`
+	EstimatedTime    uint64 `json:"estimatedTime"`
+	EstimatedExpense uint64 `json:"estimatedExpense"`
 }
 
 func (_ *Create) Path() string {
@@ -66,17 +66,17 @@ func (a *Create) MustDo(c *app.Client) *Task {
 }
 
 type Update struct {
-	Host             ID               `json:"host"`
-	Project          ID               `json:"project"`
-	ID               ID               `json:"id"`
-	Parent           *field.ID        `json:"parent,omitempty"`
-	PreviousSibling  *field.IDPtr     `json:"previousSibling,omitempty"`
-	Name             *field.String    `json:"name,omitempty"`
-	Description      *field.StringPtr `json:"description,omitempty"`
-	IsParallel       *field.Bool      `json:"isParallel,omitempty"`
-	User             *field.IDPtr     `json:"user,omitempty"`
-	EstimatedTime    *field.UInt64    `json:"estimatedTime,omitempty"`
-	EstimatedExpense *field.UInt64    `json:"estimatedExpense,omitempty"`
+	Host             ID            `json:"host"`
+	Project          ID            `json:"project"`
+	ID               ID            `json:"id"`
+	Parent           *field.ID     `json:"parent,omitempty"`
+	PreviousSibling  *field.IDPtr  `json:"previousSibling,omitempty"`
+	Name             *field.String `json:"name,omitempty"`
+	Description      *field.String `json:"description,omitempty"`
+	IsParallel       *field.Bool   `json:"isParallel,omitempty"`
+	User             *field.IDPtr  `json:"user,omitempty"`
+	EstimatedTime    *field.UInt64 `json:"estimatedTime,omitempty"`
+	EstimatedExpense *field.UInt64 `json:"estimatedExpense,omitempty"`
 }
 
 func (_ *Update) Path() string {

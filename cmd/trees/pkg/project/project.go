@@ -288,6 +288,7 @@ func (a *RemoveUsers) MustDo(c *app.Client) {
 type GetActivities struct {
 	Host          ID         `json:"host"`
 	Project       ID         `json:"project"`
+	Task          *ID        `json:"task,omitempty"`
 	Item          *ID        `json:"item,omitempty"`
 	User          *ID        `json:"user,omitempty"`
 	OccuredAfter  *time.Time `json:"occurredAfter,omitempty"`
@@ -317,6 +318,7 @@ type GetActivitiesRes struct {
 }
 
 type Activity struct {
+	Task               *ID          `json:"id,omitempty"`
 	OccurredOn         time.Time    `json:"occurredOn"`
 	User               ID           `json:"user"`
 	Item               ID           `json:"item"`

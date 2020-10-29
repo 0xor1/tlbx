@@ -67,7 +67,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				app.BadReqIf(me.Exists(tlbx), "already logged in")
 				args := a.(*user.Register)
-				args.Email = strings.Trim(args.Email, " ")
+				args.Email = StrTrimWS(args.Email)
 				if !enableSocials {
 					args.Handle = nil
 					args.Alias = nil
@@ -76,12 +76,12 @@ func New(
 				if args.Handle != nil {
 					args.Handle = ptr.String(
 						strings.ReplaceAll(
-							strings.ToLower(
-								strings.Trim(*args.Handle, " ")), " ", "_"))
+							StrLower(
+								StrTrimWS(*args.Handle)), " ", "_"))
 					validate.Str("handle", *args.Handle, tlbx, handleMinLen, handleMaxLen, handleRegex)
 				}
 				if args.Alias != nil {
-					args.Alias = ptr.String(strings.Trim(*args.Alias, " "))
+					args.Alias = ptr.String(StrTrimWS(*args.Alias))
 					validate.Str("alias", *args.Alias, tlbx, 0, aliasMaxLen)
 				}
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
@@ -189,7 +189,7 @@ func New(
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.ChangeEmail)
-				args.NewEmail = strings.Trim(args.NewEmail, " ")
+				args.NewEmail = StrTrimWS(args.NewEmail)
 				validate.Str("email", args.NewEmail, tlbx, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
 				me := me.Get(tlbx)

@@ -2,7 +2,6 @@ package cnsts
 
 import (
 	"strconv"
-	"strings"
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
@@ -30,7 +29,7 @@ func (s *Sort) String() string {
 }
 
 func (s *Sort) UnmarshalJSON(raw []byte) error {
-	val := strings.Trim(strings.ToLower(string(raw)), `"`)
+	val := StrTrim(StrLower(string(raw)), `"`)
 	*s = Sort(val)
 	s.Validate()
 	return nil
@@ -57,7 +56,7 @@ func (t *Type) String() string {
 }
 
 func (t *Type) UnmarshalJSON(raw []byte) error {
-	val := strings.Trim(strings.ToLower(string(raw)), `"`)
+	val := StrTrim(StrLower(string(raw)), `"`)
 	*t = Type(val)
 	t.Validate()
 	return nil
@@ -80,7 +79,7 @@ func (a *Action) String() string {
 }
 
 func (a *Action) UnmarshalJSON(raw []byte) error {
-	val := strings.Trim(strings.ToLower(string(raw)), `"`)
+	val := StrTrim(StrLower(string(raw)), `"`)
 	*a = Action(val)
 	a.Validate()
 	return nil

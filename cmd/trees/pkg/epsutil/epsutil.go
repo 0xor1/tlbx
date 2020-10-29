@@ -68,11 +68,18 @@ func IMustHaveAccess(tlbx app.Tlbx, host, project ID, role cnsts.Role) {
 	MustHaveAccess(tlbx, host, project, mePtr, role)
 }
 
-func MustLockProject(tlbx app.Tlbx, tx service.Tx, host, id ID) {
+func MustLockProject(tx service.Tx, host, id ID) {
 	projectExists := false
 	row := tx.QueryRow(`SELECT COUNT(*)=1 FROM projectLocks WHERE host=? AND id=? FOR UPDATE`, host, id)
 	sql.PanicIfIsntNoRows(row.Scan(&projectExists))
 	app.ReturnIf(!projectExists, http.StatusNotFound, "no such project")
+}
+
+func TaskMustExist(tx service.Tx, host, project, id ID) {
+	taskExists := false
+	row := tx.QueryRow(`SELECT COUNT(*)=1 FROM tasks WHERE host=? AND project=? AND id=?`, host, project, id)
+	sql.PanicIfIsntNoRows(row.Scan(&taskExists))
+	app.ReturnIf(!taskExists, http.StatusNotFound, "no such task")
 }
 
 func StorePrefix(host ID, projectAndOrTask ...ID) string {
@@ -87,7 +94,7 @@ func StorePrefix(host ID, projectAndOrTask ...ID) string {
 	return prefix
 }
 
-func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}) {
+func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project ID, task *ID, item ID, itemType cnsts.Type, action cnsts.Action, taskName, itemName *string, extraInfo interface{}) {
 	me := me.Get(tlbx)
 	var ei *string
 	if extraInfo != nil {
@@ -95,7 +102,7 @@ func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project, item ID, itemType 
 		ei = &eiStr
 	}
 	itemHasBeenDeleted := action == cnsts.ActionDeleted
-	_, err := tx.Exec(`INSERT INTO activities(host, project, occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, host, project, NowMilli(), me, item, itemType, itemHasBeenDeleted, action, itemName, ei)
+	_, err := tx.Exec(`INSERT INTO activities(host, project, task, occurredOn, user, item, itemType, itemHasBeenDeleted, action, taskName, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, host, project, task, NowMilli(), me, item, itemType, itemHasBeenDeleted, action, taskName, itemName, ei)
 	PanicOn(err)
 	if itemHasBeenDeleted {
 		// if this is deleting an item we need to update all previous activities on this item to have itemHasBeenDeleted
@@ -104,8 +111,14 @@ func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project, item ID, itemType 
 	}
 }
 
-func ActivityItemRename(tx service.Tx, host, project, item ID, newItemName string) {
+func ActivityItemRename(tx service.Tx, host, project, item ID, newItemName string, isTask bool) {
+	var qry string
 	// keep all projectActivity entries itemName values up to date
-	_, err := tx.Exec(`UPDATE activities SET itemName=? WHERE host=? AND project=? AND item=?`, newItemName, host, project, item)
+	if isTask {
+		qry = `UPDATE activities SET taskName=? WHERE host=? AND project=? AND task=?`
+	} else {
+		qry = `UPDATE activities SET itemName=? WHERE host=? AND project=? AND item=?`
+	}
+	_, err := tx.Exec(qry, newItemName, host, project, item)
 	PanicOn(err)
 }

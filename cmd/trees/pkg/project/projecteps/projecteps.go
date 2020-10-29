@@ -54,6 +54,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.Create)
 				me := me.Get(tlbx)
+				args.Name = StrTrimWS(args.Name)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				if args.CurrencyCode == "" {
 					args.CurrencyCode = "USD"
@@ -98,7 +99,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, fileSubCount, fileSubSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.FileSubCount, p.FileSubSize, p.ChildCount, p.DescendantCount)
 				PanicOn(err)
-				epsutil.LogActivity(tlbx, tx, me, p.ID, p.ID, cnsts.TypeProject, cnsts.ActionCreated, ptr.String(p.Name), nil)
+				epsutil.LogActivity(tlbx, tx, me, p.ID, nil, p.ID, cnsts.TypeProject, cnsts.ActionCreated, nil, ptr.String(p.Name), nil)
 				tx.Commit()
 				return p
 			},
@@ -211,6 +212,7 @@ var (
 					}
 					// validate name
 					if a.Name != nil {
+						a.Name.V = StrTrimWS(a.Name.V)
 						validate.Str("name", a.Name.V, tlbx, nameMinLen, nameMaxLen)
 						p.Name = a.Name.V
 						namesSet[i] = true
@@ -254,9 +256,9 @@ var (
 					if namesSet[i] {
 						_, err = tx.Exec(`UPDATE tasks SET name=? WHERE host=? AND project=? AND id=?`, p.Name, me, p.ID, p.ID)
 						PanicOn(err)
-						epsutil.ActivityItemRename(tx, me, p.ID, p.ID, p.Name)
+						epsutil.ActivityItemRename(tx, me, p.ID, p.ID, p.Name, false)
 					}
-					epsutil.LogActivity(tlbx, tx, me, p.ID, p.ID, cnsts.TypeProject, cnsts.ActionUpdated, ptr.String(p.Name), args[i])
+					epsutil.LogActivity(tlbx, tx, me, p.ID, nil, p.ID, cnsts.TypeProject, cnsts.ActionUpdated, nil, ptr.String(p.Name), args[i])
 				}
 				tx.Commit()
 				return ps
@@ -379,7 +381,7 @@ var (
 					u.Role = args.Users[i].Role
 					_, err := tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, u.IsActive, u.Role)
 					PanicOn(err)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionCreated, nil, u.Role)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, nil, u.ID, cnsts.TypeUser, cnsts.ActionCreated, nil, nil, u.Role)
 				}
 				tx.Commit()
 				userTx.Commit()
@@ -489,7 +491,7 @@ var (
 					count, err := res.RowsAffected()
 					PanicOn(err)
 					app.ReturnIf(count != 1, http.StatusNotFound, "user: %s not found", u.ID)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionUpdated, nil, u.Role)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, nil, u.ID, cnsts.TypeUser, cnsts.ActionUpdated, nil, nil, u.Role)
 				}
 				tx.Commit()
 				return nil
@@ -533,7 +535,7 @@ var (
 				_, err := tx.Exec(Strf(`UPDATE users SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
 				PanicOn(err)
 				for _, u := range args.Users {
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, nil, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil, nil)
 				}
 				tx.Commit()
 				return nil
@@ -554,6 +556,7 @@ var (
 				return &project.GetActivities{
 					Host:          app.ExampleID(),
 					Project:       app.ExampleID(),
+					Task:          ptr.ID(app.ExampleID()),
 					Item:          ptr.ID(app.ExampleID()),
 					User:          ptr.ID(app.ExampleID()),
 					OccuredAfter:  ptr.Time(app.ExampleTime()),
@@ -565,6 +568,7 @@ var (
 				return &project.GetActivitiesRes{
 					Set: []*project.Activity{
 						{
+							Task:               ptr.ID(app.ExampleID()),
 							OccurredOn:         app.ExampleTime(),
 							User:               app.ExampleID(),
 							Item:               app.ExampleID(),

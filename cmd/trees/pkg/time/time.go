@@ -15,15 +15,15 @@ type Time struct {
 	CreatedBy ID        `json:"createdBy"`
 	CreatedOn time.Time `json:"createdOn"`
 	Duration  uint64    `json:"duration"`
-	Note      *string   `json:"note"`
+	Note      string    `json:"note"`
 }
 
 type Create struct {
-	Host     ID      `json:"host"`
-	Project  ID      `json:"project"`
-	Task     ID      `json:"task"`
-	Duration uint64  `json:"duration"`
-	Note     *string `json:"note,omitempty"`
+	Host     ID     `json:"host"`
+	Project  ID     `json:"project"`
+	Task     ID     `json:"task"`
+	Duration uint64 `json:"duration"`
+	Note     string `json:"note,omitempty"`
 }
 
 func (_ *Create) Path() string {
@@ -36,32 +36,32 @@ func (a *Create) Do(c *app.Client) (*Time, error) {
 	return res, err
 }
 
-func (a *Create) MustDo(c *app.Client) *Task {
+func (a *Create) MustDo(c *app.Client) *Time {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
 }
 
 type Update struct {
-	Host     ID               `json:"host"`
-	Project  ID               `json:"project"`
-	Task     ID               `json:"task"`
-	ID       ID               `json:"id"`
-	Duration *field.UInt64    `json:"duration,omitempty"`
-	Note     *field.StringPtr `json:"note,omitempty"`
+	Host     ID            `json:"host"`
+	Project  ID            `json:"project"`
+	Task     ID            `json:"task"`
+	ID       ID            `json:"id"`
+	Duration *field.UInt64 `json:"duration,omitempty"`
+	Note     *field.String `json:"note,omitempty"`
 }
 
 func (_ *Update) Path() string {
 	return "/time/update"
 }
 
-func (a *Update) Do(c *app.Client) (*Task, error) {
-	res := &Task{}
+func (a *Update) Do(c *app.Client) (*Time, error) {
+	res := &Time{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Update) MustDo(c *app.Client) *Task {
+func (a *Update) MustDo(c *app.Client) *Time {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -74,7 +74,7 @@ type Get struct {
 	IDs          IDs        `json:"ids,omitempty"`
 	CreatedOnMin *time.Time `json:"createdOnMin,omitempty"`
 	CreatedOnMax *time.Time `json:"createdOnMax,omitempty"`
-	CreatedBy    *ID        `json:""createdBy,omitempty`
+	CreatedBy    *ID        `json:"createdBy,omitempty"`
 	Sort         cnsts.Sort `json:"sort,omitempty"`
 	Asc          *bool      `json:"asc,omitempty"`
 	Limit        uint16     `json:"limit,omitempty"`
@@ -102,9 +102,10 @@ func (a *Get) MustDo(c *app.Client) *GetRes {
 }
 
 type Delete struct {
-	Host    ID  `json:"host"`
-	Project ID  `json:"project"`
-	IDs     IDs `json:"ids"`
+	Host    ID `json:"host"`
+	Project ID `json:"project"`
+	Task    ID `json:"task"`
+	ID      ID `json:"ids"`
 }
 
 func (_ *Delete) Path() string {

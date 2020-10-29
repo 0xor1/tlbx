@@ -2,8 +2,21 @@ package core
 
 import (
 	"fmt"
+	"strings"
 	"unicode/utf8"
 )
+
+func StrLower(s string) string {
+	return strings.ToLower(s)
+}
+
+func StrTrim(s, cutset string) string {
+	return strings.Trim(s, cutset)
+}
+
+func StrTrimWS(s string) string {
+	return strings.TrimSpace(s)
+}
 
 func StrLen(s string) int {
 	return utf8.RuneCountInString(s)

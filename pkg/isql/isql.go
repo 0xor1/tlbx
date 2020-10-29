@@ -112,13 +112,13 @@ func NewRows(rows *sql.Rows) Rows {
 }
 
 type Rows interface {
+	Row
 	Close() error
 	ColumnTypes() ([]ColumnType, error)
 	Columns() ([]string, error)
 	Err() error
 	Next() bool
 	NextResultSet() bool
-	Scan(dest ...interface{}) error
 }
 
 func NewStmt(stmt *sql.Stmt) Stmt {
