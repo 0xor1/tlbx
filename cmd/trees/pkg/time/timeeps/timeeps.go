@@ -68,7 +68,7 @@ var (
 				_, err = tx.Exec(`UPDATE tasks SET loggedTime=loggedTime+? WHERE host=? AND project=? AND id=?`, args.Duration, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				// propogate aggregate values upwards
-				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Task)
+				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, t.ID, cnsts.TypeTime, cnsts.ActionCreated, nil, args)
 				tx.Commit()
 				return t
@@ -140,7 +140,7 @@ var (
 				if treeUpdate {
 					_, err = tx.Exec(Strf(`UPDATE tasks SET loggedTime=loggedTime%s? WHERE host=? AND project=? AND id=?`, sign), diff, args.Host, args.Project, t.Task)
 					PanicOn(err)
-					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Task)
+					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
 				tx.Commit()
 				return t
@@ -182,7 +182,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`UPDATE tasks SET loggedTime=loggedTime-? WHERE host=? AND project=? AND id=?`, t.Duration, args.Host, args.Project, args.Task)
 				PanicOn(err)
-				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Task)
+				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeTime, cnsts.ActionDeleted, nil, nil)
 				tx.Commit()
@@ -218,6 +218,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*time.Get)
+				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 				app.BadReqIf(
 					args.CreatedOnMin != nil &&
 						args.CreatedOnMax != nil &&
@@ -255,13 +256,16 @@ var (
 						qry.WriteString(` AND createdBy=?`)
 						qryArgs = append(qryArgs, *args.CreatedBy)
 					}
+					if args.After != nil {
+						qry.WriteString(Strf(` AND createdOn %s= (SELECT t.createdOn FROM times t WHERE t.host=? AND t.project=? AND t.id=?) AND id <> ?`, sql.GtLtSymbol(*args.Asc)))
+						qryArgs = append(qryArgs, args.Host, args.Project, *args.After, *args.After)
+					}
 					qry.WriteString(sql.OrderLimit100(`createdOn`, *args.Asc, args.Limit))
-					qryArgs = append(qryArgs, *args.CreatedBy)
 				}
 				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
-						if len(res.Set)+1 == iLimit {
+						if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
 							res.More = true
 							break
 						}

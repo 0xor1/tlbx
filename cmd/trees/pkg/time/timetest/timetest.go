@@ -2,6 +2,7 @@ package timetest
 
 import (
 	"testing"
+	time_ "time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
@@ -9,20 +10,30 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/testutil"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/time"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/time/timeeps"
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/stretchr/testify/assert"
 )
 
 func Everything(t *testing.T) {
-	defer printFullTree()
+	var (
+		tree map[string]*task.Task
+		pID  ID
+	)
+
+	defer func() {
+		testutil.PrintFullTree(pID, tree)
+	}()
 
 	a := assert.New(t)
 	r := test.NewRig(
 		config.Get(),
-		append(projecteps.Eps, taskeps.Eps...),
+		append(append(projecteps.Eps, taskeps.Eps...), timeeps.Eps...),
 		true,
 		nil,
 		projecteps.OnDelete,
@@ -65,69 +76,116 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 
-	(&time.Create{
-		H
+	t1 := (&time.Create{
+		Host:     r.Ali().ID(),
+		Project:  p.ID,
+		Task:     t1p0.ID,
+		Duration: 77,
+		Note:     "yolo",
+	}).MustDo(ac)
+	a.NotNil(t1)
+
+	t1 = (&time.Update{
+		Host:     r.Ali().ID(),
+		Project:  p.ID,
+		Task:     t1p0.ID,
+		ID:       t1.ID,
+		Duration: &field.UInt64{V: 33},
+		Note:     &field.String{V: "polo"},
+	}).MustDo(ac)
+	a.NotNil(t1)
+
+	t1 = (&time.Update{
+		Host:     r.Ali().ID(),
+		Project:  p.ID,
+		Task:     t1p0.ID,
+		ID:       t1.ID,
+		Duration: &field.UInt64{V: 44},
+		Note:     &field.String{V: "polo"},
+	}).MustDo(ac)
+	a.NotNil(t1)
+
+	// nil
+	tNil := (&time.Update{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    t1p0.ID,
+		ID:      t1.ID,
+	}).MustDo(ac)
+	a.Nil(tNil)
+
+	ts := (&time.Get{
+		Host:         r.Ali().ID(),
+		Project:      p.ID,
+		Task:         &t1p0.ID,
+		CreatedBy:    ptr.ID(r.Ali().ID()),
+		CreatedOnMin: ptr.Time(Now().Add(-1 * time_.Hour)),
+		CreatedOnMax: ptr.Time(Now()),
+	}).MustDo(ac)
+	a.Equal(t1, ts.Set[0])
+	a.False(ts.More)
+
+	ts = (&time.Get{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		IDs:     IDs{t1.ID},
+	}).MustDo(ac)
+	a.Equal(t1, ts.Set[0])
+	a.False(ts.More)
+
+	t2 := (&time.Create{
+		Host:     r.Ali().ID(),
+		Project:  p.ID,
+		Task:     t1p0.ID,
+		Duration: 77,
+		Note:     "solo",
+	}).MustDo(ac)
+	a.NotNil(t2)
+
+	ts = (&time.Get{
+		Host:         r.Ali().ID(),
+		Project:      p.ID,
+		Task:         &t1p0.ID,
+		CreatedBy:    ptr.ID(r.Ali().ID()),
+		CreatedOnMin: ptr.Time(Now().Add(-1 * time_.Hour)),
+		CreatedOnMax: ptr.Time(Now()),
+	}).MustDo(ac)
+	a.Equal(t2, ts.Set[0])
+	a.Equal(t1, ts.Set[1])
+	a.False(ts.More)
+
+	ts = (&time.Get{
+		Host:         r.Ali().ID(),
+		Project:      p.ID,
+		Task:         &t1p0.ID,
+		CreatedBy:    ptr.ID(r.Ali().ID()),
+		CreatedOnMin: ptr.Time(Now().Add(-1 * time_.Hour)),
+		CreatedOnMax: ptr.Time(Now()),
+		Limit:        1,
+	}).MustDo(ac)
+	a.Equal(t2, ts.Set[0])
+	a.True(ts.More)
+
+	ts = (&time.Get{
+		Host:         r.Ali().ID(),
+		Project:      p.ID,
+		Task:         &t1p0.ID,
+		CreatedBy:    ptr.ID(r.Ali().ID()),
+		CreatedOnMin: ptr.Time(Now().Add(-1 * time_.Hour)),
+		CreatedOnMax: ptr.Time(Now()),
+		After:        ptr.ID(t2.ID),
+		Limit:        1,
+	}).MustDo(ac)
+	a.Equal(t1, ts.Set[0])
+	a.False(ts.More)
+
+	(&time.Delete{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    t1p0.ID,
+		ID:      t1.ID,
 	}).MustDo(ac)
 
-	grabFullTree(r, r.Ali().ID(), p.ID)
-}
-
-var (
-	fullTree = map[string]*task.Task{}
-	pID      ID
-)
-
-// only suitable for small test trees for visual validation
-// whilst writing/debugging unit tests
-func grabFullTree(r test.Rig, host, project ID) {
-	pID = project
-	rows, err := r.Data().Primary().Query(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.Project=?`, taskeps.Sql_task_columns_prefixed), host, project)
-	if rows != nil {
-		defer rows.Close()
-	}
-	PanicOn(err)
-	for rows.Next() {
-		t, err := taskeps.Scan(rows)
-		PanicOn(err)
-		fullTree[t.ID.String()] = t
-	}
-}
-
-func printFullTree() {
-	var print func(t *task.Task, as []*task.Task)
-	print = func(t *task.Task, as []*task.Task) {
-		p := 0
-		if t.IsParallel {
-			p = 1
-		}
-		v := Strf(`[n: %s, p: %d, m: %d, e: %d, es: %d]`, t.Name, p, t.MinimumTime, t.EstimatedTime, t.EstimatedSubTime)
-		if len(as) > 0 {
-			pre := ``
-			for _, a := range as[1:] {
-				if a.NextSibling != nil {
-					pre += `|    `
-				} else {
-					pre += `     `
-				}
-			}
-			Println(Strf(`%s|`, pre))
-			Println(Strf(`%s|`, pre))
-			Println(Strf(`%s|____%s`, pre, v))
-		} else {
-			Println(v)
-		}
-		if t.FirstChild != nil {
-			print(fullTree[t.FirstChild.String()], append(as, t))
-		}
-		if t.NextSibling != nil {
-			print(fullTree[t.NextSibling.String()], as)
-		}
-	}
-	println("n: name")
-	println("p: isParallel")
-	println("m: minimumTime")
-	println("e: estimatedTime")
-	println("es: estimatedSubTime")
-	println()
-	print(fullTree[pID.String()], nil)
+	pID = p.ID
+	tree = testutil.GrabFullTree(r, r.Ali().ID(), p.ID)
 }

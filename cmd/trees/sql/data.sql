@@ -152,10 +152,10 @@ CREATE TABLE files(
   createdOn DATETIME(3) NOT NULL,
   size BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NOT NULL,
-  PRIMARY KEY(host, project, task, createdOn, createdBy, id),
+  PRIMARY KEY(host, project, task, createdOn, createdBy),
   UNIQUE INDEX(host, project, task, id),
-  UNIQUE INDEX(host, project, createdBy, createdOn, task, id),
-  UNIQUE INDEX(host, project, createdOn, createdBy, task, id)
+  UNIQUE INDEX(host, project, createdBy, createdOn, task),
+  UNIQUE INDEX(host, project, createdOn, createdBy, task)
 );
 
 DROP TABLE IF EXISTS comments;
@@ -167,10 +167,10 @@ CREATE TABLE comments(
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
   body VARCHAR(10000) NOT NULL,
-  PRIMARY KEY(host, project, task, createdOn, createdBy, id),
+  PRIMARY KEY(host, project, task, createdOn, createdBy),
   UNIQUE INDEX(host, project, task, id),
-  UNIQUE INDEX(host, project, createdBy, createdOn, task, id),
-  UNIQUE INDEX(host, project, createdOn, createdBy, task, id)
+  UNIQUE INDEX(host, project, createdBy, createdOn, task),
+  UNIQUE INDEX(host, project, createdOn, createdBy, task)
 );
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#

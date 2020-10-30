@@ -14,6 +14,24 @@ import (
 )
 
 func SetAncestralChainAggregateValuesFromTask(tx service.Tx, host, project, task ID) IDs {
+	return setAncestralChainAggregateValuesFrom(tx, host, project, task, false)
+}
+
+func SetAncestralChainAggregateValuesFromParentOfTask(tx service.Tx, host, project, task ID) IDs {
+	return setAncestralChainAggregateValuesFrom(tx, host, project, task, true)
+}
+
+func setAncestralChainAggregateValuesFrom(tx service.Tx, host, project, task ID, parentOfTask bool) IDs {
+	var qry string
+	qryArgs := make([]interface{}, 0, 5)
+	qryArgs = append(qryArgs, host, project)
+	if !parentOfTask {
+		qry = `?`
+		qryArgs = append(qryArgs, task)
+	} else {
+		qry = `(SELECT parent FROM tasks WHERE host=? AND project=? AND id=?)`
+		qryArgs = append(qryArgs, host, project, task)
+	}
 	ancestorChain := make(IDs, 0, 20)
 	PanicOn(tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
@@ -21,7 +39,7 @@ func SetAncestralChainAggregateValuesFromTask(tx service.Tx, host, project, task
 			PanicOn(rows.Scan(&i))
 			ancestorChain = append(ancestorChain, i)
 		}
-	}, `CALL setAncestralChainAggregateValuesFromTask(?, ?, ?)`, host, project, task))
+	}, Strf(`CALL setAncestralChainAggregateValuesFromTask(?, ?, %s)`, qry), qryArgs...))
 	return ancestorChain
 }
 

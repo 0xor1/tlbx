@@ -76,6 +76,7 @@ type Get struct {
 	CreatedBy    *ID        `json:"createdBy,omitempty"`
 	Asc          *bool      `json:"asc,omitempty"`
 	Limit        uint16     `json:"limit,omitempty"`
+	After        *ID        `json:"after,omitempty"`
 }
 
 type GetRes struct {
