@@ -1,13 +1,13 @@
-package timeeps
+package expenseeps
 
 import (
 	"bytes"
 	"net/http"
-	time_ "time"
+	"time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/epsutil"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/time"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/expense"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/isql"
@@ -22,30 +22,30 @@ import (
 var (
 	Eps = []*app.Endpoint{
 		{
-			Description:  "Create a new time",
-			Path:         (&time.Create{}).Path(),
+			Description:  "Create a new expense",
+			Path:         (&expense.Create{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &time.Create{}
+				return &expense.Create{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &time.Create{
-					Host:     app.ExampleID(),
-					Project:  app.ExampleID(),
-					Task:     app.ExampleID(),
-					Duration: 60,
-					Note:     "I did an hours work",
+				return &expense.Create{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					Task:    app.ExampleID(),
+					Value:   60,
+					Note:    "I did an hours work",
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleTime
+				return exampleExpense
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*time.Create)
+				args := a.(*expense.Create)
 				me := me.Get(tlbx)
-				app.ReturnIf(args.Duration == 0 || args.Duration > durationMax, http.StatusBadRequest, "duration must be between 1 and 1440")
+				app.ReturnIf(args.Value == 0, http.StatusBadRequest, "value must be between 1 and 1440")
 				args.Note = StrTrimWS(args.Note)
 				validate.Str("note", args.Note, tlbx, 0, noteMaxLen)
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
@@ -53,58 +53,58 @@ var (
 				defer tx.Rollback()
 				epsutil.MustLockProject(tx, args.Host, args.Project)
 				epsutil.TaskMustExist(tx, args.Host, args.Project, args.Task)
-				t := &time.Time{
+				e := &expense.Expense{
 					Task:      args.Task,
 					ID:        tlbx.NewID(),
 					CreatedBy: me,
 					CreatedOn: NowMilli(),
-					Duration:  args.Duration,
+					Value:     args.Value,
 					Note:      args.Note,
 				}
-				// insert new time
-				_, err := tx.Exec(`INSERT INTO times (host, project, task, id, createdBy, createdOn, duration, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, t.ID, t.CreatedBy, t.CreatedOn, t.Duration, t.Note)
+				// insert new expense
+				_, err := tx.Exec(`INSERT INTO expenses (host, project, task, id, createdBy, createdOn, value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, e.ID, e.CreatedBy, e.CreatedOn, e.Value, e.Note)
 				PanicOn(err)
-				// update task loggedTime
-				_, err = tx.Exec(`UPDATE tasks SET loggedTime=loggedTime+? WHERE host=? AND project=? AND id=?`, args.Duration, args.Host, args.Project, args.Task)
+				// update task loggedExpense
+				_, err = tx.Exec(`UPDATE tasks SET loggedExpense=loggedExpense+? WHERE host=? AND project=? AND id=?`, args.Value, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				// propogate aggregate values upwards
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, t.ID, cnsts.TypeTime, cnsts.ActionCreated, nil, args)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, e.ID, cnsts.TypeExpense, cnsts.ActionCreated, nil, args)
 				tx.Commit()
-				return t
+				return e
 			},
 		},
 		{
-			Description:  "Update a time",
-			Path:         (&time.Update{}).Path(),
+			Description:  "Update a expense",
+			Path:         (&expense.Update{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &time.Update{}
+				return &expense.Update{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &time.Update{
-					Host:     app.ExampleID(),
-					Project:  app.ExampleID(),
-					Task:     app.ExampleID(),
-					ID:       app.ExampleID(),
-					Duration: &field.UInt64{V: 60},
-					Note:     &field.String{V: "woo"},
+				return &expense.Update{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					Task:    app.ExampleID(),
+					ID:      app.ExampleID(),
+					Value:   &field.UInt64{V: 60},
+					Note:    &field.String{V: "woo"},
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleTime
+				return exampleExpense
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*time.Update)
+				args := a.(*expense.Update)
 				me := me.Get(tlbx)
-				if args.Duration == nil &&
+				if args.Value == nil &&
 					args.Note == nil {
 					// nothing to update
 					return nil
 				}
-				app.ReturnIf(args.Duration != nil && (args.Duration.V == 0 || args.Duration.V > durationMax), http.StatusBadRequest, "duration must be between 1 and 1440")
+				app.ReturnIf(args.Value != nil && (args.Value.V == 0), http.StatusBadRequest, "value must be 1 or greater")
 				if args.Note != nil {
 					args.Note.V = StrTrimWS(args.Note.V)
 					validate.Str("note", args.Note.V, tlbx, 0, noteMaxLen)
@@ -114,30 +114,30 @@ var (
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
 				t := getOne(tx, args.Host, args.Project, args.Task, args.ID)
-				app.ReturnIf(t == nil, http.StatusNotFound, "time entry not found")
+				app.ReturnIf(t == nil, http.StatusNotFound, "expense entry not found")
 				app.ReturnIf(!t.CreatedBy.Equal(me) && role != cnsts.RoleAdmin, http.StatusForbidden, "")
-				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time_.Hour))), http.StatusForbidden, "you may only edit your own time entries within an hour of creating it")
+				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only edit your own expense entries within an hour of creating it")
 				treeUpdate := false
 				var diff uint64
 				var sign string
-				if args.Duration != nil && args.Duration.V != t.Duration {
-					if args.Duration.V > t.Duration {
-						diff = args.Duration.V - t.Duration
+				if args.Value != nil && args.Value.V != t.Value {
+					if args.Value.V > t.Value {
+						diff = args.Value.V - t.Value
 						sign = "+"
 					} else {
-						diff = t.Duration - args.Duration.V
+						diff = t.Value - args.Value.V
 						sign = "-"
 					}
-					t.Duration = args.Duration.V
+					t.Value = args.Value.V
 					treeUpdate = true
 				}
 				if args.Note != nil && args.Note.V != t.Note {
 					t.Note = args.Note.V
 				}
-				_, err := tx.Exec(`UPDATE times SET duration=?, note=? WHERE host=? AND project=? AND task=? AND id=?`, t.Duration, t.Note, args.Host, args.Project, t.Task, t.ID)
+				_, err := tx.Exec(`UPDATE expenses SET value=?, note=? WHERE host=? AND project=? AND task=? AND id=?`, t.Value, t.Note, args.Host, args.Project, t.Task, t.ID)
 				PanicOn(err)
 				if treeUpdate {
-					_, err = tx.Exec(Strf(`UPDATE tasks SET loggedTime=loggedTime%s? WHERE host=? AND project=? AND id=?`, sign), diff, args.Host, args.Project, t.Task)
+					_, err = tx.Exec(Strf(`UPDATE tasks SET loggedExpense=loggedExpense%s? WHERE host=? AND project=? AND id=?`, sign), diff, args.Host, args.Project, t.Task)
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
@@ -146,16 +146,16 @@ var (
 			},
 		},
 		{
-			Description:  "Delete time",
-			Path:         (&time.Delete{}).Path(),
+			Description:  "Delete expense",
+			Path:         (&expense.Delete{}).Path(),
 			Timeout:      5000,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &time.Delete{}
+				return &expense.Delete{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &time.Delete{
+				return &expense.Delete{
 					Host:    app.ExampleID(),
 					Project: app.ExampleID(),
 					Task:    app.ExampleID(),
@@ -166,7 +166,7 @@ var (
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*time.Delete)
+				args := a.(*expense.Delete)
 				me := me.Get(tlbx)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
@@ -175,33 +175,33 @@ var (
 				epsutil.MustLockProject(tx, args.Host, args.Project)
 				t := getOne(tx, args.Host, args.Project, args.Task, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "")
-				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time_.Hour))), http.StatusForbidden, "you may only delete your own time entries within an hour of creating it")
-				// delete time
-				_, err := tx.Exec(`DELETE FROM times WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
+				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own expense entries within an hour of creating it")
+				// delete expense
+				_, err := tx.Exec(`DELETE FROM expenses WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
 				PanicOn(err)
-				_, err = tx.Exec(`UPDATE tasks SET loggedTime=loggedTime-? WHERE host=? AND project=? AND id=?`, t.Duration, args.Host, args.Project, args.Task)
+				_, err = tx.Exec(`UPDATE tasks SET loggedExpense=loggedExpense-? WHERE host=? AND project=? AND id=?`, t.Value, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeTime, cnsts.ActionDeleted, nil, nil)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeExpense, cnsts.ActionDeleted, nil, nil)
 				tx.Commit()
 				return nil
 			},
 		},
 		{
-			Description:  "get times",
-			Path:         (&time.Get{}).Path(),
+			Description:  "get expenses",
+			Path:         (&expense.Get{}).Path(),
 			Timeout:      5000,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &time.Get{
+				return &expense.Get{
 					Asc:   ptr.Bool(false),
 					Limit: 100,
 				}
 			},
 			GetExampleArgs: func() interface{} {
-				return &time.Get{
+				return &expense.Get{
 					Host:    app.ExampleID(),
 					Project: app.ExampleID(),
 					Task:    ptr.ID(app.ExampleID()),
@@ -210,13 +210,13 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return &time.GetRes{
-					Set:  []*time.Time{exampleTime},
+				return &expense.GetRes{
+					Set:  []*expense.Expense{exampleExpense},
 					More: true,
 				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*time.Get)
+				args := a.(*expense.Get)
 				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 				app.BadReqIf(
 					args.CreatedOnMin != nil &&
@@ -225,11 +225,11 @@ var (
 					"createdOnMin must be before createdOnMax")
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sql.Limit100(args.Limit)
-				res := &time.GetRes{
-					Set:  make([]*time.Time, 0, args.Limit),
+				res := &expense.GetRes{
+					Set:  make([]*expense.Expense, 0, args.Limit),
 					More: false,
 				}
-				qry := bytes.NewBufferString(`SELECT task, id, createdBy, createdOn, duration, note FROM times WHERE host=? AND project=?`)
+				qry := bytes.NewBufferString(`SELECT task, id, createdBy, createdOn, value, note FROM expenses WHERE host=? AND project=?`)
 				qryArgs := make([]interface{}, 0, len(args.IDs)+8)
 				qryArgs = append(qryArgs, args.Host, args.Project)
 				if len(args.IDs) > 0 {
@@ -256,7 +256,7 @@ var (
 						qryArgs = append(qryArgs, *args.CreatedBy)
 					}
 					if args.After != nil {
-						qry.WriteString(Strf(` AND createdOn %s= (SELECT t.createdOn FROM times t WHERE t.host=? AND t.project=? AND t.id=?) AND id <> ?`, sql.GtLtSymbol(*args.Asc)))
+						qry.WriteString(Strf(` AND createdOn %s= (SELECT t.createdOn FROM expenses t WHERE t.host=? AND t.project=? AND t.id=?) AND id <> ?`, sql.GtLtSymbol(*args.Asc)))
 						qryArgs = append(qryArgs, args.Host, args.Project, *args.After, *args.After)
 					}
 					qry.WriteString(sql.OrderLimit100(`createdOn`, *args.Asc, args.Limit))
@@ -278,33 +278,32 @@ var (
 		},
 	}
 
-	durationMax uint64 = 1440 // 24hrs in mins
-	noteMaxLen         = 250
-	exampleTime        = &time.Time{
+	noteMaxLen     = 250
+	exampleExpense = &expense.Expense{
 		Task:      app.ExampleID(),
 		ID:        app.ExampleID(),
 		CreatedBy: app.ExampleID(),
 		CreatedOn: app.ExampleTime(),
-		Duration:  60,
-		Note:      "I did something",
+		Value:     60,
+		Note:      "I bought something",
 	}
 )
 
-func getOne(tx service.Tx, host, project, task, id ID) *time.Time {
-	row := tx.QueryRow(`SELECT task, id, createdBy, createdOn, duration, note FROM times WHERE host=? AND project=? AND task=? AND id=?`, host, project, task, id)
+func getOne(tx service.Tx, host, project, task, id ID) *expense.Expense {
+	row := tx.QueryRow(`SELECT task, id, createdBy, createdOn, value, note FROM expenses WHERE host=? AND project=? AND task=? AND id=?`, host, project, task, id)
 	t, err := Scan(row)
 	sql.PanicIfIsntNoRows(err)
 	return t
 }
 
-func Scan(r isql.Row) (*time.Time, error) {
-	t := &time.Time{}
+func Scan(r isql.Row) (*expense.Expense, error) {
+	t := &expense.Expense{}
 	err := r.Scan(
 		&t.Task,
 		&t.ID,
 		&t.CreatedBy,
 		&t.CreatedOn,
-		&t.Duration,
+		&t.Value,
 		&t.Note)
 	if t.ID.IsZero() {
 		t = nil

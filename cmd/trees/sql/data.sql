@@ -133,7 +133,6 @@ CREATE TABLE expenses(
   id BINARY(16) NOT NULL,
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
-  paidOn DATETIME(3) NOT NULL,
   value BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NOT NULL,
   PRIMARY KEY(host, project, task, createdOn, createdBy),
