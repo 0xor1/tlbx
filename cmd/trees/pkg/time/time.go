@@ -3,7 +3,6 @@ package time
 import (
 	"time"
 
-	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/web/app"
@@ -75,7 +74,6 @@ type Get struct {
 	CreatedOnMin *time.Time `json:"createdOnMin,omitempty"`
 	CreatedOnMax *time.Time `json:"createdOnMax,omitempty"`
 	CreatedBy    *ID        `json:"createdBy,omitempty"`
-	Sort         cnsts.Sort `json:"sort,omitempty"`
 	Asc          *bool      `json:"asc,omitempty"`
 	Limit        uint16     `json:"limit,omitempty"`
 }

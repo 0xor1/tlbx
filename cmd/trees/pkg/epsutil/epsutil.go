@@ -26,6 +26,9 @@ func SetAncestralChainAggregateValuesFromTask(tx service.Tx, host, project, task
 }
 
 func MustGetRole(tlbx app.Tlbx, tx service.Tx, host, project ID, user ID) cnsts.Role {
+	if host.Equal(user) {
+		return cnsts.RoleAdmin
+	}
 	var role cnsts.Role
 	row := tx.QueryRow(`SELECT role FROM users WHERE host=? AND project=? AND id=? AND isActive=1`, host, project, user)
 	err := row.Scan(&role)
@@ -79,7 +82,7 @@ func TaskMustExist(tx service.Tx, host, project, id ID) {
 	taskExists := false
 	row := tx.QueryRow(`SELECT COUNT(*)=1 FROM tasks WHERE host=? AND project=? AND id=?`, host, project, id)
 	sql.PanicIfIsntNoRows(row.Scan(&taskExists))
-	app.ReturnIf(!taskExists, http.StatusNotFound, "no such task")
+	app.ReturnIf(!taskExists, http.StatusNotFound, "task not found")
 }
 
 func StorePrefix(host ID, projectAndOrTask ...ID) string {
@@ -94,7 +97,7 @@ func StorePrefix(host ID, projectAndOrTask ...ID) string {
 	return prefix
 }
 
-func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project ID, task *ID, item ID, itemType cnsts.Type, action cnsts.Action, taskName, itemName *string, extraInfo interface{}) {
+func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project ID, task *ID, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}) {
 	me := me.Get(tlbx)
 	var ei *string
 	if extraInfo != nil {
@@ -102,7 +105,22 @@ func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project ID, task *ID, item 
 		ei = &eiStr
 	}
 	itemHasBeenDeleted := action == cnsts.ActionDeleted
-	_, err := tx.Exec(`INSERT INTO activities(host, project, task, occurredOn, user, item, itemType, itemHasBeenDeleted, action, taskName, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, host, project, task, NowMilli(), me, item, itemType, itemHasBeenDeleted, action, taskName, itemName, ei)
+	var nameQry string
+	qryArgs := make([]interface{}, 0, 14)
+	qryArgs = append(qryArgs, host, project, task, NowMilli(), me, item, itemType, itemHasBeenDeleted, action)
+	if task != nil {
+		if task.Equal(item) {
+			nameQry = `?`
+			qryArgs = append(qryArgs, itemName, nil, ei)
+		} else {
+			nameQry = `(SELECT name FROM tasks WHERE host=? AND project=? AND id=?)`
+			qryArgs = append(qryArgs, host, project, task, itemName, ei)
+		}
+	} else {
+		nameQry = `?`
+		qryArgs = append(qryArgs, nil, itemName, ei)
+	}
+	_, err := tx.Exec(Strf(`INSERT INTO activities(host, project, task, occurredOn, user, item, itemType, itemHasBeenDeleted, action, taskName, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, %s, ?, ?)`, nameQry), qryArgs...)
 	PanicOn(err)
 	if itemHasBeenDeleted {
 		// if this is deleting an item we need to update all previous activities on this item to have itemHasBeenDeleted

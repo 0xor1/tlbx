@@ -1,16 +1,17 @@
 package timeeps
 
 import (
+	"bytes"
 	"net/http"
 	time_ "time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/epsutil"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/time"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/isql"
+	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
@@ -51,8 +52,7 @@ var (
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				epsutil.MustLockProject(tx, args.Host, args.Project)
-				task := taskeps.One(tx, args.Host, args.Project, args.Task)
-				app.ReturnIf(task == nil, http.StatusNotFound, "task not found")
+				epsutil.TaskMustExist(tx, args.Host, args.Project, args.Task)
 				t := &time.Time{
 					Task:      args.Task,
 					ID:        tlbx.NewID(),
@@ -69,7 +69,7 @@ var (
 				PanicOn(err)
 				// propogate aggregate values upwards
 				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Task)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, t.ID, cnsts.TypeTime, cnsts.ActionCreated, &task.Name, nil, args)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, t.ID, cnsts.TypeTime, cnsts.ActionCreated, nil, args)
 				tx.Commit()
 				return t
 			},
@@ -167,9 +167,110 @@ var (
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				//args := a.(*time.Delete)
-
+				args := a.(*time.Delete)
+				me := me.Get(tlbx)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
+				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
+				epsutil.MustLockProject(tx, args.Host, args.Project)
+				t := getOne(tx, args.Host, args.Project, args.Task, args.ID)
+				app.ReturnIf(t == nil, http.StatusNotFound, "")
+				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time_.Hour))), http.StatusForbidden, "you may only delete your own time entries within an hour of creating it")
+				// delete time
+				_, err := tx.Exec(`DELETE FROM times WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
+				PanicOn(err)
+				_, err = tx.Exec(`UPDATE tasks SET loggedTime=loggedTime-? WHERE host=? AND project=? AND id=?`, t.Duration, args.Host, args.Project, args.Task)
+				PanicOn(err)
+				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Task)
+				// set activities to deleted
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeTime, cnsts.ActionDeleted, nil, nil)
+				tx.Commit()
 				return nil
+			},
+		},
+		{
+			Description:  "get times",
+			Path:         (&time.Get{}).Path(),
+			Timeout:      5000,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &time.Get{
+					Asc:   ptr.Bool(false),
+					Limit: 100,
+				}
+			},
+			GetExampleArgs: func() interface{} {
+				return &time.Get{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					Task:    ptr.ID(app.ExampleID()),
+					IDs:     IDs{app.ExampleID()},
+					Limit:   100,
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return &time.GetRes{
+					Set:  []*time.Time{exampleTime},
+					More: true,
+				}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*time.Get)
+				app.BadReqIf(
+					args.CreatedOnMin != nil &&
+						args.CreatedOnMax != nil &&
+						args.CreatedOnMin.After(*args.CreatedOnMax),
+					"createdOnMin must be before createdOnMax")
+				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				args.Limit = sql.Limit100(args.Limit)
+				res := &time.GetRes{
+					Set:  make([]*time.Time, 0, args.Limit),
+					More: false,
+				}
+				qry := bytes.NewBufferString(`SELECT task, id, createdBy, createdOn, duration, note FROM times WHERE host=? AND project=?`)
+				qryArgs := make([]interface{}, 0, len(args.IDs)+8)
+				qryArgs = append(qryArgs, args.Host, args.Project)
+				if len(args.IDs) > 0 {
+					qry.WriteString(sql.InCondition(true, `id`, len(args.IDs)))
+					qry.WriteString(sql.OrderByField(`id`, len(args.IDs)))
+					ids := args.IDs.ToIs()
+					qryArgs = append(qryArgs, ids...)
+					qryArgs = append(qryArgs, ids...)
+				} else {
+					if args.Task != nil {
+						qry.WriteString(` AND task=?`)
+						qryArgs = append(qryArgs, args.Task)
+					}
+					if args.CreatedOnMin != nil {
+						qry.WriteString(` AND createdOn>=?`)
+						qryArgs = append(qryArgs, *args.CreatedOnMin)
+					}
+					if args.CreatedOnMax != nil {
+						qry.WriteString(` AND createdOn<=?`)
+						qryArgs = append(qryArgs, *args.CreatedOnMax)
+					}
+					if args.CreatedBy != nil {
+						qry.WriteString(` AND createdBy=?`)
+						qryArgs = append(qryArgs, *args.CreatedBy)
+					}
+					qry.WriteString(sql.OrderLimit100(`createdOn`, *args.Asc, args.Limit))
+					qryArgs = append(qryArgs, *args.CreatedBy)
+				}
+				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+					iLimit := int(args.Limit)
+					for rows.Next() {
+						if len(res.Set)+1 == iLimit {
+							res.More = true
+							break
+						}
+						t, err := Scan(rows)
+						PanicOn(err)
+						res.Set = append(res.Set, t)
+					}
+				}, qry.String(), qryArgs...))
+				return res
 			},
 		},
 	}

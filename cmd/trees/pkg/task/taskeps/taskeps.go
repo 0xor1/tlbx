@@ -97,7 +97,7 @@ var (
 				// or parents firstChild value depending on the scenario.
 				var previousSibling *task.Task
 				if args.PreviousSibling != nil {
-					previousSibling = One(tx, args.Host, args.Project, *args.PreviousSibling)
+					previousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling)
 					app.ReturnIf(previousSibling == nil, http.StatusNotFound, "previousSibling not found")
 					t.NextSibling = previousSibling.NextSibling
 					previousSibling.NextSibling = &t.ID
@@ -108,7 +108,7 @@ var (
 					// else newTask is being inserted as firstChild, so set any current firstChild
 					// as newTask's NextSibling
 					// get parent for updating child/descendant counts and firstChild if required
-					parent := One(tx, args.Host, args.Project, args.Parent)
+					parent := getOne(tx, args.Host, args.Project, args.Parent)
 					app.ReturnIf(parent == nil, http.StatusNotFound, "parent not found")
 					t.NextSibling = parent.FirstChild
 					// increment parents child and descendant counters and firstChild pointer incase that was changed
@@ -118,7 +118,7 @@ var (
 				// insert new task
 				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.MinimumTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.FileSubCount, t.FileSubSize, t.ChildCount, t.DescendantCount, t.IsParallel)
 				PanicOn(err)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &t.ID, t.ID, cnsts.TypeTask, cnsts.ActionCreated, &t.Name, nil, nil)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &t.ID, t.ID, cnsts.TypeTask, cnsts.ActionCreated, nil, nil)
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
 				// all that remains to do is update aggregate values
 				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Parent)
@@ -188,14 +188,14 @@ var (
 					// we must lock
 					epsutil.MustLockProject(tx, args.Host, args.Project)
 				}
-				t := One(tx, args.Host, args.Project, args.ID)
+				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				var newParent, newPreviousSibling, currentParent, currentPreviousSibling *task.Task
 				if args.Parent != nil {
 					if !args.Parent.V.Equal(*t.Parent) {
 						var newNextSibling *ID
 						// validate new parent exists
-						newParent = One(tx, args.Host, args.Project, args.Parent.V)
+						newParent = getOne(tx, args.Host, args.Project, args.Parent.V)
 						app.ReturnIf(newParent == nil, http.StatusNotFound, "parent not found")
 						// we must ensure we dont allow recursive loops
 						row := tx.QueryRow(Strf("%s SELECT COUNT(*)=1 FROM ancestors a WHERE id=?", sql_ancestors_cte), args.Host, args.Project, args.Parent.V, args.Host, args.Project, args.ID)
@@ -204,7 +204,7 @@ var (
 						app.BadReqIf(ancestorLoopDetected || t.ID.Equal(args.Parent.V), "ancestor loop detected, invalid parent value")
 						if args.PreviousSibling != nil && args.PreviousSibling.V != nil {
 							app.BadReqIf(args.PreviousSibling.V.Equal(args.ID), "sibling loop detected, invalid previousSibling value")
-							newPreviousSibling = One(tx, args.Host, args.Project, *args.PreviousSibling.V)
+							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
 							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
 							app.BadReqIf(!newPreviousSibling.Parent.Equal(args.Parent.V), "previousSiblings parent does not match the specified parent arg")
 							newNextSibling = newPreviousSibling.NextSibling
@@ -220,7 +220,7 @@ var (
 						if newPreviousSibling != nil && newPreviousSibling.ID.Equal(*t.Parent) {
 							currentParent = newPreviousSibling
 						} else {
-							currentParent = One(tx, args.Host, args.Project, *t.Parent)
+							currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
 						}
 						app.ReturnIf(currentParent == nil, http.StatusNotFound, "currentParent not found")
 						if currentPreviousSibling != nil {
@@ -250,14 +250,14 @@ var (
 						if args.PreviousSibling.V != nil {
 							// moving to a non first child position
 							app.BadReqIf(args.PreviousSibling.V.Equal(args.ID), "sibling loop detected, invalid previousSibling value")
-							newPreviousSibling = One(tx, args.Host, args.Project, *args.PreviousSibling.V)
+							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
 							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
 							app.BadReqIf(!newPreviousSibling.Parent.Equal(*t.Parent), "previousSiblings parent does not match the current tasks parent")
 							newNextSibling = newPreviousSibling.NextSibling
 							newPreviousSibling.NextSibling = &t.ID
 						} else {
 							// moving to the first child position
-							currentParent = One(tx, args.Host, args.Project, *t.Parent)
+							currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
 							PanicIf(currentParent == nil, "currentParent not found")
 							newNextSibling = currentParent.FirstChild
 							currentParent.FirstChild = &t.ID
@@ -329,7 +329,7 @@ var (
 				}
 				if simpleUpdateRequired || treeUpdateRequired {
 					update(t, currentParent, currentPreviousSibling, newParent, newPreviousSibling)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionUpdated, &t.Name, nil, args)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionUpdated, nil, args)
 				}
 				if treeUpdateRequired {
 					if currentParent != nil {
@@ -375,13 +375,13 @@ var (
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "you don't have permission to delete a task")
 				epsutil.MustLockProject(tx, args.Host, args.Project)
 				// at this point we need to get the task
-				t := One(tx, args.Host, args.Project, args.ID)
+				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				app.BadReqIf(t.DescendantCount > 100, "may not delete more than 100 task per delete action")
 				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.DescendantCount > 0 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own tasks within an hour of creating them and they must have no children")
 				previousNode := getPreviousSibling(tx, args.Host, args.Project, args.ID)
 				if previousNode == nil {
-					previousNode = One(tx, args.Host, args.Project, *t.Parent)
+					previousNode = getOne(tx, args.Host, args.Project, *t.Parent)
 					PanicIf(!previousNode.FirstChild.Equal(t.ID), "invalid data detected, deleting task %s", t.ID)
 					previousNode.FirstChild = t.NextSibling
 				} else {
@@ -409,7 +409,7 @@ var (
 					_, err = tx.Exec(`UPDATE tasks SET firstChild=?, nextSibling=? WHERE host=? AND project=? AND id=?`, previousNode.FirstChild, previousNode.NextSibling, args.Host, args.Project, previousNode.ID)
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.ID)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, &t.Name, nil, nil)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, nil, nil)
 
 					// first get all time/expense/file/comment ids being deleted then
 					sql_in_tasks := sql.InCondition(true, `task`, len(tasksToDelete))
@@ -477,7 +477,7 @@ var (
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
-				t := One(tx, args.Host, args.Project, args.ID)
+				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				tx.Commit()
 				return t
@@ -625,7 +625,7 @@ var (
 	}
 )
 
-func One(tx service.Tx, host, project, id ID) *task.Task {
+func getOne(tx service.Tx, host, project, id ID) *task.Task {
 	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND id=?`, Sql_task_columns_prefixed), host, project, id)
 	t, err := Scan(row)
 	sql.PanicIfIsntNoRows(err)

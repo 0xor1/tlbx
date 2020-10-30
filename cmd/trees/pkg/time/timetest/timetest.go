@@ -9,6 +9,7 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/time"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
@@ -63,6 +64,10 @@ func Everything(t *testing.T) {
 		EstimatedTime:   100,
 	}).MustDo(ac)
 	a.NotNil(t1p0)
+
+	(&time.Create{
+		H
+	}).MustDo(ac)
 
 	grabFullTree(r, r.Ali().ID(), p.ID)
 }
