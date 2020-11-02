@@ -348,7 +348,7 @@ var (
 		{
 			Description:  "Delete a task",
 			Path:         (&task.Delete{}).Path(),
-			Timeout:      5000,
+			Timeout:      0,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {

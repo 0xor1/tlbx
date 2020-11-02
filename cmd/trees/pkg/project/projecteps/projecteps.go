@@ -267,7 +267,7 @@ var (
 		{
 			Description:  "delete projects",
 			Path:         (&project.Delete{}).Path(),
-			Timeout:      500,
+			Timeout:      0,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
