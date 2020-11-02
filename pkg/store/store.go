@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"io"
 	"strings"
 	"time"
@@ -22,16 +23,16 @@ type Client interface {
 	MustCreateBucket(bucket, acl string)
 	Copy(srcBucket, dstBucket, key string) error
 	MustCopy(srcBucket, dstBucket, key string)
-	Put(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error
-	MustPut(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker)
-	PresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) (string, error)
-	MustPresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) string
-	Get(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser, error)
-	MustGet(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser)
-	PresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) (string, error)
-	MustPresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) string
-	Delete(bucket, prefix string, id ID) error
-	MustDelete(bucket, prefix string, id ID)
+	Put(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error
+	MustPut(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker)
+	PresignedPutUrl(bucket, key string, name, mimeType string, size int64) (string, error)
+	MustPresignedPutUrl(bucket, key string, name, mimeType string, size int64) string
+	Get(bucket, key string) (string, string, int64, io.ReadCloser, error)
+	MustGet(bucket, key string) (string, string, int64, io.ReadCloser)
+	PresignedGetUrl(bucket, key string, name string, isAttachment bool) (string, error)
+	MustPresignedGetUrl(bucket, key string, name string, isAttachment bool) string
+	Delete(bucket, key string) error
+	MustDelete(bucket, key string)
 	DeletePrefix(bucket, prefix string) error
 	MustDeletePrefix(bucket, prefix string)
 }
@@ -71,17 +72,21 @@ func (c *client) Copy(srcBucket, dstBucket, key string) error {
 	if err != nil {
 		return ToError(err)
 	}
-	return ToError(c.s3.WaitUntilObjectExists(&s3.HeadObjectInput{Bucket: ptr.String(dstBucket), Key: ptr.String(key)}))
+	err = c.s3.WaitUntilObjectExists(&s3.HeadObjectInput{Bucket: ptr.String(dstBucket), Key: ptr.String(key)})
+	if err != nil {
+		return ToError(err)
+	}
+	return c.Delete(srcBucket, key)
 }
 
 func (c *client) MustCopy(srcBucket, dstBucket, key string) {
 	PanicOn(c.Copy(srcBucket, dstBucket, key))
 }
 
-func (c *client) putReq(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) (*request.Request, *s3.PutObjectOutput) {
+func (c *client) putReq(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) (*request.Request, *s3.PutObjectOutput) {
 	return c.s3.PutObjectRequest(&s3.PutObjectInput{
 		Bucket:             ptr.String(bucket),
-		Key:                Key(prefix, id),
+		Key:                ptr.String(key),
 		ACL:                acl(isPublic),
 		Body:               content,
 		ContentDisposition: contentDisposition(name, isAttachment),
@@ -90,69 +95,69 @@ func (c *client) putReq(bucket, prefix string, id ID, name, mimeType string, siz
 	})
 }
 
-func (c *client) Put(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error {
-	req, _ := c.putReq(bucket, prefix, id, name, mimeType, size, isPublic, isAttachment, content)
+func (c *client) Put(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error {
+	req, _ := c.putReq(bucket, key, name, mimeType, size, isPublic, isAttachment, content)
 	return ToError(req.Send())
 }
 
-func (c *client) MustPut(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) {
-	PanicOn(c.Put(bucket, prefix, id, name, mimeType, size, isPublic, isAttachment, content))
+func (c *client) MustPut(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) {
+	PanicOn(c.Put(bucket, key, name, mimeType, size, isPublic, isAttachment, content))
 }
 
-func (c *client) PresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) (string, error) {
-	req, _ := c.putReq(bucket, prefix, id, name, mimeType, size, false, true, nil)
+func (c *client) PresignedPutUrl(bucket, key string, name, mimeType string, size int64) (string, error) {
+	req, _ := c.putReq(bucket, key, name, mimeType, size, false, true, nil)
 	url, err := req.Presign(10 * time.Minute)
 	return url, ToError(err)
 }
 
-func (c *client) MustPresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) string {
-	str, err := c.PresignedPutUrl(bucket, prefix, id, name, mimeType, size)
+func (c *client) MustPresignedPutUrl(bucket, key string, name, mimeType string, size int64) string {
+	str, err := c.PresignedPutUrl(bucket, key, name, mimeType, size)
 	PanicOn(err)
 	return str
 }
 
-func (c *client) getReq(bucket, prefix string, id ID, name string, isAttachment bool) (*request.Request, *s3.GetObjectOutput) {
+func (c *client) getReq(bucket, key string, name string, isAttachment bool) (*request.Request, *s3.GetObjectOutput) {
 	return c.s3.GetObjectRequest(&s3.GetObjectInput{
 		Bucket:                     ptr.String(bucket),
-		Key:                        Key(prefix, id),
+		Key:                        ptr.String(key),
 		ResponseContentDisposition: contentDisposition(name, isAttachment),
 	})
 }
 
-func (c *client) Get(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser, error) {
-	req, res := c.getReq(bucket, prefix, id, "", false)
+func (c *client) Get(bucket, key string) (string, string, int64, io.ReadCloser, error) {
+	req, res := c.getReq(bucket, key, "", false)
 	err := req.Send()
 	return getName(res.ContentDisposition), ptr.StringOr(res.ContentType, defaultMimeType), ptr.Int64Or(res.ContentLength, 0), res.Body, ToError(err)
 }
 
-func (c *client) MustGet(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser) {
-	name, mimeType, size, content, err := c.Get(bucket, prefix, id)
+func (c *client) MustGet(bucket, key string) (string, string, int64, io.ReadCloser) {
+	name, mimeType, size, content, err := c.Get(bucket, key)
 	PanicOn(err)
 	return name, mimeType, size, content
 }
 
-func (c *client) PresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) (string, error) {
-	req, _ := c.getReq(bucket, prefix, id, name, isAttachment)
+func (c *client) PresignedGetUrl(bucket, key string, name string, isAttachment bool) (string, error) {
+	req, _ := c.getReq(bucket, key, name, isAttachment)
 	url, err := req.Presign(10 * time.Minute)
 	return url, ToError(err)
 }
 
-func (c *client) MustPresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) string {
-	str, err := c.PresignedGetUrl(bucket, prefix, id, name, isAttachment)
+func (c *client) MustPresignedGetUrl(bucket, key string, name string, isAttachment bool) string {
+	str, err := c.PresignedGetUrl(bucket, key, name, isAttachment)
 	PanicOn(err)
 	return str
 }
 
-func (c *client) Delete(bucket, prefix string, id ID) error {
+func (c *client) Delete(bucket, key string) error {
 	_, err := c.s3.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: ptr.String(bucket),
-		Key:    Key(prefix, id),
+		Key:    ptr.String(key),
 	})
 	return ToError(err)
 }
 
-func (c *client) MustDelete(bucket, prefix string, id ID) {
-	PanicOn(c.Delete(bucket, prefix, id))
+func (c *client) MustDelete(bucket, key string) {
+	PanicOn(c.Delete(bucket, key))
 }
 
 func (c *client) DeletePrefix(bucket, prefix string) error {
@@ -191,12 +196,17 @@ func (c *client) MustDeletePrefix(bucket, prefix string) {
 	PanicOn(c.DeletePrefix(bucket, prefix))
 }
 
-func Key(prefix string, id ID) *string {
-	key := id.String()
+func Key(prefix string, root ID, ids ...ID) string {
+	var key *bytes.Buffer
 	if prefix != "" {
-		key = Strf("%s/%s", prefix, key)
+		key = bytes.NewBufferString(prefix + "/" + root.String())
+	} else {
+		key = bytes.NewBufferString(root.String())
 	}
-	return ptr.String(key)
+	for _, id := range ids {
+		key.WriteString("/" + id.String())
+	}
+	return key.String()
 }
 
 func contentDisposition(name string, isAttachment bool) *string {

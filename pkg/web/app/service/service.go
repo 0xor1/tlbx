@@ -289,76 +289,76 @@ func (s *storeClient) MustCopy(srcBucket, dstBucket, key string) {
 	PanicOn(s.Copy(srcBucket, dstBucket, key))
 }
 
-func (s *storeClient) Put(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error {
+func (s *storeClient) Put(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error {
 	var err error
 	s.do(func() {
-		err = s.store.Put(bucket, prefix, id, name, mimeType, size, isPublic, isAttachment, content)
-	}, Strf("%s %s %s", "PUT", bucket, *store.Key(prefix, id)))
+		err = s.store.Put(bucket, key, name, mimeType, size, isPublic, isAttachment, content)
+	}, Strf("%s %s %s", "PUT", bucket, key))
 	return err
 }
 
-func (s *storeClient) MustPut(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) {
-	PanicOn(s.Put(bucket, prefix, id, name, mimeType, size, isPublic, isAttachment, content))
+func (s *storeClient) MustPut(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) {
+	PanicOn(s.Put(bucket, key, name, mimeType, size, isPublic, isAttachment, content))
 }
 
-func (s *storeClient) PresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) (string, error) {
+func (s *storeClient) PresignedPutUrl(bucket, key string, name, mimeType string, size int64) (string, error) {
 	var url string
 	var err error
 	s.do(func() {
-		url, err = s.store.PresignedPutUrl(bucket, prefix, id, name, mimeType, size)
-	}, Strf("%s %s %s", "PUT_PRESIGNED_URL", bucket, *store.Key(prefix, id)))
+		url, err = s.store.PresignedPutUrl(bucket, key, name, mimeType, size)
+	}, Strf("%s %s %s", "PUT_PRESIGNED_URL", bucket, key))
 	return url, err
 }
 
-func (s *storeClient) MustPresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) string {
-	url, err := s.PresignedPutUrl(bucket, prefix, id, name, mimeType, size)
+func (s *storeClient) MustPresignedPutUrl(bucket, key string, name, mimeType string, size int64) string {
+	url, err := s.PresignedPutUrl(bucket, key, name, mimeType, size)
 	PanicOn(err)
 	return url
 }
 
-func (s *storeClient) Get(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser, error) {
+func (s *storeClient) Get(bucket, key string) (string, string, int64, io.ReadCloser, error) {
 	var name string
 	var mimeType string
 	var size int64
 	var content io.ReadCloser
 	var err error
 	s.do(func() {
-		name, mimeType, size, content, err = s.store.Get(bucket, prefix, id)
-	}, Strf("%s %s %s", "GET", bucket, *store.Key(prefix, id)))
+		name, mimeType, size, content, err = s.store.Get(bucket, key)
+	}, Strf("%s %s %s", "GET", bucket, key))
 	return name, mimeType, size, content, err
 }
 
-func (s *storeClient) MustGet(bucket, prefix string, id ID) (string, string, int64, io.ReadCloser) {
-	name, mimeType, size, content, err := s.Get(bucket, prefix, id)
+func (s *storeClient) MustGet(bucket, key string) (string, string, int64, io.ReadCloser) {
+	name, mimeType, size, content, err := s.Get(bucket, key)
 	PanicOn(err)
 	return name, mimeType, size, content
 }
 
-func (s *storeClient) PresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) (string, error) {
+func (s *storeClient) PresignedGetUrl(bucket, key string, name string, isAttachment bool) (string, error) {
 	var url string
 	var err error
 	s.do(func() {
-		url, err = s.store.PresignedGetUrl(bucket, prefix, id, name, isAttachment)
-	}, Strf("%s %s %s", "GET_PRESIGNED_URL", bucket, *store.Key(prefix, id)))
+		url, err = s.store.PresignedGetUrl(bucket, key, name, isAttachment)
+	}, Strf("%s %s %s", "GET_PRESIGNED_URL", bucket, key))
 	return url, err
 }
 
-func (s *storeClient) MustPresignedGetUrl(bucket, prefix string, id ID, name string, isAttachment bool) string {
-	url, err := s.PresignedGetUrl(bucket, prefix, id, name, isAttachment)
+func (s *storeClient) MustPresignedGetUrl(bucket, key string, name string, isAttachment bool) string {
+	url, err := s.PresignedGetUrl(bucket, key, name, isAttachment)
 	PanicOn(err)
 	return url
 }
 
-func (s *storeClient) Delete(bucket, prefix string, id ID) error {
+func (s *storeClient) Delete(bucket, key string) error {
 	var err error
 	s.do(func() {
-		err = s.store.Delete(bucket, prefix, id)
-	}, Strf("%s %s %s", "DELETE", bucket, *store.Key(prefix, id)))
+		err = s.store.Delete(bucket, key)
+	}, Strf("%s %s %s", "DELETE", bucket, key))
 	return err
 }
 
-func (s *storeClient) MustDelete(bucket, prefix string, id ID) {
-	PanicOn(s.Delete(bucket, prefix, id))
+func (s *storeClient) MustDelete(bucket, key string) {
+	PanicOn(s.Delete(bucket, key))
 }
 
 func (s *storeClient) DeletePrefix(bucket, prefix string) error {

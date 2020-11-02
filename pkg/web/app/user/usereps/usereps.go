@@ -38,7 +38,7 @@ func New(
 	enableSocials bool,
 	onSetSocials func(app.Tlbx, *user.User) error,
 	avatarBucket, avatarPrefix string,
-	store store.Client,
+	storeClient store.Client,
 ) []*app.Endpoint {
 	eps := []*app.Endpoint{
 		{
@@ -472,7 +472,7 @@ func New(
 		},
 	}
 	if enableSocials {
-		store.MustCreateBucket(avatarBucket, "public_read")
+		storeClient.MustCreateBucket(avatarBucket, "public_read")
 		eps = append(eps,
 			&app.Endpoint{
 				Description:  "get users",
@@ -620,7 +620,7 @@ func New(
 					args.Size = int64(len(content))
 					if args.Size > 0 {
 						if *user.HasAvatar {
-							srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
+							srv.Store().MustDelete(avatarBucket, store.Key(avatarPrefix, me))
 						}
 						avatar, _, err := image.Decode(bytes.NewBuffer(content))
 						PanicOn(err)
@@ -634,8 +634,7 @@ func New(
 						PanicOn(png.Encode(buff, avatar))
 						srv.Store().MustPut(
 							avatarBucket,
-							avatarPrefix,
-							me,
+							store.Key(avatarPrefix, me),
 							args.Name,
 							"image/png",
 							int64(buff.Len()),
@@ -643,7 +642,7 @@ func New(
 							false,
 							bytes.NewReader(buff.Bytes()))
 					} else if *user.HasAvatar == true {
-						srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
+						srv.Store().MustDelete(avatarBucket, store.Key(avatarPrefix, me))
 					}
 					nowHasAvatar := args.Size > 0
 					if *user.HasAvatar != nowHasAvatar {
@@ -677,7 +676,7 @@ func New(
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.GetAvatar)
 					srv := service.Get(tlbx)
-					name, mimeType, size, content := srv.Store().MustGet(avatarBucket, avatarPrefix, args.User)
+					name, mimeType, size, content := srv.Store().MustGet(avatarBucket, store.Key(avatarPrefix, args.User))
 					ds := &app.DownStream{}
 					ds.ID = args.User
 					ds.Name = name
