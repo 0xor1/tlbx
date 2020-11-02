@@ -274,7 +274,19 @@ func (s *storeClient) CreateBucket(bucket, acl string) error {
 }
 
 func (s *storeClient) MustCreateBucket(bucket, acl string) {
-	s.CreateBucket(bucket, acl)
+	PanicOn(s.CreateBucket(bucket, acl))
+}
+
+func (s *storeClient) Copy(srcBucket, dstBucket, key string) error {
+	var err error
+	s.do(func() {
+		err = s.store.Copy(srcBucket, dstBucket, key)
+	}, Strf("%s %s %s %s", "COPY_OBJECT", srcBucket, dstBucket, key))
+	return err
+}
+
+func (s *storeClient) MustCopy(srcBucket, dstBucket, key string) {
+	PanicOn(s.Copy(srcBucket, dstBucket, key))
 }
 
 func (s *storeClient) Put(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error {

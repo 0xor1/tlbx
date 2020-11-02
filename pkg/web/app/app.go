@@ -242,31 +242,31 @@ func Run(configs ...func(*Config)) {
 		do := func() {
 			// validation check
 			if tlbx.isSubMDo {
-				_, ok := ep.GetExampleResponse().(*Stream)
+				_, ok := ep.GetExampleResponse().(*DownStream)
 				BadReqIf(ok, "can not call stream endpoint in an mdo request")
 			}
 			// process args
 			args := ep.GetDefaultArgs()
-			s, isStream := args.(*Stream)
+			s, isStream := args.(*UpStream)
 			BadReqIf(isStream && tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
 			if isStream {
 				s.Type = tlbx.req.Header.Get("Content-Type")
 				s.Size = tlbx.req.ContentLength
 				PanicOn(err)
 				s.Name = tlbx.req.Header.Get("Content-Name")
-				contentID := tlbx.req.Header.Get("Content-Id")
-				if contentID != "" {
-					s.ID = MustParseID(contentID)
-				}
 				s.Content = tlbx.req.Body
 				args = s
+				argsStr := tlbx.req.Header.Get("Content-Args")
+				if s.Args != nil && argsStr != "" {
+					PanicOn(json.Unmarshal([]byte(argsStr), &s.Args))
+				}
 			} else {
 				getJsonArgs(tlbx, args)
 			}
 			// handle request
 			res := ep.Handler(tlbx, args)
 			// process response
-			if s, ok := res.(*Stream); ok {
+			if s, ok := res.(*DownStream); ok {
 				defer s.Content.Close()
 				BadReqIf(tlbx.isSubMDo, "can not call stream endpoint in an mdo request")
 				tlbx.resp.Header().Add("Content-Type", s.Type)
@@ -639,16 +639,33 @@ func getJsonArgs(tlbx *tlbx, args interface{}) {
 
 // client stuff
 
-type Stream struct {
-	Type       string
-	Name       string
-	Size       int64
-	ID         ID
-	IsDownload bool
-	Content    io.ReadCloser
+type stream struct {
+	Size    int64
+	Type    string
+	Name    string
+	Content io.ReadCloser
 }
 
-func (s *Stream) ToReq(method, url string) (*http.Request, error) {
+type UpStream struct {
+	stream
+	Args interface{}
+}
+
+func (_ *UpStream) MarshalJSON() ([]byte, error) {
+	return json.Marshal(`body contains content bytes plus headers:
+"Content-Type": "mime_type",
+"Content-Length": bytes_count,
+"Content-Name": "name",
+"Content-Args": "optional_args_json_string"`)
+}
+
+type DownStream struct {
+	stream
+	ID         ID
+	IsDownload bool
+}
+
+func (s *UpStream) ToReq(method, url string) (*http.Request, error) {
 	r, err := http.NewRequest(method, url, s.Content)
 	if err != nil {
 		return nil, err
@@ -657,20 +674,21 @@ func (s *Stream) ToReq(method, url string) (*http.Request, error) {
 	r.Header.Add("Content-Length", strconv.FormatInt(s.Size, 10))
 	r.ContentLength = s.Size
 	r.Header.Add("Content-Name", s.Name)
-	r.Header.Add("Content-Id", s.ID.String())
-	if s.IsDownload {
-		r.Header.Add("Content-Disposition", Strf(`attachment; filename="%s"`, s.Name))
+	as, err := json.Marshal(s.Args)
+	if err != nil {
+		return nil, err
 	}
+	r.Header.Add("Content-Args", string(as))
 	return r, nil
 }
 
-func (bs *Stream) MustToReq(method, url string) *http.Request {
-	r, err := bs.ToReq(method, url)
+func (s *UpStream) MustToReq(method, url string) *http.Request {
+	r, err := s.ToReq(method, url)
 	PanicOn(err)
 	return r
 }
 
-func (s *Stream) FromResp(r *http.Response) error {
+func (s *DownStream) FromResp(r *http.Response) error {
 	size, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
 		return ToError(err)
@@ -680,25 +698,23 @@ func (s *Stream) FromResp(r *http.Response) error {
 	if contentID != "" {
 		id = MustParseID(contentID)
 	}
-	*s = Stream{
-		Type:    r.Header.Get("Content-Type"),
-		Size:    size,
-		Name:    r.Header.Get("Content-Name"),
-		ID:      id,
-		Content: r.Body,
-	}
+	s.Type = r.Header.Get("Content-Type")
+	s.Size = size
+	s.Name = r.Header.Get("Content-Name")
+	s.ID = id
+	s.Content = r.Body
 	return nil
 }
 
-func (s *Stream) MustFromResp(r *http.Response) {
+func (s *DownStream) MustFromResp(r *http.Response) {
 	PanicOn(s.FromResp(r))
 }
 
-func (_ *Stream) MarshalJSON() ([]byte, error) {
+func (_ *DownStream) MarshalJSON() ([]byte, error) {
 	return json.Marshal(`body contains content bytes plus headers:
 "Content-Type": "mime_type",
 "Content-Length": bytes_count,
-"Content-Name": "name"
+"Content-Name": "name",
 "Content-Id": "id_string"`)
 }
 
@@ -730,7 +746,7 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 	var req *http.Request
 	var err error
 	switch a := args.(type) {
-	case *Stream:
+	case *UpStream:
 		if a != nil {
 			req, err = a.ToReq(method, url)
 		}
@@ -762,7 +778,7 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 	for _, cookie := range httpRes.Cookies() {
 		c.cookies[cookie.Name] = cookie.Value
 	}
-	if s, ok := res.(**Stream); ok {
+	if s, ok := res.(**DownStream); ok {
 		err = (*s).FromResp(httpRes)
 		if err != nil {
 			if s != nil && *s != nil && (*s).Content != nil {

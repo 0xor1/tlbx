@@ -3,6 +3,7 @@ package usereps
 import (
 	"bytes"
 	"database/sql"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"regexp"
@@ -598,27 +599,30 @@ func New(
 				MaxBodyBytes: app.MB,
 				IsPrivate:    false,
 				GetDefaultArgs: func() interface{} {
-					return &app.Stream{}
+					return &app.UpStream{}
 				},
 				GetExampleArgs: func() interface{} {
-					return &app.Stream{}
+					return &app.UpStream{}
 				},
 				GetExampleResponse: func() interface{} {
 					return nil
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-					args := a.(*app.Stream)
+					args := a.(*app.UpStream)
 					defer args.Content.Close()
 					me := me.Get(tlbx)
 					srv := service.Get(tlbx)
 					tx := srv.User().Begin()
 					defer tx.Rollback()
 					user := getUser(tx, nil, &me)
+					content, err := ioutil.ReadAll(args.Content)
+					PanicOn(err)
+					args.Size = int64(len(content))
 					if args.Size > 0 {
 						if *user.HasAvatar {
 							srv.Store().MustDelete(avatarBucket, avatarPrefix, me)
 						}
-						avatar, _, err := image.Decode(args.Content)
+						avatar, _, err := image.Decode(bytes.NewBuffer(content))
 						PanicOn(err)
 						bounds := avatar.Bounds()
 						xDiff := bounds.Max.X - bounds.Min.X
@@ -668,19 +672,19 @@ func New(
 					}
 				},
 				GetExampleResponse: func() interface{} {
-					return &app.Stream{}
+					return &app.DownStream{}
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.GetAvatar)
 					srv := service.Get(tlbx)
 					name, mimeType, size, content := srv.Store().MustGet(avatarBucket, avatarPrefix, args.User)
-					return &app.Stream{
-						ID:      args.User,
-						Name:    name,
-						Type:    mimeType,
-						Size:    size,
-						Content: content,
-					}
+					ds := &app.DownStream{}
+					ds.ID = args.User
+					ds.Name = name
+					ds.Type = mimeType
+					ds.Size = size
+					ds.Content = content
+					return ds
 				},
 			})
 	}

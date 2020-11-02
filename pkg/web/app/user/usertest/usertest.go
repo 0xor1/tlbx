@@ -147,13 +147,8 @@ func Everything(t *testing.T) {
 	a.False(*me.HasAvatar)
 
 	(&user.SetAvatar{
-		Avatar: &app.Stream{
-			ID:      me.ID,
-			Size:    49397,
-			Name:    "test.png",
-			Type:    "image/png",
-			Content: ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))),
-		},
+		Type:   "image/png",
+		Avatar: ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))),
 	}).MustDo(c)
 
 	me = (&user.GetMe{}).MustDo(c)
@@ -169,13 +164,8 @@ func Everything(t *testing.T) {
 	avatar.Content.Close()
 
 	(&user.SetAvatar{
-		Avatar: &app.Stream{
-			ID:      me.ID,
-			Size:    985927,
-			Name:    "test.png",
-			Type:    "image/png",
-			Content: ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgNotSquare))),
-		},
+		Type:   "image/png",
+		Avatar: ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgNotSquare))),
 	}).MustDo(c)
 
 	me = (&user.GetMe{}).MustDo(c)

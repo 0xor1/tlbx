@@ -1,6 +1,8 @@
 package user
 
 import (
+	"io"
+
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
@@ -154,7 +156,8 @@ func (a *SetAlias) MustDo(c *app.Client) {
 }
 
 type SetAvatar struct {
-	Avatar *app.Stream
+	Type   string
+	Avatar io.ReadCloser
 }
 
 func (_ *SetAvatar) Path() string {
@@ -162,7 +165,13 @@ func (_ *SetAvatar) Path() string {
 }
 
 func (a *SetAvatar) Do(c *app.Client) error {
-	return app.Call(c, a.Path(), a.Avatar, nil)
+	var stream *app.UpStream
+	if a.Avatar != nil {
+		stream = &app.UpStream{}
+		stream.Type = a.Type
+		stream.Content = a.Avatar
+	}
+	return app.Call(c, a.Path(), stream, nil)
 }
 
 func (a *SetAvatar) MustDo(c *app.Client) {
@@ -284,13 +293,13 @@ func (_ *GetAvatar) Path() string {
 	return "/user/getAvatar"
 }
 
-func (a *GetAvatar) Do(c *app.Client) (*app.Stream, error) {
-	res := &app.Stream{}
+func (a *GetAvatar) Do(c *app.Client) (*app.DownStream, error) {
+	res := &app.DownStream{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *GetAvatar) MustDo(c *app.Client) *app.Stream {
+func (a *GetAvatar) MustDo(c *app.Client) *app.DownStream {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res

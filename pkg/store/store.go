@@ -20,6 +20,8 @@ const (
 type Client interface {
 	CreateBucket(bucket, acl string) error
 	MustCreateBucket(bucket, acl string)
+	Copy(srcBucket, dstBucket, key string) error
+	MustCopy(srcBucket, dstBucket, key string)
 	Put(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error
 	MustPut(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker)
 	PresignedPutUrl(bucket, prefix string, id ID, name, mimeType string, size int64) (string, error)
@@ -58,6 +60,22 @@ func (c *client) CreateBucket(bucket, acl string) error {
 
 func (c *client) MustCreateBucket(bucket, acl string) {
 	PanicOn(c.CreateBucket(bucket, acl))
+}
+
+func (c *client) Copy(srcBucket, dstBucket, key string) error {
+	_, err := c.s3.CopyObject(&s3.CopyObjectInput{
+		Bucket:     ptr.String(dstBucket),
+		CopySource: ptr.String(srcBucket + "/" + key),
+		Key:        ptr.String(key),
+	})
+	if err != nil {
+		return ToError(err)
+	}
+	return ToError(c.s3.WaitUntilObjectExists(&s3.HeadObjectInput{Bucket: ptr.String(dstBucket), Key: ptr.String(key)}))
+}
+
+func (c *client) MustCopy(srcBucket, dstBucket, key string) {
+	PanicOn(c.Copy(srcBucket, dstBucket, key))
 }
 
 func (c *client) putReq(bucket, prefix string, id ID, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) (*request.Request, *s3.PutObjectOutput) {
