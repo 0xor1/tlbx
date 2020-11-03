@@ -156,7 +156,6 @@ func (a *SetAlias) MustDo(c *app.Client) {
 }
 
 type SetAvatar struct {
-	Type   string
 	Avatar io.ReadCloser
 }
 
@@ -168,7 +167,6 @@ func (a *SetAvatar) Do(c *app.Client) error {
 	var stream *app.UpStream
 	if a.Avatar != nil {
 		stream = &app.UpStream{}
-		stream.Type = a.Type
 		stream.Content = a.Avatar
 	}
 	return app.Call(c, a.Path(), stream, nil)

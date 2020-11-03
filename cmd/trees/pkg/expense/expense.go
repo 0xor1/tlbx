@@ -104,7 +104,7 @@ type Delete struct {
 	Host    ID `json:"host"`
 	Project ID `json:"project"`
 	Task    ID `json:"task"`
-	ID      ID `json:"ids"`
+	ID      ID `json:"id"`
 }
 
 func (_ *Delete) Path() string {

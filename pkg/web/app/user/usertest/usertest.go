@@ -147,7 +147,6 @@ func Everything(t *testing.T) {
 	a.False(*me.HasAvatar)
 
 	(&user.SetAvatar{
-		Type:   "image/png",
 		Avatar: ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))),
 	}).MustDo(c)
 
@@ -164,7 +163,6 @@ func Everything(t *testing.T) {
 	avatar.Content.Close()
 
 	(&user.SetAvatar{
-		Type:   "image/png",
 		Avatar: ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgNotSquare))),
 	}).MustDo(c)
 

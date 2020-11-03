@@ -146,15 +146,18 @@ CREATE TABLE files(
   host BINARY(16) NOT NULL,
   project BINARY(16) NOT NULL,
   task BINARY(16) NOT NULL,
+  isFinalized BOOL NOT NULL,
   id BINARY(16) NOT NULL,
+  name VARCHAR(250) NOT NULL,
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
   size BIGINT UNSIGNED NOT NULL,
-  note VARCHAR(250) NOT NULL,
-  PRIMARY KEY(host, project, task, createdOn, createdBy),
-  UNIQUE INDEX(host, project, task, id),
-  UNIQUE INDEX(host, project, createdBy, createdOn, task),
-  UNIQUE INDEX(host, project, createdOn, createdBy, task)
+  mimeType VARCHAR(250) NOT NULL,
+  PRIMARY KEY(host, project, task, isFinalized, createdOn, createdBy),
+  UNIQUE INDEX(host, project, isFinalized, task, id),
+  UNIQUE INDEX(host, project, isFinalized, createdBy, createdOn, task),
+  UNIQUE INDEX(host, project, isFinalized, createdOn, createdBy, task),
+  UNIQUE INDEX(host, project, isFinalized, name, createdOn, createdBy, task)
 );
 
 DROP TABLE IF EXISTS comments;

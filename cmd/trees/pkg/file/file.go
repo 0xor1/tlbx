@@ -1,66 +1,93 @@
-package time
+package file
 
 import (
 	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
-type Time struct {
+type File struct {
 	Task      ID        `json:"task"`
 	ID        ID        `json:"id"`
 	CreatedBy ID        `json:"createdBy"`
 	CreatedOn time.Time `json:"createdOn"`
-	Duration  uint64    `json:"duration"`
-	Note      string    `json:"note"`
+	Name      string    `json:"name"`
+	MimeType  string    `json:"mimeType"`
+	Size      uint64    `json:"size"`
 }
 
-type Create struct {
+type GetPresignedPutUrl struct {
 	Host     ID     `json:"host"`
 	Project  ID     `json:"project"`
 	Task     ID     `json:"task"`
-	Duration uint64 `json:"duration"`
-	Note     string `json:"note,omitempty"`
+	Name     string `json:"name,omitempty"`
+	MimeType string `json:"mimeType,omitempty"`
+	Size     uint64 `json:"size,omitempty"`
 }
 
-func (_ *Create) Path() string {
-	return "/time/create"
+type GetPresignedPutUrlRes struct {
+	URL string `json:"url"`
+	ID  ID     `json:"id"`
 }
 
-func (a *Create) Do(c *app.Client) (*Time, error) {
-	res := &Time{}
+func (_ *GetPresignedPutUrl) Path() string {
+	return "/file/getPresignedPutUrl"
+}
+
+func (a *GetPresignedPutUrl) Do(c *app.Client) (*GetPresignedPutUrlRes, error) {
+	res := &GetPresignedPutUrlRes{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Create) MustDo(c *app.Client) *Time {
+func (a *GetPresignedPutUrl) MustDo(c *app.Client) *GetPresignedPutUrlRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
 }
 
-type Update struct {
-	Host     ID            `json:"host"`
-	Project  ID            `json:"project"`
-	Task     ID            `json:"task"`
-	ID       ID            `json:"id"`
-	Duration *field.UInt64 `json:"duration,omitempty"`
-	Note     *field.String `json:"note,omitempty"`
+type Finalize struct {
+	Host    ID `json:"host"`
+	Project ID `json:"project"`
+	Task    ID `json:"task"`
+	ID      ID `json:"id"`
 }
 
-func (_ *Update) Path() string {
-	return "/time/update"
+func (_ *Finalize) Path() string {
+	return "/file/finalize"
 }
 
-func (a *Update) Do(c *app.Client) (*Time, error) {
-	res := &Time{}
+func (a *Finalize) Do(c *app.Client) (*File, error) {
+	res := &File{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Update) MustDo(c *app.Client) *Time {
+func (a *Finalize) MustDo(c *app.Client) *File {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type GetPresignedGetUrl struct {
+	Host    ID `json:"host"`
+	Project ID `json:"project"`
+	Task    ID `json:"task"`
+	ID      ID `json:"id"`
+}
+
+func (_ *GetPresignedGetUrl) Path() string {
+	return "/file/getPresignedGetUrl"
+}
+
+func (a *GetPresignedGetUrl) Do(c *app.Client) (string, error) {
+	var res string
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *GetPresignedGetUrl) MustDo(c *app.Client) string {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -80,12 +107,12 @@ type Get struct {
 }
 
 type GetRes struct {
-	Set  []*Time `json:"set"`
+	Set  []*File `json:"set"`
 	More bool    `json:"more"`
 }
 
 func (_ *Get) Path() string {
-	return "/time/get"
+	return "/file/get"
 }
 
 func (a *Get) Do(c *app.Client) (*GetRes, error) {
@@ -108,7 +135,7 @@ type Delete struct {
 }
 
 func (_ *Delete) Path() string {
-	return "/time/delete"
+	return "/file/delete"
 }
 
 func (a *Delete) Do(c *app.Client) error {
