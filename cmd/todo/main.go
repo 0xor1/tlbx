@@ -36,10 +36,7 @@ func main() {
 						nil,
 						listeps.OnDelete,
 						true,
-						nil,
-						config.AvatarBucket,
-						config.AvatarPrefix,
-						config.Store)...),
+						nil)...),
 				listeps.Eps...),
 			itemeps.Eps...)
 	})

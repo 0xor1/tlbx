@@ -185,6 +185,7 @@ func NewRig(
 	}
 
 	if useUsers {
+		r.store.MustCreateBucket(usereps.AvatarBucket, "public_read")
 		eps = append(
 			eps,
 			usereps.New(
@@ -194,10 +195,7 @@ func NewRig(
 				onActivate,
 				onDelete,
 				enableSocials,
-				onSetSocials,
-				config.AvatarBucket,
-				config.AvatarPrefix,
-				config.Store)...)
+				onSetSocials)...)
 	}
 	go app.Run(func(c *app.Config) {
 		c.TlbxSetup = app.TlbxMwares{

@@ -71,10 +71,11 @@ func (a *Finalize) MustDo(c *app.Client) *File {
 }
 
 type GetPresignedGetUrl struct {
-	Host    ID `json:"host"`
-	Project ID `json:"project"`
-	Task    ID `json:"task"`
-	ID      ID `json:"id"`
+	Host       ID   `json:"host"`
+	Project    ID   `json:"project"`
+	Task       ID   `json:"task"`
+	ID         ID   `json:"id"`
+	IsDownload bool `json:"isDownload"`
 }
 
 func (_ *GetPresignedGetUrl) Path() string {

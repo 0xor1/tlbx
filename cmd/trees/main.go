@@ -34,10 +34,7 @@ func main() {
 					nil,
 					projecteps.OnDelete,
 					true,
-					nil,
-					config.AvatarBucket,
-					config.AvatarPrefix,
-					config.Store)...),
+					nil)...),
 			projecteps.Eps...)
 	})
 }

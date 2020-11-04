@@ -23,8 +23,6 @@ type Config struct {
 	FromEmail                 string
 	ActivateFmtLink           string
 	ConfirmChangeEmailFmtLink string
-	AvatarBucket              string
-	AvatarPrefix              string
 	StaticDir                 string
 	ContentSecurityPolicies   []string
 	SessionAuthKey64s         [][]byte
@@ -42,13 +40,11 @@ func GetBase(file ...string) *config.Config {
 	c := config.New(file...)
 	c.SetDefault("isLocal", true)
 	c.SetDefault("aws.region", "local")
-	c.SetDefault("aws.s3.endpoint", "http://minio:9000")
+	c.SetDefault("aws.s3.endpoint", "http://localhost:9000")
 	c.SetDefault("aws.s3.creds.id", "localtest")
 	c.SetDefault("aws.s3.creds.secret", "localtest")
 	c.SetDefault("fromEmail", "test@test.localhost")
 	c.SetDefault("activateFmtLink", "http://localhost:8081/#/activate?email=%s&code=%s")
-	c.SetDefault("avatar.bucket", "avatars")
-	c.SetDefault("avatar.prefix", "")
 	c.SetDefault("confirmChangeEmailFmtLink", "http://localhost:8081/#/confirmChangeEmail?me=%s&code=%s")
 	c.SetDefault("staticDir", "client/dist")
 	c.SetDefault("contentSecurityPolicies", []interface{}{
@@ -124,8 +120,6 @@ func GetProcessed(c *config.Config) *Config {
 	res.FromEmail = c.GetString("fromEmail")
 	res.ActivateFmtLink = c.GetString("activateFmtLink")
 	res.ConfirmChangeEmailFmtLink = c.GetString("confirmChangeEmailFmtLink")
-	res.AvatarBucket = c.GetString("avatar.bucket")
-	res.AvatarPrefix = c.GetString("avatar.prefix")
 
 	authKey64s := c.GetStringSlice("sessionAuthKey64s")
 	encrKey32s := c.GetStringSlice("sessionEncrKey32s")

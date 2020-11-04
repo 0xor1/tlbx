@@ -38,7 +38,9 @@ func Everything(t *testing.T) {
 		nil,
 		projecteps.OnDelete,
 		true,
-		projecteps.OnSetSocials)
+		projecteps.OnSetSocials,
+		cnsts.TempFileBucket,
+		cnsts.FileBucket)
 	defer r.CleanUp()
 
 	ac := r.Ali().Client()

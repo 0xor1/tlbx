@@ -5,6 +5,7 @@ import (
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/file/fileeps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
@@ -29,12 +30,14 @@ func Everything(t *testing.T) {
 	a := assert.New(t)
 	r := test.NewRig(
 		config.Get(),
-		append(projecteps.Eps, taskeps.Eps...),
+		append(append(projecteps.Eps, taskeps.Eps...), fileeps.Eps...),
 		true,
 		nil,
 		projecteps.OnDelete,
 		true,
-		projecteps.OnSetSocials)
+		projecteps.OnSetSocials,
+		cnsts.TempFileBucket,
+		cnsts.FileBucket)
 	defer r.CleanUp()
 
 	ac := r.Ali().Client()
@@ -256,6 +259,9 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 
+	f := testutil.MustUploadFile(ac, r.Ali().ID(), p.ID, t3p0.ID, "yolo.test.txt", "application/text", []byte(`yolo`))
+	a.NotNil(f)
+
 	(&task.Delete{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
@@ -267,7 +273,7 @@ func Everything(t *testing.T) {
 		Project: p.ID,
 		ID:      t1p0.ID,
 	}).MustDo(ac)
-	a.Equal(*t1p0, *t1p0Get)
+	a.True(t1p0.ID.Equal(t1p0Get.ID))
 
 	t1p1Ancestors := (&task.GetAncestors{
 		Host:    r.Ali().ID(),

@@ -1,9 +1,14 @@
 package testutil
 
 import (
+	"bytes"
+	"net/http"
+
+	"github.com/0xor1/tlbx/cmd/trees/pkg/file"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 )
 
@@ -67,4 +72,34 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 	println("lse: loggedSubExpense")
 	println()
 	print(tree[project.String()], nil)
+}
+
+func MustUploadFile(client *app.Client, host, project, task ID, name, mimeType string, content []byte) *file.File {
+	ppur := (&file.GetPresignedPutUrl{
+		Host:     host,
+		Project:  project,
+		Task:     task,
+		Size:     uint64(len(content)),
+		Name:     name,
+		MimeType: mimeType,
+	}).MustDo(client)
+	req, err := http.NewRequest(http.MethodPut, ppur.URL, bytes.NewBuffer(content))
+	PanicOn(err)
+	req.Header.Add("X-Amz-Acl", "private")
+	req.Header.Add("Content-Length", Strf(`%d`, len(content)))
+	req.Header.Add("Content-Type", "application/text")
+	req.Header.Add("Content-Disposition", "attachment; filename=yolo.test.txt")
+	req.Header.Add("Host", req.Host)
+	resp, err := http.DefaultClient.Do(req)
+	PanicOn(err)
+	PanicOn(resp.Body.Close())
+	PanicIf(resp.StatusCode != 200, "resp.StatusCode - %d", resp.StatusCode)
+	f := (&file.Finalize{
+		Host:    host,
+		Project: project,
+		Task:    task,
+		ID:      ppur.ID,
+	}).MustDo(client)
+	PanicIf(!f.ID.Equal(ppur.ID), "file id unexpected")
+	return f
 }

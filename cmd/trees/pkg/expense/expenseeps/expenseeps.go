@@ -148,7 +148,7 @@ var (
 		{
 			Description:  "Delete expense",
 			Path:         (&expense.Delete{}).Path(),
-			Timeout:      5000,
+			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
@@ -191,7 +191,7 @@ var (
 		{
 			Description:  "get expenses",
 			Path:         (&expense.Get{}).Path(),
-			Timeout:      5000,
+			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {

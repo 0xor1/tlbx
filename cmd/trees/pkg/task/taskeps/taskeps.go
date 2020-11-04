@@ -429,8 +429,8 @@ var (
 					PanicOn(err)
 					if len(tasksWithFiles) > 0 {
 						filesArgs := make([]interface{}, 0, len(tasksWithFiles)+2)
-						filesArgs = append(queryArgs, args.Host, args.Project)
-						filesArgs = append(queryArgs, tasksWithFiles.ToIs()...)
+						filesArgs = append(filesArgs, args.Host, args.Project)
+						filesArgs = append(filesArgs, tasksWithFiles.ToIs()...)
 						sql_in_tasks_with_files := sql.InCondition(true, `task`, len(tasksWithFiles))
 						PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM files WHERE host=? AND project=? %s`, sql_in_tasks_with_files), filesArgs...))
 						_, err = tx.Exec(Strf(`DELETE FROM files WHERE host=? AND project=? %s`, sql_in_tasks_with_files), filesArgs...)

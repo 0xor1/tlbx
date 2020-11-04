@@ -29,6 +29,11 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
+const (
+	AvatarBucket = "avatars"
+	AvatarPrefix = ""
+)
+
 func New(
 	fromEmail,
 	activateFmtLink,
@@ -37,8 +42,6 @@ func New(
 	onDelete func(app.Tlbx, ID),
 	enableSocials bool,
 	onSetSocials func(app.Tlbx, *user.User) error,
-	avatarBucket, avatarPrefix string,
-	storeClient store.Client,
 ) []*app.Endpoint {
 	eps := []*app.Endpoint{
 		{
@@ -472,7 +475,6 @@ func New(
 		},
 	}
 	if enableSocials {
-		storeClient.MustCreateBucket(avatarBucket, "public_read")
 		eps = append(eps,
 			&app.Endpoint{
 				Description:  "get users",
@@ -620,7 +622,7 @@ func New(
 					args.Size = int64(len(content))
 					if args.Size > 0 {
 						if *user.HasAvatar {
-							srv.Store().MustDelete(avatarBucket, store.Key(avatarPrefix, me))
+							srv.Store().MustDelete(AvatarBucket, store.Key(AvatarPrefix, me))
 						}
 						avatar, _, err := image.Decode(bytes.NewBuffer(content))
 						PanicOn(err)
@@ -633,8 +635,8 @@ func New(
 						buff := &bytes.Buffer{}
 						PanicOn(png.Encode(buff, avatar))
 						srv.Store().MustPut(
-							avatarBucket,
-							store.Key(avatarPrefix, me),
+							AvatarBucket,
+							store.Key(AvatarPrefix, me),
 							args.Name,
 							"image/png",
 							int64(buff.Len()),
@@ -642,7 +644,7 @@ func New(
 							false,
 							bytes.NewReader(buff.Bytes()))
 					} else if *user.HasAvatar == true {
-						srv.Store().MustDelete(avatarBucket, store.Key(avatarPrefix, me))
+						srv.Store().MustDelete(AvatarBucket, store.Key(AvatarPrefix, me))
 					}
 					nowHasAvatar := args.Size > 0
 					if *user.HasAvatar != nowHasAvatar {
@@ -676,7 +678,7 @@ func New(
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.GetAvatar)
 					srv := service.Get(tlbx)
-					name, mimeType, size, content := srv.Store().MustGet(avatarBucket, store.Key(avatarPrefix, args.User))
+					name, mimeType, size, content := srv.Store().MustGet(AvatarBucket, store.Key(AvatarPrefix, args.User))
 					ds := &app.DownStream{}
 					ds.ID = args.User
 					ds.Name = name

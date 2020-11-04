@@ -148,7 +148,7 @@ var (
 		{
 			Description:  "Delete time",
 			Path:         (&time.Delete{}).Path(),
-			Timeout:      5000,
+			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
@@ -191,7 +191,7 @@ var (
 		{
 			Description:  "get times",
 			Path:         (&time.Get{}).Path(),
-			Timeout:      5000,
+			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
