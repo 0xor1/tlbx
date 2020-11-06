@@ -115,7 +115,6 @@ var (
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
 				t := getOne(tx, args.Host, args.Project, args.Task, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "expense entry not found")
-				app.ReturnIf(!t.CreatedBy.Equal(me) && role != cnsts.RoleAdmin, http.StatusForbidden, "")
 				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only edit your own expense entries within an hour of creating it")
 				treeUpdate := false
 				var diff uint64
@@ -141,6 +140,7 @@ var (
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeExpense, cnsts.ActionUpdated, nil, args)
 				tx.Commit()
 				return t
 			},

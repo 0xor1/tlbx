@@ -14,7 +14,6 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/testutil"
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/stretchr/testify/assert"
@@ -74,118 +73,75 @@ func Everything(t *testing.T) {
 		Description:     "",
 		IsParallel:      true,
 		User:            ptr.ID(r.Bob().ID()),
-		EstimatedFile:   100,
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 
-	e1 := (&file.Create{
+	content1 := []byte("1")
+	f1 := testutil.MustUploadFile(ac, r.Ali().ID(), p.ID, t1p0.ID, "one", "text/plain", content1)
+	a.NotNil(f1)
+
+	bs := testutil.MustDownloadFile(ac, r.Ali().ID(), p.ID, t1p0.ID, f1.ID)
+	a.Equal(content1, bs)
+
+	content2 := []byte("2")
+	f2 := testutil.MustUploadFile(ac, r.Ali().ID(), p.ID, t1p0.ID, "two", "text/plain", content2)
+	a.NotNil(f2)
+
+	res := (&file.Get{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
-		Task:    t1p0.ID,
-		Size:    77,
-		Note:    "yolo",
+		IDs:     IDs{f1.ID, f2.ID},
 	}).MustDo(ac)
-	a.NotNil(e1)
+	a.Equal(2, len(res.Set))
+	a.True(f1.ID.Equal(res.Set[0].ID))
+	a.True(f2.ID.Equal(res.Set[1].ID))
+	a.False(res.More)
 
-	e1 = (&file.Update{
-		Host:    r.Ali().ID(),
-		Project: p.ID,
-		Task:    t1p0.ID,
-		ID:      e1.ID,
-		Size:    &field.UInt64{V: 33},
-		Note:    &field.String{V: "polo"},
-	}).MustDo(ac)
-	a.NotNil(e1)
-
-	e1 = (&file.Update{
-		Host:    r.Ali().ID(),
-		Project: p.ID,
-		Task:    t1p0.ID,
-		ID:      e1.ID,
-		Size:    &field.UInt64{V: 44},
-		Note:    &field.String{V: "polo"},
-	}).MustDo(ac)
-	a.NotNil(e1)
-
-	// nil
-	eNil := (&file.Update{
-		Host:    r.Ali().ID(),
-		Project: p.ID,
-		Task:    t1p0.ID,
-		ID:      e1.ID,
-	}).MustDo(ac)
-	a.Nil(eNil)
-
-	es := (&file.Get{
+	res = (&file.Get{
 		Host:         r.Ali().ID(),
 		Project:      p.ID,
 		Task:         &t1p0.ID,
-		CreatedBy:    ptr.ID(r.Ali().ID()),
-		CreatedOnMin: ptr.Time(Now().Add(-1 * time.Hour)),
-		CreatedOnMax: ptr.Time(Now()),
-	}).MustDo(ac)
-	a.Equal(e1, es.Set[0])
-	a.False(es.More)
-
-	es = (&file.Get{
-		Host:    r.Ali().ID(),
-		Project: p.ID,
-		IDs:     IDs{e1.ID},
-	}).MustDo(ac)
-	a.Equal(e1, es.Set[0])
-	a.False(es.More)
-
-	e2 := (&file.Create{
-		Host:    r.Ali().ID(),
-		Project: p.ID,
-		Task:    t1p0.ID,
-		Size:    77,
-		Note:    "solo",
-	}).MustDo(ac)
-	a.NotNil(e2)
-
-	es = (&file.Get{
-		Host:         r.Ali().ID(),
-		Project:      p.ID,
-		Task:         &t1p0.ID,
-		CreatedBy:    ptr.ID(r.Ali().ID()),
-		CreatedOnMin: ptr.Time(Now().Add(-1 * time.Hour)),
-		CreatedOnMax: ptr.Time(Now()),
-	}).MustDo(ac)
-	a.Equal(e2, es.Set[0])
-	a.Equal(e1, es.Set[1])
-	a.False(es.More)
-
-	es = (&file.Get{
-		Host:         r.Ali().ID(),
-		Project:      p.ID,
-		Task:         &t1p0.ID,
-		CreatedBy:    ptr.ID(r.Ali().ID()),
-		CreatedOnMin: ptr.Time(Now().Add(-1 * time.Hour)),
+		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax: ptr.Time(Now()),
 		Limit:        1,
 	}).MustDo(ac)
-	a.Equal(e2, es.Set[0])
-	a.True(es.More)
+	a.Equal(1, len(res.Set))
+	a.True(f2.ID.Equal(res.Set[0].ID))
+	a.True(res.More)
 
-	es = (&file.Get{
+	res = (&file.Get{
 		Host:         r.Ali().ID(),
 		Project:      p.ID,
 		Task:         &t1p0.ID,
-		CreatedBy:    ptr.ID(r.Ali().ID()),
-		CreatedOnMin: ptr.Time(Now().Add(-1 * time.Hour)),
+		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax: ptr.Time(Now()),
-		After:        ptr.ID(e2.ID),
+		CreatedBy:    ptr.ID(r.Ali().ID()),
 		Limit:        1,
+		After:        &f2.ID,
 	}).MustDo(ac)
-	a.Equal(e1, es.Set[0])
-	a.False(es.More)
+	a.Equal(1, len(res.Set))
+	a.True(f1.ID.Equal(res.Set[0].ID))
+	a.False(res.More)
+
+	res = (&file.Get{
+		Host:         r.Ali().ID(),
+		Project:      p.ID,
+		Task:         &t1p0.ID,
+		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
+		CreatedOnMax: ptr.Time(Now()),
+		CreatedBy:    ptr.ID(r.Ali().ID()),
+		Limit:        1,
+		Asc:          ptr.Bool(true),
+	}).MustDo(ac)
+	a.Equal(1, len(res.Set))
+	a.True(f1.ID.Equal(res.Set[0].ID))
+	a.True(res.More)
 
 	(&file.Delete{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
-		ID:      e1.ID,
+		ID:      f1.ID,
 	}).MustDo(ac)
 
 	pID = p.ID

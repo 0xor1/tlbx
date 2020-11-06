@@ -150,7 +150,7 @@ var (
 				defer tx.Rollback()
 				f := getOne(tx, args.Host, args.Project, args.Task, args.ID, true)
 				app.ReturnIf(f == nil, http.StatusNotFound, "file not found")
-				url := srv.Store().MustPresignedGetUrl(cnsts.TempFileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID), f.Name, args.IsDownload)
+				url := srv.Store().MustPresignedGetUrl(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID), f.Name, args.IsDownload)
 				tx.Commit()
 				return url
 			},
@@ -223,7 +223,7 @@ var (
 						qryArgs = append(qryArgs, *args.CreatedBy)
 					}
 					if args.After != nil {
-						qry.WriteString(Strf(` AND createdOn %s= (SELECT t.createdOn FROM files f WHERE f.host=? AND f.project=? AND f.id=?) AND id <> ?`, sql.GtLtSymbol(*args.Asc)))
+						qry.WriteString(Strf(` AND createdOn %s= (SELECT f.createdOn FROM files f WHERE f.host=? AND f.project=? AND f.id=?) AND id <> ?`, sql.GtLtSymbol(*args.Asc)))
 						qryArgs = append(qryArgs, args.Host, args.Project, *args.After, *args.After)
 					}
 					qry.WriteString(sql.OrderLimit100(`createdOn`, *args.Asc, args.Limit))

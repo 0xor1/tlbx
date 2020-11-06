@@ -259,7 +259,7 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 
-	f := testutil.MustUploadFile(ac, r.Ali().ID(), p.ID, t3p0.ID, "yolo.test.txt", "application/text", []byte(`yolo`))
+	f := testutil.MustUploadFile(ac, r.Ali().ID(), p.ID, t3p0.ID, "yolo.test.txt", "text/plain", []byte(`yolo`))
 	a.NotNil(f)
 
 	(&task.Delete{

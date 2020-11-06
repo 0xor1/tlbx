@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bytes"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/file"
@@ -36,7 +37,7 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 		if t.IsParallel {
 			p = 1
 		}
-		v := Strf(`[n: %s, p: %d, m: %d, et: %d, est: %d, lt: %d, lst: %d, ee: %d, ese: %d, le: %d, lse: %d]`, t.Name, p, t.MinimumTime, t.EstimatedTime, t.EstimatedSubTime, t.LoggedTime, t.LoggedSubTime, t.EstimatedExpense, t.EstimatedSubExpense, t.LoggedExpense, t.LoggedSubExpense)
+		v := Strf(`[n: %s, p: %d, m: %d, et: %d, est: %d, lt: %d, lst: %d, ee: %d, ese: %d, le: %d, lse: %d, fc: %d, fsc: %d, fs: %d, fss: %d]`, t.Name, p, t.MinimumTime, t.EstimatedTime, t.EstimatedSubTime, t.LoggedTime, t.LoggedSubTime, t.EstimatedExpense, t.EstimatedSubExpense, t.LoggedExpense, t.LoggedSubExpense, t.FileCount, t.FileSubCount, t.FileSize, t.FileSubSize)
 		if len(as) > 0 {
 			pre := ``
 			for _, a := range as[1:] {
@@ -70,6 +71,10 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 	println("ese: estimatedSubExpense")
 	println("le: loggedExpense")
 	println("lse: loggedSubExpense")
+	println("fc: fileCount")
+	println("fsc: fileSubCount")
+	println("fs: fileSize")
+	println("fss: fileSubSize")
 	println()
 	print(tree[project.String()], nil)
 }
@@ -87,8 +92,8 @@ func MustUploadFile(client *app.Client, host, project, task ID, name, mimeType s
 	PanicOn(err)
 	req.Header.Add("X-Amz-Acl", "private")
 	req.Header.Add("Content-Length", Strf(`%d`, len(content)))
-	req.Header.Add("Content-Type", "application/text")
-	req.Header.Add("Content-Disposition", "attachment; filename=yolo.test.txt")
+	req.Header.Add("Content-Type", mimeType)
+	req.Header.Add("Content-Disposition", Strf("attachment; filename=%s", name))
 	req.Header.Add("Host", req.Host)
 	resp, err := http.DefaultClient.Do(req)
 	PanicOn(err)
@@ -102,4 +107,24 @@ func MustUploadFile(client *app.Client, host, project, task ID, name, mimeType s
 	}).MustDo(client)
 	PanicIf(!f.ID.Equal(ppur.ID), "file id unexpected")
 	return f
+}
+
+func MustDownloadFile(client *app.Client, host, project, task, id ID) []byte {
+	pgur := (&file.GetPresignedGetUrl{
+		Host:       host,
+		Project:    project,
+		Task:       task,
+		ID:         id,
+		IsDownload: true,
+	}).MustDo(client)
+	req, err := http.NewRequest(http.MethodGet, pgur, nil)
+	PanicOn(err)
+	req.Header.Add("Host", req.Host)
+	resp, err := http.DefaultClient.Do(req)
+	PanicOn(err)
+	defer resp.Body.Close()
+	PanicIf(resp.StatusCode != 200, "resp.StatusCode - %d", resp.StatusCode)
+	bs, err := ioutil.ReadAll(resp.Body)
+	PanicOn(err)
+	return bs
 }

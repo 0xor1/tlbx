@@ -115,7 +115,6 @@ var (
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
 				t := getOne(tx, args.Host, args.Project, args.Task, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "time entry not found")
-				app.ReturnIf(!t.CreatedBy.Equal(me) && role != cnsts.RoleAdmin, http.StatusForbidden, "")
 				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time_.Hour))), http.StatusForbidden, "you may only edit your own time entries within an hour of creating it")
 				treeUpdate := false
 				var diff uint64
@@ -142,6 +141,7 @@ var (
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
 				tx.Commit()
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeTime, cnsts.ActionUpdated, nil, args)
 				return t
 			},
 		},

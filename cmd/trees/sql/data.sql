@@ -37,7 +37,7 @@ CREATE TABLE activities(
   action VARCHAR(50) NOT NULL,
   taskName VARCHAR(250) NULL,
   itemName VARCHAR(250) NULL,
-  extraInfo VARCHAR(1250) NULL,
+  extraInfo VARCHAR(10000) NULL,
   PRIMARY KEY (host, project, occurredOn, item, user),
   UNIQUE INDEX (host, project, item, occurredOn, user),
   UNIQUE INDEX (host, project, task, item, occurredOn, user),
