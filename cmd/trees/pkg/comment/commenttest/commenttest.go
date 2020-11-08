@@ -2,7 +2,6 @@ package commenttest
 
 import (
 	"testing"
-	"time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/comment"
@@ -66,15 +65,14 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 
 	t1p0 := (&task.Create{
-		Host:             r.Ali().ID(),
-		Project:          p.ID,
-		Parent:           p.ID,
-		PreviousSibling:  nil,
-		Name:             "1.0",
-		Description:      "",
-		IsParallel:       true,
-		User:             ptr.ID(r.Bob().ID()),
-		EstimatedComment: 100,
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		Parent:          p.ID,
+		PreviousSibling: nil,
+		Name:            "1.0",
+		Description:     "",
+		IsParallel:      true,
+		User:            ptr.ID(r.Bob().ID()),
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 
@@ -82,8 +80,7 @@ func Everything(t *testing.T) {
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
-		Body:    77,
-		Note:    "yolo",
+		Body:    "yolo",
 	}).MustDo(ac)
 	a.NotNil(e1)
 
@@ -92,8 +89,7 @@ func Everything(t *testing.T) {
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      e1.ID,
-		Body:    &field.UInt64{V: 33},
-		Note:    &field.String{V: "polo"},
+		Body:    &field.String{V: "polo"},
 	}).MustDo(ac)
 	a.NotNil(e1)
 
@@ -102,8 +98,7 @@ func Everything(t *testing.T) {
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      e1.ID,
-		Body:    &field.UInt64{V: 44},
-		Note:    &field.String{V: "polo"},
+		Body:    &field.String{V: "polo"},
 	}).MustDo(ac)
 	a.NotNil(e1)
 
@@ -117,12 +112,9 @@ func Everything(t *testing.T) {
 	a.Nil(eNil)
 
 	es := (&comment.Get{
-		Host:         r.Ali().ID(),
-		Project:      p.ID,
-		Task:         &t1p0.ID,
-		CreatedBy:    ptr.ID(r.Ali().ID()),
-		CreatedOnMin: ptr.Time(Now().Add(-1 * time.Hour)),
-		CreatedOnMax: ptr.Time(Now()),
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    &t1p0.ID,
 	}).MustDo(ac)
 	a.Equal(e1, es.Set[0])
 	a.False(es.More)
@@ -130,7 +122,6 @@ func Everything(t *testing.T) {
 	es = (&comment.Get{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
-		IDs:     IDs{e1.ID},
 	}).MustDo(ac)
 	a.Equal(e1, es.Set[0])
 	a.False(es.More)
@@ -139,44 +130,34 @@ func Everything(t *testing.T) {
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
-		Body:    77,
-		Note:    "solo",
+		Body:    "solo",
 	}).MustDo(ac)
 	a.NotNil(e2)
 
 	es = (&comment.Get{
-		Host:         r.Ali().ID(),
-		Project:      p.ID,
-		Task:         &t1p0.ID,
-		CreatedBy:    ptr.ID(r.Ali().ID()),
-		CreatedOnMin: ptr.Time(Now().Add(-1 * time.Hour)),
-		CreatedOnMax: ptr.Time(Now()),
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    &t1p0.ID,
 	}).MustDo(ac)
 	a.Equal(e2, es.Set[0])
 	a.Equal(e1, es.Set[1])
 	a.False(es.More)
 
 	es = (&comment.Get{
-		Host:         r.Ali().ID(),
-		Project:      p.ID,
-		Task:         &t1p0.ID,
-		CreatedBy:    ptr.ID(r.Ali().ID()),
-		CreatedOnMin: ptr.Time(Now().Add(-1 * time.Hour)),
-		CreatedOnMax: ptr.Time(Now()),
-		Limit:        1,
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    &t1p0.ID,
+		Limit:   1,
 	}).MustDo(ac)
 	a.Equal(e2, es.Set[0])
 	a.True(es.More)
 
 	es = (&comment.Get{
-		Host:         r.Ali().ID(),
-		Project:      p.ID,
-		Task:         &t1p0.ID,
-		CreatedBy:    ptr.ID(r.Ali().ID()),
-		CreatedOnMin: ptr.Time(Now().Add(-1 * time.Hour)),
-		CreatedOnMax: ptr.Time(Now()),
-		After:        ptr.ID(e2.ID),
-		Limit:        1,
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    &t1p0.ID,
+		After:   ptr.ID(e2.ID),
+		Limit:   1,
 	}).MustDo(ac)
 	a.Equal(e1, es.Set[0])
 	a.False(es.More)

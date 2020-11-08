@@ -140,8 +140,8 @@ var (
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
-				tx.Commit()
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeTime, cnsts.ActionUpdated, nil, args)
+				tx.Commit()
 				return t
 			},
 		},
