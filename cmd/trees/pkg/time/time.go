@@ -74,9 +74,9 @@ type Get struct {
 	CreatedOnMin *time.Time `json:"createdOnMin,omitempty"`
 	CreatedOnMax *time.Time `json:"createdOnMax,omitempty"`
 	CreatedBy    *ID        `json:"createdBy,omitempty"`
+	After        *ID        `json:"after,omitempty"`
 	Asc          *bool      `json:"asc,omitempty"`
 	Limit        uint16     `json:"limit,omitempty"`
-	After        *ID        `json:"after,omitempty"`
 }
 
 type GetRes struct {

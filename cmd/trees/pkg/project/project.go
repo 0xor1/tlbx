@@ -297,7 +297,7 @@ type GetActivities struct {
 }
 
 func (_ *GetActivities) Path() string {
-	return "/project/activities"
+	return "/project/getActivities"
 }
 
 func (a *GetActivities) Do(c *app.Client) (*GetActivitiesRes, error) {
