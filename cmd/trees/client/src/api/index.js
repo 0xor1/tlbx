@@ -143,7 +143,7 @@ let newApi = (isMDoApi) => {
           memCache.me.alias = alias
         })
       },
-      setAlias: (avatar) => {
+      setAvatar: (avatar) => {
         return doReq('/user/setAvatar', avatar).then(()=>{
           memCache.me.hasAvatar = avatar === null
         })
@@ -222,9 +222,6 @@ let newApi = (isMDoApi) => {
       getMe: (host, project) => {
         return doReq('/project/getMe', {host, project})
       },
-      getMe: (host, project) => {
-        return doReq('/project/getMe', {host, project})
-      },
       getUsers: (host, project, ids, role, handlePrefix, after, limit) => {
         return doReq('/project/getUsers', {host, project, ids, role, handlePrefix, after, limit})
       },
@@ -288,7 +285,7 @@ let newApi = (isMDoApi) => {
     },
     file: {
       create: (host, project, task, name, mimeType, size, content) => {
-        return doReq('/file/getPresignedPutUrl', {host, project, task, name, mimeType, size}).then((data)=>{
+        return doReq('/file/getPresignedPutUrl', {host, project, task, name, mimeType, size}).then((res)=>{
           let id = res.id
           doReq(res.url, content, {
             "Host": (new URL(res.url)).hostname,
