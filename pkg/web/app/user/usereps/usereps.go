@@ -693,9 +693,9 @@ func New(
 }
 
 var (
-	handleRegex  = regexp.MustCompile(`[_a-z0-9]{1,15}`)
+	handleRegex  = regexp.MustCompile(`\A[_a-z0-9]{1,20}\z`)
 	handleMinLen = 1
-	handleMaxLen = 15
+	handleMaxLen = 20
 	emailRegex   = regexp.MustCompile(`\A.+@.+\..+\z`)
 	emailMaxLen  = 250
 	aliasMaxLen  = 50
