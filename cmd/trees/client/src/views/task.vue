@@ -28,7 +28,7 @@
           <button @click.stop="update(item)">update</button>
         </td>
         <td class="count">
-          {{ dayjs(item.createdOn).format("DD-MM-YYYY") }}
+          {{ item.createdOn | dayjs("DD-MM-YYYY") }}
         </td>
         <td class="action" @click.stop="complete(item, index)">
           <img src="@/assets/tick.svg">

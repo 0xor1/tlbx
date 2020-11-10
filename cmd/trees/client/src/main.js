@@ -1,13 +1,13 @@
-import vue from 'vue'
+import Vue from 'vue'
 import app from './app.vue'
 import router from './router'
 import dayjs from 'vue-dayjs'
 
-vue.config.productionTip = false
+Vue.config.productionTip = false
 
-vue.use(dayjs)
+Vue.use(dayjs)
 
-new vue({
+new Vue({
   router,
   render: h => h(app)
-}).mount('#app')
+}).$mount('#app')

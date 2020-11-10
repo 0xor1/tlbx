@@ -6,14 +6,13 @@ let newApi = (isMDoApi) => {
   let mDoSending = false
   let mDoSent = false
   let awaitingMDoList = []
-  let doReq = (path, args, headers) => {
+  let doReq = (path, args) => {
     path = '/api'+path
     if (!isMDoApi || (isMDoApi && mDoSending && !mDoSent)) {
-      headers = headers || {"X-Client": "tlbx-web-client"}
       return axios({
         method: 'put',
         url: path,
-        headers: headers,
+        headers: {"X-Client": "tlbx-web-client"},
         data: args
       }).then((res) => {
         return res.data
@@ -133,19 +132,9 @@ let newApi = (isMDoApi) => {
       resetPwd: (email) => {
         return doReq('/user/resetPwd', {email})
       },
-      setHandle: (handle) => {
-        return doReq('/user/setHandle', {handle: handle}).then(()=>{
-          memCache.me.handle = handle
-        })
-      },
       setAlias: (alias) => {
         return doReq('/user/setAlias', {alias}).then(()=>{
           memCache.me.alias = alias
-        })
-      },
-      setAvatar: (avatar) => {
-        return doReq('/user/setAvatar', avatar).then(()=>{
-          memCache.me.hasAvatar = avatar === null
         })
       },
       setPwd: (currentPwd, newPwd, confirmNewPwd) => {
@@ -203,123 +192,58 @@ let newApi = (isMDoApi) => {
         })
       }
     },
-    project: {
-      create: (currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic, name) => {
-        return doReq('/project/create', {currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic, name})
+    list: {
+      create: (name) => {
+        return doReq('/list/create', {name})
       },
-      get: (host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, dueOnMin, dueOnMax, after, sort, asc, limit) => {
-        return doReq('/project/get', {host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, dueOnMin, dueOnMax, after, sort, asc, limit})
-      },
-      update: (id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isArchived, isPublic) => {
-        return doReq('/project/update', [{id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isArchived, isPublic}])
-      },
-      delete: (ids) => {
-        return doReq('/project/delete', ids)
-      },
-      addUsers: (host, project, users) => {
-        return doReq('/project/addUsers', {host, project, users})
-      },
-      getMe: (host, project) => {
-        return doReq('/project/getMe', {host, project})
-      },
-      getUsers: (host, project, ids, role, handlePrefix, after, limit) => {
-        return doReq('/project/getUsers', {host, project, ids, role, handlePrefix, after, limit})
-      },
-      setUserRoles: (host, project, users) => {
-        return doReq('/project/setUserRoles', {host, project, users})
-      },
-      removeUsers: (host, project, users) => {
-        return doReq('/project/removeUsers', {host, project, users})
-      },
-      getActivities: (host, project, task, item, user, occuredAfter, occuredBefore, limit) => {
-        return doReq('/project/getActivities', {host, project, task, item, user, occuredAfter, occuredBefore, limit})
-      }
-    },
-    task: {
-      create: (host, project, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense) => {
-        return doReq('/task/create', {host, project, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense})
-      },
-      update: (host, project, id, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense) => {
-        return doReq('/task/update', {host, project, id, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense})
-      },
-      delete: (host, project, id) => {
-        return doReq('/task/delete', {host, project, id})
-      },
-      get: (host, project, id) => {
-        return doReq('/task/get', {host, project, id})
-      },
-      getAncestors: (host, project, id, limit) => {
-        return doReq('/task/getAncestors', {host, project, id, limit})
-      },
-      getChildren: (host, project, id, after, limit) => {
-        return doReq('/task/getChildren', {host, project, id, after, limit})
-      }
-    },
-    time: {
-      create: (host, project, task, duration, note) => {
-        return doReq('/time/create', {host, project, task, duration, note})
-      },
-      update: (host, project, task, id, duration, note) => {
-        return doReq('/time/update', {host, project, task, id, duration, note})
-      },
-      get: (host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) => {
-        return doReq('/time/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
-      },
-      delete: (host, project, task, id) => {
-        return doReq('/time/delete', {host, project, task, id})
-      }
-    },
-    expense: {
-      create: (host, project, task, value, note) => {
-        return doReq('/expense/create', {host, project, task, value, note})
-      },
-      update: (host, project, task, id, value, note) => {
-        return doReq('/expense/update', {host, project, task, id, value, note})
-      },
-      get: (host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) => {
-        return doReq('/expense/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
-      },
-      delete: (host, project, task, id) => {
-        return doReq('/expense/delete', {host, project, task, id})
-      }
-    },
-    file: {
-      create: (host, project, task, name, mimeType, size, content) => {
-        return doReq('/file/getPresignedPutUrl', {host, project, task, name, mimeType, size}).then((res)=>{
-          let id = res.id
-          doReq(res.url, content, {
-            "Host": (new URL(res.url)).hostname,
-            "X-Amz-Acl": "private",
-            "Content-Length": size, 
-            "Content-Type": mimeType,
-            "Content-Disposition": "attachment; filename="+name,
-          }).then(()=>{
-            doReq("/file/finalize", {host, project, task, id})
-          })
+      one: (id) => {
+        return doReq('/list/get', {ids: [id]}).then((res)=>{
+          if (res.set.length === 1) {
+            return res.set[0]
+          }
+          return null
         })
       },
-      getPresignedGetUrl: (host, project, task, id, isDownload) => {
-        return doReq('/file/getPresignedGetUrl', {host, project, task, id, isDownload})
+      get: (args) => {
+        return doReq('/list/get', args)
       },
-      get: (host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) => {
-        return doReq('/file/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
+      update: (id, name) => {
+        return doReq('/list/update', {id, name: {v: name}})
       },
-      delete: (host, project, task, id) => {
-        return doReq('/file/delete', {host, project, task, id})
+      delete: (ids) => {
+        return doReq('/list/delete', {ids})
       }
     },
-    comment: {
-      create: (host, project, task, body) => {
-        return doReq('/comment/create', {host, project, task, body})
+    item: {
+      create: (list, name) => {
+        return doReq('/item/create', {list, name})
       },
-      update: (host, project, task, id, body) => {
-        return doReq('/comment/update', {host, project, task, id, body})
+      one: (list, id) => {
+        return doReq('/item/get', {list, ids: [id]}).then((res)=>{
+          if (res.set.length === 1) {
+            return res.set[0]
+          }
+          return null
+        })
       },
-      get: (host, project, task, after, limit) => {
-        return doReq('/comment/get', {host, project, task, after, limit})
+      get: (args) => {
+        return doReq('/item/get', args)
       },
-      delete: (host, project, task, id) => {
-        return doReq('/comment/delete', {host, project, task, id})
+      update: (list, id, name, complete) => {
+        let args = {
+          list,
+          id
+        }
+        if (name !== undefined) {
+          args.name = {v: name}
+        }
+        if (complete !== undefined) {
+          args.complete = {v: complete}
+        }
+        return doReq('/item/update', args)
+      },
+      delete: (list, ids) => {
+        return doReq('/item/delete', {list, ids})
       }
     }
   }

@@ -42,7 +42,7 @@ const routes = [
     component: projects
   },
   {
-    path: '/task/:id',
+    path: '/project/:projectId/task/:taskId',
     name: 'task',
     component: task
   }
