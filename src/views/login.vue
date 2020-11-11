@@ -48,7 +48,7 @@
       login: function(){
         if (this.validate()) {
           api.user.login(this.email, this.pwd).then(()=>{
-            router.push('/lists')
+            router.push('/projects')
           })
         }
       }

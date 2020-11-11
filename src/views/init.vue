@@ -9,7 +9,7 @@
     name: 'init',
     data () {
       api.user.me().then(() => {
-        router.push('/lists')
+        router.push('/projects')
       }).catch(() => {
         router.push('/login')
       })

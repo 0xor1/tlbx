@@ -48,13 +48,17 @@
             this.aliasErr = ""
         }
         this.handle = this.handle.toLowerCase()
-        if (this.handle.length < 1 || this.handle.length > 20) {
-            this.handleErr = "handle must be 1 - 20 characters long"
-        } else if (!/^[_a-z0-9]{1,20}$/.test(this.handle)) {
-          this.handleErr = "handle may only contain underscores and alphanumerical characters"
+        if (this.handle.length > 0 || this.email.length > 0) {
+          if (this.handle.length < 1 || this.handle.length > 20) {
+              this.handleErr = "handle must be 1 - 20 characters long"
+          } else if (!/^[_a-z0-9]{1,20}$/.test(this.handle)) {
+            this.handleErr = "handle may only contain underscores and alphanumerical characters"
+          } else {
+              this.handleErr = ""
+          }
         } else {
-            this.handleErr = ""
-        }
+              this.handleErr = ""
+          }
         if (this.email.length > 0) {
           this.emailIsValid = /^.+@.+\..+$/.test(this.email)
         }
@@ -78,7 +82,7 @@
       },
       register: function(){
         if (this.validate()) {
-          api.user.register(this.alias, this.email, this.pwd, this.confirmPwd).then(()=>{
+          api.user.register(this.alias, this.handle, this.email, this.pwd, this.confirmPwd).then(()=>{
             this.registered = true
           }).catch((err)=>{
             this.alreadyLoggedIn = err.response.data === "already logged in"
