@@ -1,4 +1,4 @@
-# client
+# trees_client
 
 ## Project setup
 ```
