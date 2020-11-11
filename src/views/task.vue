@@ -59,6 +59,9 @@
     data: function() {
       this.load(true, false)
       return {
+        hostId: router.currentRoute.params.hostId,
+        projectId: router.currentRoute.params.projectId,
+        taskId: router.currentRoute.params.taskId,
         loading: true,
         createName: "",
         task: {},

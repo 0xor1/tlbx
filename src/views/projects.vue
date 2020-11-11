@@ -60,6 +60,7 @@
     data: function() {
       this.load(true)
       return {
+        hostId: router.currentRoute.params.hostId,
         loading: true,
         createName: "",
         projects: [],
@@ -73,7 +74,7 @@
         api.project.create(this.createName).then(this.goto)
       },
       goto: function(project){
-          router.push('/project/'+project.id)
+          router.push('/host/'+this.hostId+'/project/'+project.id+'/task/'+project.id)
       },
       trash: function(project, index){
         api.project.delete([project.id]).then(()=>{
@@ -115,11 +116,11 @@
           if (reset) {
             this.projects = []
           }
-          let args = {}
+          let args = {host: this.hostId}
           if (this.projects !== undefined && this.projects.length > 0 ) {
             args.after = this.projects[this.projects.length - 1].id
           }
-          api.project.get(args).then((res) => {
+          api.project.get(this.hostId).then((res) => {
             for (let i = 0; i < res.set.length; i++) {
               let project = res.set[i]
               project.newName = project.name

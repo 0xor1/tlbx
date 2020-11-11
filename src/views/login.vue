@@ -47,8 +47,8 @@
       },
       login: function(){
         if (this.validate()) {
-          api.user.login(this.email, this.pwd).then(()=>{
-            router.push('/projects')
+          api.user.login(this.email, this.pwd).then((me)=>{
+            router.push('/host/'+me.id+'/projects')
           })
         }
       }

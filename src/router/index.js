@@ -37,12 +37,12 @@ const routes = [
     component: login
   },
   {
-    path: '/projects',
+    path: '/host/:hostId/projects',
     name: 'projects',
     component: projects
   },
   {
-    path: '/project/:projectId/task/:taskId',
+    path: '/host/:hostId/project/:projectId/task/:taskId',
     name: 'task',
     component: task
   }

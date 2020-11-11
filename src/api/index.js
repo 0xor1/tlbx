@@ -204,8 +204,8 @@ let newApi = (isMDoApi) => {
       }
     },
     project: {
-      create: (currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic, name) => {
-        return doReq('/project/create', {currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic, name})
+      create: (name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn) => {
+        return doReq('/project/create', {name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn})
       },
       get: (host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, dueOnMin, dueOnMax, after, sort, asc, limit) => {
         return doReq('/project/get', {host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, dueOnMin, dueOnMax, after, sort, asc, limit})
