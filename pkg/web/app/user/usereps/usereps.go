@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -103,7 +104,7 @@ func New(
 					PanicOn(err)
 				}
 				setPwd(tlbx, id, args.Pwd, args.ConfirmPwd)
-				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, args.Email, activateCode))
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), activateCode))
 				return nil
 			},
 		},
@@ -134,7 +135,7 @@ func New(
 				if fullUser == nil || fullUser.ActivateCode == nil {
 					return nil
 				}
-				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, args.Email, *fullUser.ActivateCode))
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), *fullUser.ActivateCode))
 				return nil
 			},
 		},

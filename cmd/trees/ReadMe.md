@@ -10,7 +10,7 @@ install tmux, go, node/npm and docker/docker-compose then `./bin/run trees`. to 
 
 ## Note
 
-This is a port of [a more advanced complex version of trees](https://github.com/0xor1/trees) which supports:
+This is a port of [a more advanced complex version of trees](https://github.com/0xor1/deprecated-trees) which supports:
 
 * Group accounts
     * For more formal settings group accounts let users be added with more specific
