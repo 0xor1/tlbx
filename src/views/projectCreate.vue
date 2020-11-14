@@ -18,15 +18,15 @@
     <input v-model.number="hoursPerDay" :max="24" type="number" placeholder="hours per day" @blur="validate" @keydown.enter="create">
     <input v-model.number="daysPerWeek" :max="7" type="number" placeholder="days per week" @blur="validate" @keydown.enter="create">
     <datepicker v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
-    <datepicker v-model="dueOn" placeholder="due on" @closed="validate"></datepicker>
+    <datepicker v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
     <button @click="create">create</button>
+    <button @click="$router.push('/projects')">cancel</button>
     <span v-if="createErr.length > 0" class="err">{{createErr}}</span>
   </div>
 </template>
 
 <script>
   import api from '@/api'
-  import router from '@/router'
   import datepicker from 'vuejs-datepicker';
   export default {
     name: 'projectCreate',
@@ -44,7 +44,7 @@
         hoursPerDay: null,
         daysPerWeek: null,
         startOn: null,
-        dueOn: null,
+        endOn: null,
         createErr: "",
         currencies: [
           "AED",
@@ -255,22 +255,20 @@
         if (this.startOn != null) {
             this.startOn.setHours(0, 0, 0, 0)
         }
-        if (this.dueOn != null) {
-            this.dueOn.setHours(0, 0, 0, 0)
+        if (this.endOn != null) {
+            this.endOn.setHours(0, 0, 0, 0)
         }
         if (this.startOn != null && 
-          this.dueOn != null &&
-          this.startOn.getTime() >= this.dueOn.getTime()) {
-            this.dueOn.setDate(this.startOn.getDate()+1)
+          this.endOn != null &&
+          this.startOn.getTime() >= this.endOn.getTime()) {
+            this.endOn.setDate(this.startOn.getDate()+1)
         }
         return this.nameErr.length === 0
       },
       create: function(){
         if (this.validate()) {
-          api.project.create(this.name, this.isPublic, this.currencyCode, this.hoursPerDay, this.daysPerWeek, this.startOn, this.dueOn).then((p)=>{
-            router.push('/host/'+this.me.id+'/project/'+p.id+'/task/'+p.id)
-          }).catch(()=>{
-            //todo 
+          api.project.create(this.name, this.isPublic, this.currencyCode, this.hoursPerDay, this.daysPerWeek, this.startOn, this.endOn).then((p)=>{
+            this.$router.push('/host/'+this.me.id+'/project/'+p.id+'/task/'+p.id)
           })
         }
       }

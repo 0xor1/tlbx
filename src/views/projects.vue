@@ -3,41 +3,78 @@
     <div class="header">
       <a @click.stop.prevent="logout" href="">logout</a>
       <h1>projects</h1>
-      <input @keydown.enter="create" v-model="createName" placeholder="new project">
-      <button @click="create">create</button>
+      <button @click="$router.push('/project/create')">create</button>
     </div>
-    <p v-if="!loading && projects.length === 0">create your first project</p>
+    <p v-if="!loading && ps.length === 0">create your first project</p>
     <p v-else>
     <table >
-      <tr>
+      <tr class="header">
         <th class="name">
           Name
         </th>
-        <th class="todo">
-          Todo
+        <th class="nodes">
+          Nodes
         </th>
-        <th>
-          Completed
+        <th class="mintime">
+          Minimum Time
+        </th>
+        <th class="esttime">
+          Estimated Time
+        </th>
+        <th class="logtime">
+          Logged Time
+        </th>
+        <th class="estexp">
+          Estimated Expense
+        </th>
+        <th class="logexp">
+          Logged Expense
+        </th>
+        <th class="createdon">
+          Created On
+        </th>
+        <th class="starton">
+          Start On
+        </th>
+        <th class="endon">
+          End On
         </th>
       </tr>
-      <tr class="project" @click="goto(project)" v-for="(project, index) in projects" :key="project.id">
-        <td v-if="!project.showEditTools">
-          {{ project.name }}
+      <tr class="project" @click="$router.push('/host/'+p.host+'/project/'+p.id+'/task/'+p.id)" v-for="(p, index) in ps" :key="p.id">
+        <td>
+          {{ p.name }}
         </td>
-        <td v-else>
-          <input :ref='"edit_" + project.id' @keydown.esc="toggleEditTools(project)" @keydown.enter="update(project)" @click.stop v-model="project.newName" placeholder="new name">
-          <button @click.stop="update(project)">update</button>
+        <td class="nodes">
+          {{ p.descendantCount + 1 }}
         </td>
-        <td class="count">
-          {{ project.todoItemCount }}
-        </td>
-        <td class="count">
-          {{ project.completedItemCount }}
-        </td>
-        <td class="action" @click.stop="toggleEditTools(project)">
+        <th class="mintime">
+          {{ p.minimumTime }}
+        </th>
+        <th class="esttime">
+          {{ p.estimatedTime }}
+        </th>
+        <th class="logtime">
+          {{ p.loggedTime }}
+        </th>
+        <th class="estexp">
+          {{ p.currencyCode }} {{ p.estimatedExpense / 100}}
+        </th>
+        <th class="logexp">
+          {{p.currencyCode}} {{ p.loggedExpense / 100}}
+        </th>
+        <th class="createdon">
+          {{ p.createdOn }}
+        </th>
+        <th class="starton">
+          {{ p.startOn }}
+        </th>
+        <th class="endon">
+          {{ p.endOn }}
+        </th>
+        <td class="action" @click.stop="$router.push('project/'+p.id+'/update')">
           <img src="@/assets/edit.svg">
         </td>
-        <td class="action" @click.stop="trash(project, index)">
+        <td class="action" @click.stop="trash(p, index)">
           <img src="@/assets/trash.svg">
         </td>
       </tr>
@@ -54,7 +91,6 @@
 
 <script>
   import api from '@/api'
-  import router from '@/router'
   export default {
     name: 'projects',
     data: function() {
@@ -62,69 +98,34 @@
       return {
         loading: true,
         createName: "",
-        projects: [],
+        ps: [],
         currentEditItem: null,
         err: null,
         more: false
       }
     },
     methods: {
-      create: function(){
-        api.project.create(this.createName).then(this.goto)
-      },
-      goto: function(project){
-          router.push('/host/'+this.hostId+'/project/'+project.id+'/task/'+project.id)
-      },
-      trash: function(project, index){
-        api.project.delete([project.id]).then(()=>{
-          this.projects.splice(index, 1)
-        })
-      },
-      toggleEditTools: function(project){
-        project.showEditTools = !project.showEditTools
-        project.newName = project.name
-        if (this.currentEditItem !== null && this.currentEditItem !== project) {
-          this.currentEditItem.showEditTools = false
-        }
-        this.$forceUpdate()
-        if (project.showEditTools) {
-          this.currentEditItem = project
-          this.$nextTick(()=>{
-            this.$refs["edit_"+project.id][0].focus()
-          })
-        }
-      },
-      update: function(project){
-        project.showEditTools = false
-        let oldName = project.name
-        let newName = project.newName
-        this.currentEditItem = null
-        this.$forceUpdate()
-        if (oldName === newName) {
-          return
-        }
-        api.project.update(project.id, newName).then((res)=>{
-          project.name = res.name
-        }).catch(()=>{
-          project.name = oldName
+      trash: function(p, index){
+        api.project.delete([p.id]).then(()=>{
+            this.ps.splice(index, 1)
         })
       },
       load: function(reset){
         if (!this.loading) {
           this.loading = true
           if (reset) {
-            this.projects = []
+            this.ps = []
           }
           let args = {host: this.hostId}
-          if (this.projects !== undefined && this.projects.length > 0 ) {
-            args.after = this.projects[this.projects.length - 1].id
+          if (this.ps !== undefined && this.ps.length > 0 ) {
+            args.after = this.ps[this.ps.length - 1].id
           }
           api.project.get(this.hostId).then((res) => {
             for (let i = 0; i < res.set.length; i++) {
               let project = res.set[i]
               project.newName = project.name
               project.showEditTools = false
-              this.projects.push(res.set[i]) 
+              this.ps.push(res.set[i]) 
             }
             this.more = res.more
           }).catch((err) => {
@@ -136,7 +137,7 @@
       },
       logout: function(){
         api.user.logout().then(()=>{
-          router.push('/login')
+          this.$router.push('/login')
         })
       }
     }

@@ -10,6 +10,7 @@ import task from '../views/task.vue'
 import api from '@/api'
 
 vue.use(vueRouter)
+
 const authCheck = (to, from, next)=>{
   api.user.me().then(()=>{
     next()

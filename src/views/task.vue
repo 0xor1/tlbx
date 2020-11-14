@@ -53,15 +53,14 @@
 
 <script>
   import api from '@/api'
-  import router from '@/router'
   export default {
     name: 'tasks',
     data: function() {
       this.load(true, false)
       return {
-        hostId: router.currentRoute.params.hostId,
-        projectId: router.currentRoute.params.projectId,
-        taskId: router.currentRoute.params.taskId,
+        hostId: this.$router.currentRoute.params.hostId,
+        projectId: this.$router.currentRoute.params.projectId,
+        taskId: this.$router.currentRoute.params.taskId,
         loading: true,
         createName: "",
         task: {},
@@ -124,7 +123,7 @@
         })
       },
       load: function(reset, completed){
-        let taskId = router.currentRoute.params.id
+        let taskId = this.$router.currentRoute.params.id
         let mapi = api
         if (!this.loading) {
           this.loading = true
@@ -159,11 +158,11 @@
       },
       logout: function(){
         api.user.logout().then(()=>{
-          router.push('/login')
+          this.$router.push('/login')
         })
       },
       gotoLists: function(){
-        router.push('/tasks')
+        this.$router.push('/tasks')
       }
     }
   }

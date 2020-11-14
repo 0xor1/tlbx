@@ -12,7 +12,6 @@
 
 <script>
   import api from '@/api'
-  import router from '@/router'
   export default {
     name: 'login',
     data: function() {
@@ -48,7 +47,7 @@
       login: function(){
         if (this.validate()) {
           api.user.login(this.email, this.pwd).then(()=>{
-            router.push('/projects')
+            this.$router.push('/projects')
           })
         }
       }

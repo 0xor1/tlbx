@@ -6,13 +6,12 @@
 
 <script>
   import api from '@/api'
-  import router from '@/router'
   export default {
     name: 'activate',
     data: function() {
-      let query = router.currentRoute.query
+      let query = this.$router.currentRoute.query
       api.user.activate(query.email, query.code).then(()=>{
-        router.push('/')
+        this.$router.push('/')
       })
       return {}
     }

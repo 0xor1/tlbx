@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 let memCache = {}
+let globalErrorHandler = null
 
 let newApi = (isMDoApi) => {
   let mDoSending = false
@@ -18,10 +19,14 @@ let newApi = (isMDoApi) => {
       }).then((res) => {
         return res.data
       }).catch((err) => {
-        throw {
+        let errObj = {
           status: err.response.status,
           body: err.response.data
         }
+        if (globalErrorHandler != null) {
+          globalErrorHandler(errObj.body)
+        }
+        throw errObj
       })
     } else if (isMDoApi && !mDoSending && !mDoSent) {
       let awaitingMDoObj = {
@@ -41,6 +46,9 @@ let newApi = (isMDoApi) => {
   }
 
   return {
+    setGlobalErrorHandler: (fn)=>{
+      globalErrorHandler = fn
+    },
     newMDoApi: () => {
       return newApi(true)
     },
@@ -204,14 +212,14 @@ let newApi = (isMDoApi) => {
       }
     },
     project: {
-      create: (name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn) => {
-        return doReq('/project/create', {name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn})
+      create: (name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn) => {
+        return doReq('/project/create', {name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn})
       },
-      get: (host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, dueOnMin, dueOnMax, after, sort, asc, limit) => {
-        return doReq('/project/get', {host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, dueOnMin, dueOnMax, after, sort, asc, limit})
+      get: (host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) => {
+        return doReq('/project/get', {host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit})
       },
-      update: (id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isArchived, isPublic) => {
-        return doReq('/project/update', [{id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isArchived, isPublic}])
+      update: (id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic) => {
+        return doReq('/project/update', [{id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic}])
       },
       delete: (ids) => {
         return doReq('/project/delete', ids)
