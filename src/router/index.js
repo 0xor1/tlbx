@@ -1,21 +1,16 @@
 import vue from 'vue'
 import vueRouter from 'vue-router'
-import init from '../views/init.vue'
 import activate from '../views/activate.vue'
 import confirmChangeEmail from '../views/confirmChangeEmail.vue'
 import register from '../views/register.vue'
 import login from '../views/login.vue'
 import projects from '../views/projects.vue'
+import projectCreate from '../views/projectCreate.vue'
 import task from '../views/task.vue'
 
 vue.use(vueRouter)
 
 const routes = [
-  {
-    path: '/',
-    name: 'init',
-    component: init
-  },
   {
     path: '/activate',
     name: 'activate',
@@ -37,6 +32,11 @@ const routes = [
     component: login
   },
   {
+    path: '/project/create',
+    name: 'projectCreate',
+    component: projectCreate
+  },
+  {
     path: '/projects',
     name: 'projects',
     component: projects
@@ -45,6 +45,10 @@ const routes = [
     path: '/host/:hostId/project/:projectId/task/:taskId',
     name: 'task',
     component: task
+  },
+  {
+    path: '*',
+    redirect: '/projects'
   }
 ]
 
