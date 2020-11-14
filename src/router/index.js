@@ -37,7 +37,7 @@ const routes = [
     component: login
   },
   {
-    path: '/host/:hostId/projects',
+    path: '/projects',
     name: 'projects',
     component: projects
   },

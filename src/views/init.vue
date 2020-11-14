@@ -8,8 +8,8 @@
   export default {
     name: 'init',
     data () {
-      api.user.me().then((me) => {
-        router.push('/host/'+me.id+'/projects')
+      api.user.me().then(() => {
+        router.push('/projects')
       }).catch(() => {
         router.push('/login')
       })

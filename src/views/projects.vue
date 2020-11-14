@@ -60,7 +60,6 @@
     data: function() {
       this.load(true)
       return {
-        hostId: router.currentRoute.params.hostId,
         loading: true,
         createName: "",
         projects: [],
