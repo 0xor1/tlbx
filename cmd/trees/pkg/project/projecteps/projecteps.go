@@ -43,7 +43,7 @@ var (
 					HoursPerDay:  8,
 					DaysPerWeek:  5,
 					StartOn:      ptr.Time(app.ExampleTime()),
-					DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+					EndOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 					IsPublic:     false,
 					Name:         "My New Project",
 				}
@@ -62,7 +62,7 @@ var (
 				validate.CurrencyCode(tlbx, args.CurrencyCode)
 				app.BadReqIf(args.HoursPerDay < 1 || args.HoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
 				app.BadReqIf(args.DaysPerWeek < 1 || args.DaysPerWeek > 7, "invalid daysPerWeek must be > 0 and <= 7")
-				app.BadReqIf(args.StartOn != nil && args.DueOn != nil && !args.StartOn.Before(*args.DueOn), "invalid startOn must be before dueOn")
+				app.BadReqIf(args.StartOn != nil && args.EndOn != nil && !args.StartOn.Before(*args.EndOn), "invalid startOn must be before endOn")
 				p := &project.Project{
 					Task: task.Task{
 						ID:         tlbx.NewID(),
@@ -77,7 +77,7 @@ var (
 						HoursPerDay:  args.HoursPerDay,
 						DaysPerWeek:  args.DaysPerWeek,
 						StartOn:      args.StartOn,
-						DueOn:        args.DueOn,
+						EndOn:        args.EndOn,
 						IsPublic:     args.IsPublic,
 					},
 					Host:       me,
@@ -95,7 +95,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, cnsts.RoleAdmin)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, dueOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsPublic)
+				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.EndOn, p.IsPublic)
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, fileSubCount, fileSubSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.FileSubCount, p.FileSubSize, p.ChildCount, p.DescendantCount)
 				PanicOn(err)
@@ -160,7 +160,7 @@ var (
 						HoursPerDay:  &field.UInt8{V: 6},
 						DaysPerWeek:  &field.UInt8{V: 4},
 						StartOn:      &field.TimePtr{V: ptr.Time(app.ExampleTime())},
-						DueOn:        &field.TimePtr{V: ptr.Time(app.ExampleTime().Add(24 * time.Hour))},
+						EndOn:        &field.TimePtr{V: ptr.Time(app.ExampleTime().Add(24 * time.Hour))},
 						IsArchived:   &field.Bool{V: false},
 						IsPublic:     &field.Bool{V: true},
 					},
@@ -189,7 +189,7 @@ var (
 						u.HoursPerDay == nil &&
 						u.DaysPerWeek == nil &&
 						u.StartOn == nil &&
-						u.DueOn == nil &&
+						u.EndOn == nil &&
 						u.IsArchived == nil &&
 						u.IsPublic == nil {
 						copy(args[i:], args[i+1:])
@@ -217,20 +217,20 @@ var (
 						p.Name = a.Name.V
 						namesSet[i] = true
 					}
-					// validate startOn and dueOn
+					// validate startOn and endOn
 					switch {
-					case a.StartOn != nil && a.DueOn != nil:
-						app.BadReqIf(a.StartOn.V != nil && a.DueOn.V != nil && !a.StartOn.V.Before(*a.DueOn.V), "invalid startOn must be before dueOn")
-					case a.StartOn != nil && p.DueOn != nil:
-						app.BadReqIf(a.StartOn.V != nil && p.DueOn != nil && !a.StartOn.V.Before(*p.DueOn), "invalid startOn must be before dueOn")
-					case a.DueOn != nil && p.StartOn != nil:
-						app.BadReqIf(p.StartOn != nil && a.DueOn.V != nil && !p.StartOn.Before(*a.DueOn.V), "invalid startOn must be before dueOn")
+					case a.StartOn != nil && a.EndOn != nil:
+						app.BadReqIf(a.StartOn.V != nil && a.EndOn.V != nil && !a.StartOn.V.Before(*a.EndOn.V), "invalid startOn must be before endOn")
+					case a.StartOn != nil && p.EndOn != nil:
+						app.BadReqIf(a.StartOn.V != nil && p.EndOn != nil && !a.StartOn.V.Before(*p.EndOn), "invalid startOn must be before endOn")
+					case a.EndOn != nil && p.StartOn != nil:
+						app.BadReqIf(p.StartOn != nil && a.EndOn.V != nil && !p.StartOn.Before(*a.EndOn.V), "invalid startOn must be before endOn")
 					}
 					if a.StartOn != nil {
 						p.StartOn = a.StartOn.V
 					}
-					if a.DueOn != nil {
-						p.DueOn = a.DueOn.V
+					if a.EndOn != nil {
+						p.EndOn = a.EndOn.V
 					}
 					if a.HoursPerDay != nil {
 						app.BadReqIf(a.HoursPerDay.V < 1 || a.HoursPerDay.V > 24, "invalid hoursPerDay must be > 0 and <= 24")
@@ -251,7 +251,7 @@ var (
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
 				for i, p := range ps {
-					_, err := tx.Exec(`UPDATE projects SET name=?, currencyCode=?, hoursPerDay=?, daysPerWeek=?, startOn=?, dueOn=?, isArchived=?, isPublic=? WHERE host=? AND id=?`, p.Name, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.DueOn, p.IsArchived, p.IsPublic, me, p.ID)
+					_, err := tx.Exec(`UPDATE projects SET name=?, currencyCode=?, hoursPerDay=?, daysPerWeek=?, startOn=?, endOn=?, isArchived=?, isPublic=? WHERE host=? AND id=?`, p.Name, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.EndOn, p.IsArchived, p.IsPublic, me, p.ID)
 					PanicOn(err)
 					if namesSet[i] {
 						_, err = tx.Exec(`UPDATE tasks SET name=? WHERE host=? AND project=? AND id=?`, p.Name, me, p.ID, p.ID)
@@ -641,7 +641,7 @@ var (
 			HoursPerDay:  8,
 			DaysPerWeek:  5,
 			StartOn:      ptr.Time(app.ExampleTime()),
-			DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+			EndOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 			IsPublic:     false,
 		},
 		Host:       app.ExampleID(),
@@ -710,26 +710,26 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			args.StartOnMin.After(*args.StartOnMax),
 		"startOnMin must be before startOnMax")
 	app.BadReqIf(
-		args.DueOnMin != nil &&
-			args.DueOnMax != nil &&
-			args.DueOnMin.After(*args.DueOnMax),
-		"dueOnMin must be before dueOnMax")
+		args.EndOnMin != nil &&
+			args.EndOnMax != nil &&
+			args.EndOnMin.After(*args.EndOnMax),
+		"endOnMin must be before endOnMax")
 	app.BadReqIf(
 		args.StartOnMin != nil &&
-			args.DueOnMin != nil &&
-			args.StartOnMin.After(*args.DueOnMax),
-		"startOnMin must be before dueOnMin")
+			args.EndOnMin != nil &&
+			args.StartOnMin.After(*args.EndOnMax),
+		"startOnMin must be before endOnMin")
 	app.BadReqIf(
 		args.StartOnMax != nil &&
-			args.DueOnMax != nil &&
-			args.StartOnMax.After(*args.DueOnMax),
-		"startOnMax must be before dueOnMax")
+			args.EndOnMax != nil &&
+			args.StartOnMax.After(*args.EndOnMax),
+		"startOnMax must be before endOnMax")
 	args.Limit = sql.Limit100(args.Limit)
 	srv := service.Get(tlbx)
 	res := &project.GetRes{
 		Set: make([]*project.Project, 0, args.Limit),
 	}
-	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.dueOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
+	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
 	queryArgs := make([]interface{}, 0, 14)
 	idsLen := len(args.IDs)
 	if args.Host != nil {
@@ -783,13 +783,13 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			query.WriteString(` AND p.startOn <=?`)
 			queryArgs = append(queryArgs, *args.StartOnMax)
 		}
-		if args.DueOnMin != nil {
-			query.WriteString(` AND p.dueOn >=?`)
-			queryArgs = append(queryArgs, *args.DueOnMin)
+		if args.EndOnMin != nil {
+			query.WriteString(` AND p.endOn >=?`)
+			queryArgs = append(queryArgs, *args.EndOnMin)
 		}
-		if args.DueOnMax != nil {
-			query.WriteString(` AND p.dueOn <=?`)
-			queryArgs = append(queryArgs, *args.DueOnMax)
+		if args.EndOnMax != nil {
+			query.WriteString(` AND p.endOn <=?`)
+			queryArgs = append(queryArgs, *args.EndOnMax)
 		}
 		if args.After != nil {
 			query.WriteString(Strf(` AND %s %s= (SELECT p.%s FROM projects p WHERE p.host=? AND p.id=?) AND p.id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
@@ -813,7 +813,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 				break
 			}
 			p := &project.Project{}
-			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.DueOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.FileSubCount, &p.FileSubSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
+			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.EndOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.FileSubCount, &p.FileSubSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
 			res.Set = append(res.Set, p)
 		}
 	}, query.String(), queryArgs...))

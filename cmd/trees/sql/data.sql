@@ -62,14 +62,14 @@ CREATE TABLE projects(
   hoursPerDay TINYINT UNSIGNED NOT NULL,
   daysPerWeek TINYINT UNSIGNED NOT NULL,
   startOn DATETIME(3) NULL,
-  dueOn DATETIME(3) NULL,
+  endOn DATETIME(3) NULL,
   isPublic BOOL NOT NULL,
   PRIMARY KEY (host, id),
   UNIQUE INDEX(id),
   UNIQUE INDEX(host, isArchived, isPublic, name, createdOn, id),
   UNIQUE INDEX(host, isArchived, isPublic, createdOn, name, id),
   UNIQUE INDEX(host, isArchived, isPublic, startOn, name, id),
-  UNIQUE INDEX(host, isArchived, isPublic, dueOn, name, id)
+  UNIQUE INDEX(host, isArchived, isPublic, endOn, name, id)
 );
 
 DROP TABLE IF EXISTS tasks;

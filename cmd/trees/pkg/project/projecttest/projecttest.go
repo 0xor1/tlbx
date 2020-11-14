@@ -37,7 +37,7 @@ func Everything(t *testing.T) {
 		HoursPerDay:  8,
 		DaysPerWeek:  5,
 		StartOn:      ptr.Time(app.ExampleTime()),
-		DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 		IsPublic:     false,
 		Name:         "My New Project",
 	}).MustDo(ac)
@@ -58,10 +58,10 @@ func Everything(t *testing.T) {
 		CreatedOnMax: &p1.CreatedOn,
 		StartOnMin:   ptr.Time(app.ExampleTime()),
 		StartOnMax:   ptr.Time(app.ExampleTime()),
-		DueOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-		DueOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 		After:        nil,
-		Sort:         cnsts.SortDueOn,
+		Sort:         cnsts.SortEndOn,
 		Asc:          ptr.Bool(false),
 		Limit:        100,
 	}).MustDo(ac).Set[0]
@@ -75,10 +75,10 @@ func Everything(t *testing.T) {
 		CreatedOnMax: &p1.CreatedOn,
 		StartOnMin:   ptr.Time(app.ExampleTime()),
 		StartOnMax:   ptr.Time(app.ExampleTime()),
-		DueOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-		DueOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 		After:        nil,
-		Sort:         cnsts.SortDueOn,
+		Sort:         cnsts.SortEndOn,
 		Asc:          ptr.Bool(false),
 		Limit:        100,
 	}).MustDo(ac).Set[0]
@@ -92,10 +92,10 @@ func Everything(t *testing.T) {
 		CreatedOnMax: &p1.CreatedOn,
 		StartOnMin:   ptr.Time(app.ExampleTime()),
 		StartOnMax:   ptr.Time(app.ExampleTime()),
-		DueOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-		DueOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 		After:        ptr.ID(p1.ID),
-		Sort:         cnsts.SortDueOn,
+		Sort:         cnsts.SortEndOn,
 		Asc:          ptr.Bool(true),
 		Limit:        100,
 	}).MustDo(ac).Set))
@@ -104,7 +104,7 @@ func Everything(t *testing.T) {
 	cc := "EUR"
 	dpw := uint8(4)
 	startOn := NowMilli()
-	dueOn := startOn.Add(24 * time.Hour)
+	endOn := startOn.Add(24 * time.Hour)
 	p1 = (&project.Update{
 		ID:           p1.ID,
 		Name:         &field.String{V: name1},
@@ -112,7 +112,7 @@ func Everything(t *testing.T) {
 		HoursPerDay:  &field.UInt8{V: dpw},
 		DaysPerWeek:  &field.UInt8{V: dpw},
 		StartOn:      &field.TimePtr{V: &startOn},
-		DueOn:        &field.TimePtr{V: &dueOn},
+		EndOn:        &field.TimePtr{V: &endOn},
 		IsArchived:   &field.Bool{V: false},
 		IsPublic:     &field.Bool{V: true},
 	}).MustDo(ac)
@@ -121,7 +121,7 @@ func Everything(t *testing.T) {
 	a.Equal(dpw, p1.HoursPerDay)
 	a.Equal(dpw, p1.DaysPerWeek)
 	a.Equal(startOn, *p1.StartOn)
-	a.Equal(dueOn, *p1.DueOn)
+	a.Equal(endOn, *p1.EndOn)
 	a.False(p1.IsArchived)
 	a.True(p1.IsPublic)
 
@@ -129,21 +129,21 @@ func Everything(t *testing.T) {
 	p1 = (&project.One{Host: r.Ali().ID(), ID: p1.ID}).MustDo(r.NewClient())
 	a.NotNil(p1)
 
-	// try to set startOn to same value as dueOn
+	// try to set startOn to same value as endOn
 	nilP, err := (&project.Update{
 		ID:      p1.ID,
-		StartOn: &field.TimePtr{V: &dueOn},
+		StartOn: &field.TimePtr{V: &endOn},
 	}).Do(ac)
 	a.Nil(nilP)
-	a.Contains(err.Error(), "invalid startOn must be before dueOn")
+	a.Contains(err.Error(), "invalid startOn must be before endOn")
 
-	// try to set dueOn to same value as startOn
+	// try to set endOn to same value as startOn
 	nilP, err = (&project.Update{
 		ID:    p1.ID,
-		DueOn: &field.TimePtr{V: &startOn},
+		EndOn: &field.TimePtr{V: &startOn},
 	}).Do(ac)
 	a.Nil(nilP)
-	a.Contains(err.Error(), "invalid startOn must be before dueOn")
+	a.Contains(err.Error(), "invalid startOn must be before endOn")
 
 	// create another project and get with a limit of 1 to test more: true response
 	name2 := "My 2nd Project"
@@ -170,7 +170,7 @@ func Everything(t *testing.T) {
 	ps := (&project.Updates{}).MustDo(ac)
 
 	// make multiple updates
-	dueOn = dueOn.Add(24 * time.Hour)
+	endOn = endOn.Add(24 * time.Hour)
 	ps = (&project.Updates{
 		{
 			// send an empty update
@@ -178,20 +178,20 @@ func Everything(t *testing.T) {
 		},
 		{
 			ID:    p1.ID,
-			DueOn: &field.TimePtr{V: &dueOn},
+			EndOn: &field.TimePtr{V: &endOn},
 		},
 		{
 			ID:    p2.ID,
-			DueOn: &field.TimePtr{V: &dueOn},
+			EndOn: &field.TimePtr{V: &endOn},
 		},
 	}).MustDo(ac)
 	a.Len(ps, 2)
 	a.True(p1.ID.Equal(ps[0].ID))
 	a.Equal(name1, ps[0].Name)
-	a.Equal(dueOn, *ps[0].DueOn)
+	a.Equal(endOn, *ps[0].EndOn)
 	a.True(p2.ID.Equal(ps[1].ID))
 	a.Equal(name2, ps[1].Name)
-	a.Equal(dueOn, *ps[1].DueOn)
+	a.Equal(endOn, *ps[1].EndOn)
 
 	// delete projects
 	(&project.Delete{}).MustDo(ac)
@@ -203,7 +203,7 @@ func Everything(t *testing.T) {
 		HoursPerDay:  8,
 		DaysPerWeek:  5,
 		StartOn:      ptr.Time(app.ExampleTime()),
-		DueOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 		IsPublic:     false,
 		Name:         "My New Project",
 	}).MustDo(ac)

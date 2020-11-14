@@ -18,11 +18,11 @@ const (
 	SortName      Sort = "name"
 	SortCreatedOn Sort = "createdon"
 	SortStartOn   Sort = "starton"
-	SortDueOn     Sort = "dueon"
+	SortEndOn     Sort = "endon"
 )
 
 func (s *Sort) Validate() {
-	app.BadReqIf(s != nil && !(*s == SortName || *s == SortCreatedOn || *s == SortStartOn || *s == SortDueOn), "invalid sort")
+	app.BadReqIf(s != nil && !(*s == SortName || *s == SortCreatedOn || *s == SortStartOn || *s == SortEndOn), "invalid sort")
 }
 
 func (s *Sort) String() string {

@@ -23,7 +23,7 @@ type Base struct {
 	HoursPerDay  uint8      `json:"hoursPerDay"`
 	DaysPerWeek  uint8      `json:"daysPerWeek"`
 	StartOn      *time.Time `json:"startOn"`
-	DueOn        *time.Time `json:"dueOn"`
+	EndOn        *time.Time `json:"endOn"`
 	IsPublic     bool       `json:"isPublic"`
 }
 
@@ -32,7 +32,7 @@ type Create struct {
 	HoursPerDay  uint8      `json:"hoursPerDay,omitempty"`
 	DaysPerWeek  uint8      `json:"daysPerWeek,omitempty"`
 	StartOn      *time.Time `json:"startOn"`
-	DueOn        *time.Time `json:"dueOn"`
+	EndOn        *time.Time `json:"endOn"`
 	IsPublic     bool       `json:"isPublic"`
 	Name         string     `json:"name"`
 }
@@ -82,8 +82,8 @@ type Get struct {
 	CreatedOnMax *time.Time `json:"createdOnMax,omitempty"`
 	StartOnMin   *time.Time `json:"startOnMin,omitempty"`
 	StartOnMax   *time.Time `json:"startOnMax,omitempty"`
-	DueOnMin     *time.Time `json:"dueOnMin,omitempty"`
-	DueOnMax     *time.Time `json:"dueOnMax,omitempty"`
+	EndOnMin     *time.Time `json:"endOnMin,omitempty"`
+	EndOnMax     *time.Time `json:"endOnMax,omitempty"`
 	After        *ID        `json:"after,omitempty"`
 	Sort         cnsts.Sort `json:"sort,omitempty"`
 	Asc          *bool      `json:"asc,omitempty"`
@@ -118,7 +118,7 @@ type Update struct {
 	HoursPerDay  *field.UInt8   `json:"hoursPerDay,omitempty"`
 	DaysPerWeek  *field.UInt8   `json:"daysPerWeek,omitempty"`
 	StartOn      *field.TimePtr `json:"startOn,omitempty"`
-	DueOn        *field.TimePtr `json:"dueOn,omitempty"`
+	EndOn        *field.TimePtr `json:"endOn,omitempty"`
 	IsArchived   *field.Bool    `json:"isArchived,omitempty"`
 	IsPublic     *field.Bool    `json:"isPublic,omitempty"`
 }
