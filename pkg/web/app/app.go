@@ -49,6 +49,18 @@ type Config struct {
 	Serve       func(http.HandlerFunc)
 }
 
+func JoinEps(epss ...[]*Endpoint) []*Endpoint {
+	count := 0
+	for _, eps := range epss {
+		count += len(eps)
+	}
+	joined := make([]*Endpoint, 0, count)
+	for _, eps := range epss {
+		joined = append(joined, eps...)
+	}
+	return joined
+}
+
 type TlbxMware func(Tlbx)
 type TlbxMwares []func(Tlbx)
 

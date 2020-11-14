@@ -1,8 +1,13 @@
 package main
 
 import (
+	"github.com/0xor1/tlbx/cmd/trees/pkg/comment/commenteps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/expense/expenseeps"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/file/fileeps"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/time/timeeps"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
@@ -12,7 +17,6 @@ import (
 
 func main() {
 	config := config.Get()
-	eps := []*app.Endpoint{}
 	app.Run(func(c *app.Config) {
 		c.StaticDir = config.StaticDir
 		c.ContentSecurityPolicies = config.ContentSecurityPolicies
@@ -24,17 +28,20 @@ func main() {
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),
 		}
 		c.Log = config.Log
-		c.Endpoints = append(
-			append(
-				eps,
-				usereps.New(
-					config.FromEmail,
-					config.ActivateFmtLink,
-					config.ConfirmChangeEmailFmtLink,
-					nil,
-					projecteps.OnDelete,
-					true,
-					nil)...),
-			projecteps.Eps...)
+		c.Endpoints = app.JoinEps(
+			usereps.New(
+				config.FromEmail,
+				config.ActivateFmtLink,
+				config.ConfirmChangeEmailFmtLink,
+				nil,
+				projecteps.OnDelete,
+				true,
+				nil),
+			projecteps.Eps,
+			taskeps.Eps,
+			timeeps.Eps,
+			expenseeps.Eps,
+			fileeps.Eps,
+			commenteps.Eps)
 	})
 }
