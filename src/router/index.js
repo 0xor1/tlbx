@@ -10,6 +10,18 @@ import task from '../views/task.vue'
 import api from '@/api'
 
 vue.use(vueRouter)
+const authCheck = (to, from, next)=>{
+  api.user.me().then(()=>{
+    next()
+  }).catch(()=>{
+    if (to.name != 'login' && 
+    to.name != 'register') {
+      next('/login')
+    } else {
+      next()
+    }
+  })
+}
 
 const routes = [
   {
@@ -35,12 +47,14 @@ const routes = [
   {
     path: '/project/create',
     name: 'projectCreate',
-    component: projectCreate
+    component: projectCreate,
+    beforeEnter: authCheck
   },
   {
     path: '/projects',
     name: 'projects',
-    component: projects
+    component: projects,
+    beforeEnter: authCheck
   },
   {
     path: '/host/:hostId/project/:projectId/task/:taskId',
@@ -55,18 +69,6 @@ const routes = [
 
 const router = new vueRouter({
   routes
-})
-router.beforeEach((to, from, next)=>{
-  api.user.me().then(()=>{
-    next()
-  }).catch(()=>{
-    if (to.name != 'login' && 
-    to.name != 'register') {
-      next('/login')
-    } else {
-      next()
-    }
-  })
 })
 
 export default router
