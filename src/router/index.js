@@ -7,6 +7,7 @@ import login from '../views/login.vue'
 import projects from '../views/projects.vue'
 import projectCreate from '../views/projectCreate.vue'
 import task from '../views/task.vue'
+import api from '@/api'
 
 vue.use(vueRouter)
 
@@ -54,6 +55,18 @@ const routes = [
 
 const router = new vueRouter({
   routes
+})
+router.beforeEach((to, from, next)=>{
+  api.user.me().then(()=>{
+    next()
+  }).catch(()=>{
+    if (to.name != 'login' && 
+    to.name != 'register') {
+      next('/login')
+    } else {
+      next()
+    }
+  })
 })
 
 export default router

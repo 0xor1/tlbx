@@ -1,19 +1,7 @@
 <template>
     <router-view/>
 </template>
-<script>
-  import api from '@/api'
-  import router from '@/router'
-  export default {
-    name: 'root',
-    data () {
-      api.user.me().catch(() => {
-        router.push('/login')
-      })
-      return {}
-    }
-  }
-</script>
+
 <style lang="scss">
 @import url(https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap);
 * {
