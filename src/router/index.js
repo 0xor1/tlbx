@@ -63,19 +63,13 @@ const routes = [
     component: projects
   },
   {
-    path: '/projects',
-    name: 'projects',
-    component: projects,
-    beforeEnter: authCheck
-  },
-  {
     path: '/host/:hostId/project/:projectId/task/:taskId',
     name: 'task',
     component: task
   },
   {
     path: '*',
-    redirect: '/projects'
+    redirect: '/'
   }
 ]
 
