@@ -59,7 +59,7 @@ const routes = [
   },
   {
     path: '/host/:hostId/projects',
-    name: 'hostProjects',
+    name: 'projects',
     component: projects
   },
   {

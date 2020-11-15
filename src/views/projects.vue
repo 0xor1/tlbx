@@ -3,7 +3,18 @@
     <div class="header">
       <a @click.stop.prevent="logout" href="">logout</a>
       <h1>projects</h1>
-      <button v-if="showCreate" @click="$router.push('/project/create')">create</button>
+      <button v-if="isMe" @click="$router.push('/project/create')">create</button>
+    </div>
+    <p v-if="loading">
+      loading projects
+    </p>
+    <p v-else-if="isMe && ps.length === 0">
+      create your first project
+    </p>
+    <p v-else-if="ps.length === 0">
+      user has no projects
+    </p>
+    <div v-else>
       <div class="column-filters">
         <input type="checkbox" v-model="showDates"><label>dates </label>
         <input type="checkbox" v-model="showTimes"><label>times </label>
@@ -11,112 +22,108 @@
         <input type="checkbox" v-model="showFiles"><label>files </label>
         <input type="checkbox" v-model="showNodes"><label>nodes</label>
       </div>
+      <table >
+        <tr class="header">
+          <th class="name">
+            Name
+          </th>
+          <th v-if="showDates" class="createdon">
+            Created On
+          </th>
+          <th v-if="showDates" class="starton">
+            Start On
+          </th>
+          <th v-if="showDates" class="endon">
+            End On
+          </th>
+          <th v-if="showTimes" class="hoursperday">
+            Hours Per Day
+          </th>
+          <th v-if="showTimes" class="daysperweek">
+            Days Per Week
+          </th>
+          <th v-if="showTimes" class="mintime">
+            Minimum Time
+          </th>
+          <th v-if="showTimes" class="esttime">
+            Estimated Time
+          </th>
+          <th v-if="showTimes" class="logtime">
+            Logged Time
+          </th>
+          <th v-if="showExpenses" class="estexp">
+            Estimated Expense
+          </th>
+          <th v-if="showExpenses" class="logexp">
+            Logged Expense
+          </th>
+          <th v-if="showFiles" class="filecount">
+            File Count
+          </th>
+          <th v-if="showFiles" class="filesize">
+            File Size
+          </th>
+          <th v-if="showNodes" class="nodes">
+            Nodes
+          </th>
+        </tr>
+        <tr class="project" @click="$router.push('/host/'+p.host+'/project/'+p.id+'/task/'+p.id)" v-for="(p, index) in ps" :key="p.id">
+          <td>
+            {{ p.name }}
+          </td>
+          <td v-if="showDates" class="createdon">
+            {{ dt(p.createdOn) }}
+          </td>
+          <td v-if="showDates" class="starton">
+            {{ dt(p.startOn) }}
+          </td>
+          <td v-if="showDates" class="endon">
+            {{ dt(p.endOn) }}
+          </td>
+          <td v-if="showTimes" class="hoursperday">
+            {{ p.hoursPerDay }}
+          </td>
+          <td v-if="showTimes" class="daysperweek">
+            {{ p.daysPerWeek }}
+          </td>
+          <td v-if="showTimes" class="mintime">
+            {{ $fmt.duration(p.minimumTime) }}
+          </td>
+          <td v-if="showTimes" class="esttime">
+            {{ $fmt.duration(p.estimatedTime) }}
+          </td>
+          <td v-if="showTimes" class="logtime">
+            {{ $fmt.duration(p.loggedTime) }}
+          </td>
+          <td v-if="showExpenses" class="estexp">
+            {{ $fmt.cost(p.currencyCode, p.estimatedExpense)}}
+          </td>
+          <td v-if="showExpenses" class="logexp">
+            {{ $fmt.cost(p.currencyCode, p.loggedExpense) }}
+          </td>
+          <td v-if="showFiles" class="filecount">
+            {{ p.fileCount + p.fileSubCount }}
+          </td>
+          <td v-if="showFiles" class="filesize">
+            {{ $fmt.bytes(p.fileSize + p.fileSubSize) }}
+          </td>
+          <td v-if="showNodes" class="nodes">
+            {{ p.descendantCount + 1 }}
+          </td>
+          <td class="action" @click.stop="$router.push('project/'+p.id+'/update')">
+            <img src="@/assets/edit.svg">
+          </td>
+          <td class="action" @click.stop="trash(p, index)">
+            <img src="@/assets/trash.svg">
+          </td>
+        </tr>
+        <tr v-if="more">
+          <td>
+            <button @click="load(false)">load more</button>
+          </td>
+        </tr>
+      </table>
     </div>
-    <p v-if="!loading && ps.length === 0">create your first project</p>
-    <p v-else>
-    <table >
-      <tr class="header">
-        <th class="name">
-          Name
-        </th>
-        <th v-if="showDates" class="createdon">
-          Created On
-        </th>
-        <th v-if="showDates" class="starton">
-          Start On
-        </th>
-        <th v-if="showDates" class="endon">
-          End On
-        </th>
-        <th v-if="showTimes" class="hoursperday">
-          Hours Per Day
-        </th>
-        <th v-if="showTimes" class="daysperweek">
-          Days Per Week
-        </th>
-        <th v-if="showTimes" class="mintime">
-          Minimum Time
-        </th>
-        <th v-if="showTimes" class="esttime">
-          Estimated Time
-        </th>
-        <th v-if="showTimes" class="logtime">
-          Logged Time
-        </th>
-        <th v-if="showExpenses" class="estexp">
-          Estimated Expense
-        </th>
-        <th v-if="showExpenses" class="logexp">
-          Logged Expense
-        </th>
-        <th v-if="showFiles" class="filecount">
-          File Count
-        </th>
-        <th v-if="showFiles" class="filesize">
-          File Size
-        </th>
-        <th v-if="showNodes" class="nodes">
-          Nodes
-        </th>
-      </tr>
-      <tr class="project" @click="$router.push('/host/'+p.host+'/project/'+p.id+'/task/'+p.id)" v-for="(p, index) in ps" :key="p.id">
-        <td>
-          {{ p.name }}
-        </td>
-        <td v-if="showDates" class="createdon">
-          {{ dt(p.createdOn) }}
-        </td>
-        <td v-if="showDates" class="starton">
-          {{ dt(p.startOn) }}
-        </td>
-        <td v-if="showDates" class="endon">
-          {{ dt(p.endOn) }}
-        </td>
-        <td v-if="showTimes" class="hoursperday">
-          {{ p.hoursPerDay }}
-        </td>
-        <td v-if="showTimes" class="daysperweek">
-          {{ p.daysPerWeek }}
-        </td>
-        <td v-if="showTimes" class="mintime">
-          {{ $fmt.duration(p.minimumTime) }}
-        </td>
-        <td v-if="showTimes" class="esttime">
-          {{ $fmt.duration(p.estimatedTime) }}
-        </td>
-        <td v-if="showTimes" class="logtime">
-          {{ $fmt.duration(p.loggedTime) }}
-        </td>
-        <td v-if="showExpenses" class="estexp">
-          {{ $fmt.cost(p.currencyCode, p.estimatedExpense)}}
-        </td>
-        <td v-if="showExpenses" class="logexp">
-          {{ $fmt.cost(p.currencyCode, p.loggedExpense) }}
-        </td>
-        <td v-if="showFiles" class="filecount">
-          {{ p.fileCount + p.fileSubCount }}
-        </td>
-        <td v-if="showFiles" class="filesize">
-          {{ $fmt.bytes(p.fileSize + p.fileSubSize) }}
-        </td>
-        <td v-if="showNodes" class="nodes">
-          {{ p.descendantCount + 1 }}
-        </td>
-        <td class="action" @click.stop="$router.push('project/'+p.id+'/update')">
-          <img src="@/assets/edit.svg">
-        </td>
-        <td class="action" @click.stop="trash(p, index)">
-          <img src="@/assets/trash.svg">
-        </td>
-      </tr>
-      <tr v-if="more">
-        <td>
-          <button @click="load(false)">load more</button>
-        </td>
-      </tr>
-    </table>
-    </p>
-    <p v-if="loading">loading projects</p>
   </div>
 </template>
 
@@ -125,8 +132,11 @@
     name: 'projects',
     data: function() {
       this.load(true)
+      this.$api.user.me().then((me)=>{
+        this.isMe = this.$router.currentRoute.params.hostId == me.id
+      })
       return {
-        showCreate: this.$router.currentRoute.name == 'projects',
+        isMe: false,
         loading: true,
         showDates: true,
         showTimes: true,
@@ -182,14 +192,20 @@
       }
     },
     watch: {
-      $route (to) {
-        this.showCreate = to.name == 'projects'
+      $route () {
+        this.load(true)
+        this.$api.user.me().then((me)=>{
+          this.isMe = this.$router.currentRoute.params.hostId == me.id
+        })
       }
     }
   }
 </script>
 
 <style lang="scss">
+.column-filters {
+  margin: 5px 0 5px 0;
+}
 table {
   border-collapse: collapse;
   th, td {

@@ -20,7 +20,7 @@
     <datepicker v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
     <datepicker v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
     <button @click="create">create</button>
-    <button @click="$router.push('/projects')">cancel</button>
+    <button @click="$router.push('/')">cancel</button>
     <span v-if="createErr.length > 0" class="err">{{createErr}}</span>
   </div>
 </template>
