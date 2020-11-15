@@ -52,7 +52,6 @@
 </template>
 
 <script>
-  import api from '@/api'
   export default {
     name: 'tasks',
     data: function() {
@@ -72,14 +71,14 @@
     },
     methods: {
       create: function(){
-        api.item.create(this.task.id, this.createName).then((res)=>{
+        this.$api.item.create(this.task.id, this.createName).then((res)=>{
           this.createName = ""
           this.task.todoItemCount++
           this.items.push(res)
         })
       },
       trash: function(item, index){
-        api.item.delete(this.task.id, [item.id]).then(()=>{
+        this.$api.item.delete(this.task.id, [item.id]).then(()=>{
           this.task.todoItemCount--
           this.items.splice(index, 1)
         })
@@ -109,14 +108,14 @@
         if (oldName === newName) {
           return
         }
-        api.item.update(this.task.id, item.id, newName).then((res)=>{
+        this.$api.item.update(this.task.id, item.id, newName).then((res)=>{
           item.name = res.name
         }).catch(()=>{
           item.name = oldName
         })
       },
       complete: function(item, index){
-        api.item.update(this.task.id, item.id, undefined, true).then(()=>{
+        this.$api.item.update(this.task.id, item.id, undefined, true).then(()=>{
           this.task.todoItemCount--
           this.task.completedItemCount++
           this.items.splice(index, 1)
@@ -124,12 +123,12 @@
       },
       load: function(reset, completed){
         let taskId = this.$router.currentRoute.params.id
-        let mapi = api
+        let mapi = this.$api
         if (!this.loading) {
           this.loading = true
           if (reset) {
             this.items = []
-            mapi = api.newMDoApi()
+            mapi = this.$api.newMDoApi()
             mapi.task.one(taskId).then((res)=>{
               this.task = res
             })
@@ -157,7 +156,7 @@
         }
       },
       logout: function(){
-        api.user.logout().then(()=>{
+        this.$api.user.logout().then(()=>{
           this.$router.push('/login')
         })
       },

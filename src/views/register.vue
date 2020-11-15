@@ -20,7 +20,6 @@
 </template>
 
 <script>
-  import api from '@/api'
   export default {
     name: 'login',
     data: function() {
@@ -82,7 +81,7 @@
       },
       register: function(){
         if (this.validate()) {
-          api.user.register(this.alias, this.handle, this.email, this.pwd, this.confirmPwd).then(()=>{
+          this.$api.user.register(this.alias, this.handle, this.email, this.pwd, this.confirmPwd).then(()=>{
             this.registered = true
           }).catch((err)=>{
             this.alreadyLoggedIn = err.response.data === "already logged in"

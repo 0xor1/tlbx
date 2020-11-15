@@ -11,7 +11,6 @@
 </template>
 
 <script>
-  import api from '@/api'
   export default {
     name: 'login',
     data: function() {
@@ -46,7 +45,7 @@
       },
       login: function(){
         if (this.validate()) {
-          api.user.login(this.email, this.pwd).then(()=>{
+          this.$api.user.login(this.email, this.pwd).then(()=>{
             this.$router.push('/projects')
           })
         }

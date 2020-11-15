@@ -26,17 +26,12 @@
 </template>
 
 <script>
-  import api from '@/api'
   import datepicker from 'vuejs-datepicker';
   export default {
     name: 'projectCreate',
     components: {datepicker},
     data: function() {
-      api.user.me().then((me)=>{
-        this.me = me
-      })
       return {
-        me: null,
         name: "",
         nameErr: true,
         isPublic: false,
@@ -267,8 +262,8 @@
       },
       create: function(){
         if (this.validate()) {
-          api.project.create(this.name, this.isPublic, this.currencyCode, this.hoursPerDay, this.daysPerWeek, this.startOn, this.endOn).then((p)=>{
-            this.$router.push('/host/'+this.me.id+'/project/'+p.id+'/task/'+p.id)
+          this.$api.project.create(this.name, this.isPublic, this.currencyCode, this.hoursPerDay, this.daysPerWeek, this.startOn, this.endOn).then((p)=>{
+            this.$router.push('/host/'+p.host+'/project/'+p.id+'/task/'+p.id)
           })
         }
       }

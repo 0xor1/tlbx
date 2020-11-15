@@ -47,30 +47,30 @@
         <td class="nodes">
           {{ p.descendantCount + 1 }}
         </td>
-        <th class="mintime">
-          {{ p.minimumTime }}
-        </th>
-        <th class="esttime">
-          {{ p.estimatedTime }}
-        </th>
-        <th class="logtime">
-          {{ p.loggedTime }}
-        </th>
-        <th class="estexp">
-          {{ p.currencyCode }} {{ p.estimatedExpense / 100}}
-        </th>
-        <th class="logexp">
-          {{p.currencyCode}} {{ p.loggedExpense / 100}}
-        </th>
-        <th class="createdon">
-          {{ p.createdOn }}
-        </th>
-        <th class="starton">
-          {{ p.startOn }}
-        </th>
-        <th class="endon">
-          {{ p.endOn }}
-        </th>
+        <td class="mintime">
+          {{ $fmt.duration(p.minimumTime) }}
+        </td>
+        <td class="esttime">
+          {{ $fmt.duration(p.estimatedTime) }}
+        </td>
+        <td class="logtime">
+          {{ $fmt.duration(p.loggedTime) }}
+        </td>
+        <td class="estexp">
+          {{ $fmt.cost(p.currencyCode, p.estimatedExpense)}}
+        </td>
+        <td class="logexp">
+          {{ $fmt.cost(p.currencyCode, p.loggedExpense) }}
+        </td>
+        <td class="createdon">
+          {{ $dayjs(p.createdOn).format('YYYY-MM-DD') }}
+        </td>
+        <td class="starton">
+          {{ $dayjs(p.startOn).format('YYYY-MM-DD') }}
+        </td>
+        <td class="endon">
+          {{ $dayjs(p.endOn).format('YYYY-MM-DD') }}
+        </td>
         <td class="action" @click.stop="$router.push('project/'+p.id+'/update')">
           <img src="@/assets/edit.svg">
         </td>
@@ -90,7 +90,6 @@
 </template>
 
 <script>
-  import api from '@/api'
   export default {
     name: 'projects',
     data: function() {
@@ -101,12 +100,12 @@
         ps: [],
         currentEditItem: null,
         err: null,
-        more: false
+        more: false,
       }
     },
     methods: {
       trash: function(p, index){
-        api.project.delete([p.id]).then(()=>{
+        this.$api.project.delete([p.id]).then(()=>{
             this.ps.splice(index, 1)
         })
       },
@@ -120,7 +119,7 @@
           if (this.ps !== undefined && this.ps.length > 0 ) {
             args.after = this.ps[this.ps.length - 1].id
           }
-          api.project.get(this.hostId).then((res) => {
+          this.$api.project.get(this.hostId).then((res) => {
             for (let i = 0; i < res.set.length; i++) {
               let project = res.set[i]
               project.newName = project.name
@@ -136,7 +135,7 @@
         }
       },
       logout: function(){
-        api.user.logout().then(()=>{
+        this.$api.user.logout().then(()=>{
           this.$router.push('/login')
         })
       }
@@ -149,14 +148,12 @@ table {
   border-collapse: collapse;
   th, td {
     border: 1px solid #ddd;
-    &.name{
-      min-width: 250px;
-    }
-    &.todo{
+    &:not(.action){
+      text-align: center;
       min-width: 100px;
     }
-    &.count{
-      text-align: center;
+    &.name{
+      min-width: 250px;
     }
   }
   tr.project {
