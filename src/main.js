@@ -17,7 +17,6 @@ Vue.use(toasted, {
 
 Vue.config.productionTip = false
 
-
 let v = new Vue({
   router,
   render: h => h(app)

@@ -1,5 +1,6 @@
 import vue from 'vue'
 import vueRouter from 'vue-router'
+import direct from '../views/direct.vue'
 import activate from '../views/activate.vue'
 import confirmChangeEmail from '../views/confirmChangeEmail.vue'
 import register from '../views/register.vue'
@@ -26,6 +27,11 @@ const authCheck = (to, from, next)=>{
 
 const routes = [
   {
+    path: '/',
+    name: 'direct',
+    component: direct
+  },
+  {
     path: '/activate',
     name: 'activate',
     component: activate
@@ -50,6 +56,11 @@ const routes = [
     name: 'projectCreate',
     component: projectCreate,
     beforeEnter: authCheck
+  },
+  {
+    path: '/host/:hostId/projects',
+    name: 'hostProjects',
+    component: projects
   },
   {
     path: '/projects',

@@ -1,3 +1,10 @@
+let kb = 1000
+let mb = kb * kb
+let gb = mb * kb
+let tb = gb * kb
+let pb = tb * kb
+let eb = pb * tb
+
 export default {
     install(vue){
         vue.prototype.$fmt = {
@@ -52,10 +59,37 @@ export default {
                     case "NZD":
                         symbol= 'NZ$'
                         break;
-                    default:
-                        symbol = currencyCode + " "
                 }
                 return symbol + (value/100).toFixed(2)
+            },
+            bytes: (size)=>{
+                let unit = "B"
+                let div = 1
+                if (size > kb) {
+                    if (size < mb) {
+                        unit = "KB"
+                        div = kb
+                    } else if (size < gb) {
+                        unit = "MB"
+                        div = mb
+                    } else if (size < tb) {
+                        unit = "GB"
+                        div = gb
+                    } else if (size < pb) {
+                        unit = "TB"
+                        div = tb
+                    } else if (size < eb) {
+                        unit = "PB"
+                        div = pb
+                    } else {
+                        unit = "EB"
+                        div = eb
+                    }
+                }
+                if (div == 1) {
+                    return (size / div) + unit
+                }
+                return (size / div).toPrecision(3) + unit
             }
         }
     }
