@@ -62,6 +62,7 @@ var (
 				validate.CurrencyCode(tlbx, args.CurrencyCode)
 				app.BadReqIf(args.HoursPerDay < 1 || args.HoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
 				app.BadReqIf(args.DaysPerWeek < 1 || args.DaysPerWeek > 7, "invalid daysPerWeek must be > 0 and <= 7")
+				app.BadReqIf(args.HoursPerDay == 0 && args.DaysPerWeek > 0, "invalid hoursPerDay must be > 1 if daysPerWeek is > 1")
 				app.BadReqIf(args.StartOn != nil && args.EndOn != nil && !args.StartOn.Before(*args.EndOn), "invalid startOn must be before endOn")
 				p := &project.Project{
 					Task: task.Task{
@@ -237,6 +238,10 @@ var (
 						p.HoursPerDay = a.HoursPerDay.V
 					}
 					if a.DaysPerWeek != nil {
+						app.BadReqIf(
+							(a.HoursPerDay != nil && a.HoursPerDay.V == 0 && a.DaysPerWeek.V > 0) ||
+								(a.HoursPerDay == nil && p.HoursPerDay == 0 && a.DaysPerWeek.V > 0),
+							"invalid daysPerWeek must be > 0 only when hoursPerDay > 0")
 						app.BadReqIf(a.DaysPerWeek.V < 1 || a.DaysPerWeek.V > 7, "invalid daysPerWeek must be > 0 and <= 7")
 						p.DaysPerWeek = a.DaysPerWeek.V
 					}
