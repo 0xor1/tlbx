@@ -16,11 +16,12 @@
     </p>
     <div v-else>
       <div class="column-filters">
+        show: 
         <input type="checkbox" v-model="showDates"><label>dates </label>
         <input type="checkbox" v-model="showTimes"><label>times </label>
         <input type="checkbox" v-model="showExpenses"><label>expenses </label>
         <input type="checkbox" v-model="showFiles"><label>files </label>
-        <input type="checkbox" v-model="showNodes"><label>nodes</label>
+        <input type="checkbox" v-model="showTasks"><label>tasks</label>
       </div>
       <table >
         <tr class="header">
@@ -63,8 +64,8 @@
           <th v-if="showFiles" class="filesize">
             File Size
           </th>
-          <th v-if="showNodes" class="nodes">
-            Nodes
+          <th v-if="showTasks" class="tasks">
+            Tasks
           </th>
         </tr>
         <tr class="project" @click="$router.push('/host/'+p.host+'/project/'+p.id+'/task/'+p.id)" v-for="(p, index) in ps" :key="p.id">
@@ -107,10 +108,10 @@
           <td v-if="showFiles" class="filesize">
             {{ $fmt.bytes(p.fileSize + p.fileSubSize) }}
           </td>
-          <td v-if="showNodes" class="nodes">
+          <td v-if="showTasks" class="tasks">
             {{ p.descendantCount + 1 }}
           </td>
-          <td class="action" @click.stop="$router.push('project/'+p.id+'/update')">
+          <td class="action" @click.stop="$router.push('/project/'+p.id+'/update')">
             <img src="@/assets/edit.svg">
           </td>
           <td class="action" @click.stop="trash(p, index)">
@@ -142,7 +143,7 @@
         showTimes: true,
         showExpenses: true,
         showFiles: true,
-        showNodes: true,
+        showTasks: true,
         ps: [],
         err: null,
         more: false,
