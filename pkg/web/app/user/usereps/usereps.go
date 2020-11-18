@@ -52,7 +52,12 @@ func New(
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &user.Register{}
+				d := &user.Register{}
+				if enableSocials {
+					d.Handle = ptr.String("")
+					d.Alias = ptr.String("")
+				}
+				return d
 			},
 			GetExampleArgs: func() interface{} {
 				ex := &user.Register{
