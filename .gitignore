@@ -1,0 +1,9 @@
+.vscode/
+.idea/
+coverage.out
+index.html
+*.gen.go
+main
+tmpTestStore/
+__local_store_obj_info__.json
+cmd/scratch/**/*
