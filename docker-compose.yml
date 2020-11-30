@@ -4,8 +4,8 @@ services:
   tlbx-trees-sql:
     container_name: tlbx-trees-sql
     build:
-      context: ../../.
-      dockerfile: cmd/trees/sql.dockerfile
+      context: .
+      dockerfile: sql.dockerfile
     image: tlbx-trees-sql
     environment:
       MYSQL_ROOT_PASSWORD: dev
