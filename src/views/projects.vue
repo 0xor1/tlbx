@@ -73,13 +73,13 @@
             {{ p.name }}
           </td>
           <td v-if="showDates" class="createdon">
-            {{ dt(p.createdOn) }}
+            {{ $fmt.date(p.createdOn) }}
           </td>
           <td v-if="showDates" class="starton">
-            {{ dt(p.startOn) }}
+            {{ $fmt.date(p.startOn) }}
           </td>
           <td v-if="showDates" class="endon">
-            {{ dt(p.endOn) }}
+            {{ $fmt.date(p.endOn) }}
           </td>
           <td v-if="showDates" class="hoursperday">
             {{ p.hoursPerDay }}

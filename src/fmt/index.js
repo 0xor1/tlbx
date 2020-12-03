@@ -12,7 +12,7 @@ export default {
                 if (dt == null) {
                     return ""
                 }
-                return this.$dayjs(dt).format('YYYY-MM-DD')
+                return vue.prototype.$dayjs(dt).format('YYYY-MM-DD')
             },
             duration(minutes, hoursPerDay, daysPerWeek) {
                 // hoursPerDay and daysPerWeek are optional, if they arent passed
