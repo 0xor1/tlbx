@@ -8,6 +8,11 @@ import fmt from '@/fmt'
 
 
 Vue.use({install: v => v.prototype.$api = api})
+Vue.use({install: v => v.prototype.$goToMyProjects = ()=>{
+  api.user.me().then((me)=>{
+    router.push(`/host/${me.id}/projects`)
+  })
+}})
 Vue.use(fmt)
 Vue.use(dayjs, {lang: 'en'})
 Vue.use(toasted, {

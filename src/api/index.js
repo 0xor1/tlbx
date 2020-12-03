@@ -1,14 +1,18 @@
 import axios from 'axios'
 
+let notAuthed = false
 let memCache = {}
 let globalErrorHandler = null
+function isMeNotAuthedResponse(path, err) {
+  return path === '/api/user/me' && err.response.status === 401
+}
 
 let newApi = (isMDoApi) => {
   let mDoSending = false
   let mDoSent = false
   let awaitingMDoList = []
   let doReq = (path, args, headers) => {
-    path = '/api'+path
+    path = `/api${path}`
     if (!isMDoApi || (isMDoApi && mDoSending && !mDoSent)) {
       headers = headers || {"X-Client": "tlbx-web-client"}
       return axios({
@@ -19,11 +23,16 @@ let newApi = (isMDoApi) => {
       }).then((res) => {
         return res.data
       }).catch((err) => {
+        let isMeNotAutherRes = isMeNotAuthedResponse(path, err)
+        if (isMeNotAuthedResponse) {
+          notAuthed = true
+        }
         let errObj = {
           status: err.response.status,
           body: err.response.data
         }
-        if (globalErrorHandler != null) {
+        if (globalErrorHandler != null && !isMeNotAutherRes) {
+            // dont show error just for checking if logged in
           globalErrorHandler(errObj.body)
         }
         throw errObj
@@ -90,7 +99,7 @@ let newApi = (isMDoApi) => {
       new Promise(asyncIndividualPromisesReady).then(() => {
         let mDoObj = {}
         for (let i = 0, l = awaitingMDoList.length; i < l; i++) {
-          let key = '' + i
+          let key = `${i}`
           mDoObj[key] = {
             path: awaitingMDoList[i].path,
             args: awaitingMDoList[i].args
@@ -98,7 +107,7 @@ let newApi = (isMDoApi) => {
         }
         doReq('/mdo', mDoObj).then((res) => {
           for (let i = 0, l = awaitingMDoList.length; i < l; i++) {
-            let key = '' + i
+            let key = `${i}`
             if (res[key].status === 200) {
               awaitingMDoList[i].resolve(res[key].body)
             } else {
@@ -164,6 +173,7 @@ let newApi = (isMDoApi) => {
       },
       login: (email, pwd) => {
         return doReq('/user/login', {email, pwd}).then((res)=>{
+          notAuthed = false
           memCache.me = res
           memCache[res.id] = res
           return res
@@ -171,10 +181,20 @@ let newApi = (isMDoApi) => {
       },
       logout: () => {
         memCache = {}
-        return doReq('/user/logout')
+        return doReq('/user/logout').then(()=>{
+          notAuthed = true
+        })
       },
       me: () => {
+        if (notAuthed) {
+          // here we have already called /user/me and got back a 401
+          // so no need to call it again, just reject immediately
+          return new Promise((resolve, reject) => {
+            reject(null)
+          })
+        }
         if (memCache.me) {
+          // here user is already authed
           return new Promise((resolve) => {
             resolve(memCache.me)
           })
@@ -300,7 +320,7 @@ let newApi = (isMDoApi) => {
             "X-Amz-Acl": "private",
             "Content-Length": size, 
             "Content-Type": mimeType,
-            "Content-Disposition": "attachment; filename="+name,
+            "Content-Disposition": `attachment; filename=${name}`,
           }).then(()=>{
             doReq("/file/finalize", {host, project, task, id})
           })

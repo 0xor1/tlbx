@@ -8,7 +8,13 @@ let eb = pb * tb
 export default {
     install(vue){
         vue.prototype.$fmt = {
-            duration: (minutes, hoursPerDay, daysPerWeek) => {
+            date(dt) {
+                if (dt == null) {
+                    return ""
+                }
+                return this.$dayjs(dt).format('YYYY-MM-DD')
+            },
+            duration(minutes, hoursPerDay, daysPerWeek) {
                 // hoursPerDay and daysPerWeek are optional, if they arent passed
                 // or are passed as zero just show hours and minutes
                 let h = Math.floor(minutes / 60)
@@ -28,7 +34,7 @@ export default {
                 d = d % daysPerWeek
                 return w + "w " + d + "d " + h + "h " + m + "m"
             },
-            cost: (currencyCode, value) => {
+            cost(currencyCode, value) {
                 let symbol = currencyCode
                 // only support symbols for the major currencies
                 switch(currencyCode) {
@@ -62,7 +68,7 @@ export default {
                 }
                 return symbol + (value/100).toFixed(2)
             },
-            bytes: (size)=>{
+            bytes(size) {
                 let unit = "B"
                 let div = 1
                 if (size > kb) {

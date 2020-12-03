@@ -12,7 +12,8 @@ import api from '@/api'
 
 vue.use(vueRouter)
 
-const authCheck = (to, from, next)=>{
+// if session not authed redirect to login
+const notAuthedCheck = (to, from, next)=>{
   api.user.me().then(()=>{
     next()
   }).catch(()=>{
@@ -22,6 +23,16 @@ const authCheck = (to, from, next)=>{
     } else {
       next()
     }
+  })
+}
+
+// if session is authed and going to login or register
+// redirect to my projects
+const authedCheck = (to, from, next)=>{
+  api.user.me().then((me)=>{
+    next(`/host/${me.id}/projects`)
+  }).catch(()=>{
+    next()
   })
 }
 
@@ -44,18 +55,20 @@ const routes = [
   {
     path: '/register',
     name: 'register',
-    component: register
+    component: register,
+    beforeEnter: authedCheck
   },
   {
     path: '/login',
     name: 'login',
-    component: login
+    component: login,
+    beforeEnter: authedCheck
   },
   {
     path: '/project/create',
     name: 'projectCreate',
     component: projectCreate,
-    beforeEnter: authCheck
+    beforeEnter: notAuthedCheck
   },
   {
     path: '/host/:hostId/projects',

@@ -263,7 +263,7 @@
       create: function(){
         if (this.validate()) {
           this.$api.project.create(this.name, this.isPublic, this.currencyCode, this.hoursPerDay, this.daysPerWeek, this.startOn, this.endOn).then((p)=>{
-            this.$router.push('/host/'+p.host+'/project/'+p.id+'/task/'+p.id)
+            this.$router.push(`/host/${p.host}/project/${p.id}/task/${p.id}`)
           })
         }
       }

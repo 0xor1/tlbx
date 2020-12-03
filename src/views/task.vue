@@ -24,7 +24,7 @@
           {{ item.name }}
         </td>
         <td v-else>
-          <input :ref="'edit_' + item.id" @keydown.esc="toggleEditTools(item)" @keydown.enter="update(item)" @click.stop v-model="item.newName" placeholder="new name">
+          <input :ref="`edit_${item.id}`" @keydown.esc="toggleEditTools(item)" @keydown.enter="update(item)" @click.stop v-model="item.newName" placeholder="new name">
           <button @click.stop="update(item)">update</button>
         </td>
         <td class="count">
@@ -93,7 +93,7 @@
         if (item.showEditTools) {
           this.currentEditItem = item
           this.$nextTick(()=>{
-            this.$refs["edit_"+item.id][0].focus()
+            this.$refs[`edit_${item.id}`][0].focus()
           })
         }
       },

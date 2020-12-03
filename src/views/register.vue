@@ -23,6 +23,7 @@
   export default {
     name: 'login',
     data: function() {
+      this.$goToMyProjects()
       return {
         aliasErr: true,
         alias: "",

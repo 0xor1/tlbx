@@ -1,7 +1,7 @@
 <template>
   <div class="root">
     <div class="header">
-      <a @click.stop.prevent="logout" href="">logout</a>
+      <loginout></loginout>
       <h1>projects</h1>
       <button v-if="isMe" @click="$router.push('/project/create')">create</button>
     </div>
@@ -37,10 +37,10 @@
           <th v-if="showDates" class="endon">
             End On
           </th>
-          <th v-if="showTimes" class="hoursperday">
+          <th v-if="showDates" class="hoursperday">
             Hours Per Day
           </th>
-          <th v-if="showTimes" class="daysperweek">
+          <th v-if="showDates" class="daysperweek">
             Days Per Week
           </th>
           <th v-if="showTimes" class="mintime">
@@ -68,7 +68,7 @@
             Tasks
           </th>
         </tr>
-        <tr class="project" @click="$router.push('/host/'+p.host+'/project/'+p.id+'/task/'+p.id)" v-for="(p, index) in ps" :key="p.id">
+        <tr class="project" @click="$router.push(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
           <td>
             {{ p.name }}
           </td>
@@ -81,10 +81,10 @@
           <td v-if="showDates" class="endon">
             {{ dt(p.endOn) }}
           </td>
-          <td v-if="showTimes" class="hoursperday">
+          <td v-if="showDates" class="hoursperday">
             {{ p.hoursPerDay }}
           </td>
-          <td v-if="showTimes" class="daysperweek">
+          <td v-if="showDates" class="daysperweek">
             {{ p.daysPerWeek }}
           </td>
           <td v-if="showTimes" class="mintime">
@@ -111,7 +111,7 @@
           <td v-if="showTasks" class="tasks">
             {{ p.descendantCount + 1 }}
           </td>
-          <td class="action" @click.stop="$router.push('/project/'+p.id+'/update')">
+          <td class="action" @click.stop="$router.push(`/project/${p.id}/update`)">
             <img src="@/assets/edit.svg">
           </td>
           <td class="action" @click.stop="trash(p, index)">
@@ -129,8 +129,10 @@
 </template>
 
 <script>
+  import loginout from '../components/loginout'
   export default {
     name: 'projects',
+    components: { loginout },
     data: function() {
       this.load(true)
       this.$api.user.me().then((me)=>{
@@ -139,11 +141,11 @@
       return {
         isMe: false,
         loading: true,
-        showDates: true,
+        showDates: false,
         showTimes: true,
         showExpenses: true,
-        showFiles: true,
-        showTasks: true,
+        showFiles: false,
+        showTasks: false,
         ps: [],
         err: null,
         more: false,
@@ -184,12 +186,6 @@
         this.$api.user.logout().then(()=>{
           this.$router.push('/login')
         })
-      },
-      dt: function(dt){
-        if (dt == null) {
-          return ""
-        }
-        return this.$dayjs(dt).format('YYYY-MM-DD')
       }
     },
     watch: {
@@ -205,7 +201,7 @@
 
 <style lang="scss">
 .column-filters {
-  margin: 5px 0 5px 0;
+  margin: 0.5pc 0 0.5pc 0;
 }
 table {
   border-collapse: collapse;
