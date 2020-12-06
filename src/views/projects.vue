@@ -146,18 +146,32 @@
         showExpenses: true,
         showFiles: false,
         showTasks: false,
+        commonCols: [
+          {
+            name: "Name",
+            prop: "name",
+            show: () => true,
+          },
+          {
+            name: "Created On",
+            prop: "createOn",
+            show: () => this.showDates,
+          }
+        ],
+        sort: "createon",
+        asc: false,
         ps: [],
         err: null,
         more: false,
       }
     },
     methods: {
-      trash: function(p, index){
+      trash(p, index){
         this.$api.project.delete([p.id]).then(()=>{
             this.ps.splice(index, 1)
         })
       },
-      load: function(reset){
+      load(reset){
         if (!this.loading) {
           this.loading = true
           if (reset) {
@@ -201,7 +215,7 @@
 
 <style lang="scss">
 .column-filters {
-  margin: 0.5pc 0 0.5pc 0;
+  margin: 0.6pc 0 0.6pc 0;
 }
 table {
   border-collapse: collapse;
