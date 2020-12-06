@@ -512,7 +512,7 @@ func New(
 					if len(args.Users) == 0 {
 						return nil
 					}
-					validate.MaxIDs(tlbx, "users", args.Users, 100)
+					validate.MaxIDs(tlbx, "users", args.Users, 1000)
 					srv := service.Get(tlbx)
 					query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar FROM users WHERE id IN(?`)
 					queryArgs := make([]interface{}, 0, len(args.Users))
