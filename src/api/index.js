@@ -2,6 +2,7 @@ import axios from 'axios'
 
 let notAuthed = false
 let memCache = {}
+let userGetInFlight = {}
 let globalErrorHandler = null
 function isMeNotAuthedResponse(path, err) {
   return path === '/api/user/me' && err.response.status === 401
@@ -221,31 +222,63 @@ let newApi = (isMDoApi) => {
       },
       get: (ids) => {
         let toGet = []
-        let found = []
+        let someInFlight = false
         ids.forEach((id)=>{
-          if (memCache[id]) {
-            found.push(memCache[id])
-          } else {
+          if (memCache[id] == null && userGetInFlight[id] == null) {
             toGet.push(id)
+          } else if (!someInFlight && userGetInFlight[id]) {
+            someInFlight = true
           }
         })
-        if (toGet.length === 0) {
+        // if there are none to get and none in flight
+        // return a promis that resolves immediately
+        if (toGet.length === 0 && !someInFlight) {
           return new Promise((resolve) => {
-            resolve(found)
+            let res = []
+            // all users are already cached resolve now.
+            ids.forEach((id)=>{
+              res.push(memCache[id])
+            })
+            resolve(res)
           })
         }
-        return doReq('/user/get', {users: toGet}).then((res) => {
-          let all = []
-          if (res != null) {
-            res.forEach((user)=>{
-              memCache[user.id] = user
+        // if there are some to get add them to the in flight list
+        // and get them, and return a promis to be resolved later.
+        if (toGet.length > 0) {
+          toGet.forEach((id)=>{
+            userGetInFlight[id] = true
+          })
+          doReq('/user/get', {users: toGet}).then((res) => {
+            if (res != null) {
+              res.forEach((user)=>{
+                memCache[user.id] = user
+              })
+            }
+          }).finally(()=>{
+            // must always clear up in flight list no matter what.
+            toGet.forEach((id)=>{
+              delete userGetInFlight[id]
             })
+            someInFlight = false
+          })
+        }
+        let completer = null
+        completer = (resolve, reject) => {
+          if (someInFlight) {
+            // if some are still in flight loop again
+            setTimeout(completer, 200, resolve, reject)
+          } else {
+            let res = []
+            // req is finished, return what users we have
             ids.forEach((id)=>{
-              all.push(memCache[id])
+              if (memCache[id] != null) {
+                res.push(memCache[id])
+              }
             })
+            resolve(res)
           }
-          return all
-        })
+        }
+        return new Promise(completer)
       }
     },
     project: {
