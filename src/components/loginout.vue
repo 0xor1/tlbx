@@ -1,13 +1,18 @@
 <template>
   <div class="root">
     <p v-if="loading">Loading...</p>
-    <a v-else @click.stop.prevent="loginout" href="">{{ authed? 'logout': 'login'}}</a>
+    <p v-else>
+      <user v-bind:user="me.id"></user>
+      <a @click.stop.prevent="loginout" href="">{{ authed? 'logout': 'login'}}</a>
+    </p>
   </div>
 </template>
 
 <script>
+  import user from './user'
   export default {
     name: 'loginout',
+    components: { user },
     data() {
       return this.initState()
     },
@@ -15,15 +20,17 @@
       initState (){
         return {
           loading: true,
-          authed: false
+          authed: false,
+          me: null
         }
       },
       init() {
         for(const [key, value] of Object.entries(this.initState())) {
           this[key] = value
         }
-        this.$api.user.me().then(()=>{
-            this.authed = true
+        this.$api.user.me().then((me)=>{
+          this.me = me
+          this.authed = true
         }).catch(()=>{
             this.authed = false
         }).finally(()=>{

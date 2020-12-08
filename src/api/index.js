@@ -211,8 +211,8 @@ let newApi = (isMDoApi) => {
       },
       one(id){
         return this.get([id]).then((res)=>{
-          if (res.set.length > 0) {
-            return res.set[0]
+          if (res != null && res.length > 0) {
+            return res[0]
           }
           throw {
             status: 404,
