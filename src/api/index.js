@@ -7,6 +7,13 @@ function isMeNotAuthedResponse(path, err) {
   return path === '/api/user/me' && err.response.status === 401
 }
 
+function NewError(status, body) {
+  return {
+    status,
+    body
+  }
+}
+
 let newApi = (isMDoApi) => {
   let mDoSending = false
   let mDoSent = false
@@ -23,15 +30,12 @@ let newApi = (isMDoApi) => {
       }).then((res) => {
         return res.data
       }).catch((err) => {
-        let isMeNotAutherRes = isMeNotAuthedResponse(path, err)
-        if (isMeNotAuthedResponse) {
+        let isMeNotAuthedRes = isMeNotAuthedResponse(path, err)
+        if (isMeNotAuthedRes) {
           notAuthed = true
         }
-        let errObj = {
-          status: err.response.status,
-          body: err.response.data
-        }
-        if (globalErrorHandler != null && !isMeNotAutherRes) {
+        let errObj = NewError(err.response.status, err.response.data)
+        if (globalErrorHandler != null && !isMeNotAuthedRes) {
             // dont show error just for checking if logged in
           globalErrorHandler(errObj.body)
         }
@@ -75,6 +79,7 @@ let newApi = (isMDoApi) => {
           if (awaitingMDoList[i].resolve === null) {
             ready = false
             setTimeout(asyncIndividualPromisesReady, 0, resolve)
+            break
           }
         }
         if (ready) {
@@ -83,10 +88,9 @@ let newApi = (isMDoApi) => {
       }
       let mdoErrors = []
       mdoErrors.isMDoErrors = true
-      let mDoComplete = false
       let mDoCompleterFunc
       mDoCompleterFunc = (resolve, reject) => {
-        if (mDoComplete) {
+        if (mDoSent) {
           if (mdoErrors.length === 0) {
             resolve()
           } else {
@@ -121,7 +125,6 @@ let newApi = (isMDoApi) => {
             awaitingMDoList[i].reject(error)
           }
         }).finally(()=>{
-          mDoComplete = true
           mDoSending = false
           mDoSent = true
         })
@@ -205,6 +208,17 @@ let newApi = (isMDoApi) => {
           return res
         })
       },
+      one(id){
+        return this.get([id]).then((res)=>{
+          if (res.set.length > 0) {
+            return res.set[0]
+          }
+          throw {
+            status: 404,
+            body: "no such user"
+          }
+        })
+      },
       get: (ids) => {
         let toGet = []
         let found = []
@@ -212,7 +226,6 @@ let newApi = (isMDoApi) => {
           if (memCache[id]) {
             found.push(memCache[id])
           } else {
-            found.push(memCache[id])
             toGet.push(id)
           }
         })
@@ -222,18 +235,33 @@ let newApi = (isMDoApi) => {
           })
         }
         return doReq('/user/get', {users: toGet}).then((res) => {
+          let all = []
           if (res != null) {
             res.forEach((user)=>{
               memCache[user.id] = user
             })
+            ids.forEach((id)=>{
+              all.push(memCache[id])
+            })
           }
-          return res
+          return all
         })
       }
     },
     project: {
-      create: (name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn) => {
+      create(name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn) {
         return doReq('/project/create', {name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn})
+      },
+      one(host, id) {
+        return this.get(host, [id]).then((res)=>{
+          if (res.set.length > 0) {
+            return res.set[0]
+          }
+          throw {
+            status: 404,
+            body: "no such project"
+          }
+        })
       },
       get: (host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) => {
         return doReq('/project/get', {host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit})

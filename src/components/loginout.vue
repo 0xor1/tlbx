@@ -9,17 +9,17 @@
   export default {
     name: 'loginout',
     data() {
-      return this.state()
+      return this.initState()
     },
     methods: {
-      state (){
+      initState (){
         return {
           loading: true,
           authed: false
         }
       },
       init() {
-        for(const [key, value] of Object.entries(this.state())) {
+        for(const [key, value] of Object.entries(this.initState())) {
           this[key] = value
         }
         this.$api.user.me().then(()=>{
