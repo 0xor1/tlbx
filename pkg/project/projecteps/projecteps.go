@@ -246,7 +246,7 @@ var (
 						ids = append(ids, u.ID)
 					}
 				}
-				ps := getSet(tlbx, &project.Get{Host: me, IDs: ids}, false).Set
+				ps := getSet(tlbx, &project.Get{Host: me, GetBase: project.GetBase{IDs: ids}}, false).Set
 				for i, p := range ps {
 					a := args[i]
 					if a.CurrencyCode != nil {

@@ -59,7 +59,7 @@ type One struct {
 }
 
 func (a *One) Do(c *app.Client) (*Project, error) {
-	res, err := (&Get{Host: a.Host, IDs: IDs{a.ID}}).Do(c)
+	res, err := (&Get{Host: a.Host, GetBase: GetBase{IDs: IDs{a.ID}}}).Do(c)
 	if res != nil && len(res.Set) == 1 {
 		return res.Set[0], err
 	}
@@ -74,13 +74,13 @@ func (a *One) MustDo(c *app.Client) *Project {
 
 type Get struct {
 	Host       ID    `json:"host,omitempty"`
-	IDs        IDs   `json:"ids,omitempty"`
 	IsArchived bool  `json:"isArchived"`
 	IsPublic   *bool `json:"isPublic,omitempty"`
 	GetBase
 }
 
 type GetBase struct {
+	IDs          IDs        `json:"ids,omitempty"`
 	NamePrefix   *string    `json:"namePrefix,omitempty"`
 	CreatedOnMin *time.Time `json:"createdOnMin,omitempty"`
 	CreatedOnMax *time.Time `json:"createdOnMax,omitempty"`
