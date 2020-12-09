@@ -1,6 +1,11 @@
 package main
 
 import (
+	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
+	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/session"
+	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/0xor1/trees/pkg/comment/commenteps"
 	"github.com/0xor1/trees/pkg/config"
 	"github.com/0xor1/trees/pkg/expense/expenseeps"
@@ -8,11 +13,6 @@ import (
 	"github.com/0xor1/trees/pkg/project/projecteps"
 	"github.com/0xor1/trees/pkg/task/taskeps"
 	"github.com/0xor1/trees/pkg/time/timeeps"
-	"github.com/0xor1/tlbx/pkg/web/app"
-	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
-	"github.com/0xor1/tlbx/pkg/web/app/service"
-	"github.com/0xor1/tlbx/pkg/web/app/session"
-	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 )
 
 func main() {
