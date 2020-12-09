@@ -214,13 +214,13 @@ let newApi = (isMDoApi) => {
           if (res != null && res.length > 0) {
             return res[0]
           }
-          throw {
-            status: 404,
-            body: "no such user"
-          }
+          throw NewError(404, "no such user")
         })
       },
       get: (ids) => {
+        if (typeof ids === "string") {
+          ids = [ids]
+        }
         let toGet = []
         let someInFlight = false
         ids.forEach((id)=>{
@@ -245,6 +245,7 @@ let newApi = (isMDoApi) => {
         // if there are some to get add them to the in flight list
         // and get them, and return a promis to be resolved later.
         if (toGet.length > 0) {
+          someInFlight = true
           toGet.forEach((id)=>{
             userGetInFlight[id] = true
           })
@@ -264,19 +265,32 @@ let newApi = (isMDoApi) => {
         }
         let completer = null
         completer = (resolve, reject) => {
-          if (someInFlight) {
+          let someStillInFlight = false
+          if ((someInFlight && toGet.length > 0)) {
+            someStillInFlight = true
+          } else if (someInFlight && Object.keys(userGetInFlight).length > 0) {
+            // flight may have ended we need to check if they are here yet
+            for (let i = 0; i < ids.length; i++) {
+              if (userGetInFlight[ids[i]]) {
+                someStillInFlight = true
+                break
+              }
+            }
+          }
+          if (someStillInFlight) {
             // if some are still in flight loop again
             setTimeout(completer, 200, resolve, reject)
-          } else {
-            let res = []
-            // req is finished, return what users we have
-            ids.forEach((id)=>{
-              if (memCache[id] != null) {
-                res.push(memCache[id])
-              }
-            })
-            resolve(res)
+            return
           }
+          let res = []
+          // req is finished, return what users we have
+          ids.forEach((id)=>{
+            if (memCache[id] != null) {
+              res.push(memCache[id])
+            }
+          })
+          resolve(res)
+        
         }
         return new Promise(completer)
       }
@@ -298,6 +312,9 @@ let newApi = (isMDoApi) => {
       },
       get: (host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) => {
         return doReq('/project/get', {host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit})
+      },
+      getOthers: (host, ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) => {
+        return doReq('/project/getOthers', {host, ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit})
       },
       update: (id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic) => {
         return doReq('/project/update', [{id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic}])

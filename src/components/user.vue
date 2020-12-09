@@ -1,7 +1,7 @@
 <template>
   <div class="root">
     <p v-if="loading">Loading...</p>
-    <a v-else @click.stop.prevent="goto" href="">{{ alias }}</a>
+    <a v-else @click.stop.prevent="goto" href="">{{ user.handle }}</a>
   </div>
 </template>
 
@@ -9,7 +9,7 @@
   export default {
     name: 'user',
     props: {
-        user: String
+        userId: String
     },
     data() {
       return this.initState()
@@ -18,21 +18,21 @@
       initState (){
         return {
           loading: true,
-          alias: ""
+          user: null
         }
       },
       init() {
         for(const [key, value] of Object.entries(this.initState())) {
           this[key] = value
         }
-        this.$api.user.one(this.user).then((user)=>{
+        this.$api.user.one(this.userId).then((user)=>{
             this.loading = false
-            this.alias = user.alias
+            this.user = user
         })
       },
       goto() {
-        if (this.$router.currentRoute.path != `/host/${this.user}/projects`) {
-            this.$router.push(`/host/${this.user}/projects`)
+        if (this.$router.currentRoute.path != `/host/${this.userId}/projects`) {
+            this.$router.push(`/host/${this.userId}/projects`)
         }
       }
     },
@@ -43,4 +43,7 @@
 </script>
 
 <style scoped lang="scss">
+div {
+  display: inline-block;
+}
 </style>

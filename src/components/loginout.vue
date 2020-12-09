@@ -2,8 +2,8 @@
   <div class="root">
     <p v-if="loading">Loading...</p>
     <p v-else>
-      <user v-bind:user="me.id"></user>
-      <a @click.stop.prevent="loginout" href="">{{ authed? 'logout': 'login'}}</a>
+      <user v-if="authed" v-bind:userId="me.id"></user>&nbsp;
+      <a v-if="!/\/(login|register)/.test($router.currentRoute.path)" @click.stop.prevent="loginout" href="">{{ authed? 'logout': 'login'}}</a>
     </p>
   </div>
 </template>
@@ -59,4 +59,7 @@
 </script>
 
 <style scoped lang="scss">
+user{
+  display: inline-block;
+}
 </style>

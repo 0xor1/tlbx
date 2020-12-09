@@ -1,6 +1,17 @@
 <template>
-    <router-view/>
+    <div>
+        <loginout></loginout>
+        <router-view/>
+    </div>
 </template>
+
+<script>
+import loginout from './components/loginout'
+  export default {
+    name: 'root',
+    components: { loginout },
+  }
+</script>
 
 <style lang="scss">
 @import url(https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap);

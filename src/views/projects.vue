@@ -1,8 +1,7 @@
 <template>
   <div class="root">
     <div class="header">
-      <loginout></loginout>
-      <h1>projects</h1>
+      <h1 v-if="user != null">{{user.handle+" projects"}}</h1>
       <button v-if="isMe" @click="$router.push('/project/create')">create</button>
     </div>
     <p v-if="loading">
@@ -129,54 +128,84 @@
 </template>
 
 <script>
-  import loginout from '../components/loginout'
   export default {
     name: 'projects',
-    components: { loginout },
     data: function() {
-      this.load(true)
-      this.$api.user.me().then((me)=>{
-        this.isMe = this.$router.currentRoute.params.hostId == me.id
-      })
-      return {
-        isMe: false,
-        loading: true,
-        showDates: false,
-        showTimes: true,
-        showExpenses: true,
-        showFiles: false,
-        showTasks: false,
-        commonCols: [
-          {
-            name: "Name",
-            prop: "name",
-            show: () => true,
-          },
-          {
-            name: "Created On",
-            prop: "createOn",
-            show: () => this.showDates,
-          }
-        ],
-        sort: "createon",
-        asc: false,
-        ps: [],
-        err: null,
-        more: false,
+      return this.initState()
+    },
+    computed: {
+      isMe(){
+        return this.me != null && this.me.id === this.hostId
       }
     },
     methods: {
-      trash(p, index){
-        this.$api.project.delete([p.id]).then(()=>{
-            this.ps.splice(index, 1)
-        })
+      initState (){
+        return {
+          hostId: this.$router.currentRoute.params.hostId,
+          me: null,
+          user: null,
+          loading: true,
+          showDates: false,
+          showTimes: true,
+          showExpenses: true,
+          showFiles: false,
+          showTasks: false,
+          commonCols: [
+            {
+              name: "Name",
+              prop: "name",
+              show: () => true,
+            },
+            {
+              name: "Created On",
+              prop: "createOn",
+              show: () => this.showDates,
+            }
+          ],
+          sort: "createon",
+          asc: false,
+          ps: [],
+          others: [],
+          more: false,
+        }
       },
-      load(reset){
+      init() {
+        for(const [key, value] of Object.entries(this.initState())) {
+          this[key] = value
+        }
+        let mapi = this.$api.newMDoApi()
+        mapi.user.me().then((me)=>{
+          this.me = me
+        })
+        mapi.user.one(this.hostId).then((user)=>{
+          this.user = user
+        })
+        mapi.project.get(this.hostId).then((res) => {
+          for (let i = 0; i < res.set.length; i++) {
+            let project = res.set[i]
+            project.newName = project.name
+            project.showEditTools = false
+            this.ps.push(res.set[i]) 
+          }
+          this.more = res.more
+        })
+        mapi.project.getOthers(this.hostId).then((res) => {
+          for (let i = 0; i < res.set.length; i++) {
+            let project = res.set[i]
+            project.newName = project.name
+            project.showEditTools = false
+            this.ps.push(res.set[i]) 
+          }
+          this.more = res.more
+        })
+        mapi.sendMDo().finally(()=>{
+          this.loading = false
+        })
+
+      },
+      loadMore(){
         if (!this.loading) {
           this.loading = true
-          if (reset) {
-            this.ps = []
-          }
           let args = {host: this.$router.currentRoute.params.hostId}
           if (this.ps !== undefined && this.ps.length > 0 ) {
             args.after = this.ps[this.ps.length - 1].id
@@ -189,25 +218,23 @@
               this.ps.push(res.set[i]) 
             }
             this.more = res.more
-          }).catch((err) => {
-            this.err = err
           }).finally(()=>{
             this.loading = false
           })
         }
       },
-      logout: function(){
-        this.$api.user.logout().then(()=>{
-          this.$router.push('/login')
+      trash(p, index){
+        this.$api.project.delete([p.id]).then(()=>{
+            this.ps.splice(index, 1)
         })
       }
     },
+    mounted(){
+      this.init()
+    },
     watch: {
       $route () {
-        this.load(true)
-        this.$api.user.me().then((me)=>{
-          this.isMe = this.$router.currentRoute.params.hostId == me.id
-        })
+        this.init()
       }
     }
   }
