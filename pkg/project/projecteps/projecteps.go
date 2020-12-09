@@ -5,10 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/epsutil"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/isql"
@@ -19,6 +15,10 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
+	"github.com/0xor1/trees/pkg/cnsts"
+	"github.com/0xor1/trees/pkg/epsutil"
+	"github.com/0xor1/trees/pkg/project"
+	"github.com/0xor1/trees/pkg/task"
 )
 
 var (
@@ -204,7 +204,7 @@ var (
 						ids = append(ids, u.ID)
 					}
 				}
-				ps := getSet(tlbx, &project.Get{Host: &me, IDs: ids}).Set
+				ps := getSet(tlbx, &project.Get{Host: me, IDs: ids}).Set
 				for i, p := range ps {
 					a := args[i]
 					if a.CurrencyCode != nil {
@@ -737,23 +737,16 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
 	queryArgs := make([]interface{}, 0, 14)
 	idsLen := len(args.IDs)
-	if args.Host != nil {
-		query.WriteString(` p.host=?`)
-		queryArgs = append(queryArgs, args.Host)
-		if me.Exists(tlbx) {
-			me := me.Get(tlbx)
-			if !me.Equal(*args.Host) {
-				query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT u.project FROM users u WHERE u.host=? AND u.isActive=1 AND u.id=?))`)
-				queryArgs = append(queryArgs, args.Host, me)
-			}
-		} else {
-			query.WriteString(` AND p.isPublic=1`)
+	query.WriteString(` p.host=?`)
+	queryArgs = append(queryArgs, args.Host)
+	if me.Exists(tlbx) {
+		me := me.Get(tlbx)
+		if !me.Equal(args.Host) {
+			query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT u.project FROM users u WHERE u.host=? AND u.isActive=1 AND u.id=?))`)
+			queryArgs = append(queryArgs, args.Host, me)
 		}
 	} else {
-		PanicIf(!me.Exists(tlbx), "if no host is specified, the request must come from an active user session")
-		query.WriteString(` (p.host=? OR p.id IN (SELECT u.project FROM users u WHERE u.isActive=1 AND u.id=? AND u.host<>?))`)
-		me := me.Get(tlbx)
-		queryArgs = append(queryArgs, me, me, me)
+		query.WriteString(` AND p.isPublic=1`)
 	}
 	if idsLen > 0 {
 		query.WriteString(sql.InCondition(true, `p.id`, idsLen))

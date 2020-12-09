@@ -5,12 +5,12 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/0xor1/tlbx/cmd/trees/pkg/file"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/task/taskeps"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
+	"github.com/0xor1/trees/pkg/file"
+	"github.com/0xor1/trees/pkg/task"
+	"github.com/0xor1/trees/pkg/task/taskeps"
 )
 
 // only suitable for small test trees for visual validation

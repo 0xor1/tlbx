@@ -3,12 +3,12 @@ package project
 import (
 	"time"
 
-	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
+	"github.com/0xor1/trees/pkg/cnsts"
+	"github.com/0xor1/trees/pkg/task"
 )
 
 type Project struct {
@@ -59,7 +59,7 @@ type One struct {
 }
 
 func (a *One) Do(c *app.Client) (*Project, error) {
-	res, err := (&Get{Host: &a.Host, IDs: IDs{a.ID}}).Do(c)
+	res, err := (&Get{Host: a.Host, IDs: IDs{a.ID}}).Do(c)
 	if res != nil && len(res.Set) == 1 {
 		return res.Set[0], err
 	}
@@ -73,7 +73,7 @@ func (a *One) MustDo(c *app.Client) *Project {
 }
 
 type Get struct {
-	Host         *ID        `json:"host,omitempty"`
+	Host         ID         `json:"host,omitempty"`
 	IDs          IDs        `json:"ids,omitempty"`
 	NamePrefix   *string    `json:"namePrefix,omitempty"`
 	IsArchived   bool       `json:"isArchived"`

@@ -3,7 +3,6 @@ package epsutil
 import (
 	"net/http"
 
-	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/json"
@@ -11,6 +10,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/sql"
+	"github.com/0xor1/trees/pkg/cnsts"
 )
 
 func SetAncestralChainAggregateValuesFromTask(tx service.Tx, host, project, task ID) IDs {

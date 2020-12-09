@@ -4,16 +4,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/config"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
-	"github.com/0xor1/tlbx/cmd/trees/pkg/project/projecteps"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
+	"github.com/0xor1/trees/pkg/cnsts"
+	"github.com/0xor1/trees/pkg/config"
+	"github.com/0xor1/trees/pkg/project"
+	"github.com/0xor1/trees/pkg/project/projecteps"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,7 +50,7 @@ func Everything(t *testing.T) {
 	a.NotNil(p1)
 
 	p1 = (&project.Get{
-		Host:         ptr.ID(r.Ali().ID()),
+		Host:         r.Ali().ID(),
 		NamePrefix:   ptr.String("My New"),
 		IsArchived:   false,
 		IsPublic:     ptr.Bool(false),
@@ -68,6 +68,7 @@ func Everything(t *testing.T) {
 
 	// getwithout specifying host
 	p1 = (&project.Get{
+		Host:         r.Ali().ID(),
 		NamePrefix:   ptr.String("My New"),
 		IsArchived:   false,
 		IsPublic:     ptr.Bool(false),
@@ -84,7 +85,7 @@ func Everything(t *testing.T) {
 	}).MustDo(ac).Set[0]
 
 	a.Zero(len((&project.Get{
-		Host:         ptr.ID(p1.ID),
+		Host:         p1.ID,
 		NamePrefix:   ptr.String("My New"),
 		IsArchived:   false,
 		IsPublic:     ptr.Bool(false),
@@ -157,7 +158,7 @@ func Everything(t *testing.T) {
 	a.NotNil(p2)
 
 	a.True((&project.Get{
-		Host:  ptr.ID(r.Ali().ID()),
+		Host:  r.Ali().ID(),
 		Limit: 1,
 	}).MustDo(ac).More)
 
@@ -196,7 +197,7 @@ func Everything(t *testing.T) {
 	// delete projects
 	(&project.Delete{}).MustDo(ac)
 	(&project.Delete{p1.ID, p2.ID}).MustDo(ac)
-	a.Zero(len((&project.Get{Host: ptr.ID(r.Ali().ID())}).MustDo(ac).Set))
+	a.Zero(len((&project.Get{Host: r.Ali().ID()}).MustDo(ac).Set))
 
 	p1 = (&project.Create{
 		CurrencyCode: "USD",
