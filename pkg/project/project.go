@@ -73,11 +73,15 @@ func (a *One) MustDo(c *app.Client) *Project {
 }
 
 type Get struct {
-	Host         ID         `json:"host,omitempty"`
-	IDs          IDs        `json:"ids,omitempty"`
+	Host       ID    `json:"host,omitempty"`
+	IDs        IDs   `json:"ids,omitempty"`
+	IsArchived bool  `json:"isArchived"`
+	IsPublic   *bool `json:"isPublic,omitempty"`
+	GetBase
+}
+
+type GetBase struct {
 	NamePrefix   *string    `json:"namePrefix,omitempty"`
-	IsArchived   bool       `json:"isArchived"`
-	IsPublic     *bool      `json:"isPublic,omitempty"`
 	CreatedOnMin *time.Time `json:"createdOnMin,omitempty"`
 	CreatedOnMax *time.Time `json:"createdOnMax,omitempty"`
 	StartOnMin   *time.Time `json:"startOnMin,omitempty"`
@@ -106,6 +110,25 @@ func (a *Get) Do(c *app.Client) (*GetRes, error) {
 }
 
 func (a *Get) MustDo(c *app.Client) *GetRes {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+// get other users projects that I am a member of
+type GetOthers GetBase
+
+func (_ *GetOthers) Path() string {
+	return "/project/getOthers"
+}
+
+func (a *GetOthers) Do(c *app.Client) (*GetRes, error) {
+	res := &GetRes{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *GetOthers) MustDo(c *app.Client) *GetRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
