@@ -839,7 +839,7 @@ func getSet(tlbx app.Tlbx, args *project.Get, others bool) *project.GetRes {
 			queryArgs = append(queryArgs, *args.EndOnMax)
 		}
 		if args.After != nil {
-			query.WriteString(Strf(` AND %s %s= (SELECT p.%s FROM projects p WHERE p.host=? AND p.id=?) AND p.id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
+			query.WriteString(Strf(` AND p.%s %s= (SELECT p.%s FROM projects p WHERE p.host=? AND p.id=?) AND p.id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, args.Host, *args.After, *args.After)
 			if args.Sort != cnsts.SortCreatedOn {
 				query.WriteString(Strf(` AND p.createdOn %s (SELECT p.createdOn FROM projects p WHERE p.host=? AND p.id=?)`, sql.GtLtSymbol(*args.Asc)))
