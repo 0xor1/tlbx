@@ -330,14 +330,17 @@ function newApi(isMDoApi) {
           }
         })
       },
-      get(host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) {
-        return doReq('/project/get', {host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit})
+      get(args) {
+        // host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit
+        return doReq('/project/get', args)
       },
-      getOthers(ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) {
-        return doReq('/project/getOthers', {ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit})
+      getOthers(args) {
+        // ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit
+        return doReq('/project/getOthers', args)
       },
-      update(id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic) {
-        return doReq('/project/update', [{id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic}])
+      update(args) {
+        // id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic
+        return doReq('/project/update', [args])
       },
       delete(ids) {
         return doReq('/project/delete', ids)

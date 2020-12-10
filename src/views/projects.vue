@@ -1,141 +1,81 @@
 <template>
   <div class="root">
     <div class="header">
-      <h1 v-if="user != null">{{user.handle+" projects"}}</h1>
+      <h1 v-if="user != null">{{user.handle+"s projects"}}</h1>
       <button v-if="isMe" @click="$router.push('/project/create')">create</button>
     </div>
     <p v-if="loading">
       loading projects
     </p>
-    <p v-else-if="isMe && ps.length === 0">
-      create your first project
-    </p>
-    <p v-else-if="ps.length === 0">
-      user has no projects
-    </p>
     <div v-else>
-      <div class="column-filters">
-        show: 
-        <input type="checkbox" v-model="showDates"><label>dates </label>
-        <input type="checkbox" v-model="showTimes"><label>times </label>
-        <input type="checkbox" v-model="showExpenses"><label>expenses </label>
-        <input type="checkbox" v-model="showFiles"><label>files </label>
-        <input type="checkbox" v-model="showTasks"><label>tasks</label>
+      <div class="projects">
+        <div class="column-filters">
+          show: 
+          <input type="checkbox" v-model="showDates"><label>dates </label>
+          <input type="checkbox" v-model="showTimes"><label>times </label>
+          <input type="checkbox" v-model="showExpenses"><label>expenses </label>
+          <input type="checkbox" v-model="showFiles"><label>files </label>
+          <input type="checkbox" v-model="showTasks"><label>tasks</label>
+        </div>
+        <table>
+          <tr class="header">
+            <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              {{c.name}}
+            </th>
+          </tr>
+          <tr class="project" @click="$router.push(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
+            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              {{ c.get(p) }}
+            </td>
+            <td class="action" @click.stop="$router.push(`/project/${p.id}/update`)">
+              <img src="@/assets/edit.svg">
+            </td>
+            <td class="action" @click.stop="trash(p, index)">
+              <img src="@/assets/trash.svg">
+            </td>
+          </tr>
+        </table>
+        <button class="load-more" v-if="isMe && psMore" @click="loadMore()">load more</button>
       </div>
-      <table >
-        <tr class="header">
-          <th class="name">
-            Name
-          </th>
-          <th v-if="showDates" class="createdon">
-            Created On
-          </th>
-          <th v-if="showDates" class="starton">
-            Start On
-          </th>
-          <th v-if="showDates" class="endon">
-            End On
-          </th>
-          <th v-if="showDates" class="hoursperday">
-            Hours Per Day
-          </th>
-          <th v-if="showDates" class="daysperweek">
-            Days Per Week
-          </th>
-          <th v-if="showTimes" class="mintime">
-            Minimum Time
-          </th>
-          <th v-if="showTimes" class="esttime">
-            Estimated Time
-          </th>
-          <th v-if="showTimes" class="logtime">
-            Logged Time
-          </th>
-          <th v-if="showExpenses" class="estexp">
-            Estimated Expense
-          </th>
-          <th v-if="showExpenses" class="logexp">
-            Logged Expense
-          </th>
-          <th v-if="showFiles" class="filecount">
-            File Count
-          </th>
-          <th v-if="showFiles" class="filesize">
-            File Size
-          </th>
-          <th v-if="showTasks" class="tasks">
-            Tasks
-          </th>
-        </tr>
-        <tr class="project" @click="$router.push(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
-          <td>
-            {{ p.name }}
-          </td>
-          <td v-if="showDates" class="createdon">
-            {{ $fmt.date(p.createdOn) }}
-          </td>
-          <td v-if="showDates" class="starton">
-            {{ $fmt.date(p.startOn) }}
-          </td>
-          <td v-if="showDates" class="endon">
-            {{ $fmt.date(p.endOn) }}
-          </td>
-          <td v-if="showDates" class="hoursperday">
-            {{ p.hoursPerDay }}
-          </td>
-          <td v-if="showDates" class="daysperweek">
-            {{ p.daysPerWeek }}
-          </td>
-          <td v-if="showTimes" class="mintime">
-            {{ $fmt.duration(p.minimumTime) }}
-          </td>
-          <td v-if="showTimes" class="esttime">
-            {{ $fmt.duration(p.estimatedTime) }}
-          </td>
-          <td v-if="showTimes" class="logtime">
-            {{ $fmt.duration(p.loggedTime) }}
-          </td>
-          <td v-if="showExpenses" class="estexp">
-            {{ $fmt.cost(p.currencyCode, p.estimatedExpense)}}
-          </td>
-          <td v-if="showExpenses" class="logexp">
-            {{ $fmt.cost(p.currencyCode, p.loggedExpense) }}
-          </td>
-          <td v-if="showFiles" class="filecount">
-            {{ p.fileCount + p.fileSubCount }}
-          </td>
-          <td v-if="showFiles" class="filesize">
-            {{ $fmt.bytes(p.fileSize + p.fileSubSize) }}
-          </td>
-          <td v-if="showTasks" class="tasks">
-            {{ p.descendantCount + 1 }}
-          </td>
-          <td class="action" @click.stop="$router.push(`/project/${p.id}/update`)">
-            <img src="@/assets/edit.svg">
-          </td>
-          <td class="action" @click.stop="trash(p, index)">
-            <img src="@/assets/trash.svg">
-          </td>
-        </tr>
-        <tr v-if="more">
-          <td>
-            <button @click="load(false)">load more</button>
-          </td>
-        </tr>
-      </table>
+      <div v-if="others.length > 0" class="others">
+        <h1>Others Projects</h1>
+        <table>
+          <tr class="header">
+            <th class="host">
+              Host
+            </th>
+            <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              {{c.name}}
+            </th>
+          </tr>
+          <tr class="project" @click="$router.push(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p) in others" :key="p.id">
+            <td >
+              <user v-bind:userId="p.host"></user>
+            </td><td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              {{ c.get(p) }}
+            </td>
+          </tr>
+        </table>
+        <button class="load-more" v-if="isMe && othersMore" @click="loadMore()">load more</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+  import user from '../components/user'
   export default {
     name: 'projects',
+    components: {user},
     data: function() {
       return this.initState()
     },
     computed: {
       isMe(){
         return this.me != null && this.me.id === this.hostId
+      },
+      cols(){
+        return this.commonCols.filter(i => i.show())
       }
     },
     methods: {
@@ -153,75 +93,135 @@
           commonCols: [
             {
               name: "Name",
-              prop: "name",
+              class: "name",
+              get: (p)=> p.name,
               show: () => true,
             },
             {
               name: "Created On",
-              prop: "createOn",
+              class: "createOn",
+              get: (p)=> this.$fmt.date(p.createdOn),
               show: () => this.showDates,
+            },
+            {
+              name: "Start On",
+              class: "startOn",
+              get: (p)=> this.$fmt.date(p.startOn),
+              show: () => this.showDates,
+            },
+            {
+              name: "End On",
+              class: "endOn",
+              get: (p)=> this.$fmt.date(p.endOn),
+              show: () => this.showDates,
+            },
+            {
+              name: "Hours Per Day",
+              class: "hoursPerDay",
+              get: (p)=> p.hoursPerDay,
+              show: () => this.showDates,
+            },
+            {
+              name: "Days Per Week",
+              class: "daysPerWeek",
+              get: (p)=> p.daysPerWeek,
+              show: () => this.showDates,
+            },
+            {
+              name: "Minimum Time",
+              class: "minimumTime",
+              get: (p)=> this.$fmt.duration(p.minimumTime),
+              show: () => this.showTimes,
+            },
+            {
+              name: "Estimated Time",
+              class: "estimatedTime",
+              get: (p)=> this.$fmt.duration(p.estimatedTime),
+              show: () => this.showTimes,
+            },
+            {
+              name: "Logged Time",
+              class: "loggedTime",
+              get: (p)=> this.$fmt.duration(p.loggedTime),
+              show: () => this.showTimes,
+            },
+            {
+              name: "Estimated Expense",
+              class: "estimatedExpense",
+              get: (p)=> this.$fmt.cost(p.currencyCode, p.estimatedExpense),
+              show: () => this.showExpenses,
+            },
+            {
+              name: "Logged Expense",
+              class: "loggedExpense",
+              get: (p)=> this.$fmt.cost(p.currencyCode, p.loggedExpense),
+              show: () => this.showExpenses,
+            },
+            {
+              name: "File Count",
+              class: "fileCount",
+              get: (p)=> p.fileCount,
+              show: () => this.showFiles,
+            },
+            {
+              name: "File Size",
+              class: "fileSize",
+              get: (p) => this.$fmt.bytes(p.fileSize + p.fileSubSize),
+              show: () => this.showFiles,
+            },
+            {
+              name: "Tasks",
+              class: "tasks",
+              get: (p)=>{return p.descendantCount + 1},
+              show: () => this.showTasks,
             }
           ],
           sort: "createon",
           asc: false,
           ps: [],
           others: [],
-          more: false,
+          psMore: false,
+          othersMore: false
         }
       },
       init() {
         for(const [key, value] of Object.entries(this.initState())) {
           this[key] = value
         }
-        let mapi = this.$api.newMDoApi()
-        mapi.user.me().then((me)=>{
+        this.$api.user.me().then((me)=>{
           this.me = me
-        })
-        mapi.user.one(this.hostId).then((user)=>{
-          this.user = user
-        })
-        mapi.project.get(this.hostId).then((res) => {
-          for (let i = 0; i < res.set.length; i++) {
-            let project = res.set[i]
-            project.newName = project.name
-            project.showEditTools = false
-            this.ps.push(res.set[i]) 
-          }
-          this.more = res.more
-        })
-        mapi.project.getOthers(this.hostId).then((res) => {
-          for (let i = 0; i < res.set.length; i++) {
-            let project = res.set[i]
-            project.newName = project.name
-            project.showEditTools = false
-            this.ps.push(res.set[i]) 
-          }
-          this.more = res.more
-        })
-        mapi.sendMDo().finally(()=>{
-          this.loading = false
-        })
-
-      },
-      loadMore(){
-        if (!this.loading) {
-          this.loading = true
-          let args = {host: this.$router.currentRoute.params.hostId}
-          if (this.ps !== undefined && this.ps.length > 0 ) {
-            args.after = this.ps[this.ps.length - 1].id
-          }
-          this.$api.project.get(this.$router.currentRoute.params.hostId).then((res) => {
+        }).finally(()=>{
+          let mapi = this.$api.newMDoApi()
+          mapi.user.one(this.hostId).then((user)=>{
+            this.user = user
+          })
+          mapi.project.get({host: this.hostId}).then((res) => {
             for (let i = 0; i < res.set.length; i++) {
-              let project = res.set[i]
-              project.newName = project.name
-              project.showEditTools = false
               this.ps.push(res.set[i]) 
             }
-            this.more = res.more
-          }).finally(()=>{
+            this.psMore = res.more
+          })
+          if (this.isMe) {
+            mapi.project.getOthers().then((res) => {
+              for (let i = 0; i < res.set.length; i++) {
+                this.others.push(res.set[i]) 
+              }
+              this.othersMore = res.more
+            })
+          }
+          mapi.sendMDo().finally(()=>{
             this.loading = false
           })
-        }
+        })
+      },
+      loadMore(){
+        let after = this.ps[this.ps.length-1].id
+        this.$api.project.get({host: this.hostId, after}).then((res) => {
+          for (let i = 0; i < res.set.length; i++) {
+            this.ps.push(res.set[i]) 
+          }
+          this.psMore = res.psMore
+        })
       },
       trash(p, index){
         this.$api.project.delete([p.id]).then(()=>{
@@ -245,6 +245,7 @@
   margin: 0.6pc 0 0.6pc 0;
 }
 table {
+  margin: 1pc 0 1pc 0;
   border-collapse: collapse;
   th, td {
     border: 1px solid #ddd;
@@ -268,5 +269,8 @@ table {
       fill: white;
     }
   }
+}
+button.load-more{
+  margin: 1pc 0 1pc 0;
 }
 </style>
