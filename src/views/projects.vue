@@ -35,7 +35,7 @@
             </td>
           </tr>
         </table>
-        <button class="load-more" v-if="isMe && psMore" @click="loadMore()">load more</button>
+        <button class="load-more" v-if="psMore" @click="loadMore()">load more</button>
       </div>
       <div v-if="others.length > 0" class="others">
         <h1>Others Projects</h1>
@@ -56,7 +56,7 @@
             </td>
           </tr>
         </table>
-        <button class="load-more" v-if="isMe && othersMore" @click="loadMore()">load more</button>
+        <button class="load-more" v-if="othersMore" @click="loadMoreOthers()">load more</button>
       </div>
     </div>
   </div>
@@ -221,6 +221,15 @@
             this.ps.push(res.set[i]) 
           }
           this.psMore = res.psMore
+        })
+      },
+      loadMoreOthers(){
+        let after = this.others[this.others.length-1].id
+        this.$api.project.getOthers({host: this.hostId, after}).then((res) => {
+          for (let i = 0; i < res.set.length; i++) {
+            this.others.push(res.set[i]) 
+          }
+          this.othersMore = res.psMore
         })
       },
       trash(p, index){
