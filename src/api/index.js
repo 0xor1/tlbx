@@ -2,6 +2,7 @@ import axios from 'axios'
 
 let notAuthed = false
 let memCache = {}
+let meInFlight = false
 let userGetInFlight = {}
 let globalErrorHandler = null
 function isMeNotAuthedResponse(path, err) {
@@ -15,7 +16,7 @@ function NewError(status, body) {
   }
 }
 
-let newApi = (isMDoApi) => {
+function newApi(isMDoApi) {
   let mDoSending = false
   let mDoSent = false
   let awaitingMDoList = []
@@ -133,49 +134,49 @@ let newApi = (isMDoApi) => {
       return new Promise(mDoCompleterFunc)
     },
     user: {
-      register: (alias, handle, email, pwd, confirmPwd) => {
+      register(alias, handle, email, pwd, confirmPwd) {
         return doReq('/user/register', {alias, handle, email, pwd, confirmPwd})
       },
-      resendActivateLink: (email) => {
+      resendActivateLink(email) {
         return doReq('/user/resendActivateLink', {email})
       },
-      activate: (email, code) => {
+      activate(email, code) {
         return doReq('/user/activate', {email, code})
       },
-      changeEmail: (newEmail) => {
+      changeEmail(newEmail) {
         return doReq('/user/changeEmail', {newEmail})
       },
       resendChangeEmailLink: () => {
         return doReq('/user/resendChangeEmailLink')
       },
-      confirmChangeEmail: (me, code) => {
+      confirmChangeEmail(me, code) {
         return doReq('/user/confirmChangeEmail', {me, code})
       },
-      resetPwd: (email) => {
+      resetPwd(email) {
         return doReq('/user/resetPwd', {email})
       },
-      setHandle: (handle) => {
+      setHandle(handle) {
         return doReq('/user/setHandle', {handle: handle}).then(()=>{
           memCache.me.handle = handle
         })
       },
-      setAlias: (alias) => {
+      setAlias(alias) {
         return doReq('/user/setAlias', {alias}).then(()=>{
           memCache.me.alias = alias
         })
       },
-      setAvatar: (avatar) => {
+      setAvatar(avatar) {
         return doReq('/user/setAvatar', avatar).then(()=>{
           memCache.me.hasAvatar = avatar === null
         })
       },
-      setPwd: (currentPwd, newPwd, confirmNewPwd) => {
+      setPwd(currentPwd, newPwd, confirmNewPwd) {
         return doReq('/user/setPwd', {currentPwd, newPwd, confirmNewPwd})
       },
-      delete: (pwd) => {
+      delete(pwd) {
         return doReq('/user/delete', {pwd})
       },
-      login: (email, pwd) => {
+      login(email, pwd) {
         return doReq('/user/login', {email, pwd}).then((res)=>{
           notAuthed = false
           memCache.me = res
@@ -183,13 +184,13 @@ let newApi = (isMDoApi) => {
           return res
         })
       },
-      logout: () => {
+      logout() {
         memCache = {}
         return doReq('/user/logout').then(()=>{
           notAuthed = true
         })
       },
-      me: () => {
+      me() {
         if (notAuthed) {
           // here we have already called /user/me and got back a 401
           // so no need to call it again, just reject immediately
@@ -203,10 +204,29 @@ let newApi = (isMDoApi) => {
             resolve(memCache.me)
           })
         }
+        if (meInFlight) {
+          let completer = null
+          completer = (resolve, reject) => {
+            if (meInFlight) {
+              // if Im still in flight loop again
+              setTimeout(completer, 100, resolve, reject)
+              return
+            }
+            if (memCache.me) {
+              resolve(memCache.me)
+            } else {
+              reject(null)
+            }
+          }
+          return new Promise(completer)
+        }
+        meInFlight = true
         return doReq('/user/me').then((res) => {
           memCache.me = res
           memCache[res.id] = res
           return res
+        }).finally(()=>{
+          meInFlight = false
         })
       },
       one(id){
@@ -217,7 +237,7 @@ let newApi = (isMDoApi) => {
           throw NewError(404, "no such user")
         })
       },
-      get: (ids) => {
+      get(ids){
         if (typeof ids === "string") {
           ids = [ids]
         }
@@ -279,7 +299,7 @@ let newApi = (isMDoApi) => {
           }
           if (someStillInFlight) {
             // if some are still in flight loop again
-            setTimeout(completer, 200, resolve, reject)
+            setTimeout(completer, 100, resolve, reject)
             return
           }
           let res = []
@@ -310,87 +330,87 @@ let newApi = (isMDoApi) => {
           }
         })
       },
-      get: (host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) => {
+      get(host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) {
         return doReq('/project/get', {host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit})
       },
-      getOthers: (host, ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) => {
-        return doReq('/project/getOthers', {host, ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit})
+      getOthers(ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit) {
+        return doReq('/project/getOthers', {ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit})
       },
-      update: (id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic) => {
+      update(id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic) {
         return doReq('/project/update', [{id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic}])
       },
-      delete: (ids) => {
+      delete(ids) {
         return doReq('/project/delete', ids)
       },
-      addUsers: (host, project, users) => {
+      addUsers(host, project, users) {
         return doReq('/project/addUsers', {host, project, users})
       },
-      getMe: (host, project) => {
+      getMe(host, project) {
         return doReq('/project/getMe', {host, project})
       },
-      getUsers: (host, project, ids, role, handlePrefix, after, limit) => {
+      getUsers(host, project, ids, role, handlePrefix, after, limit) {
         return doReq('/project/getUsers', {host, project, ids, role, handlePrefix, after, limit})
       },
-      setUserRoles: (host, project, users) => {
+      setUserRoles(host, project, users) {
         return doReq('/project/setUserRoles', {host, project, users})
       },
-      removeUsers: (host, project, users) => {
+      removeUsers(host, project, users) {
         return doReq('/project/removeUsers', {host, project, users})
       },
-      getActivities: (host, project, task, item, user, occuredAfter, occuredBefore, limit) => {
+      getActivities(host, project, task, item, user, occuredAfter, occuredBefore, limit) {
         return doReq('/project/getActivities', {host, project, task, item, user, occuredAfter, occuredBefore, limit})
       }
     },
     task: {
-      create: (host, project, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense) => {
+      create(host, project, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense) {
         return doReq('/task/create', {host, project, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense})
       },
-      update: (host, project, id, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense) => {
+      update(host, project, id, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense) {
         return doReq('/task/update', {host, project, id, parent, previousSibling, name, description, isParallel, user, estimatedTime, estimatedExpense})
       },
-      delete: (host, project, id) => {
+      delete(host, project, id) {
         return doReq('/task/delete', {host, project, id})
       },
-      get: (host, project, id) => {
+      get(host, project, id) {
         return doReq('/task/get', {host, project, id})
       },
-      getAncestors: (host, project, id, limit) => {
+      getAncestors(host, project, id, limit) {
         return doReq('/task/getAncestors', {host, project, id, limit})
       },
-      getChildren: (host, project, id, after, limit) => {
+      getChildren(host, project, id, after, limit) {
         return doReq('/task/getChildren', {host, project, id, after, limit})
       }
     },
     time: {
-      create: (host, project, task, duration, note) => {
+      create(host, project, task, duration, note) {
         return doReq('/time/create', {host, project, task, duration, note})
       },
-      update: (host, project, task, id, duration, note) => {
+      update(host, project, task, id, duration, note) {
         return doReq('/time/update', {host, project, task, id, duration, note})
       },
-      get: (host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) => {
+      get(host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
         return doReq('/time/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
       },
-      delete: (host, project, task, id) => {
+      delete(host, project, task, id) {
         return doReq('/time/delete', {host, project, task, id})
       }
     },
     expense: {
-      create: (host, project, task, value, note) => {
+      create(host, project, task, value, note) {
         return doReq('/expense/create', {host, project, task, value, note})
       },
-      update: (host, project, task, id, value, note) => {
+      update(host, project, task, id, value, note) {
         return doReq('/expense/update', {host, project, task, id, value, note})
       },
-      get: (host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) => {
+      get(host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
         return doReq('/expense/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
       },
-      delete: (host, project, task, id) => {
+      delete(host, project, task, id) {
         return doReq('/expense/delete', {host, project, task, id})
       }
     },
     file: {
-      create: (host, project, task, name, mimeType, size, content) => {
+      create(host, project, task, name, mimeType, size, content) {
         return doReq('/file/getPresignedPutUrl', {host, project, task, name, mimeType, size}).then((res)=>{
           let id = res.id
           doReq(res.url, content, {
@@ -404,27 +424,27 @@ let newApi = (isMDoApi) => {
           })
         })
       },
-      getPresignedGetUrl: (host, project, task, id, isDownload) => {
+      getPresignedGetUrl(host, project, task, id, isDownload) {
         return doReq('/file/getPresignedGetUrl', {host, project, task, id, isDownload})
       },
-      get: (host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) => {
+      get(host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
         return doReq('/file/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
       },
-      delete: (host, project, task, id) => {
+      delete(host, project, task, id) {
         return doReq('/file/delete', {host, project, task, id})
       }
     },
     comment: {
-      create: (host, project, task, body) => {
+      create(host, project, task, body) {
         return doReq('/comment/create', {host, project, task, body})
       },
-      update: (host, project, task, id, body) => {
+      update(host, project, task, id, body) {
         return doReq('/comment/update', {host, project, task, id, body})
       },
-      get: (host, project, task, after, limit) => {
+      get(host, project, task, after, limit) {
         return doReq('/comment/get', {host, project, task, after, limit})
       },
-      delete: (host, project, task, id) => {
+      delete(host, project, task, id) {
         return doReq('/comment/delete', {host, project, task, id})
       }
     }
