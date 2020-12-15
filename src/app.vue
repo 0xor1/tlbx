@@ -1,19 +1,19 @@
 <template>
     <div class="app-root">
-        <div class="header">
-          <div class="menu-opener">
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
+        <div v-bind:class="{'show-menu':showMenu}" class="body">
+            <router-view/>
         </div>
         <div v-if="showMenu" v-bind:class="{'show-menu':showMenu}" class="menu">
           <div class="opts">
-            OPTS
+            <div v-if="me">
+              <a @click.stop.prevent="goHome()" href="">home</a>
+            </div>
           </div>
         </div>
-        <div v-bind:class="{'show-menu':showMenu}" class="body">
-            <router-view/>
+        <div @click.stop.prevent="showMenu=!showMenu" class="menu-toggle">
+          <div></div>
+          <div></div>
+          <div></div>
         </div>
     </div>
 </template>
@@ -39,8 +39,14 @@
         this.$api.user.me().then((me)=>{
           this.me = me
         }).finally(()=>{
-          
+          this.loading = false
         })
+      },
+      goHome(){
+        let goto = `/host/${this.me.id}/projects`
+        if (this.me && this.$router.currentRoute.path != goto) {
+          this.$router.push(goto)
+        }
       }
     },mounted(){
       this.init()
@@ -90,47 +96,61 @@ $inputPlaceholderColor: #aaa;
 }
 
 .app-root{
-    > .header{
-      @include basic($height: 2.7pc);
-      > .menu-opener{
-        height: 2.5pc;
-        width: 2.5pc;
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        background-color: $inputColor;
-        &:hover{
-          background-color: $inputHoverColor
-        }
-        &:active{
-          background-color: $inputActiveColor
-        }
-        @include border();
-        > div{
-          margin: 0.1pc;
-          width: 1.8pc;
-          height: 0.35pc;
-          background-color: $color;
-        }
+  > .body{
+    position: absolute;
+    padding: 2.6pc 0 0 0;
+    width: 100%;
+    height: calc(100% - 2.13pc);
+    &.show-menu{
+      @media only screen and (min-width: 480px) {
+        left: 15.1pc;
+        width: calc(100% - 15.1pc);
       }
     }
-    > .menu{ 
-      @include basic($overflow: auto);
-      position: absolute;
-      top: 0;
-      left: 0;
-      &.show-menu{
-
+  }
+  > .menu-toggle{
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 2.5pc;
+    width: 2.5pc;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: $inputColor;
+    &:hover{
+      background-color: $inputHoverColor
+    }
+    &:active{
+      background-color: $inputActiveColor
+    }
+    @include border();
+    > div{
+      margin: 0.1pc;
+      width: 1.8pc;
+      height: 0.35pc;
+      background-color: $color;
+    }
+  }
+  > .menu{
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding-top: 2.6pc;
+    overflow: hidden;
+    width: 0;
+    height: 100%;
+    &.show-menu{
+      @include border($dir: right);
+      width: 100%;
+      overflow-y: auto;
+      @media only screen and (min-width: 480px) {
+        width: 15pc;
       }
     }
-    > .body{
-      @include basic($height: calc(100% - 2.13pc));
-      &.show-menu{
-        
-      }
-    }
+  }
 }
 // what follows is essentially a prelude
 // for the entire app
