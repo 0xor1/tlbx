@@ -1,42 +1,170 @@
 <template>
-    <div>
-        <loginout></loginout>
-        <router-view/>
+    <div class="app-root">
+        <div class="header">
+          <div class="menu-opener">
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+        </div>
+        <div v-if="showMenu" v-bind:class="{'show-menu':showMenu}" class="menu">
+          <div class="opts">
+            OPTS
+          </div>
+        </div>
+        <div v-bind:class="{'show-menu':showMenu}" class="body">
+            <router-view/>
+        </div>
     </div>
 </template>
 
 <script>
-import loginout from './components/loginout'
   export default {
     name: 'root',
-    components: { loginout },
+    data() {
+      return this.initState()
+    },
+    methods: {
+      initState(){
+        return {
+          loading: true,
+          showMenu: this.showMenu || false,
+          me: null
+        }
+      },
+      init(){
+        for(const [key, value] of Object.entries(this.initState())) {
+          this[key] = value
+        }
+        this.$api.user.me().then((me)=>{
+          this.me = me
+        }).finally(()=>{
+          
+        })
+      }
+    },mounted(){
+      this.init()
+    },
+    watch: {
+      $route () {
+        this.init()
+      }
+    }
   }
 </script>
 
 <style lang="scss">
+$color: #ddd;
+$borderColor: #777;
+$bgColor: #000;
+$inputColor: #222;
+$inputHoverColor: #555;
+$inputActiveColor: #222;
+$inputPlaceholderColor: #aaa;
+
+@mixin border(
+  $dir: false,
+  $ticc: 1px, 
+  $style: solid, 
+  $color: $color) {
+  @if $dir {
+    border-#{$dir}: $ticc $style $color;
+  } @else {
+    border: $ticc $style $color;
+  }
+}
+
+@mixin basic(
+  $display: block,
+  $width: 100%,
+  $height: 100%,
+  $margin: 0,
+  $padding: 0,
+  $overflow: hidden) {
+    display: $display;
+    width: $width;
+    height: $height;
+    margin: $margin;
+    padding: $padding;
+    overflow: $overflow;
+}
+
+.app-root{
+    > .header{
+      @include basic($height: 2.7pc);
+      > .menu-opener{
+        height: 2.5pc;
+        width: 2.5pc;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: $inputColor;
+        &:hover{
+          background-color: $inputHoverColor
+        }
+        &:active{
+          background-color: $inputActiveColor
+        }
+        @include border();
+        > div{
+          margin: 0.1pc;
+          width: 1.8pc;
+          height: 0.35pc;
+          background-color: $color;
+        }
+      }
+    }
+    > .menu{ 
+      @include basic($overflow: auto);
+      position: absolute;
+      top: 0;
+      left: 0;
+      &.show-menu{
+
+      }
+    }
+    > .body{
+      @include basic($height: calc(100% - 2.13pc));
+      &.show-menu{
+        
+      }
+    }
+}
+// what follows is essentially a prelude
+// for the entire app
+html, body, .app-root {
+    @include basic;
+}
+table{
+  th, td{
+    @include border($ticc: 0.1pc);
+  }
+}
 @import url(https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap);
 * {
     font-family: 'Roboto Mono', monospace;
-    background-color: #000;
-    color: #ddd;
-    button {
-        cursor: pointer;
-        &:hover {
-            background-color: #555;
-        }
-        &:active {
-            background-color: #222;
-        }
+    background-color: $bgColor;
+    color: $color;
+}
+button {
+    cursor: pointer;
+    &:hover {
+        background-color: $inputHoverColor;
     }
-    input, button {
-        background-color: #222;
-        outline: none;
-        border: 1px solid #fff;
-        border-radius: 2px;
-        padding: 5px;
-        &::placeholder{
-            color: #aaa;
-        }
+    &:active {
+        background-color: $inputActiveColor;
+    }
+}
+input, button {
+    background-color: $inputColor;
+    outline: none;
+    border: 1px solid $color;
+    border-radius: 2px;
+    padding: 5px;
+    &::placeholder{
+        color: $inputPlaceholderColor;
     }
 }
 </style>

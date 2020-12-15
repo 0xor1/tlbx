@@ -257,7 +257,7 @@ table {
   margin: 1pc 0 1pc 0;
   border-collapse: collapse;
   th, td {
-    border: 1px solid #ddd;
+    // border: 1px solid #ddd;
     &:not(.action){
       text-align: center;
       min-width: 100px;
