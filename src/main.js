@@ -23,6 +23,15 @@ Vue.use(toasted, {
 Vue.config.productionTip = false
 
 let v = new Vue({
+  data: {
+    show: {
+      dates: false,
+      times: true,
+      expenses: true,
+      files: false,
+      tasks: false
+    },
+  },
   router,
   render: h => h(app)
 })

@@ -5,8 +5,36 @@
         </div>
         <div v-if="showMenu" v-bind:class="{'show-menu':showMenu}" class="menu">
           <div class="opts">
-            <div v-if="me">
-              <a @click.stop.prevent="goHome()" href="">home</a>
+            <div class="btn" v-if="me" @click.stop.prevent="goHome()">
+              home
+            </div>
+            <div class="btn" v-if="me" @click.stop.prevent="showFields=!showFields">
+              fields
+            </div>
+            <div class="fields" v-if="me && showFields">
+              <div @click.stop.prevent="$root.show.dates = !$root.show.dates">
+                <label @click.stop for="dates">dates</label>
+                <input @click.stop type="checkbox" v-model="$root.show.dates" id="dates">
+              </div>
+              <div @click.stop.prevent="$root.show.times = !$root.show.times">
+                <label @click.stop for="times">times</label>
+                <input @click.stop type="checkbox" v-model="$root.show.times" id="times">
+              </div>
+              <div @click.stop.prevent="$root.show.expenses = !$root.show.expenses">
+                <label @click.stop for="expenses">expenses</label>
+                <input @click.stop type="checkbox" v-model="$root.show.expenses" id="expenses">
+              </div>
+              <div @click.stop.prevent="$root.show.files = !$root.show.files">
+                <label @click.stop for="files">files</label>
+                <input @click.stop type="checkbox" v-model="$root.show.files" id="files">
+              </div>
+              <div @click.stop.prevent="$root.show.tasks = !$root.show.tasks">
+                <label @click.stop for="tasks">tasks</label>
+                <input @click.stop type="checkbox" v-model="$root.show.tasks" id="tasks">
+              </div>
+            </div>
+            <div class="btn" @click.stop.prevent="loginout">
+              {{ me? 'logout': 'login'}}
             </div>
           </div>
         </div>
@@ -29,6 +57,7 @@
         return {
           loading: true,
           showMenu: this.showMenu || false,
+          showFields: this.showFields || false,
           me: null
         }
       },
@@ -42,10 +71,21 @@
           this.loading = false
         })
       },
+      loginout() {
+        if (this.me != null) {
+          this.$api.user.logout().then(()=>{
+            this.goto('/login')
+          })
+        } else {
+          this.goto('/login')
+        }
+      },
       goHome(){
-        let goto = `/host/${this.me.id}/projects`
-        if (this.me && this.$router.currentRoute.path != goto) {
-          this.$router.push(goto)
+        this.goto(`/host/${this.me.id}/projects`)
+      },
+      goto(path){
+        if (this.$router.currentRoute.path != path) {
+          this.$router.push(path)
         }
       }
     },mounted(){
@@ -148,6 +188,49 @@ $inputPlaceholderColor: #aaa;
       overflow-y: auto;
       @media only screen and (min-width: 480px) {
         width: 15pc;
+      }
+    }
+    > .opts{
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      overflow-y: auto;
+      height: calc(100% - 2.5pc);
+      > .btn{
+        cursor: pointer;
+        text-align: center;
+        height: 2pc;
+        line-height: 2pc;
+        &:hover{
+          background-color: $inputHoverColor
+        }
+        &:active{
+          background-color: $inputActiveColor
+        }
+      }
+      > .fields{
+        text-align: center;
+        > div{
+          width: 100%;
+          cursor: pointer;
+          &:hover{
+            background-color: $inputHoverColor
+          }
+          &:active{
+            background-color: $inputActiveColor
+          }
+          > label, >input {
+            cursor: pointer;
+            background: transparent;
+          }
+        }
+        &:hover{
+          background-color: $inputHoverColor
+        }
+        &:active{
+          background-color: $inputActiveColor
+        }
       }
     }
   }

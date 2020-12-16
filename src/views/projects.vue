@@ -9,14 +9,6 @@
     </p>
     <div v-else>
       <div class="projects">
-        <div class="column-filters">
-          show: 
-          <input type="checkbox" v-model="showDates"><label>dates </label>
-          <input type="checkbox" v-model="showTimes"><label>times </label>
-          <input type="checkbox" v-model="showExpenses"><label>expenses </label>
-          <input type="checkbox" v-model="showFiles"><label>files </label>
-          <input type="checkbox" v-model="showTasks"><label>tasks</label>
-        </div>
         <table>
           <tr class="header">
             <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
@@ -85,95 +77,90 @@
           me: null,
           user: null,
           loading: true,
-          showDates: false,
-          showTimes: true,
-          showExpenses: true,
-          showFiles: false,
-          showTasks: false,
           commonCols: [
             {
               name: "Name",
               class: "name",
               get: (p)=> p.name,
-              show: () => true,
+              show: () => true
             },
             {
               name: "Created On",
               class: "createOn",
               get: (p)=> this.$fmt.date(p.createdOn),
-              show: () => this.showDates,
+              show: () => this.$root.show.dates
             },
             {
               name: "Start On",
               class: "startOn",
               get: (p)=> this.$fmt.date(p.startOn),
-              show: () => this.showDates,
+              show: () => this.$root.show.dates
             },
             {
               name: "End On",
               class: "endOn",
               get: (p)=> this.$fmt.date(p.endOn),
-              show: () => this.showDates,
+              show: () => this.$root.show.dates
             },
             {
               name: "Hours Per Day",
               class: "hoursPerDay",
               get: (p)=> p.hoursPerDay,
-              show: () => this.showDates,
+              show: () => this.$root.show.dates
             },
             {
               name: "Days Per Week",
               class: "daysPerWeek",
               get: (p)=> p.daysPerWeek,
-              show: () => this.showDates,
+              show: () => this.$root.show.dates
             },
             {
               name: "Minimum Time",
               class: "minimumTime",
               get: (p)=> this.$fmt.duration(p.minimumTime),
-              show: () => this.showTimes,
+              show: () => this.$root.show.times
             },
             {
               name: "Estimated Time",
               class: "estimatedTime",
               get: (p)=> this.$fmt.duration(p.estimatedTime),
-              show: () => this.showTimes,
+              show: () => this.$root.show.times
             },
             {
               name: "Logged Time",
               class: "loggedTime",
               get: (p)=> this.$fmt.duration(p.loggedTime),
-              show: () => this.showTimes,
+              show: () => this.$root.show.times
             },
             {
               name: "Estimated Expense",
               class: "estimatedExpense",
               get: (p)=> this.$fmt.cost(p.currencyCode, p.estimatedExpense),
-              show: () => this.showExpenses,
+              show: () => this.$root.show.expenses
             },
             {
               name: "Logged Expense",
               class: "loggedExpense",
               get: (p)=> this.$fmt.cost(p.currencyCode, p.loggedExpense),
-              show: () => this.showExpenses,
+              show: () => this.$root.show.expenses
             },
             {
               name: "File Count",
               class: "fileCount",
               get: (p)=> p.fileCount,
-              show: () => this.showFiles,
+              show: () => this.$root.show.files
             },
             {
               name: "File Size",
               class: "fileSize",
               get: (p) => this.$fmt.bytes(p.fileSize + p.fileSubSize),
-              show: () => this.showFiles,
+              show: () => this.$root.show.files
             },
             {
               name: "Tasks",
               class: "tasks",
               get: (p)=>{return p.descendantCount + 1},
-              show: () => this.showTasks,
+              show: () => this.$root.show.tasks
             }
           ],
           sort: "createon",

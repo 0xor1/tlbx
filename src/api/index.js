@@ -195,7 +195,7 @@ function newApi(isMDoApi) {
           // here we have already called /user/me and got back a 401
           // so no need to call it again, just reject immediately
           return new Promise((resolve, reject) => {
-            reject(null)
+            reject(NewError(401, "Unauthorized"))
           })
         }
         if (memCache.me) {

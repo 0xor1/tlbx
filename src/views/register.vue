@@ -1,6 +1,6 @@
 <template>
   <div class="root">
-    <h1>Register</h1>
+    <h1>register</h1>
     <input v-model="alias" placeholder="alias" @blur="validate" @keydown.enter="register">
     <span v-if="aliasErr.length > 0" class="err">{{aliasErr}}</span>
     <input v-model="handle" placeholder="handle" @blur="validate" @keydown.enter="register">
