@@ -15,8 +15,8 @@
       </select>
       <label> currency code</label>
     </span>
-    <input v-model.number="hoursPerDay" :max="24" type="number" placeholder="hours per day" @blur="validate" @keydown.enter="create">
-    <input v-model.number="daysPerWeek" :max="7" type="number" placeholder="days per week" @blur="validate" @keydown.enter="create">
+    <input v-model.number="hoursPerDay" :min="0" :max="24" type="number" placeholder="hours per day" @blur="validate" @keydown.enter="create">
+    <input v-model.number="daysPerWeek" :min="0" :max="7" type="number" placeholder="days per week" @blur="validate" @keydown.enter="create">
     <datepicker v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
     <datepicker v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
     <button @click="create">create</button>
@@ -36,8 +36,8 @@
         nameErr: true,
         isPublic: false,
         currencyCode: "USD",
-        hoursPerDay: 8,
-        daysPerWeek: 5,
+        hoursPerDay: null,
+        daysPerWeek: null,
         startOn: null,
         endOn: null,
         createErr: "",
@@ -231,12 +231,12 @@
         } else {
             this.nameErr = ""
         }
-        if (this.hoursPerDay != null) { 
+        if (this.hoursPerDay != null) {
           if (this.hoursPerDay > 24) {
             this.hoursPerDay = 24
           }
           if (this.hoursPerDay < 1) {
-            this.hoursPerDay = 1
+            this.hoursPerDay = null
           }
         }
         if (this.daysPerWeek != null) { 
@@ -244,7 +244,7 @@
             this.daysPerWeek = 7
           }
           if (this.daysPerWeek < 1) {
-            this.daysPerWeek = 1
+            this.daysPerWeek = null
           }
         }
         if (this.startOn != null) {
@@ -280,6 +280,9 @@ div.root {
   button, a{
     display: inline;
     margin-right: 15px;
+  }
+  input[type="number"] {
+    width: 10pc;
   }
 }
 .err{
