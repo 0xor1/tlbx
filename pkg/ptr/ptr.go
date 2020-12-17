@@ -76,6 +76,17 @@ func UintOr(v *uint, or uint) uint {
 	return *v
 }
 
+func Uint8(v uint8) *uint8 {
+	return &v
+}
+
+func Uint8Or(v *uint8, or uint8) uint8 {
+	if v == nil {
+		return or
+	}
+	return *v
+}
+
 func Uint64(v uint64) *uint64 {
 	return &v
 }
