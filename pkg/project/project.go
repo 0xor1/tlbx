@@ -20,8 +20,8 @@ type Project struct {
 
 type Base struct {
 	CurrencyCode string     `json:"currencyCode"`
-	HoursPerDay  uint8      `json:"hoursPerDay"`
-	DaysPerWeek  uint8      `json:"daysPerWeek"`
+	HoursPerDay  *uint8     `json:"hoursPerDay"`
+	DaysPerWeek  *uint8     `json:"daysPerWeek"`
 	StartOn      *time.Time `json:"startOn"`
 	EndOn        *time.Time `json:"endOn"`
 	IsPublic     bool       `json:"isPublic"`
@@ -29,8 +29,8 @@ type Base struct {
 
 type Create struct {
 	CurrencyCode string     `json:"currencyCode,omitempty"`
-	HoursPerDay  uint8      `json:"hoursPerDay,omitempty"`
-	DaysPerWeek  uint8      `json:"daysPerWeek,omitempty"`
+	HoursPerDay  *uint8     `json:"hoursPerDay,omitempty"`
+	DaysPerWeek  *uint8     `json:"daysPerWeek,omitempty"`
 	StartOn      *time.Time `json:"startOn"`
 	EndOn        *time.Time `json:"endOn"`
 	IsPublic     bool       `json:"isPublic"`
@@ -135,15 +135,15 @@ func (a *GetOthers) MustDo(c *app.Client) *GetRes {
 }
 
 type Update struct {
-	ID           ID             `json:"id,omitempty"`
-	Name         *field.String  `json:"name,omitempty"`
-	CurrencyCode *field.String  `json:"currencyCode,omitempty"`
-	HoursPerDay  *field.UInt8   `json:"hoursPerDay,omitempty"`
-	DaysPerWeek  *field.UInt8   `json:"daysPerWeek,omitempty"`
-	StartOn      *field.TimePtr `json:"startOn,omitempty"`
-	EndOn        *field.TimePtr `json:"endOn,omitempty"`
-	IsArchived   *field.Bool    `json:"isArchived,omitempty"`
-	IsPublic     *field.Bool    `json:"isPublic,omitempty"`
+	ID           ID              `json:"id,omitempty"`
+	Name         *field.String   `json:"name,omitempty"`
+	CurrencyCode *field.String   `json:"currencyCode,omitempty"`
+	HoursPerDay  *field.UInt8Ptr `json:"hoursPerDay,omitempty"`
+	DaysPerWeek  *field.UInt8Ptr `json:"daysPerWeek,omitempty"`
+	StartOn      *field.TimePtr  `json:"startOn,omitempty"`
+	EndOn        *field.TimePtr  `json:"endOn,omitempty"`
+	IsArchived   *field.Bool     `json:"isArchived,omitempty"`
+	IsPublic     *field.Bool     `json:"isPublic,omitempty"`
 }
 
 func (a *Update) Do(c *app.Client) (*Project, error) {

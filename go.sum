@@ -1,5 +1,7 @@
 github.com/0xor1/tlbx v0.0.0-20201118213927-72f3e4da6ce0 h1:uCCHqwIpiujzD4fXmrMkTun1WGrPd1AtJ+358I8aIS8=
 github.com/0xor1/tlbx v0.0.0-20201118213927-72f3e4da6ce0/go.mod h1:jbf+wH3sNMUN22flOE2Gq3kEcrcz5gjmQIIplxMLvOw=
+github.com/0xor1/tlbx v0.0.0-20201217174720-07ffdd044fde h1:46d3Ir2ZpFk71NIP+liU/2IoCznx8Z7eZ1b8GZsfJH8=
+github.com/0xor1/tlbx v0.0.0-20201217174720-07ffdd044fde/go.mod h1:jbf+wH3sNMUN22flOE2Gq3kEcrcz5gjmQIIplxMLvOw=
 github.com/SparkPost/gosparkpost v0.2.0 h1:yzhHQT7cE+rqzd5tANNC74j+2x3lrPznqPJrxC1yR8s=
 github.com/SparkPost/gosparkpost v0.2.0/go.mod h1:S9WKcGeou7cbPpx0kTIgo8Q69WZvUmVeVzbD+djalJ4=
 github.com/aws/aws-sdk-go v1.34.8 h1:GDfVeXG8XQDbpOeAj7415F8qCQZwvY/k/fj+HBqUnBA=

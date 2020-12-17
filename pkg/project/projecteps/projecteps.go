@@ -32,16 +32,16 @@ var (
 			GetDefaultArgs: func() interface{} {
 				return &project.Create{
 					CurrencyCode: "USD",
-					HoursPerDay:  8,
-					DaysPerWeek:  5,
+					HoursPerDay:  nil,
+					DaysPerWeek:  nil,
 					IsPublic:     false,
 				}
 			},
 			GetExampleArgs: func() interface{} {
 				return &project.Create{
 					CurrencyCode: "USD",
-					HoursPerDay:  8,
-					DaysPerWeek:  5,
+					HoursPerDay:  ptr.Uint8(8),
+					DaysPerWeek:  ptr.Uint8(5),
 					StartOn:      ptr.Time(app.ExampleTime()),
 					EndOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 					IsPublic:     false,
@@ -60,9 +60,9 @@ var (
 					args.CurrencyCode = "USD"
 				}
 				validate.CurrencyCode(tlbx, args.CurrencyCode)
-				app.BadReqIf(args.HoursPerDay < 1 || args.HoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
-				app.BadReqIf(args.DaysPerWeek < 1 || args.DaysPerWeek > 7, "invalid daysPerWeek must be > 0 and <= 7")
-				app.BadReqIf(args.HoursPerDay == 0 && args.DaysPerWeek > 0, "invalid hoursPerDay must be > 1 if daysPerWeek is > 1")
+				app.BadReqIf(args.HoursPerDay != nil && (*args.HoursPerDay < 1 || *args.HoursPerDay > 24), "invalid hoursPerDay must be > 0 and <= 24")
+				app.BadReqIf(args.DaysPerWeek != nil && (*args.DaysPerWeek < 1 || *args.DaysPerWeek > 7), "invalid daysPerWeek must be > 0 and <= 7")
+				app.BadReqIf(args.HoursPerDay == nil && args.DaysPerWeek != nil, "invalid hoursPerDay must be set if daysPerWeek is set")
 				app.BadReqIf(args.StartOn != nil && args.EndOn != nil && !args.StartOn.Before(*args.EndOn), "invalid startOn must be before endOn")
 				p := &project.Project{
 					Task: task.Task{
@@ -200,8 +200,8 @@ var (
 						ID:           app.ExampleID(),
 						Name:         &field.String{V: "Renamed Project"},
 						CurrencyCode: &field.String{V: "EUR"},
-						HoursPerDay:  &field.UInt8{V: 6},
-						DaysPerWeek:  &field.UInt8{V: 4},
+						HoursPerDay:  &field.UInt8Ptr{V: ptr.Uint8(6)},
+						DaysPerWeek:  &field.UInt8Ptr{V: ptr.Uint8(4)},
 						StartOn:      &field.TimePtr{V: ptr.Time(app.ExampleTime())},
 						EndOn:        &field.TimePtr{V: ptr.Time(app.ExampleTime().Add(24 * time.Hour))},
 						IsArchived:   &field.Bool{V: false},
@@ -276,17 +276,17 @@ var (
 						p.EndOn = a.EndOn.V
 					}
 					if a.HoursPerDay != nil {
-						app.BadReqIf(a.HoursPerDay.V < 1 || a.HoursPerDay.V > 24, "invalid hoursPerDay must be > 0 and <= 24")
+						app.BadReqIf(a.HoursPerDay.V != nil && (*a.HoursPerDay.V < 1 || *a.HoursPerDay.V > 24), "invalid hoursPerDay must be > 0 and <= 24")
 						p.HoursPerDay = a.HoursPerDay.V
 					}
 					if a.DaysPerWeek != nil {
-						app.BadReqIf(
-							(a.HoursPerDay != nil && a.HoursPerDay.V == 0 && a.DaysPerWeek.V > 0) ||
-								(a.HoursPerDay == nil && p.HoursPerDay == 0 && a.DaysPerWeek.V > 0),
-							"invalid daysPerWeek must be > 0 only when hoursPerDay > 0")
-						app.BadReqIf(a.DaysPerWeek.V < 1 || a.DaysPerWeek.V > 7, "invalid daysPerWeek must be > 0 and <= 7")
+						app.BadReqIf(a.DaysPerWeek.V != nil && (*a.DaysPerWeek.V < 1 || *a.DaysPerWeek.V > 7), "invalid daysPerWeek must be > 0 and <= 7")
 						p.DaysPerWeek = a.DaysPerWeek.V
 					}
+					app.BadReqIf(
+						(p.HoursPerDay == nil && p.DaysPerWeek != nil) ||
+							(p.HoursPerDay != nil && p.DaysPerWeek == nil),
+						"invalid hoursPerDay And daysPerWeek must both be either set or not set")
 					if a.IsArchived != nil {
 						p.IsArchived = a.IsArchived.V
 					}
@@ -685,8 +685,8 @@ var (
 		},
 		Base: project.Base{
 			CurrencyCode: "USD",
-			HoursPerDay:  8,
-			DaysPerWeek:  5,
+			HoursPerDay:  ptr.Uint8(8),
+			DaysPerWeek:  ptr.Uint8(5),
 			StartOn:      ptr.Time(app.ExampleTime()),
 			EndOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 			IsPublic:     false,

@@ -34,8 +34,8 @@ func Everything(t *testing.T) {
 	ac := r.Ali().Client()
 	p1 := (&project.Create{
 		CurrencyCode: "USD",
-		HoursPerDay:  8,
-		DaysPerWeek:  5,
+		HoursPerDay:  ptr.Uint8(8),
+		DaysPerWeek:  ptr.Uint8(5),
 		StartOn:      ptr.Time(app.ExampleTime()),
 		EndOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 		IsPublic:     false,
@@ -116,8 +116,8 @@ func Everything(t *testing.T) {
 		ID:           p1.ID,
 		Name:         &field.String{V: name1},
 		CurrencyCode: &field.String{V: cc},
-		HoursPerDay:  &field.UInt8{V: dpw},
-		DaysPerWeek:  &field.UInt8{V: dpw},
+		HoursPerDay:  &field.UInt8Ptr{V: &dpw},
+		DaysPerWeek:  &field.UInt8Ptr{V: &dpw},
 		StartOn:      &field.TimePtr{V: &startOn},
 		EndOn:        &field.TimePtr{V: &endOn},
 		IsArchived:   &field.Bool{V: false},
@@ -125,8 +125,8 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.Equal(name1, p1.Name)
 	a.Equal(cc, p1.CurrencyCode)
-	a.Equal(dpw, p1.HoursPerDay)
-	a.Equal(dpw, p1.DaysPerWeek)
+	a.Equal(dpw, *p1.HoursPerDay)
+	a.Equal(dpw, *p1.DaysPerWeek)
 	a.Equal(startOn, *p1.StartOn)
 	a.Equal(endOn, *p1.EndOn)
 	a.False(p1.IsArchived)
@@ -156,8 +156,8 @@ func Everything(t *testing.T) {
 	name2 := "My 2nd Project"
 	p2 := (&project.Create{
 		CurrencyCode: "USD",
-		HoursPerDay:  8,
-		DaysPerWeek:  5,
+		HoursPerDay:  ptr.Uint8(8),
+		DaysPerWeek:  ptr.Uint8(5),
 		IsPublic:     false,
 		Name:         name2,
 	}).MustDo(ac)
@@ -209,8 +209,8 @@ func Everything(t *testing.T) {
 
 	p1 = (&project.Create{
 		CurrencyCode: "USD",
-		HoursPerDay:  8,
-		DaysPerWeek:  5,
+		HoursPerDay:  ptr.Uint8(8),
+		DaysPerWeek:  ptr.Uint8(5),
 		StartOn:      ptr.Time(app.ExampleTime()),
 		EndOn:        ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
 		IsPublic:     false,
