@@ -455,12 +455,19 @@ var (
 				return exampleUser
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				if !me.Exists(tlbx) {
+					return nil
+				}
 				args := a.(*project.GetMe)
-				return getUsers(tlbx, &project.GetUsers{
+				users := getUsers(tlbx, &project.GetUsers{
 					Host:    args.Host,
 					Project: args.Project,
 					IDs:     IDs{me.Get(tlbx)},
-				}).Set[0]
+				})
+				if len(users.Set) == 0 {
+					return nil
+				}
+				return users.Set[0]
 			},
 		},
 		{
