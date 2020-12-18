@@ -8,10 +8,15 @@
   export default {
     name: 'directing',
     data: function() {
-      this.$api.user.me().then((me)=>{
-        this.$router.push(`/host/${me.id}/projects`)
-      }).catch(()=>{
-        this.$router.push('/login')
+      let me = null
+      this.$api.user.me().then((res)=>{
+        me = res
+      }).finally(()=>{
+        if (me != null) {
+          this.$router.push(`/host/${me.id}/projects`)
+        } else {
+          this.$router.push('/login')
+        }
       })
       return {}
     }

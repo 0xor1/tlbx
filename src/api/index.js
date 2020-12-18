@@ -5,9 +5,6 @@ let memCache = {}
 let meInFlight = false
 let userGetInFlight = {}
 let globalErrorHandler = null
-function isMeNotAuthedResponse(path, err) {
-  return path === '/api/user/me' && err.response.status === 401
-}
 
 function NewError(status, body) {
   return {
@@ -32,12 +29,8 @@ function newApi(isMDoApi) {
       }).then((res) => {
         return res.data
       }).catch((err) => {
-        let isMeNotAuthedRes = isMeNotAuthedResponse(path, err)
-        if (isMeNotAuthedRes) {
-          notAuthed = true
-        }
         let errObj = NewError(err.response.status, err.response.data)
-        if (globalErrorHandler != null && !isMeNotAuthedRes) {
+        if (globalErrorHandler != null) {
             // dont show error just for checking if logged in
           globalErrorHandler(errObj.body)
         }
@@ -192,10 +185,10 @@ function newApi(isMDoApi) {
       },
       me() {
         if (notAuthed) {
-          // here we have already called /user/me and got back a 401
-          // so no need to call it again, just reject immediately
-          return new Promise((resolve, reject) => {
-            reject(NewError(401, "Unauthorized"))
+          // here we have already called /user/me and got back a nil
+          // so no need to call it again, just return nil immediately
+          return new Promise((resolve) => {
+            resolve(null)
           })
         }
         if (memCache.me) {
@@ -215,15 +208,19 @@ function newApi(isMDoApi) {
             if (memCache.me) {
               resolve(memCache.me)
             } else {
-              reject(null)
+              resolve(null)
             }
           }
           return new Promise(completer)
         }
         meInFlight = true
         return doReq('/user/me').then((res) => {
-          memCache.me = res
-          memCache[res.id] = res
+          if (res != null ) {
+            memCache.me = res
+            memCache[res.id] = res
+          } else {
+            notAuthed = true
+          }
           return res
         }).finally(()=>{
           meInFlight = false

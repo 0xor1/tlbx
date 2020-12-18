@@ -11,7 +11,7 @@
             <div class="btn" v-if="me" @click.stop.prevent="showFields=!showFields">
               fields
             </div>
-            <div class="fields" v-if="me && showFields">
+            <div class="fields" v-if="showFields">
               <div @click.stop.prevent="$root.show.dates = !$root.show.dates">
                 <label @click.stop for="dates">dates</label>
                 <input @click.stop type="checkbox" v-model="$root.show.dates" id="dates">
@@ -48,7 +48,7 @@
 
 <script>
   export default {
-    name: 'root',
+    name: 'app',
     data() {
       return this.initState()
     },
@@ -138,9 +138,9 @@ $inputPlaceholderColor: #aaa;
 .app-root{
   > .body{
     position: absolute;
-    padding: 2.6pc 0 0 0;
     width: 100%;
-    height: calc(100% - 2.13pc);
+    height: 100%;
+    overflow: auto;
     &.show-menu{
       @media only screen and (min-width: 480px) {
         left: 15.1pc;

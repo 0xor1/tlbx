@@ -19,10 +19,10 @@
             <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{ c.get(p) }}
             </td>
-            <td class="action" @click.stop="$router.push(`/project/${p.id}/update`)">
+            <td v-if="isMe" class="action" @click.stop="$router.push(`/project/${p.id}/update`)">
               <img src="@/assets/edit.svg">
             </td>
-            <td class="action" @click.stop="trash(p, index)">
+            <td v-if="isMe" class="action" @click.stop="trash(p, index)">
               <img src="@/assets/trash.svg">
             </td>
           </tr>
@@ -64,7 +64,7 @@
     },
     computed: {
       isMe(){
-        return this.me != null && this.me.id === this.hostId
+        return this.me != null && this.me.id === this.host
       },
       cols(){
         return this.commonCols.filter(i => i.show())
@@ -73,7 +73,7 @@
     methods: {
       initState (){
         return {
-          hostId: this.$router.currentRoute.params.hostId,
+          host: this.$router.currentRoute.params.host,
           me: null,
           user: null,
           loading: true,
@@ -179,10 +179,10 @@
           this.me = me
         }).finally(()=>{
           let mapi = this.$api.newMDoApi()
-          mapi.user.one(this.hostId).then((user)=>{
+          mapi.user.one(this.host).then((user)=>{
             this.user = user
           })
-          mapi.project.get({host: this.hostId}).then((res) => {
+          mapi.project.get({host: this.host}).then((res) => {
             for (let i = 0; i < res.set.length; i++) {
               this.ps.push(res.set[i]) 
             }
@@ -203,7 +203,7 @@
       },
       loadMore(){
         let after = this.ps[this.ps.length-1].id
-        this.$api.project.get({host: this.hostId, after}).then((res) => {
+        this.$api.project.get({host: this.host, after}).then((res) => {
           for (let i = 0; i < res.set.length; i++) {
             this.ps.push(res.set[i]) 
           }
@@ -212,7 +212,7 @@
       },
       loadMoreOthers(){
         let after = this.others[this.others.length-1].id
-        this.$api.project.getOthers({host: this.hostId, after}).then((res) => {
+        this.$api.project.getOthers({host: this.host, after}).then((res) => {
           for (let i = 0; i < res.set.length; i++) {
             this.others.push(res.set[i]) 
           }
@@ -237,6 +237,9 @@
 </script>
 
 <style lang="scss">
+.root{
+  padding-top: 2.6pc;
+}
 .column-filters {
   margin: 0.6pc 0 0.6pc 0;
 }
@@ -244,7 +247,6 @@ table {
   margin: 1pc 0 1pc 0;
   border-collapse: collapse;
   th, td {
-    // border: 1px solid #ddd;
     &:not(.action){
       text-align: center;
       min-width: 100px;
@@ -265,8 +267,5 @@ table {
       fill: white;
     }
   }
-}
-button.load-more{
-  margin: 1pc 0 1pc 0;
 }
 </style>

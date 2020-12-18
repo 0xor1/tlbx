@@ -14,14 +14,19 @@ vue.use(vueRouter)
 
 // if session not authed redirect to login
 const notAuthedCheck = (to, from, next)=>{
-  api.user.me().then(()=>{
-    next()
-  }).catch(()=>{
-    if (to.name != 'login' && 
-    to.name != 'register') {
-      next('/login')
-    } else {
+  let me = null
+  api.user.me().then((res)=>{
+    me = res
+  }).finally(()=>{
+    if (me != null) {
       next()
+    } else {
+      if (to.name != 'login' && 
+        to.name != 'register') {
+        next('/login')
+      } else {
+        next()
+      }
     }
   })
 }
@@ -29,9 +34,14 @@ const notAuthedCheck = (to, from, next)=>{
 // if session is authed and going to login or register
 // redirect to my projects
 const authedCheck = (to, from, next)=>{
-  api.user.me().then((me)=>{
-    next(`/host/${me.id}/projects`)
-  }).catch(()=>{
+  let me = null
+  api.user.me().then((res)=>{
+    me = res
+  }).finally(()=>{
+    if (me != null) {
+      next(`/host/${me.id}/projects`)
+      return
+    }
     next()
   })
 }
@@ -71,12 +81,12 @@ const routes = [
     beforeEnter: notAuthedCheck
   },
   {
-    path: '/host/:hostId/projects',
+    path: '/host/:host/projects',
     name: 'projects',
     component: projects
   },
   {
-    path: '/host/:hostId/project/:projectId/task/:taskId',
+    path: '/host/:host/project/:project/task/:task',
     name: 'task',
     component: task
   },

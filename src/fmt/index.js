@@ -8,6 +8,18 @@ let eb = pb * tb
 export default {
     install(vue){
         vue.prototype.$fmt = {
+            role(r) {
+                switch (r) {
+                    case 0:
+                        return 'admin'
+                    case 1:
+                        return 'writer'
+                    case 2:
+                        return 'reader'
+                    default:
+                        return 'unkown'
+                }
+            },
             date(dt) {
                 if (dt == null) {
                     return ""
