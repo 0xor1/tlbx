@@ -471,6 +471,9 @@ func New(
 				return ex
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
+				if !me.Exists(tlbx) {
+					return nil
+				}
 				me := me.Get(tlbx)
 				tx := service.Get(tlbx).User().Begin()
 				defer tx.Rollback()
