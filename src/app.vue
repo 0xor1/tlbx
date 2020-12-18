@@ -87,6 +87,9 @@
         if (this.$router.currentRoute.path != path) {
           this.$router.push(path)
         }
+        if (window.innerWidth <= 480) {
+          this.showMenu = false
+        }
       }
     },mounted(){
       this.init()

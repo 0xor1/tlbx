@@ -56,6 +56,7 @@
 
 <style scoped lang="scss">
 div.root {
+  padding: 2.6pc 0 0 1.3pc;
   & > * {
     display: block;
     margin-bottom: 5px;

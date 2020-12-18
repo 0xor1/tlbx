@@ -79,85 +79,85 @@
           loading: true,
           commonCols: [
             {
-              name: "Name",
+              name: "name",
               class: "name",
               get: (p)=> p.name,
               show: () => true
             },
             {
-              name: "Created On",
+              name: "created on",
               class: "createOn",
               get: (p)=> this.$fmt.date(p.createdOn),
               show: () => this.$root.show.dates
             },
             {
-              name: "Start On",
+              name: "start on",
               class: "startOn",
               get: (p)=> this.$fmt.date(p.startOn),
               show: () => this.$root.show.dates
             },
             {
-              name: "End On",
+              name: "end on",
               class: "endOn",
               get: (p)=> this.$fmt.date(p.endOn),
               show: () => this.$root.show.dates
             },
             {
-              name: "Hours Per Day",
+              name: "hours per day",
               class: "hoursPerDay",
               get: (p)=> p.hoursPerDay,
               show: () => this.$root.show.dates
             },
             {
-              name: "Days Per Week",
+              name: "days per week",
               class: "daysPerWeek",
               get: (p)=> p.daysPerWeek,
               show: () => this.$root.show.dates
             },
             {
-              name: "Minimum Time",
+              name: "min time",
               class: "minimumTime",
               get: (p)=> this.$fmt.duration(p.minimumTime),
               show: () => this.$root.show.times
             },
             {
-              name: "Estimated Time",
+              name: "est time",
               class: "estimatedTime",
               get: (p)=> this.$fmt.duration(p.estimatedTime),
               show: () => this.$root.show.times
             },
             {
-              name: "Logged Time",
+              name: "log time",
               class: "loggedTime",
               get: (p)=> this.$fmt.duration(p.loggedTime),
               show: () => this.$root.show.times
             },
             {
-              name: "Estimated Expense",
+              name: "est exp",
               class: "estimatedExpense",
               get: (p)=> this.$fmt.cost(p.currencyCode, p.estimatedExpense),
               show: () => this.$root.show.expenses
             },
             {
-              name: "Logged Expense",
+              name: "log exp",
               class: "loggedExpense",
               get: (p)=> this.$fmt.cost(p.currencyCode, p.loggedExpense),
               show: () => this.$root.show.expenses
             },
             {
-              name: "File Count",
+              name: "files",
               class: "fileCount",
               get: (p)=> p.fileCount,
               show: () => this.$root.show.files
             },
             {
-              name: "File Size",
+              name: "file size",
               class: "fileSize",
               get: (p) => this.$fmt.bytes(p.fileSize + p.fileSubSize),
               show: () => this.$root.show.files
             },
             {
-              name: "Tasks",
+              name: "tasks",
               class: "tasks",
               get: (p)=>{return p.descendantCount + 1},
               show: () => this.$root.show.tasks
@@ -236,9 +236,9 @@
   }
 </script>
 
-<style lang="scss">
-.root{
-  padding-top: 2.6pc;
+<style lang="scss" scoped>
+div.root {
+  padding: 2.6pc 0 0 1.3pc;
 }
 .column-filters {
   margin: 0.6pc 0 0.6pc 0;
