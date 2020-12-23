@@ -20,7 +20,7 @@
     <datepicker v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
     <datepicker v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
     <button @click="create">create</button>
-    <button @click="$router.push('/')">cancel</button>
+    <button @click="cancel">cancel</button>
     <span v-if="createErr.length > 0" class="err">{{createErr}}</span>
   </div>
 </template>
@@ -266,6 +266,11 @@
             this.$router.push(`/host/${p.host}/project/${p.id}/task/${p.id}`)
           })
         }
+      },
+      cancel: function(){
+        this.$api.user.me().then((me)=>{
+          this.$router.push(`/host/${me.id}/projects`)
+        })
       }
     }
   }
