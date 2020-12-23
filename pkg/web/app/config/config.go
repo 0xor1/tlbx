@@ -12,6 +12,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/log"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/store"
+	sp "github.com/SparkPost/gosparkpost"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -52,12 +53,8 @@ func GetBase(file ...string) *config.Config {
 		"font-src 'self' https://fonts.gstatic.com",
 	})
 	c.SetDefault("log.type", "local")
-	c.SetDefault("email.type", "")
-	c.SetDefault("store.type", "")
-	c.SetDefault("store.preBaseUrl", "http://localhost:8081")
-	c.SetDefault("store.local.presigned.bucket", "local_pre_bucket")
-	c.SetDefault("store.local.presigned.prefix", "local_pre_prefix")
-	c.SetDefault("store.dir", "tmpStoreDir")
+	c.SetDefault("email.type", "local")
+	c.SetDefault("email.apikey", "")
 	// session cookie store
 	c.SetDefault("sessionAuthKey64s", []interface{}{
 		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
@@ -84,26 +81,30 @@ func GetBase(file ...string) *config.Config {
 func GetProcessed(c *config.Config) *Config {
 	res := &Config{}
 
-	if c.GetBool("isLocal") {
-		res.IsLocal = true
-		res.Log = log.New()
-		res.Email = email.NewLocalClient(res.Log)
-	} else {
-		res.IsLocal = false
-		switch c.GetString("log.type") {
-		default:
-			PanicIf(true, "unsupported log type %s", c.GetString("log.type"))
-		}
+	res.IsLocal = c.GetBool("isLocal")
 
-		switch c.GetString("email.type") {
-		case "":
-			break // none needed
-		case "sparkpost":
-			fallthrough // TODO
-		default:
-			PanicIf(true, "unsupported email type %s", c.GetString("email.type"))
-		}
+	switch c.GetString("log.type") {
+	case "local":
+		res.Log = log.New()
+	default:
+		PanicIf(true, "unsupported log type %s", c.GetString("log.type"))
 	}
+
+	switch c.GetString("email.type") {
+	case "local":
+		res.Email = email.NewLocalClient(res.Log)
+	case "sparkpost":
+		spClient := &sp.Client{}
+		PanicOn(spClient.Init(&sp.Config{
+			BaseUrl:    "https://api.eu.sparkpost.com",
+			ApiKey:     c.GetString("email.apikey"),
+			ApiVersion: 1,
+		}))
+		res.Email = email.NewSparkPostClient(spClient)
+	default:
+		PanicIf(true, "unsupported email type %s", c.GetString("email.type"))
+	}
+
 	res.Store = store.New(
 		s3.New(
 			session.New(
