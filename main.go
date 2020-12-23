@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	config := config.Get()
+	config := config.Get("config.json")
 	app.Run(func(c *app.Config) {
 		c.StaticDir = config.StaticDir
 		c.ContentSecurityPolicies = config.ContentSecurityPolicies
