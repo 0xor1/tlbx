@@ -20,7 +20,10 @@ func main() {
 		c.Name = "Todo"
 		c.Description = "A simple Todo list application, create multiple lists with many items which can be marked complete or uncomplete"
 		c.TlbxSetup = app.TlbxMwares{
-			session.BasicMware(config.SessionAuthKey64s, config.SessionEncrKey32s, config.IsLocal),
+			session.BasicMware(
+				config.Session.AuthKey64s,
+				config.Session.EncrKey32s,
+				config.Session.Secure),
 			ratelimit.MeMware(config.Cache),
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),
 		}

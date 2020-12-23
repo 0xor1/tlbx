@@ -20,14 +20,16 @@ import (
 )
 
 type Config struct {
-	IsLocal                   bool
+	Session struct {
+		Secure     bool
+		AuthKey64s [][]byte
+		EncrKey32s [][]byte
+	}
 	FromEmail                 string
 	ActivateFmtLink           string
 	ConfirmChangeEmailFmtLink string
 	StaticDir                 string
 	ContentSecurityPolicies   []string
-	SessionAuthKey64s         [][]byte
-	SessionEncrKey32s         [][]byte
 	Log                       log.Log
 	Email                     email.Client
 	Store                     store.Client
@@ -39,7 +41,16 @@ type Config struct {
 
 func GetBase(file ...string) *config.Config {
 	c := config.New(file...)
-	c.SetDefault("isLocal", true)
+	// session cookie store
+	c.SetDefault("session.secure", false)
+	c.SetDefault("session.authKey64s", []interface{}{
+		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
+		"WK_2RgRx6vjfWVkpiwOCB1fvv1yklnltstBjYlQGfRsl6LyVV4mkt6UamUylmkwC8MEgb9bSGr1FYgM2Zk20Ug",
+	})
+	c.SetDefault("session.encrKey32s", []interface{}{
+		"3ICuYRUelY-4Fhak0Iw0_5CW24bJvxFWM0jAA78IIp8",
+		"u80sYkgbBav52fJXbENYhN3Iyof7WhuLHHMaS_rmUQw",
+	})
 	c.SetDefault("aws.region", "local")
 	c.SetDefault("aws.s3.endpoint", "http://localhost:9000")
 	c.SetDefault("aws.s3.creds.id", "localtest")
@@ -55,15 +66,6 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("log.type", "local")
 	c.SetDefault("email.type", "local")
 	c.SetDefault("email.apikey", "")
-	// session cookie store
-	c.SetDefault("sessionAuthKey64s", []interface{}{
-		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
-		"WK_2RgRx6vjfWVkpiwOCB1fvv1yklnltstBjYlQGfRsl6LyVV4mkt6UamUylmkwC8MEgb9bSGr1FYgM2Zk20Ug",
-	})
-	c.SetDefault("sessionEncrKey32s", []interface{}{
-		"3ICuYRUelY-4Fhak0Iw0_5CW24bJvxFWM0jAA78IIp8",
-		"u80sYkgbBav52fJXbENYhN3Iyof7WhuLHHMaS_rmUQw",
-	})
 	c.SetDefault("cache", "localhost:6379")
 	c.SetDefault("user.primary", "users:C0-Mm-0n-U5-3r5@tcp(localhost:3306)/users?parseTime=true&loc=UTC&multiStatements=true")
 	c.SetDefault("user.slaves", []string{})
@@ -80,8 +82,6 @@ func GetBase(file ...string) *config.Config {
 
 func GetProcessed(c *config.Config) *Config {
 	res := &Config{}
-
-	res.IsLocal = c.GetBool("isLocal")
 
 	switch c.GetString("log.type") {
 	case "local":
@@ -122,17 +122,18 @@ func GetProcessed(c *config.Config) *Config {
 	res.ActivateFmtLink = c.GetString("activateFmtLink")
 	res.ConfirmChangeEmailFmtLink = c.GetString("confirmChangeEmailFmtLink")
 
-	authKey64s := c.GetStringSlice("sessionAuthKey64s")
-	encrKey32s := c.GetStringSlice("sessionEncrKey32s")
+	res.Session.Secure = c.GetBool("session.secure")
+	authKey64s := c.GetStringSlice("session.authKey64s")
+	encrKey32s := c.GetStringSlice("session.encrKey32s")
 	for i := range authKey64s {
 		authBytes, err := base64.RawURLEncoding.DecodeString(authKey64s[i])
 		PanicOn(err)
 		PanicIf(len(authBytes) != 64, "sessionAuthBytes length is not 64")
-		res.SessionAuthKey64s = append(res.SessionAuthKey64s, authBytes)
+		res.Session.AuthKey64s = append(res.Session.AuthKey64s, authBytes)
 		encrBytes, err := base64.RawURLEncoding.DecodeString(encrKey32s[i])
 		PanicOn(err)
 		PanicIf(len(encrBytes) != 32, "sessionEncrBytes length is not 32")
-		res.SessionEncrKey32s = append(res.SessionEncrKey32s, encrBytes)
+		res.Session.EncrKey32s = append(res.Session.EncrKey32s, encrBytes)
 	}
 
 	res.Cache = iredis.CreatePool(c.GetString("cache"))

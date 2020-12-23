@@ -11,11 +11,11 @@ import (
 
 type tlbxKey struct{}
 
-func BasicMware(authKey64s, encrKey32s [][]byte, isLocal bool) func(app.Tlbx) {
+func BasicMware(authKey64s, encrKey32s [][]byte, secure bool) func(app.Tlbx) {
 	return Mware(func(c *Config) {
 		c.AuthKey64s = authKey64s
 		c.EncrKey32s = encrKey32s
-		c.Secure = !isLocal
+		c.Secure = secure
 	})
 }
 
