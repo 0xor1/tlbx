@@ -2,7 +2,7 @@
   <div class="root">
     <div class="header">
       <h1 v-if="user != null">{{user.handle+"s projects"}}</h1>
-      <button v-if="isMe" @click="$router.push('/project/create')">create</button>
+      <button v-if="isMe" @click="$u.rtr.goto('/project/create')">create</button>
     </div>
     <p v-if="loading">
       loading projects
@@ -15,11 +15,11 @@
               {{c.name}}
             </th>
           </tr>
-          <tr class="project" @click="$router.push(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
+          <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
             <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{ c.get(p) }}
             </td>
-            <td v-if="isMe" class="action" @click.stop="$router.push(`/project/${p.id}/update`)">
+            <td v-if="isMe" class="action" @click.stop="$u.rtr.goto(`/host/${me.id}/project/${p.id}/edit`)">
               <img src="@/assets/edit.svg">
             </td>
             <td v-if="isMe" class="action" @click.stop="trash(p, index)">
@@ -40,7 +40,7 @@
               {{c.name}}
             </th>
           </tr>
-          <tr class="project" @click="$router.push(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p) in others" :key="p.id">
+          <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p) in others" :key="p.id">
             <td >
               <user v-bind:userId="p.host"></user>
             </td><td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
@@ -73,7 +73,7 @@
     methods: {
       initState (){
         return {
-          host: this.$router.currentRoute.params.host,
+          host: this.$u.rtr.host(),
           me: null,
           user: null,
           loading: true,
@@ -87,19 +87,19 @@
             {
               name: "created on",
               class: "createOn",
-              get: (p)=> this.$fmt.date(p.createdOn),
+              get: (p)=> this.$u.fmt.date(p.createdOn),
               show: () => this.$root.show.dates
             },
             {
               name: "start on",
               class: "startOn",
-              get: (p)=> this.$fmt.date(p.startOn),
+              get: (p)=> this.$u.fmt.date(p.startOn),
               show: () => this.$root.show.dates
             },
             {
               name: "end on",
               class: "endOn",
-              get: (p)=> this.$fmt.date(p.endOn),
+              get: (p)=> this.$u.fmt.date(p.endOn),
               show: () => this.$root.show.dates
             },
             {
@@ -117,31 +117,31 @@
             {
               name: "min time",
               class: "minimumTime",
-              get: (p)=> this.$fmt.duration(p.minimumTime),
+              get: (p)=> this.$u.fmt.duration(p.minimumTime),
               show: () => this.$root.show.times
             },
             {
               name: "est time",
               class: "estimatedTime",
-              get: (p)=> this.$fmt.duration(p.estimatedTime),
+              get: (p)=> this.$u.fmt.duration(p.estimatedTime),
               show: () => this.$root.show.times
             },
             {
               name: "log time",
               class: "loggedTime",
-              get: (p)=> this.$fmt.duration(p.loggedTime),
+              get: (p)=> this.$u.fmt.duration(p.loggedTime),
               show: () => this.$root.show.times
             },
             {
               name: "est exp",
               class: "estimatedExpense",
-              get: (p)=> this.$fmt.cost(p.currencyCode, p.estimatedExpense),
+              get: (p)=> this.$u.fmt.cost(p.currencyCode, p.estimatedExpense),
               show: () => this.$root.show.expenses
             },
             {
               name: "log exp",
               class: "loggedExpense",
-              get: (p)=> this.$fmt.cost(p.currencyCode, p.loggedExpense),
+              get: (p)=> this.$u.fmt.cost(p.currencyCode, p.loggedExpense),
               show: () => this.$root.show.expenses
             },
             {
@@ -153,7 +153,7 @@
             {
               name: "file size",
               class: "fileSize",
-              get: (p) => this.$fmt.bytes(p.fileSize + p.fileSubSize),
+              get: (p) => this.$u.fmt.bytes(p.fileSize + p.fileSubSize),
               show: () => this.$root.show.files
             },
             {

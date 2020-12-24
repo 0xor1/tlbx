@@ -31,9 +31,7 @@
         })
       },
       goto() {
-        if (this.$router.currentRoute.path != `/host/${this.userId}/projects`) {
-            this.$router.push(`/host/${this.userId}/projects`)
-        }
+        this.$u.rtr.goto(`/host/${this.userId}/projects`)
       }
     },
     mounted(){

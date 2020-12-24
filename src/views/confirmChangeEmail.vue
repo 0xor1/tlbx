@@ -10,7 +10,7 @@
     data: function() {
       let query = this.$router.currentRoute.query
       this.$api.user.confirmChangeEmail(query.me, query.code).then(()=>{
-        this.$router.push('/')
+        this.$u.rtr.goHome()
       })
       return {}
     }

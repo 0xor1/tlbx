@@ -8,7 +8,7 @@
             <div class="btn" v-if="me" @click.stop.prevent="goHome()">
               home
             </div>
-            <div class="btn" v-if="me" @click.stop.prevent="showFields=!showFields">
+            <div class="btn" @click.stop.prevent="showFields=!showFields">
               fields
             </div>
             <div class="fields" v-if="showFields">
@@ -84,9 +84,7 @@
         this.goto(`/host/${this.me.id}/projects`)
       },
       goto(path){
-        if (this.$router.currentRoute.path != path) {
-          this.$router.push(path)
-        }
+        this.$u.rtr.goto(path)
         if (window.innerWidth <= 480) {
           this.showMenu = false
         }

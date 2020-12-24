@@ -1,12 +1,11 @@
 import vue from 'vue'
 import vueRouter from 'vue-router'
-import direct from '../views/direct.vue'
 import activate from '../views/activate.vue'
 import confirmChangeEmail from '../views/confirmChangeEmail.vue'
 import register from '../views/register.vue'
 import login from '../views/login.vue'
 import projects from '../views/projects.vue'
-import projectCreate from '../views/projectCreate.vue'
+import projectCreateOrEdit from '../views/projectCreateOrEdit.vue'
 import task from '../views/task.vue'
 import api from '@/api'
 
@@ -48,11 +47,6 @@ const authedCheck = (to, from, next)=>{
 
 const routes = [
   {
-    path: '/',
-    name: 'direct',
-    component: direct
-  },
-  {
     path: '/activate',
     name: 'activate',
     component: activate
@@ -77,7 +71,13 @@ const routes = [
   {
     path: '/project/create',
     name: 'projectCreate',
-    component: projectCreate,
+    component: projectCreateOrEdit,
+    beforeEnter: notAuthedCheck
+  },
+  {
+    path: '/host/:host/project/:project/edit',
+    name: 'projectEdit',
+    component: projectCreateOrEdit,
     beforeEnter: notAuthedCheck
   },
   {
@@ -92,7 +92,7 @@ const routes = [
   },
   {
     path: '*',
-    redirect: '/'
+    redirect: '/login'
   }
 ]
 

@@ -317,7 +317,7 @@ function newApi(isMDoApi) {
         return doReq('/project/create', {name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn})
       },
       one(host, id) {
-        return this.get(host, [id]).then((res)=>{
+        return this.get({host, ids: [id]}).then((res)=>{
           if (res.set.length > 0) {
             return res.set[0]
           }

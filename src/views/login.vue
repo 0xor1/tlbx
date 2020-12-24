@@ -45,8 +45,8 @@
       },
       login: function(){
         if (this.validate()) {
-          this.$api.user.login(this.email, this.pwd).then(()=>{
-            this.$router.push('/projects')
+          this.$api.user.login(this.email, this.pwd).then((me)=>{
+            this.$u.rtr.goto(`/host/${me.id}/projects`)
           })
         }
       }
