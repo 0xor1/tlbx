@@ -5,7 +5,7 @@ import confirmChangeEmail from '../views/confirmChangeEmail.vue'
 import register from '../views/register.vue'
 import login from '../views/login.vue'
 import projects from '../views/projects.vue'
-import projectCreateOrEdit from '../views/projectCreateOrEdit.vue'
+import projectCreateOrUpdate from '../views/projectCreateOrUpdate.vue'
 import task from '../views/task.vue'
 import api from '@/api'
 
@@ -71,13 +71,13 @@ const routes = [
   {
     path: '/project/create',
     name: 'projectCreate',
-    component: projectCreateOrEdit,
+    component: projectCreateOrUpdate,
     beforeEnter: notAuthedCheck
   },
   {
-    path: '/host/:host/project/:project/edit',
-    name: 'projectEdit',
-    component: projectCreateOrEdit,
+    path: '/host/:host/project/:project/update',
+    name: 'projectUpdate',
+    component: projectCreateOrUpdate,
     beforeEnter: notAuthedCheck
   },
   {

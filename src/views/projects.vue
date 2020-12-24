@@ -19,7 +19,7 @@
             <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{ c.get(p) }}
             </td>
-            <td v-if="isMe" class="action" @click.stop="$u.rtr.goto(`/host/${me.id}/project/${p.id}/edit`)">
+            <td v-if="isMe" class="action" @click.stop="$u.rtr.goto(`/host/${me.id}/project/${p.id}/update`)">
               <img src="@/assets/edit.svg">
             </td>
             <td v-if="isMe" class="action" @click.stop="trash(p, index)">

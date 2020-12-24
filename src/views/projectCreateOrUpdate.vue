@@ -4,7 +4,7 @@
       loading...
     </div>
     <div v-else>
-      <h1>project {{isCreate? 'create': 'edit'}}</h1>
+      <h1>project {{isCreate? 'create': 'update'}}</h1>
       <input v-model="name" placeholder="name" @blur="validate" @keydown.enter="ok">
       <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
       <span>
@@ -23,7 +23,7 @@
       <input v-model.number="daysPerWeek" :min="0" :max="7" type="number" placeholder="days per week" @blur="validate" @keydown.enter="ok">
       <datepicker v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
       <datepicker v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
-      <button @click="ok">{{isCreate? 'create': 'edit'}}</button>
+      <button @click="ok">{{isCreate? 'create': 'update'}}</button>
       <button @click="cancel">cancel</button>
       <span v-if="err.length > 0" class="err">{{err}}</span>
     </div>
@@ -33,7 +33,7 @@
 <script>
   import datepicker from 'vuejs-datepicker';
   export default {
-    name: 'projectCreateOrEdit',
+    name: 'projectCreateOrUpdate',
     components: {datepicker},
     data: function() {
       return this.initState()
@@ -42,7 +42,7 @@
       isCreate(){
         return this.$u.rtr.name() == "projectCreate"
       },
-      isEdit(){
+      isUpdate(){
         return !this.isCreate
       }
     },
@@ -246,7 +246,7 @@
         for(const [key, value] of Object.entries(this.initState())) {
           this[key] = value
         }
-        if (this.isEdit) {
+        if (this.isUpdate) {
           this.$api.user.me().then((me)=>{
             if (me.id !== this.$u.rtr.host()) {
               this.$u.rtr.goHome()
