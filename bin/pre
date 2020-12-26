@@ -16,3 +16,5 @@ go fmt ./... && \
 go test -p=$(nproc) -coverprofile=coverage.out ./... && \
 go tool cover -html=coverage.out && \
 rm coverage.out
+
+docker-compose -f docker/docker-compose.yml stop
