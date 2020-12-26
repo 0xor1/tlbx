@@ -335,9 +335,15 @@ function newApi(isMDoApi) {
         // ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit
         return doReq('/project/getOthers', args)
       },
-      update(args) {
-        // id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic
-        return doReq('/project/update', [args])
+      update(ps) {
+        // [id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic]       
+        return doReq('/project/update', ps)
+      },
+      updateOne(args) {
+        // id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic       
+        return doReq('/project/update', [args]).then((ps)=>{
+          return ps[0]
+        })
       },
       delete(ids) {
         return doReq('/project/delete', ids)

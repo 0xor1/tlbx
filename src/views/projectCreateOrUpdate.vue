@@ -313,7 +313,7 @@
               this.$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)
             })
           } else {
-            this.$api.project.update({
+            this.$api.project.updateOne({
               id: this.$u.rtr.project(), 
               name: {v: this.name},
               isPublic: {v: this.isPublic},
@@ -323,7 +323,7 @@
               startOn: {v: this.startOn},
               endOn: {v: this.endOn}
             }).then((p)=>{
-              this.$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)
+              this.$u.rtr.goto(`/host/${p.host}/project/${p.project}/task/${p.project}`)
             })
           }
         }
