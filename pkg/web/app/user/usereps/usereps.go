@@ -102,14 +102,20 @@ func New(
 				if enableSocials {
 					hasAvatar = ptr.Bool(false)
 				}
-				_, err := srv.User().Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, Now(), activateCode)
+				usrtx := srv.User().Begin()
+				defer usrtx.Rollback()
+				pwdtx := srv.Pwd().Begin()
+				defer pwdtx.Rollback()
+				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, Now(), activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
 					PanicOn(err)
 				}
-				setPwd(tlbx, id, args.Pwd, args.ConfirmPwd)
 				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), activateCode))
+				setPwd(tlbx, pwdtx, id, args.Pwd, args.ConfirmPwd)
+				usrtx.Commit()
+				pwdtx.Commit()
 				return nil
 			},
 		},
@@ -305,11 +311,14 @@ func New(
 						mustWaitDur := (10 * time.Minute) - Now().Sub(*user.LastPwdResetOn)
 						app.BadReqIf(mustWaitDur > 0, "must wait %d seconds before reseting pwd again", int64(math.Ceil(mustWaitDur.Seconds())))
 					}
+					pwdtx := srv.Pwd().Begin()
+					defer pwdtx.Rollback()
 					newPwd := `$aA1` + crypt.UrlSafeString(12)
-					setPwd(tlbx, user.ID, newPwd, newPwd)
+					setPwd(tlbx, pwdtx, user.ID, newPwd, newPwd)
 					sendResetPwdEmail(srv, args.Email, fromEmail, newPwd)
 					user.LastPwdResetOn = &now
 					updateUser(tx, user)
+					pwdtx.Commit()
 				}
 				tx.Commit()
 				return nil
@@ -340,7 +349,10 @@ func New(
 				me := me.Get(tlbx)
 				pwd := getPwd(srv, me)
 				app.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.CurrentPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
-				setPwd(tlbx, me, args.NewPwd, args.ConfirmNewPwd)
+				pwdtx := srv.Pwd().Begin()
+				defer pwdtx.Rollback()
+				setPwd(tlbx, pwdtx, me, args.NewPwd, args.ConfirmNewPwd)
+				pwdtx.Commit()
 				return nil
 			},
 		},
@@ -420,7 +432,10 @@ func New(
 				emailOrPwdMismatch(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)))
 				// if encryption params have changed re encrypt on successful login
 				if len(pwd.Salt) != scryptSaltLen || len(pwd.Pwd) != scryptKeyLen || pwd.N != scryptN || pwd.R != scryptR || pwd.P != scryptP {
-					setPwd(tlbx, user.ID, args.Pwd, args.Pwd)
+					pwdtx := srv.Pwd().Begin()
+					defer pwdtx.Rollback()
+					setPwd(tlbx, pwdtx, user.ID, args.Pwd, args.Pwd)
+					pwdtx.Commit()
 				}
 				tx.Commit()
 				me.Set(tlbx, user.ID)
@@ -793,12 +808,11 @@ func getPwd(srv service.Layer, id ID) *pwd {
 	return res
 }
 
-func setPwd(tlbx app.Tlbx, id ID, pwd, confirmPwd string) {
+func setPwd(tlbx app.Tlbx, pwdtx service.Tx, id ID, pwd, confirmPwd string) {
 	app.BadReqIf(pwd != confirmPwd, "pwds do not match")
 	validate.Str("pwd", pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
-	srv := service.Get(tlbx)
 	salt := crypt.Bytes(scryptSaltLen)
 	pwdBs := crypt.ScryptKey([]byte(pwd), salt, scryptN, scryptR, scryptP, scryptKeyLen)
-	_, err := srv.Pwd().Exec(`INSERT INTO pwds (id, salt, pwd, n, r, p) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE salt=VALUE(salt), pwd=VALUE(pwd), n=VALUE(n), r=VALUE(r), p=VALUE(p)`, id, salt, pwdBs, scryptN, scryptR, scryptP)
+	_, err := pwdtx.Exec(`INSERT INTO pwds (id, salt, pwd, n, r, p) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE salt=VALUE(salt), pwd=VALUE(pwd), n=VALUE(n), r=VALUE(r), p=VALUE(p)`, id, salt, pwdBs, scryptN, scryptR, scryptP)
 	PanicOn(err)
 }
