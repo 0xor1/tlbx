@@ -5,30 +5,29 @@ import confirmChangeEmail from '../views/confirmChangeEmail.vue'
 import register from '../views/register.vue'
 import login from '../views/login.vue'
 import projects from '../views/projects.vue'
-import projectCreateOrUpdate from '../views/projectCreateOrUpdate.vue'
 import task from '../views/task.vue'
 import api from '@/api'
 
 vue.use(vueRouter)
 
 // if session not authed redirect to login
-const notAuthedCheck = (to, from, next)=>{
-  let me = null
-  api.user.me().then((res)=>{
-    me = res
-  }).finally(()=>{
-    if (me != null) {
-      next()
-    } else {
-      if (to.name != 'login' && 
-        to.name != 'register') {
-        next('/login')
-      } else {
-        next()
-      }
-    }
-  })
-}
+// const notAuthedCheck = (to, from, next)=>{
+//   let me = null
+//   api.user.me().then((res)=>{
+//     me = res
+//   }).finally(()=>{
+//     if (me != null) {
+//       next()
+//     } else {
+//       if (to.name != 'login' && 
+//         to.name != 'register') {
+//         next('/login')
+//       } else {
+//         next()
+//       }
+//     }
+//   })
+// }
 
 // if session is authed and going to login or register
 // redirect to my projects
@@ -67,18 +66,6 @@ const routes = [
     name: 'login',
     component: login,
     beforeEnter: authedCheck
-  },
-  {
-    path: '/project/create',
-    name: 'projectCreate',
-    component: projectCreateOrUpdate,
-    beforeEnter: notAuthedCheck
-  },
-  {
-    path: '/host/:host/project/:project/update',
-    name: 'projectUpdate',
-    component: projectCreateOrUpdate,
-    beforeEnter: notAuthedCheck
   },
   {
     path: '/host/:host/projects',

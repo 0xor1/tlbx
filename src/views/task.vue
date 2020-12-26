@@ -3,6 +3,7 @@
     <div v-if="loading">
     </div>
     <div v-else>
+
     </div>
   </div>
 </template>
@@ -95,5 +96,7 @@
 </script>
 
 <style lang="scss" scoped>
-
+div.root {
+  padding: 2.6pc 0 0 1.3pc;
+}
 </style>

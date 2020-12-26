@@ -1,54 +1,59 @@
 <template>
   <div class="root">
-    <div class="header">
-      <h1 v-if="user != null">{{user.handle+"s projects"}}</h1>
-      <button v-if="isMe" @click="$u.rtr.goto('/project/create')">create</button>
+    <div v-if="showCreate || showUpdate">
+      <project-create-or-update v-bind:isCreate="showCreate" v-bind:projectId="updateId" @close="showCreate = showUpdate = false"></project-create-or-update>
     </div>
-    <p v-if="loading">
-      loading projects
-    </p>
     <div v-else>
-      <div class="projects">
-        <table>
-          <tr class="header">
-            <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
-              {{c.name}}
-            </th>
-          </tr>
-          <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
-            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
-              {{ c.get(p) }}
-            </td>
-            <td v-if="isMe" class="action" @click.stop="$u.rtr.goto(`/host/${me.id}/project/${p.id}/update`)">
-              <img src="@/assets/edit.svg">
-            </td>
-            <td v-if="isMe" class="action" @click.stop="trash(p, index)">
-              <img src="@/assets/trash.svg">
-            </td>
-          </tr>
-        </table>
-        <button class="load-more" v-if="psMore" @click="loadMore()">load more</button>
+      <div class="header">
+        <h1 v-if="user != null">{{user.handle+"s projects"}}</h1>
+        <button v-if="isMe" @click="showCreate = true">create</button>
       </div>
-      <div v-if="others.length > 0" class="others">
-        <h1>Others Projects</h1>
-        <table>
-          <tr class="header">
-            <th class="host">
-              Host
-            </th>
-            <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
-              {{c.name}}
-            </th>
-          </tr>
-          <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p) in others" :key="p.id">
-            <td >
-              <user v-bind:userId="p.host"></user>
-            </td><td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
-              {{ c.get(p) }}
-            </td>
-          </tr>
-        </table>
-        <button class="load-more" v-if="othersMore" @click="loadMoreOthers()">load more</button>
+      <p v-if="loading">
+        loading projects
+      </p>
+      <div v-else>
+        <div class="projects">
+          <table>
+            <tr class="header">
+              <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+                {{c.name}}
+              </th>
+            </tr>
+            <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
+              <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+                {{ c.get(p) }}
+              </td>
+              <td v-if="isMe" class="action" @click.stop="updateId = p.id; showUpdate = true">
+                <img src="@/assets/edit.svg">
+              </td>
+              <td v-if="isMe" class="action" @click.stop="trash(p, index)">
+                <img src="@/assets/trash.svg">
+              </td>
+            </tr>
+          </table>
+          <button class="load-more" v-if="psMore" @click="loadMore()">load more</button>
+        </div>
+        <div v-if="others.length > 0" class="others">
+          <h1>Others Projects</h1>
+          <table>
+            <tr class="header">
+              <th class="host">
+                Host
+              </th>
+              <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+                {{c.name}}
+              </th>
+            </tr>
+            <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p) in others" :key="p.id">
+              <td >
+                <user v-bind:userId="p.host"></user>
+              </td><td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+                {{ c.get(p) }}
+              </td>
+            </tr>
+          </table>
+          <button class="load-more" v-if="othersMore" @click="loadMoreOthers()">load more</button>
+        </div>
       </div>
     </div>
   </div>
@@ -56,9 +61,10 @@
 
 <script>
   import user from '../components/user'
+  import projectCreateOrUpdate from '../components/projectCreateOrUpdate.vue'
   export default {
     name: 'projects',
-    components: {user},
+    components: {user, projectCreateOrUpdate},
     data: function() {
       return this.initState()
     },
@@ -74,6 +80,9 @@
       initState (){
         return {
           host: this.$u.rtr.host(),
+          showCreate: false,
+          showUpdate: false,
+          updateId: null,
           me: null,
           user: null,
           loading: true,

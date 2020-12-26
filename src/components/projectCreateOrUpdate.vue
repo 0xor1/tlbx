@@ -1,5 +1,5 @@
 <template>
-  <div class="root">
+  <div>
     <div v-if="loading">
       loading...
     </div>
@@ -35,16 +35,12 @@
   export default {
     name: 'projectCreateOrUpdate',
     components: {datepicker},
+    props: {
+      isCreate: Boolean,
+      projectId: String
+    },
     data: function() {
       return this.initState()
-    },
-    computed: {
-      isCreate(){
-        return this.$u.rtr.name() == "projectCreate"
-      },
-      isUpdate(){
-        return !this.isCreate
-      }
     },
     methods: {
       initState (){
@@ -246,13 +242,13 @@
         for(const [key, value] of Object.entries(this.initState())) {
           this[key] = value
         }
-        if (this.isUpdate) {
+        if (!this.isCreate) {
           this.$api.user.me().then((me)=>{
             if (me.id !== this.$u.rtr.host()) {
               this.$u.rtr.goHome()
               return
             }
-            this.$api.project.one(this.$u.rtr.host(), this.$u.rtr.project()).then((p)=>{
+            this.$api.project.one(this.$u.rtr.host(), this.projectId).then((p)=>{
               this.name = p.name
               this.isPublic = p.isPublic
               this.currencyCode = p.currencyCode
@@ -314,7 +310,7 @@
             })
           } else {
             this.$api.project.updateOne({
-              id: this.$u.rtr.project(), 
+              id: this.projectId, 
               name: {v: this.name},
               isPublic: {v: this.isPublic},
               currencyCode: {v: this.currencyCode},
@@ -329,7 +325,7 @@
         }
       },
       cancel(){
-        this.$u.rtr.goHome()
+        this.$emit('close')
       }
     },
     mounted(){
@@ -344,8 +340,7 @@
 </script>
 
 <style scoped lang="scss">
-div.root > div {
-  padding: 2.6pc 0 0 1.3pc;
+div > div {
   & > * {
     display: block;
     margin-bottom: 5px;
