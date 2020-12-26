@@ -278,6 +278,14 @@ func Everything(t *testing.T) {
 	t1p1Ancestors := (&task.GetAncestors{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
+		ID:      p.ID,
+	}).MustDo(ac)
+	a.Equal(len(t1p1Ancestors.Set), 0)
+	a.False(t1p1Ancestors.More)
+
+	t1p1Ancestors = (&task.GetAncestors{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
 		ID:      t1p1.ID,
 	}).MustDo(ac)
 	a.Equal(t2p0.ID, t1p1Ancestors.Set[0].ID)
