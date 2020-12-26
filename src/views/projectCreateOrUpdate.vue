@@ -323,7 +323,7 @@
               startOn: {v: this.startOn},
               endOn: {v: this.endOn}
             }).then((p)=>{
-              this.$u.rtr.goto(`/host/${p.host}/project/${p.project}/task/${p.project}`)
+              this.$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)
             })
           }
         }
