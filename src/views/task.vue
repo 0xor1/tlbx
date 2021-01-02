@@ -1,9 +1,28 @@
 <template>
   <div class="root">
-    <div v-if="loading">
+    <div class="loading" v-if="loading">
+      loading...
     </div>
-    <div v-else>
+    <div class="content" v-else>
+      <div class="breadcrumb">
+        <span v-if="ancestors.length > 0 && ancestors[ancestors.length - 1].parent != null">
+          <a :click="getMoreAncestors">..</a>
+          /
+        </span>
+        <span v-for="a in ancestors" :key="a.id">
+          <a :href="'/#/host/'+$u.rtr.host()+'/project/'+$u.rtr.project()+'/task/'+a.id">{{a.name}}</a>
+          /           
+        </span>
+        <span>
+          <a :href="'/#/host/'+$u.rtr.host()+'/project/'+$u.rtr.project()+'/task/'+task.id">{{task.name}}</a>   
+        </span>
+      </div>
+      <div class="task">
+        <h2>{{task.name}}</h2>
+      </div>
+      <div class="subs">
 
+      </div>
     </div>
   </div>
 </template>
@@ -33,6 +52,7 @@
           moreFiles: false,
           comments: [],
           moreComments: false,
+          loadingMoreAncestors: false
         }
       },
       init(){
@@ -51,7 +71,7 @@
             })
           }
           mapi.task.getAncestors(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), 10).then((res)=>{
-            this.ancestors = res.set
+            this.ancestors = res.set.reverse()
             this.moreAncestors = res.more
           })
           mapi.task.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((t)=>{
@@ -80,8 +100,22 @@
           mapi.sendMDo().finally(()=>{
             this.loading = false
           })
-
         })
+      },
+      getMoreAncestors(){
+        if (!this.loadingMoreAncestors) {
+          this.loadingMoreAncestors = true;
+          let taskId = this.$u.rtr.task()
+          if (this.ancestors.length > 0 && this.ancestors[0].id != null) {
+            taskId = this.ancestors[0].id
+          }
+          this.$api.task.getAncestors(this.$u.rtr.host(), this.$u.rtr.project(), taskId, 10).then((res)=>{
+            this.ancestors = res.set.reverse().concat(this.ancestors)
+            this.moreAncestors = res.more
+          }).finally(()=>{
+            this.loadingMoreAncestors = false
+          })
+        }
       }
     },
     mounted(){
@@ -98,5 +132,11 @@
 <style lang="scss" scoped>
 div.root {
   padding: 2.6pc 0 0 1.3pc;
+  > .content{
+    > .breadcrumb {
+      white-space: nowrap;
+      overflow-y: auto;
+    }
+  }
 }
 </style>
