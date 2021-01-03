@@ -51,6 +51,16 @@ export default {
                 }
             },
             fmt: {
+                ellipsis(txt, len) {
+                    if (len == null || len < 3) {
+                        throw new Error('len must be greater than 3')
+                    }
+                    let res = txt
+                    if (txt.length > len) {
+                        res = txt.substring(0, len - 3) + '...'
+                    }
+                    return res
+                },
                 role(r) {
                     switch (r) {
                         case 0:

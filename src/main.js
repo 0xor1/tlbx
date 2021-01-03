@@ -31,6 +31,12 @@ let v = new Vue({
           expenses: true,
           files: false,
           tasks: false
+        },
+        _ctx: this._ctx || {
+          currentProjectId: null,
+          loading: false,
+          pMe: null,
+          project: null
         }
       }
       return res
@@ -40,6 +46,36 @@ let v = new Vue({
         this[key] = value
       }
       this.$u._main_init_utils(this)
+      if (this._ctx.currentProjectId !== this.$u.rtr.project()) {
+        this._ctx.currentProjectId = this.$u.rtr.project()
+        this._ctx.loading = true
+        this._ctx.pMe = null
+        this._ctx.project = null
+        let mapi = this.$api.newMDoApi()
+        mapi.project.one(this.$u.rtr.host(), this.$u.rtr.project()).then((p)=>{
+          this._ctx.project = p
+        })
+        mapi.project.getMe(this.$u.rtr.host(), this.$u.rtr.project()).then((pMe)=>{
+          this._ctx.pMe = pMe
+        })
+        mapi.sendMDo().finally(()=>{
+          this._ctx.loading = false
+        })
+      }
+    },
+    ctx(){
+      let completer = null
+      completer = (resolve)=>{
+        if (this._ctx.loading) {
+          setTimeout(completer, 10, resolve)
+        } else {
+          resolve({
+            pMe: this._ctx.pMe,
+            project: this._ctx.project
+          })
+        }
+      }
+      return new Promise(completer)
     }
   },
   mounted(){

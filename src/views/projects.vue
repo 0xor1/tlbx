@@ -126,37 +126,37 @@
             {
               name: "min time",
               class: "minimumTime",
-              get: (p)=> this.$u.fmt.duration(p.minimumTime),
+              get: (p)=> this.$u.fmt.duration(p.minimumTime, p.hoursPerDay, p.daysPerWeek),
               show: () => this.$root.show.times
             },
             {
               name: "est time",
               class: "estimatedTime",
-              get: (p)=> this.$u.fmt.duration(p.estimatedTime),
+              get: (p)=> this.$u.fmt.duration(p.estimatedTime + p.estimatedSubTime, p.hoursPerDay, p.daysPerWeek),
               show: () => this.$root.show.times
             },
             {
               name: "log time",
               class: "loggedTime",
-              get: (p)=> this.$u.fmt.duration(p.loggedTime),
+              get: (p)=> this.$u.fmt.duration(p.loggedTime + p.loggedSubTime, p.hoursPerDay, p.daysPerWeek),
               show: () => this.$root.show.times
             },
             {
               name: "est exp",
               class: "estimatedExpense",
-              get: (p)=> this.$u.fmt.cost(p.currencyCode, p.estimatedExpense),
+              get: (p)=> this.$u.fmt.cost(p.currencyCode, p.estimatedExpense + p.estimatedSubExpense),
               show: () => this.$root.show.expenses
             },
             {
               name: "log exp",
               class: "loggedExpense",
-              get: (p)=> this.$u.fmt.cost(p.currencyCode, p.loggedExpense),
+              get: (p)=> this.$u.fmt.cost(p.currencyCode, p.loggedExpense + p.loggedSubExpense),
               show: () => this.$root.show.expenses
             },
             {
               name: "files",
               class: "fileCount",
-              get: (p)=> p.fileCount,
+              get: (p)=> p.fileCount + p.fileSubCount,
               show: () => this.$root.show.files
             },
             {
@@ -168,7 +168,7 @@
             {
               name: "tasks",
               class: "tasks",
-              get: (p)=>{return p.descendantCount + 1},
+              get: (p)=> p.descendantCount + 1,
               show: () => this.$root.show.tasks
             }
           ],
