@@ -93,11 +93,34 @@ export default {
                     let d = Math.floor(h / hoursPerDay)
                     h = h % hoursPerDay
                     if (daysPerWeek == null || daysPerWeek == 0) {
-                        return d + "d " + h + "h " + m + "m"
+                        let res = ""
+                        if (d > 0) {
+                            res += d + "d "
+                        }
+                        if (h > 0) {
+                            res += h + "h "
+                        }
+                        if (m > 0 || (h == 0 && d == 0)) {
+                            res += m + "m"
+                        }
+                        return res
                     }
                     let w = Math.floor(d / daysPerWeek)
                     d = d % daysPerWeek
-                    return w + "w " + d + "d " + h + "h " + m + "m"
+                    let res = ""
+                    if (w > 0) {
+                        res += w + "w "
+                    }
+                    if (d > 0) {
+                        res += d + "d "
+                    }
+                    if (h > 0) {
+                        res += h + "h "
+                    }
+                    if (m > 0 || (h == 0 && d == 0 && w == 0)) {
+                        res += m + "m"
+                    }
+                    return res
                 },
                 cost(currencyCode, value) {
                     let symbol = currencyCode
