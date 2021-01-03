@@ -199,6 +199,7 @@ func Run(configs ...func(*Config)) {
 			}
 			mDoReqs := map[string]*mDoReq{}
 			getJsonArgs(tlbx, &mDoReqs)
+			BadReqIf(len(mDoReqs) == 0, "empty mdo req")
 			BadReqIf(len(mDoReqs) > c.MDoMax, "too many mdo reqs, max reqs allowed: %d", c.MDoMax)
 			fullMDoResp := map[string]*mDoResp{}
 			fullMDoRespMtx := &sync.Mutex{}
