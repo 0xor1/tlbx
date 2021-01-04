@@ -336,7 +336,12 @@ var (
 						// if we moved parent we must recalculate aggregate values on the old parents ancestral chain
 						epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, currentParent.ID)
 					}
-					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, t.ID)
+					updatedTaskIDs := epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, t.ID)
+					if len(updatedTaskIDs) <= 1 && t.Parent != nil {
+						// if updating aggregate values on the task being updated results in only that task or none
+						// beign updated, need to make sure we explicitly update through the new parent also
+						epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
+					}
 				}
 				if nameUpdated {
 					epsutil.ActivityItemRename(tx, args.Host, args.Project, args.ID, t.Name, true)
