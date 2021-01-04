@@ -37,7 +37,7 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 		if t.IsParallel {
 			p = 1
 		}
-		v := Strf(`[n: %s, p: %d, m: %d, et: %d, est: %d, lt: %d, lst: %d, ee: %d, ese: %d, le: %d, lse: %d, fc: %d, fsc: %d, fs: %d, fss: %d]`, t.Name, p, t.MinimumTime, t.EstimatedTime, t.EstimatedSubTime, t.LoggedTime, t.LoggedSubTime, t.EstimatedExpense, t.EstimatedSubExpense, t.LoggedExpense, t.LoggedSubExpense, t.FileCount, t.FileSubCount, t.FileSize, t.FileSubSize)
+		v := Strf(`[n: %s, p: %d, m: %d, et: %d, est: %d, lt: %d, lst: %d, ee: %d, ese: %d, le: %d, lse: %d, fc: %d, fsc: %d, fs: %d, fss: %d]`, t.Name, p, t.MinimumSubTime, t.EstimatedTime, t.EstimatedSubTime, t.LoggedTime, t.LoggedSubTime, t.EstimatedExpense, t.EstimatedSubExpense, t.LoggedExpense, t.LoggedSubExpense, t.FileCount, t.FileSubCount, t.FileSize, t.FileSubSize)
 		if len(as) > 0 {
 			pre := ``
 			for _, a := range as[1:] {
@@ -62,7 +62,7 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 	}
 	println("n: name")
 	println("p: isParallel")
-	println("m: minimumTime")
+	println("m: minimumSubTime")
 	println("et: estimatedTime")
 	println("est: estimatedSubTime")
 	println("lt: loggedTime")

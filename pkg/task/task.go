@@ -18,7 +18,7 @@ type Task struct {
 	Description         string    `json:"description"`
 	CreatedBy           ID        `json:"createdBy"`
 	CreatedOn           time.Time `json:"createdOn"`
-	MinimumTime         uint64    `json:"minimumTime"`
+	MinimumSubTime      uint64    `json:"minimumSubTime"`
 	EstimatedTime       uint64    `json:"estimatedTime"`
 	LoggedTime          uint64    `json:"loggedTime"`
 	EstimatedSubTime    uint64    `json:"estimatedSubTime"`

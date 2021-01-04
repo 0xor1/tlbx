@@ -64,7 +64,7 @@ var (
 					Description:         args.Description,
 					CreatedBy:           me,
 					CreatedOn:           NowMilli(),
-					MinimumTime:         args.EstimatedTime,
+					MinimumSubTime:      args.EstimatedTime,
 					EstimatedTime:       args.EstimatedTime,
 					LoggedTime:          0,
 					EstimatedSubTime:    0,
@@ -116,7 +116,7 @@ var (
 					PanicOn(err)
 				}
 				// insert new task
-				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.MinimumTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.FileSubCount, t.FileSubSize, t.ChildCount, t.DescendantCount, t.IsParallel)
+				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.MinimumSubTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.FileSubCount, t.FileSubSize, t.ChildCount, t.DescendantCount, t.IsParallel)
 				PanicOn(err)
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &t.ID, t.ID, cnsts.TypeTask, cnsts.ActionCreated, nil, nil)
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
@@ -408,7 +408,7 @@ var (
 					PanicOn(err)
 					_, err = tx.Exec(`UPDATE tasks SET firstChild=?, nextSibling=? WHERE host=? AND project=? AND id=?`, previousNode.FirstChild, previousNode.NextSibling, args.Host, args.Project, previousNode.ID)
 					PanicOn(err)
-					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.ID)
+					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, nil, nil)
 
 					// first get all time/expense/file/comment ids being deleted then
@@ -606,7 +606,7 @@ var (
 		Description:         "do that thing you're supposed to do",
 		CreatedBy:           app.ExampleID(),
 		CreatedOn:           app.ExampleTime(),
-		MinimumTime:         100,
+		MinimumSubTime:      100,
 		EstimatedTime:       100,
 		LoggedTime:          100,
 		EstimatedSubTime:    100,
@@ -651,7 +651,7 @@ func Scan(r isql.Row) (*task.Task, error) {
 		&t.Description,
 		&t.CreatedBy,
 		&t.CreatedOn,
-		&t.MinimumTime,
+		&t.MinimumSubTime,
 		&t.EstimatedTime,
 		&t.LoggedTime,
 		&t.EstimatedSubTime,
@@ -674,7 +674,7 @@ func Scan(r isql.Row) (*task.Task, error) {
 }
 
 var (
-	Sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel`
+	Sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumSubTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel`
 	sql_task_columns          = strings.ReplaceAll(Sql_task_columns_prefixed, `t.`, ``)
 	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id) AS (SELECT 0, parent FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.id) CYCLE id RESTRICT`
 )

@@ -85,7 +85,7 @@ CREATE TABLE tasks(
   description VARCHAR(1250) NOT NULL,
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
-  minimumTime BIGINT UNSIGNED NOT NULL,
+  minimumSubTime BIGINT UNSIGNED NOT NULL,
   estimatedTime BIGINT UNSIGNED NOT NULL,
   loggedTime BIGINT UNSIGNED NOT NULL,
   estimatedSubTime BIGINT UNSIGNED NOT NULL,
@@ -186,7 +186,7 @@ CREATE PROCEDURE setAncestralChainAggregateValuesFromTask(_host BINARY(16), _pro
 BEGIN
   
   DECLARE currentParent BINARY(16) DEFAULT NULL;
-  DECLARE currentMinimumTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentMinimumSubTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE currentEstimatedSubTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE currentLoggedSubTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE currentEstimatedSubExpense BIGINT UNSIGNED DEFAULT 0;
@@ -196,7 +196,7 @@ BEGIN
   DECLARE currentChildCount BIGINT UNSIGNED DEFAULT 0;
   DECLARE currentDescendantCount BIGINT UNSIGNED DEFAULT 0;
 
-  DECLARE newMinimumTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newMinimumSubTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE newEstimatedSubTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE newLoggedSubTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE newEstimatedSubExpense BIGINT UNSIGNED DEFAULT 0;
@@ -216,7 +216,7 @@ BEGIN
     
     SELECT
       t.parent,
-      t.minimumTime,
+      t.minimumSubTime,
       t.estimatedSubTime,
       t.loggedSubTime,
       t.estimatedSubExpense,
@@ -225,9 +225,9 @@ BEGIN
       t.fileSubSize,
       t.childCount,
       t.descendantCount,
-      t.estimatedTime + CASE t.isParallel
-        WHEN 0 THEN COALESCE(Sum(c.minimumTime), 0)
-        WHEN 1 THEN COALESCE(MAX(c.minimumTime), 0)
+      CASE t.isParallel
+        WHEN 0 THEN COALESCE(SUM(c.estimatedTime + c.minimumSubTime), 0)
+        WHEN 1 THEN COALESCE(MAX(c.estimatedTime + c.minimumSubTime), 0)
       END,
       COALESCE(SUM(c.estimatedTime + c.estimatedSubTime), 0),
       COALESCE(SUM(c.loggedTime + c.loggedSubTime), 0),
@@ -239,7 +239,7 @@ BEGIN
       COALESCE(COALESCE(COUNT(DISTINCT c.id), 0) + COALESCE(SUM(c.descendantCount), 0), 0)
     INTO
       currentParent,
-      currentMinimumTime,
+      currentMinimumSubTime,
       currentEstimatedSubTime,
       currentLoggedSubTime,
       currentEstimatedSubExpense,
@@ -248,7 +248,7 @@ BEGIN
       currentFileSubSize,
       currentChildCount,
       currentDescendantCount,
-      newMinimumTime,
+      newMinimumSubTime,
       newEstimatedSubTime,
       newLoggedSubTime,
       newEstimatedSubExpense,
@@ -276,7 +276,7 @@ BEGIN
     GROUP BY
       t.id;
 
-    IF currentMinimumTime <> newMinimumTime OR
+    IF currentMinimumSubTime <> newMinimumSubTime OR
       currentEstimatedSubTime <> newEstimatedSubTime OR
       currentLoggedSubTime <> newLoggedSubTime OR
       currentEstimatedSubExpense <> newEstimatedSubExpense OR
@@ -289,7 +289,7 @@ BEGIN
       UPDATE
         tasks
       SET
-        minimumTime=newMinimumTime,
+        minimumSubTime=newMinimumSubTime,
         estimatedSubTime=newEstimatedSubTime,
         loggedSubTime=newLoggedSubTime,
         estimatedSubExpense=newEstimatedSubExpense,
@@ -322,7 +322,7 @@ END //
 DELIMITER ;
 
 #useful helper query for manual verifying/debugging test results
-#SELECT  t1.name, t2.name AS parent, t3.name AS nextSibling, t4.name AS firstChild, t1.description, t1.minimumTime, t1.estimatedTime, t1.loggedTime, t1.estimatedSubTime, t1.loggedSubTime, t1.estimatedExpense, t1.loggedExpense, t1.estimatedSubExpense, t1.loggedSubExpense, t1.childCount, t1.descendantCount FROM trees_data.tasks t1 LEFT JOIN trees_data.tasks t2 ON t1.parent = t2.id LEFT JOIN trees_data.tasks t3 ON t1.nextSibling = t3.id LEFT JOIN trees_data.tasks t4 ON t1.firstChild = t4.id ORDER BY t1.name;
+#SELECT  t1.name, t2.name AS parent, t3.name AS nextSibling, t4.name AS firstChild, t1.description, t1.minimumSubTime, t1.estimatedTime, t1.loggedTime, t1.estimatedSubTime, t1.loggedSubTime, t1.estimatedExpense, t1.loggedExpense, t1.estimatedSubExpense, t1.loggedSubExpense, t1.childCount, t1.descendantCount FROM trees_data.tasks t1 LEFT JOIN trees_data.tasks t2 ON t1.parent = t2.id LEFT JOIN trees_data.tasks t3 ON t1.nextSibling = t3.id LEFT JOIN trees_data.tasks t4 ON t1.firstChild = t4.id ORDER BY t1.name;
 
 
 DROP USER IF EXISTS 'trees_data'@'%';

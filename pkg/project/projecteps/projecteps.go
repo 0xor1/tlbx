@@ -99,7 +99,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.EndOn, p.IsPublic)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, fileSubCount, fileSubSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.FileSubCount, p.FileSubSize, p.ChildCount, p.DescendantCount)
+				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, minimumSubTime, estimatedTime, loggedTime, estimatedSubTime, loggedSubTime, estimatedExpense, loggedExpense, estimatedSubExpense, loggedSubExpense, fileCount, fileSize, fileSubCount, fileSubSize, childCount, descendantCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.MinimumSubTime, p.EstimatedTime, p.LoggedTime, p.EstimatedSubTime, p.LoggedSubTime, p.EstimatedExpense, p.LoggedExpense, p.EstimatedSubExpense, p.LoggedSubExpense, p.FileCount, p.FileSize, p.FileSubCount, p.FileSubSize, p.ChildCount, p.DescendantCount)
 				PanicOn(err)
 				epsutil.LogActivity(tlbx, tx, me, p.ID, nil, p.ID, cnsts.TypeProject, cnsts.ActionCreated, ptr.String(p.Name), nil)
 				tx.Commit()
@@ -784,7 +784,7 @@ func getSet(tlbx app.Tlbx, args *project.Get, others bool) *project.GetRes {
 	res := &project.GetRes{
 		Set: make([]*project.Project, 0, args.Limit),
 	}
-	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
+	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumSubTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
 	queryArgs := make([]interface{}, 0, 14)
 	idsLen := len(args.IDs)
 	if !others {
@@ -868,7 +868,7 @@ func getSet(tlbx app.Tlbx, args *project.Get, others bool) *project.GetRes {
 				break
 			}
 			p := &project.Project{}
-			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.EndOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.FileSubCount, &p.FileSubSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
+			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.EndOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.MinimumSubTime, &p.EstimatedTime, &p.LoggedTime, &p.EstimatedSubTime, &p.LoggedSubTime, &p.EstimatedExpense, &p.LoggedExpense, &p.EstimatedSubExpense, &p.LoggedSubExpense, &p.FileCount, &p.FileSize, &p.FileSubCount, &p.FileSubSize, &p.ChildCount, &p.DescendantCount, &p.IsParallel))
 			res.Set = append(res.Set, p)
 		}
 	}, query.String(), queryArgs...))
