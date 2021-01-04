@@ -125,8 +125,8 @@
             },
             {
               name: "min time",
-              class: "minimumTime",
-              get: (p)=> this.$u.fmt.duration(p.minimumTime, p.hoursPerDay, p.daysPerWeek),
+              class: "minimumSubTime",
+              get: (p)=> this.$u.fmt.duration(p.estimatedTime + p.minimumSubTime, p.hoursPerDay, p.daysPerWeek),
               show: () => this.$root.show.times
             },
             {
@@ -166,9 +166,15 @@
               show: () => this.$root.show.files
             },
             {
-              name: "tasks",
+              name: "children",
               class: "tasks",
-              get: (p)=> p.descendantCount + 1,
+              get: (p)=> p.childCount,
+              show: () => this.$root.show.tasks
+            },
+            {
+              name: "descendants",
+              class: "tasks",
+              get: (p)=> p.descendantCount,
               show: () => this.$root.show.tasks
             }
           ],

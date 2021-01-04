@@ -20,8 +20,8 @@
       <div class="task">
         <h1 >{{task.name}}</h1>
         <p v-if="task.description != null">{{task.description}}</p>
-        <p>min time: {{$u.fmt.duration(task.minimumTime, project.hoursPerDay, project.daysPerWeek)}}</p>
         <p>is parallel: {{task.isParallel}}</p>
+        <p>min sub time: {{$u.fmt.duration(task.estimatedTime + task.minimumSubTime, project.hoursPerDay, project.daysPerWeek)}}</p>
         <table>
           <tr class="header">
             <th>
@@ -32,7 +32,7 @@
           </tr>
           <tr class="row">
             <td>
-              {{$u.fmt.ellipsis(task.name, 10)}}
+              this task
             </td>
             <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{ c.get(task) }}
@@ -40,7 +40,7 @@
           </tr>
           <tr class="row">
             <td>
-              subs
+              sub tasks
             </td>
             <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{ c.sub(task) }}
@@ -96,14 +96,6 @@
           moreComments: false,
           loadingMoreAncestors: false,
           commonCols: [
-            // {
-            //   name: "min time",
-            //   class: "minimumTime",
-            //   summary: (t)=> this.$u.fmt.duration(t.minimumTime, this.project.hoursPerDay, this.project.daysPerWeek),
-            //   get: (t)=> this.$u.fmt.duration(t.minimumTime, this.project.hoursPerDay, this.project.daysPerWeek),
-            //   sub: (t)=> this.$u.fmt.duration(t.minimumTime, this.project.hoursPerDay, this.project.daysPerWeek),
-            //   show: () => this.$root.show.times
-            // },
             {
               name: "est time",
               class: "estimatedTime",
