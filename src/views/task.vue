@@ -20,6 +20,41 @@
       <div class="task">
         <h1 >{{task.name}}</h1>
         <p v-if="task.description != null">{{task.description}}</p>
+        <p>min time: {{$u.fmt.duration(task.minimumTime, project.hoursPerDay, project.daysPerWeek)}}</p>
+        <p>is parallel: {{task.isParallel}}</p>
+        <table>
+          <tr class="header">
+            <th>
+            </th>
+            <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              {{c.name}}
+            </th>
+          </tr>
+          <tr class="row">
+            <td>
+              {{$u.fmt.ellipsis(task.name, 10)}}
+            </td>
+            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              {{ c.get(task) }}
+            </td>
+          </tr>
+          <tr class="row">
+            <td>
+              subs
+            </td>
+            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              {{ c.sub(task) }}
+            </td>
+          </tr>
+          <tr class="row">
+            <td>
+              summary
+            </td>
+            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              {{ c.summary(task) }}
+            </td>
+          </tr>
+        </table>
       </div>
       <div class="subs">
 
@@ -33,6 +68,11 @@
     name: 'tasks',
     data: function() {
       return this.initState()
+    },
+    computed: {
+      cols(){
+        return this.commonCols.filter(i => i.show())
+      }
     },
     methods: {
       initState(){
@@ -56,52 +96,68 @@
           moreComments: false,
           loadingMoreAncestors: false,
           commonCols: [
-            {
-              name: "min time",
-              class: "minimumTime",
-              get: (t)=> this.$u.fmt.duration(t.minimumTime, this.project.hoursPerDay, this.project.daysPerWeek),
-              show: () => this.$root.show.times
-            },
+            // {
+            //   name: "min time",
+            //   class: "minimumTime",
+            //   summary: (t)=> this.$u.fmt.duration(t.minimumTime, this.project.hoursPerDay, this.project.daysPerWeek),
+            //   get: (t)=> this.$u.fmt.duration(t.minimumTime, this.project.hoursPerDay, this.project.daysPerWeek),
+            //   sub: (t)=> this.$u.fmt.duration(t.minimumTime, this.project.hoursPerDay, this.project.daysPerWeek),
+            //   show: () => this.$root.show.times
+            // },
             {
               name: "est time",
               class: "estimatedTime",
-              get: (t)=> this.$u.fmt.duration(t.estimatedTime + t.estimatedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
+              summary: (t)=> this.$u.fmt.duration(t.estimatedTime + t.estimatedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
+              get: (t)=> this.$u.fmt.duration(t.estimatedTime, this.project.hoursPerDay, this.project.daysPerWeek),
+              sub: (t)=> this.$u.fmt.duration(t.estimatedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
               show: () => this.$root.show.times
             },
             {
               name: "log time",
               class: "loggedTime",
-              get: (t)=> this.$u.fmt.duration(t.loggedTime + t.loggedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
+              summary: (t)=> this.$u.fmt.duration(t.loggedTime + t.loggedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
+              get: (t)=> this.$u.fmt.duration(t.loggedTime, this.project.hoursPerDay, this.project.daysPerWeek),
+              sub: (t)=> this.$u.fmt.duration(t.loggedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
               show: () => this.$root.show.times
             },
             {
               name: "est exp",
               class: "estimatedExpense",
-              get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedExpense + t.estimatedSubExpense),
+              summary: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedExpense + t.estimatedSubExpense),
+              get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedExpense),
+              sub: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedSubExpense),
               show: () => this.$root.show.expenses
             },
             {
               name: "log exp",
               class: "loggedExpense",
-              get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.loggedExpense + t.loggedSubExpense),
+              summary: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.loggedExpense + t.loggedSubExpense),
+              get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.loggedExpense),
+              sub: (t)=> this.$u.fmt.cost(this.project.currencyCode,t.loggedSubExpense),
               show: () => this.$root.show.expenses
             },
             {
               name: "files",
               class: "fileCount",
-              get: (t)=> t.fileCount + t.fileSubCount,
+              summary: (t)=> t.fileCount + t.fileSubCount,
+              get: (t)=> t.fileCount,
+              sub: (t)=> t.fileSubCount,
               show: () => this.$root.show.files
             },
             {
               name: "file size",
               class: "fileSize",
-              get: (t) => this.$u.fmt.bytes(t.fileSize + t.fileSubSize),
+              summary: (t) => this.$u.fmt.bytes(t.fileSize + t.fileSubSize),
+              get: (t) => this.$u.fmt.bytes(t.fileSize),
+              sub: (t) => this.$u.fmt.bytes(t.fileSubSize),
               show: () => this.$root.show.files
             },
             {
               name: "tasks",
               class: "tasks",
-              get: (t)=> t.descendantCount + 1,
+              summary: (t)=> t.descendantCount + 1,
+              get: ()=> 1,
+              sub: (t)=> t.descendantCount,
               show: () => this.$root.show.tasks
             }
           ]
@@ -185,6 +241,14 @@ div.root {
     > .breadcrumb {
       white-space: nowrap;
       overflow-y: auto;
+    }
+    table {
+      margin: 1pc 0 1pc 0;
+      border-collapse: collapse;
+      th, td {
+        text-align: center;
+        min-width: 100px;
+      }
     }
   }
 }
