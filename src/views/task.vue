@@ -20,8 +20,13 @@
         <p>est time: <input :disabled="!$u.perm.canWrite(pMe)" type="text" v-model="estTime" placeholder="[#]h [#]m"></p>
         <table>
           <tr class="header">
-            <th>
+            <th rowspan="2">
             </th>
+            <th :colspan="s.cols.length" v-bind:class="s.name" v-for="(s, index) in sections" :key="index">
+              {{s.name}}
+            </th>
+          </tr>
+          <tr class="header">
             <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{c.name}}
             </th>
@@ -51,8 +56,15 @@
       return this.initState()
     },
     computed: {
+      sections(){
+        return this.subSummary.filter(i => i.show())
+      },
       cols(){
-        return this.commonCols.filter(i => i.show())
+        let res = []
+        this.sections.forEach((section)=>{
+          res = res.concat(section.cols)
+        })
+        return res
       }
     },
     methods: {
@@ -78,60 +90,65 @@
           comments: [],
           moreComments: false,
           loadingMoreAncestors: false,
-          commonCols: [
+          subSummary: [
             {
-              name: "min time",
-              class: "minimumTime",
-              get: (t)=> this.$u.fmt.duration(t.minimumSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
-              show: () => this.$root.show.times
+              name: "time",
+              show: () => this.$root.show.times,
+              cols: [
+                { name: "min",
+                  get: (t)=> this.$u.fmt.duration(t.minimumSubTime, this.project.hoursPerDay, this.project.daysPerWeek)                  
+                },
+                {
+                  name: "est",
+                  get: (t)=> this.$u.fmt.duration(t.estimatedSubTime, this.project.hoursPerDay, this.project.daysPerWeek)
+                },
+                {
+                  name: "log",
+                  get: (t)=> this.$u.fmt.duration(t.loggedSubTime, this.project.hoursPerDay, this.project.daysPerWeek)
+                }
+              ]
             },
             {
-              name: "est time",
-              class: "estimatedTime",
-              get: (t)=> this.$u.fmt.duration(t.estimatedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
-              show: () => this.$root.show.times
+              name: "expense",
+              show: () => this.$root.show.expenses,
+              cols: [
+                {
+                  name: "est",
+                  get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedSubExpense)
+                },
+                {
+                  name: "log",
+                  get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.loggedSubExpense)
+                }
+              ]
             },
             {
-              name: "log time",
-              class: "loggedTime",
-              get: (t)=> this.$u.fmt.duration(t.loggedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
-              show: () => this.$root.show.times
+              name: "file",
+              show: () => this.$root.show.files,
+              cols: [
+                {
+                  name: "count",
+                  get: (t)=> t.fileSubCount
+                },
+                {
+                  name: "size",
+                  get: (t)=> t.fileSubSize
+                }
+              ]
             },
             {
-              name: "est exp",
-              class: "estimatedExpense",
-              get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedSubExpense),
-              show: () => this.$root.show.expenses
-            },
-            {
-              name: "log exp",
-              class: "loggedExpense",
-              get: (t)=> this.$u.fmt.cost(this.project.currencyCode,t.loggedSubExpense),
-              show: () => this.$root.show.expenses
-            },
-            {
-              name: "files",
-              class: "fileCount",
-              get: (t)=> t.fileSubCount,
-              show: () => this.$root.show.files
-            },
-            {
-              name: "file size",
-              class: "fileSize",
-              get: (t) => this.$u.fmt.bytes(t.fileSubSize),
-              show: () => this.$root.show.files
-            },
-            {
-              name: "children",
-              class: "children",
-              get: (t) => t.childCount,
-              show: () => this.$root.show.tasks
-            },
-            {
-              name: "descendants",
-              class: "descendants",
-              get: (t) => t.descendantCount,
-              show: () => this.$root.show.tasks
+              name: "task",
+              show: () => this.$root.show.tasks,
+              cols: [
+                {
+                  name: "children",
+                  get: (t)=> t.childCount
+                },
+                {
+                  name: "descendants",
+                  get: (t)=> t.descendantCount
+                }
+              ]
             }
           ]
         }
