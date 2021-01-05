@@ -30,13 +30,16 @@ type Config struct {
 	ConfirmChangeEmailFmtLink string
 	StaticDir                 string
 	ContentSecurityPolicies   []string
-	Log                       log.Log
-	Email                     email.Client
-	Store                     store.Client
-	Cache                     iredis.Pool
-	User                      isql.ReplicaSet
-	Pwd                       isql.ReplicaSet
-	Data                      isql.ReplicaSet
+	RateLimit                 struct {
+		PerMinute int
+	}
+	Log   log.Log
+	Email email.Client
+	Store store.Client
+	Cache iredis.Pool
+	User  isql.ReplicaSet
+	Pwd   isql.ReplicaSet
+	Data  isql.ReplicaSet
 }
 
 func GetBase(file ...string) *config.Config {
@@ -76,6 +79,7 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("sql.connMaxLifetime", 5*time.Second)
 	c.SetDefault("sql.maxIdleConns", 50)
 	c.SetDefault("sql.maxOpenConns", 100)
+	c.SetDefault("rateLimit.perMinute", 300)
 
 	return c
 }
@@ -121,6 +125,7 @@ func GetProcessed(c *config.Config) *Config {
 	res.FromEmail = c.GetString("fromEmail")
 	res.ActivateFmtLink = c.GetString("activateFmtLink")
 	res.ConfirmChangeEmailFmtLink = c.GetString("confirmChangeEmailFmtLink")
+	res.RateLimit.PerMinute = c.GetInt("rateLimit.perMinute")
 
 	res.Session.Secure = c.GetBool("session.secure")
 	authKey64s := c.GetStringSlice("session.authKey64s")

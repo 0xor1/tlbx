@@ -18,10 +18,8 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
-	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
-	"github.com/0xor1/tlbx/pkg/web/server/realip"
 )
 
 const (
@@ -203,17 +201,7 @@ func NewRig(
 				config.Session.AuthKey64s,
 				config.Session.EncrKey32s,
 				config.Session.Secure),
-			ratelimit.Mware(func(c *ratelimit.Config) {
-				c.KeyGen = func(tlbx app.Tlbx) string {
-					var key string
-					if me.Exists(tlbx) {
-						key = me.Get(tlbx).String()
-					}
-					return Strf("rate-limiter-%s-%s", realip.RealIP(tlbx.Req()), key)
-				}
-				c.Pool = r.cache
-				c.PerMinute = 1000000 // when running batch tests 120 rate limit is easily exceeded
-			}),
+			ratelimit.MeMware(r.cache, 1000000),
 			service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store),
 		}
 		c.Endpoints = eps
