@@ -27,7 +27,7 @@ func main() {
 				config.Session.AuthKey64s,
 				config.Session.EncrKey32s,
 				config.Session.Secure),
-			ratelimit.MeMware(config.Cache),
+			ratelimit.MeMware(config.Cache, config.RateLimit.PerMinute),
 			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),
 		}
 		c.Log = config.Log
