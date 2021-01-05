@@ -13,7 +13,8 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-func MeMware(cache iredis.Pool) func(app.Tlbx) {
+func MeMware(cache iredis.Pool, perMinute ...int) func(app.Tlbx) {
+	PanicIf(len(perMinute) != 0 && perMinute[0] < 1, "perMinute must be >= 1")
 	return Mware(func(c *Config) {
 		c.KeyGen = func(tlbx app.Tlbx) string {
 			var key string
@@ -23,6 +24,9 @@ func MeMware(cache iredis.Pool) func(app.Tlbx) {
 			return Strf("rate-limiter-%s-%s", realip.RealIP(tlbx.Req()), key)
 		}
 		c.Pool = cache
+		if len(perMinute) != 0 {
+			c.PerMinute = perMinute[0]
+		}
 	})
 }
 
@@ -125,7 +129,7 @@ type Config struct {
 func config(configs ...func(*Config)) *Config {
 	c := &Config{
 		KeyGen:      nil,
-		PerMinute:   120,
+		PerMinute:   300,
 		ExitOnError: false,
 		Pool:        nil,
 	}
