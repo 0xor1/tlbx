@@ -120,6 +120,18 @@
               class: "fileSize",
               get: (t) => this.$u.fmt.bytes(t.fileSubSize),
               show: () => this.$root.show.files
+            },
+            {
+              name: "children",
+              class: "children",
+              get: (t) => t.childCount,
+              show: () => this.$root.show.tasks
+            },
+            {
+              name: "descendants",
+              class: "descendants",
+              get: (t) => t.descendantCount,
+              show: () => this.$root.show.tasks
             }
           ]
         }
