@@ -10,18 +10,14 @@
           /
         </span>
         <span v-for="a in ancestors" :key="a.id">
-          <a :title="a.name" :href="'/#/host/'+$u.rtr.host()+'/project/'+$u.rtr.project()+'/task/'+a.id">{{$u.fmt.ellipsis(a.name, 10)}}</a>
-          /           
-        </span>
-        <span>
-          <a :title="task.name" :href="'/#/host/'+$u.rtr.host()+'/project/'+$u.rtr.project()+'/task/'+task.id">{{$u.fmt.ellipsis(task.name, 10)}}</a>   
+          <a :title="a.name" :href="'/#/host/'+$u.rtr.host()+'/project/'+$u.rtr.project()+'/task/'+a.id">{{$u.fmt.ellipsis(a.name, 20)}}</a>      
         </span>
       </div>
       <div class="task">
-        <h1 >{{task.name}}</h1>
+        <h1>{{task.name}}</h1>
         <p v-if="task.description != null">{{task.description}}</p>
-        <p>is parallel: {{task.isParallel}}</p>
-        <p>min sub time: {{$u.fmt.duration(task.estimatedTime + task.minimumSubTime, project.hoursPerDay, project.daysPerWeek)}}</p>
+        <p>parallel: <input :disabled="!$u.perm.canWrite(pMe)" type="checkbox" v-model="task.isParallel"></p>
+        <p>est time: <input :disabled="!$u.perm.canWrite(pMe)" type="text" v-model="estTime" placeholder="[#]h [#]m"></p>
         <table>
           <tr class="header">
             <th>
@@ -31,27 +27,12 @@
             </th>
           </tr>
           <tr class="row">
+          <tr class="row">
             <td>
-              this task
+              sub task summary
             </td>
             <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{ c.get(task) }}
-            </td>
-          </tr>
-          <tr class="row">
-            <td>
-              sub tasks
-            </td>
-            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
-              {{ c.sub(task) }}
-            </td>
-          </tr>
-          <tr class="row">
-            <td>
-              summary
-            </td>
-            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
-              {{ c.summary(task) }}
             </td>
           </tr>
         </table>
@@ -77,6 +58,7 @@
     methods: {
       initState(){
         return {
+          updating: false,
           loading: true,
           me: null,
           project: null,
@@ -84,6 +66,7 @@
           ancestors: [],
           moreAncestors: false,
           task: null,
+          estTime: "0m",
           children: [],
           moreChildren: false,
           times: [],
@@ -97,60 +80,46 @@
           loadingMoreAncestors: false,
           commonCols: [
             {
+              name: "min time",
+              class: "minimumTime",
+              get: (t)=> this.$u.fmt.duration(t.minimumSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
+              show: () => this.$root.show.times
+            },
+            {
               name: "est time",
               class: "estimatedTime",
-              summary: (t)=> this.$u.fmt.duration(t.estimatedTime + t.estimatedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
-              get: (t)=> this.$u.fmt.duration(t.estimatedTime, this.project.hoursPerDay, this.project.daysPerWeek),
-              sub: (t)=> this.$u.fmt.duration(t.estimatedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
+              get: (t)=> this.$u.fmt.duration(t.estimatedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
               show: () => this.$root.show.times
             },
             {
               name: "log time",
               class: "loggedTime",
-              summary: (t)=> this.$u.fmt.duration(t.loggedTime + t.loggedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
-              get: (t)=> this.$u.fmt.duration(t.loggedTime, this.project.hoursPerDay, this.project.daysPerWeek),
-              sub: (t)=> this.$u.fmt.duration(t.loggedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
+              get: (t)=> this.$u.fmt.duration(t.loggedSubTime, this.project.hoursPerDay, this.project.daysPerWeek),
               show: () => this.$root.show.times
             },
             {
               name: "est exp",
               class: "estimatedExpense",
-              summary: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedExpense + t.estimatedSubExpense),
-              get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedExpense),
-              sub: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedSubExpense),
+              get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedSubExpense),
               show: () => this.$root.show.expenses
             },
             {
               name: "log exp",
               class: "loggedExpense",
-              summary: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.loggedExpense + t.loggedSubExpense),
-              get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.loggedExpense),
-              sub: (t)=> this.$u.fmt.cost(this.project.currencyCode,t.loggedSubExpense),
+              get: (t)=> this.$u.fmt.cost(this.project.currencyCode,t.loggedSubExpense),
               show: () => this.$root.show.expenses
             },
             {
               name: "files",
               class: "fileCount",
-              summary: (t)=> t.fileCount + t.fileSubCount,
-              get: (t)=> t.fileCount,
-              sub: (t)=> t.fileSubCount,
+              get: (t)=> t.fileSubCount,
               show: () => this.$root.show.files
             },
             {
               name: "file size",
               class: "fileSize",
-              summary: (t) => this.$u.fmt.bytes(t.fileSize + t.fileSubSize),
-              get: (t) => this.$u.fmt.bytes(t.fileSize),
-              sub: (t) => this.$u.fmt.bytes(t.fileSubSize),
+              get: (t) => this.$u.fmt.bytes(t.fileSubSize),
               show: () => this.$root.show.files
-            },
-            {
-              name: "tasks",
-              class: "tasks",
-              summary: (t)=> t.descendantCount + 1,
-              get: ()=> 1,
-              sub: (t)=> t.descendantCount,
-              show: () => this.$root.show.tasks
             }
           ]
         }
@@ -172,6 +141,7 @@
             })
             mapi.task.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((t)=>{
               this.task = t
+              this.estTime = this.$u.fmt.duration(t.estimatedTime, this.project.hoursPerDay, this.project.daysPerWeek)
             })
             mapi.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
               this.children = res.set

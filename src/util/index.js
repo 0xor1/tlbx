@@ -50,6 +50,11 @@ export default {
                     return nullOr(self.$router.currentRoute.params.task)
                 }
             },
+            perm: {
+                canAdmin: (pMe) => pMe != null && pMe.isActive === true && pMe.role < 1,
+                canWrite: (pMe) => pMe != null && pMe.isActive === true && pMe.role < 2,
+                canRead: (pMe) => pMe != null && pMe.isActive === true && pMe.role < 3
+            },
             fmt: {
                 ellipsis(txt, len) {
                     if (len == null || len < 3) {
@@ -63,6 +68,8 @@ export default {
                 },
                 role(r) {
                     switch (r) {
+                        case null:
+                            return 'none'
                         case 0:
                             return 'admin'
                         case 1:
