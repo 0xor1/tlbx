@@ -14,10 +14,16 @@
         </span>
       </div>
       <div class="task">
-        <h1>{{task.name}}</h1>
-        <p v-if="task.description != null">{{task.description}}</p>
+        <h1><input :disabled="pMe == null || pMe.id != $u.rtr.host()" type="text" v-model="task.name"></h1>
+        <textarea style="" :disabled="!$u.perm.canWrite(pMe)" v-model="task.description" placeholder="description"></textarea>
+        <p>created by: <user :userId="task.createdBy"></user></p>
+        <p>created on: {{$u.fmt.datetime(task.createdOn)}}</p>
+        <p>assignee: <user :userId="task.user"></user></p>
         <p>parallel: <input :disabled="!$u.perm.canWrite(pMe)" type="checkbox" v-model="task.isParallel"></p>
         <p>est time: <input :disabled="!$u.perm.canWrite(pMe)" type="text" v-model="estTime" placeholder="[#]h [#]m"></p>
+        <p>log time: {{$u.fmt.duration(task.loggedTime, project.hoursPerDay, project.daysPerWeek)}}</p>
+        <p>est exp: <input :disabled="!$u.perm.canWrite(pMe)" type="text" v-model="estExp" placeholder="0.00"></p>
+        <p>log exp: {{$u.fmt.cost(project.currencyCode, task.loggedExpense)}}</p>
         <table>
           <tr class="header">
             <th rowspan="2">
@@ -31,7 +37,6 @@
               {{c.name}}
             </th>
           </tr>
-          <tr class="row">
           <tr class="row">
             <td>
               sub task summary
@@ -50,8 +55,10 @@
 </template>
 
 <script>
+  import user from '../components/user'
   export default {
     name: 'tasks',
+    components: {user},
     data: function() {
       return this.initState()
     },
@@ -79,6 +86,7 @@
           moreAncestors: false,
           task: null,
           estTime: "0m",
+          estExp: "0.00",
           children: [],
           moreChildren: false,
           times: [],
@@ -171,6 +179,7 @@
             mapi.task.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((t)=>{
               this.task = t
               this.estTime = this.$u.fmt.duration(t.estimatedTime, this.project.hoursPerDay, this.project.daysPerWeek)
+              this.estExp = this.$u.fmt.cost(this.project.currencyCode, t.estimatedExpense)
             })
             mapi.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
               this.children = res.set
@@ -225,13 +234,25 @@
   }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 div.root {
   padding: 2.6pc 0 0 1.3pc;
   > .content{
     > .breadcrumb {
       white-space: nowrap;
       overflow-y: auto;
+    }
+    h1 input {
+      font-size: 2pc;
+      font-weight: bold;
+      width: 30pc;
+    }
+    textarea {
+      width: 30pc;
+      height: 4pc;
+    }
+    p {
+      margin: 0.5pc 0;
     }
     table {
       margin: 1pc 0 1pc 0;

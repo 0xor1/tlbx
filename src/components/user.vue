@@ -31,6 +31,10 @@
         })
       },
       goto() {
+        if (this.$u.rtr.project() != null && this.$u.rtr.name() != "projectUser") {
+          this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/user/${this.userId}`)
+          return
+        }
         this.$u.rtr.goto(`/host/${this.userId}/projects`)
       }
     },
@@ -41,7 +45,8 @@
 </script>
 
 <style scoped lang="scss">
-div {
+div.root {
+  padding: 0;
   display: inline-block;
 }
 </style>

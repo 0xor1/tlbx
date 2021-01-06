@@ -86,6 +86,12 @@ export default {
                     }
                     return self.$dayjs(dt).format('YYYY-MM-DD')
                 },
+                datetime(dt) {
+                    if (dt == null) {
+                        return ""
+                    }
+                    return self.$dayjs(dt).format('YYYY-MM-DD HH:mm')
+                },
                 duration(minutes, hoursPerDay, daysPerWeek) {
                     // hoursPerDay and daysPerWeek are optional, if they arent passed
                     // or are passed as zero just show hours and minutes

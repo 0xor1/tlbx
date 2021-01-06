@@ -270,5 +270,8 @@ input, button {
     &::placeholder{
         color: $inputPlaceholderColor;
     }
+    &:disabled {
+      background-color: $bgColor;
+    }
 }
 </style>

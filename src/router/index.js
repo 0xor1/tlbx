@@ -5,6 +5,7 @@ import confirmChangeEmail from '../views/confirmChangeEmail.vue'
 import register from '../views/register.vue'
 import login from '../views/login.vue'
 import projects from '../views/projects.vue'
+import projectUser from '../views/projectUser.vue'
 import task from '../views/task.vue'
 import api from '@/api'
 
@@ -71,6 +72,11 @@ const routes = [
     path: '/host/:host/projects',
     name: 'projects',
     component: projects
+  },
+  {
+    path: '/host/:host/project/:project/user/:user',
+    name: 'projectUser',
+    component: projectUser
   },
   {
     path: '/host/:host/project/:project/task/:task',
