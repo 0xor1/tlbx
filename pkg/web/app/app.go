@@ -374,6 +374,7 @@ func config(configs ...func(*Config)) *Config {
 type ActionStats struct {
 	Milli  int64  `json:"ms"`
 	Type   string `json:"type"`
+	Name   string `json:"name"`
 	Action string `json:"action"`
 }
 
@@ -392,7 +393,7 @@ func (r *reqStats) String() string {
 	}
 	queries := make([]string, 0, len(r.Queries))
 	for _, q := range r.Queries {
-		queries = append(queries, Strf("%s\t%dms\t%s", q.Type, q.Milli, q.Action))
+		queries = append(queries, Strf("%s\t%s\t%dms\t%s", q.Type, q.Name, q.Milli, q.Action))
 	}
 	return Strf("%s\n%s", basic, strings.Join(queries, "\n"))
 }

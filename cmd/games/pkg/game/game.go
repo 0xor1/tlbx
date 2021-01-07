@@ -1,7 +1,6 @@
 package game
 
 import (
-	"database/sql"
 	"math/rand"
 	"sync"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	comsql "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/gomodule/redigo/redis"
@@ -187,7 +187,7 @@ func Get(tlbx app.Tlbx, gameType string, game ID, updatedAfter *time.Time, dst G
 	return read(tlbx, nil, false, gameType, game, updatedAfter, dst)
 }
 
-func read(tlbx app.Tlbx, tx service.Tx, forUpdate bool, gameType string, game ID, updatedAfter *time.Time, dst Game) Game {
+func read(tlbx app.Tlbx, tx sql.Tx, forUpdate bool, gameType string, game ID, updatedAfter *time.Time, dst Game) Game {
 	PanicIf(forUpdate && tx == nil, "tx required forUpdate get call")
 	PanicIf(forUpdate && updatedAfter != nil, "updatedAfter should not be passed on forUpdate calls")
 	PanicIf(!forUpdate && tx != nil, "tx must be nil if it is a not forUpdate get call")
@@ -219,7 +219,7 @@ func read(tlbx app.Tlbx, tx service.Tx, forUpdate bool, gameType string, game ID
 	return dst
 }
 
-func update(tlbx app.Tlbx, tx service.Tx, gameType string, game Game) {
+func update(tlbx app.Tlbx, tx sql.Tx, gameType string, game Game) {
 	base := game.GetBase()
 	base.UpdatedOn = NowMilli()
 	base.MyID = nil
@@ -242,7 +242,7 @@ func DeleteOutdated(exec func(query string, args ...interface{}), delay time.Dur
 	lastDeleteOutdatedCalledOn = Now()
 }
 
-func getUsersActiveGame(tlbx app.Tlbx, tx service.Tx, forUpdate bool, gameType string, dst Game) (Game, string) {
+func getUsersActiveGame(tlbx app.Tlbx, tx sql.Tx, forUpdate bool, gameType string, dst Game) (Game, string) {
 	PanicIf(forUpdate && tx == nil, "tx required forUpdate get call")
 	PanicIf(!forUpdate && tx != nil, "tx must be nil if it is a not forUpdate get call")
 	buf := make([]byte, 0, 5*app.KB)
@@ -258,7 +258,7 @@ func getUsersActiveGame(tlbx app.Tlbx, tx service.Tx, forUpdate bool, gameType s
 		}
 		gotType := ""
 		err := row.Scan(&gotType, &buf)
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil && err != isql.ErrNoRows {
 			PanicOn(err)
 		}
 		// if we dont care what type we want

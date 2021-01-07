@@ -12,6 +12,12 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+var (
+	ErrNoRows   = sql.ErrNoRows
+	ErrConnDone = sql.ErrConnDone
+	ErrTxDone   = sql.ErrTxDone
+)
+
 func NewOpener() Opener {
 	return &opener{}
 }

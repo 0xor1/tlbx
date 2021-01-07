@@ -2,7 +2,6 @@ package usereps
 
 import (
 	"bytes"
-	"database/sql"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -23,6 +22,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
@@ -762,7 +762,7 @@ type fullUser struct {
 	LastPwdResetOn  *time.Time
 }
 
-func getUser(tx service.Tx, email *string, id *ID) *fullUser {
+func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 	PanicIf(email == nil && id == nil, "one of email or id must not be nil")
 	query := `SELECT id, email, handle, alias, hasAvatar, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn FROM users WHERE `
 	var arg interface{}
@@ -776,14 +776,14 @@ func getUser(tx service.Tx, email *string, id *ID) *fullUser {
 	row := tx.QueryRow(query, arg)
 	res := &fullUser{}
 	err := row.Scan(&res.ID, &res.Email, &res.Handle, &res.Alias, &res.HasAvatar, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
-	if err == sql.ErrNoRows {
+	if err == isql.ErrNoRows {
 		return nil
 	}
 	PanicOn(err)
 	return res
 }
 
-func updateUser(tx service.Tx, user *fullUser) {
+func updateUser(tx sql.Tx, user *fullUser) {
 	_, err := tx.Exec(`UPDATE users SET email=?, handle=?, alias=?, hasAvatar=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.Handle, user.Alias, user.HasAvatar, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
 	PanicOn(err)
 }
@@ -801,14 +801,14 @@ func getPwd(srv service.Layer, id ID) *pwd {
 	row := srv.Pwd().QueryRow(`SELECT id, salt, pwd, n, r, p FROM pwds WHERE id=?`, id)
 	res := &pwd{}
 	err := row.Scan(&res.ID, &res.Salt, &res.Pwd, &res.N, &res.R, &res.P)
-	if err == sql.ErrNoRows {
+	if err == isql.ErrNoRows {
 		return nil
 	}
 	PanicOn(err)
 	return res
 }
 
-func setPwd(tlbx app.Tlbx, pwdtx service.Tx, id ID, pwd, confirmPwd string) {
+func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd, confirmPwd string) {
 	app.BadReqIf(pwd != confirmPwd, "pwds do not match")
 	validate.Str("pwd", pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
 	salt := crypt.Bytes(scryptSaltLen)
