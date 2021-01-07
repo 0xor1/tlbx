@@ -8,20 +8,21 @@ import (
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	"github.com/0xor1/tlbx/pkg/web/app/sql"
+	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/trees/pkg/cnsts"
 )
 
-func SetAncestralChainAggregateValuesFromTask(tx service.Tx, host, project, task ID) IDs {
+func SetAncestralChainAggregateValuesFromTask(tx sql.Tx, host, project, task ID) IDs {
 	return setAncestralChainAggregateValuesFrom(tx, host, project, task, false)
 }
 
-func SetAncestralChainAggregateValuesFromParentOfTask(tx service.Tx, host, project, task ID) IDs {
+func SetAncestralChainAggregateValuesFromParentOfTask(tx sql.Tx, host, project, task ID) IDs {
 	return setAncestralChainAggregateValuesFrom(tx, host, project, task, true)
 }
 
-func setAncestralChainAggregateValuesFrom(tx service.Tx, host, project, task ID, parentOfTask bool) IDs {
+func setAncestralChainAggregateValuesFrom(tx sql.Tx, host, project, task ID, parentOfTask bool) IDs {
 	var qry string
 	qryArgs := make([]interface{}, 0, 5)
 	qryArgs = append(qryArgs, host, project)
@@ -43,14 +44,14 @@ func setAncestralChainAggregateValuesFrom(tx service.Tx, host, project, task ID,
 	return ancestorChain
 }
 
-func MustGetRole(tlbx app.Tlbx, tx service.Tx, host, project ID, user ID) cnsts.Role {
+func MustGetRole(tlbx app.Tlbx, tx sql.Tx, host, project ID, user ID) cnsts.Role {
 	if host.Equal(user) {
 		return cnsts.RoleAdmin
 	}
 	var role cnsts.Role
 	row := tx.QueryRow(`SELECT role FROM users WHERE host=? AND project=? AND id=? AND isActive=1`, host, project, user)
 	err := row.Scan(&role)
-	app.ReturnIf(sql.IsNoRows(err), http.StatusForbidden, "")
+	app.ReturnIf(sqlh.IsNoRows(err), http.StatusForbidden, "")
 	PanicOn(err)
 	return role
 }
@@ -65,7 +66,7 @@ func MustHaveAccess(tlbx app.Tlbx, host, project ID, user *ID, role cnsts.Role) 
 	if !userExist || role == cnsts.RoleReader {
 		row := srv.Data().QueryRow(`SELECT isPublic FROM projects WHERE host=? AND id=?`, host, project)
 		isPublic := false
-		sql.PanicIfIsntNoRows(row.Scan(&isPublic))
+		sqlh.PanicIfIsntNoRows(row.Scan(&isPublic))
 		if isPublic {
 			return
 		}
@@ -75,7 +76,7 @@ func MustHaveAccess(tlbx app.Tlbx, host, project ID, user *ID, role cnsts.Role) 
 
 	row := srv.Data().QueryRow(`SELECT 1 FROM users WHERE host=? AND project=? AND id=? AND role<=? AND isActive=1`, host, project, *user, role)
 	hasAccess := false
-	sql.PanicIfIsntNoRows(row.Scan(&hasAccess))
+	sqlh.PanicIfIsntNoRows(row.Scan(&hasAccess))
 	app.ReturnIf(!hasAccess, http.StatusForbidden, "")
 }
 
@@ -89,17 +90,17 @@ func IMustHaveAccess(tlbx app.Tlbx, host, project ID, role cnsts.Role) {
 	MustHaveAccess(tlbx, host, project, mePtr, role)
 }
 
-func MustLockProject(tx service.Tx, host, id ID) {
+func MustLockProject(tx sql.Tx, host, id ID) {
 	projectExists := false
 	row := tx.QueryRow(`SELECT COUNT(*)=1 FROM projectLocks WHERE host=? AND id=? FOR UPDATE`, host, id)
-	sql.PanicIfIsntNoRows(row.Scan(&projectExists))
+	sqlh.PanicIfIsntNoRows(row.Scan(&projectExists))
 	app.ReturnIf(!projectExists, http.StatusNotFound, "no such project")
 }
 
-func TaskMustExist(tx service.Tx, host, project, id ID) {
+func TaskMustExist(tx sql.Tx, host, project, id ID) {
 	taskExists := false
 	row := tx.QueryRow(`SELECT COUNT(*)=1 FROM tasks WHERE host=? AND project=? AND id=?`, host, project, id)
-	sql.PanicIfIsntNoRows(row.Scan(&taskExists))
+	sqlh.PanicIfIsntNoRows(row.Scan(&taskExists))
 	app.ReturnIf(!taskExists, http.StatusNotFound, "task not found")
 }
 
@@ -115,7 +116,7 @@ func StorePrefix(host ID, projectAndOrTask ...ID) string {
 	return prefix
 }
 
-func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project ID, task *ID, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}) {
+func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project ID, task *ID, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}) {
 	me := me.Get(tlbx)
 	var ei *string
 	if extraInfo != nil {
@@ -147,7 +148,7 @@ func LogActivity(tlbx app.Tlbx, tx service.Tx, host, project ID, task *ID, item 
 	}
 }
 
-func ActivityItemRename(tx service.Tx, host, project, item ID, newItemName string, isTask bool) {
+func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, isTask bool) {
 	var qry string
 	// keep all projectActivity entries itemName values up to date
 	if isTask {

@@ -11,8 +11,9 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	"github.com/0xor1/tlbx/pkg/web/app/sql"
+	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/0xor1/trees/pkg/cnsts"
 	"github.com/0xor1/trees/pkg/epsutil"
@@ -224,7 +225,7 @@ var (
 						args.CreatedOnMin.After(*args.CreatedOnMax),
 					"createdOnMin must be before createdOnMax")
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
-				args.Limit = sql.Limit100(args.Limit)
+				args.Limit = sqlh.Limit100(args.Limit)
 				res := &expense.GetRes{
 					Set:  make([]*expense.Expense, 0, args.Limit),
 					More: false,
@@ -233,8 +234,8 @@ var (
 				qryArgs := make([]interface{}, 0, len(args.IDs)+8)
 				qryArgs = append(qryArgs, args.Host, args.Project)
 				if len(args.IDs) > 0 {
-					qry.WriteString(sql.InCondition(true, `id`, len(args.IDs)))
-					qry.WriteString(sql.OrderByField(`id`, len(args.IDs)))
+					qry.WriteString(sqlh.InCondition(true, `id`, len(args.IDs)))
+					qry.WriteString(sqlh.OrderByField(`id`, len(args.IDs)))
 					ids := args.IDs.ToIs()
 					qryArgs = append(qryArgs, ids...)
 					qryArgs = append(qryArgs, ids...)
@@ -256,10 +257,10 @@ var (
 						qryArgs = append(qryArgs, *args.CreatedBy)
 					}
 					if args.After != nil {
-						qry.WriteString(Strf(` AND createdOn %s= (SELECT t.createdOn FROM expenses t WHERE t.host=? AND t.project=? AND t.id=?) AND id <> ?`, sql.GtLtSymbol(*args.Asc)))
+						qry.WriteString(Strf(` AND createdOn %s= (SELECT t.createdOn FROM expenses t WHERE t.host=? AND t.project=? AND t.id=?) AND id <> ?`, sqlh.GtLtSymbol(*args.Asc)))
 						qryArgs = append(qryArgs, args.Host, args.Project, *args.After, *args.After)
 					}
-					qry.WriteString(sql.OrderLimit100(`createdOn`, *args.Asc, args.Limit))
+					qry.WriteString(sqlh.OrderLimit100(`createdOn`, *args.Asc, args.Limit))
 				}
 				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
@@ -289,10 +290,10 @@ var (
 	}
 )
 
-func getOne(tx service.Tx, host, project, task, id ID) *expense.Expense {
+func getOne(tx sql.Tx, host, project, task, id ID) *expense.Expense {
 	row := tx.QueryRow(`SELECT task, id, createdBy, createdOn, cost, note FROM expenses WHERE host=? AND project=? AND task=? AND id=?`, host, project, task, id)
 	t, err := Scan(row)
-	sql.PanicIfIsntNoRows(err)
+	sqlh.PanicIfIsntNoRows(err)
 	return t
 }
 

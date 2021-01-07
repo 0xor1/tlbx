@@ -11,8 +11,9 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	"github.com/0xor1/tlbx/pkg/web/app/sql"
+	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/0xor1/trees/pkg/cnsts"
 	"github.com/0xor1/trees/pkg/comment"
@@ -178,7 +179,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*comment.Get)
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
-				args.Limit = sql.Limit100(args.Limit)
+				args.Limit = sqlh.Limit100(args.Limit)
 				res := &comment.GetRes{
 					Set:  make([]*comment.Comment, 0, args.Limit),
 					More: false,
@@ -194,7 +195,7 @@ var (
 					qry.WriteString(` AND createdOn <= (SELECT c.createdOn FROM comments c WHERE c.host=? AND c.project=? AND c.id=?) AND id <> ?`)
 					qryArgs = append(qryArgs, args.Host, args.Project, *args.After, *args.After)
 				}
-				qry.WriteString(sql.OrderLimit100(`createdOn`, false, args.Limit))
+				qry.WriteString(sqlh.OrderLimit100(`createdOn`, false, args.Limit))
 				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
@@ -223,10 +224,10 @@ var (
 	}
 )
 
-func getOne(tx service.Tx, host, project, task, id ID) *comment.Comment {
+func getOne(tx sql.Tx, host, project, task, id ID) *comment.Comment {
 	row := tx.QueryRow(`SELECT task, id, createdBy, createdOn, body FROM comments WHERE host=? AND project=? AND task=? AND id=?`, host, project, task, id)
 	t, err := Scan(row)
-	sql.PanicIfIsntNoRows(err)
+	sqlh.PanicIfIsntNoRows(err)
 	return t
 }
 

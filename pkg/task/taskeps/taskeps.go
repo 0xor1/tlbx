@@ -11,8 +11,9 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	"github.com/0xor1/tlbx/pkg/web/app/sql"
+	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/0xor1/trees/pkg/cnsts"
 	"github.com/0xor1/trees/pkg/epsutil"
@@ -409,7 +410,7 @@ var (
 					queryArgs := make([]interface{}, 0, len(tasksToDelete)+2)
 					queryArgs = append(queryArgs, args.Host, args.Project)
 					queryArgs = append(queryArgs, tasksToDelete.ToIs()...)
-					_, err := tx.Exec(Strf(`DELETE FROM tasks WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(tasksToDelete))), queryArgs...)
+					_, err := tx.Exec(Strf(`DELETE FROM tasks WHERE host=? AND project=? %s`, sqlh.InCondition(true, `id`, len(tasksToDelete))), queryArgs...)
 					PanicOn(err)
 					_, err = tx.Exec(`UPDATE tasks SET firstChild=?, nextSibling=? WHERE host=? AND project=? AND id=?`, previousNode.FirstChild, previousNode.NextSibling, args.Host, args.Project, previousNode.ID)
 					PanicOn(err)
@@ -417,7 +418,7 @@ var (
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, nil, nil)
 
 					// first get all time/expense/file/comment ids being deleted then
-					sql_in_tasks := sql.InCondition(true, `task`, len(tasksToDelete))
+					sql_in_tasks := sqlh.InCondition(true, `task`, len(tasksToDelete))
 					toDelete := make(IDs, 0, 50)
 					scanToDelete := func(rows isql.Rows) {
 						for rows.Next() {
@@ -436,7 +437,7 @@ var (
 						filesArgs := make([]interface{}, 0, len(tasksWithFiles)+2)
 						filesArgs = append(filesArgs, args.Host, args.Project)
 						filesArgs = append(filesArgs, tasksWithFiles.ToIs()...)
-						sql_in_tasks_with_files := sql.InCondition(true, `task`, len(tasksWithFiles))
+						sql_in_tasks_with_files := sqlh.InCondition(true, `task`, len(tasksWithFiles))
 						PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM files WHERE host=? AND project=? %s`, sql_in_tasks_with_files), filesArgs...))
 						_, err = tx.Exec(Strf(`DELETE FROM files WHERE host=? AND project=? %s`, sql_in_tasks_with_files), filesArgs...)
 						PanicOn(err)
@@ -447,7 +448,7 @@ var (
 
 					// set all relevant activity logs as itemHasBeenDeleted=1
 					queryArgs = append(queryArgs, toDelete.ToIs()...)
-					_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? %s`, sql.InCondition(true, `item`, len(queryArgs)-2)), queryArgs...)
+					_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? %s`, sqlh.InCondition(true, `item`, len(queryArgs)-2)), queryArgs...)
 					PanicOn(err)
 
 					for _, t := range tasksWithFiles {
@@ -516,7 +517,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.GetAncestors)
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
-				args.Limit = sql.Limit100(args.Limit)
+				args.Limit = sqlh.Limit100(args.Limit)
 				res := &task.GetSetRes{
 					Set:  make([]*task.Task, 0, args.Limit),
 					More: false,
@@ -565,7 +566,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.GetChildren)
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
-				args.Limit = sql.Limit100(args.Limit)
+				args.Limit = sqlh.Limit100(args.Limit)
 				res := &task.GetSetRes{
 					Set:  make([]*task.Task, 0, args.Limit),
 					More: false,
@@ -630,17 +631,17 @@ var (
 	}
 )
 
-func getOne(tx service.Tx, host, project, id ID) *task.Task {
+func getOne(tx sql.Tx, host, project, id ID) *task.Task {
 	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND id=?`, Sql_task_columns_prefixed), host, project, id)
 	t, err := Scan(row)
-	sql.PanicIfIsntNoRows(err)
+	sqlh.PanicIfIsntNoRows(err)
 	return t
 }
 
-func getPreviousSibling(tx service.Tx, host, project, nextSibling ID) *task.Task {
+func getPreviousSibling(tx sql.Tx, host, project, nextSibling ID) *task.Task {
 	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.nextSibling=?`, Sql_task_columns_prefixed), host, project, nextSibling)
 	t, err := Scan(row)
-	sql.PanicIfIsntNoRows(err)
+	sqlh.PanicIfIsntNoRows(err)
 	return t
 }
 
