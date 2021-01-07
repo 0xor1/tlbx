@@ -6,6 +6,7 @@ USE trees_data;
 
 #BIGINT UNSIGNED duration values are all in units of minutes
 #BIGINT UNSIGNED fileSize values are all in units of bytes
+## abbreviations used est=estimate inc=incurred sub=subtask(s) and N suffix means count
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users(
@@ -85,21 +86,21 @@ CREATE TABLE tasks(
   description VARCHAR(1250) NOT NULL,
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
-  minimumSubTime BIGINT UNSIGNED NOT NULL,
-  estimatedTime BIGINT UNSIGNED NOT NULL,
-  loggedTime BIGINT UNSIGNED NOT NULL,
-  estimatedSubTime BIGINT UNSIGNED NOT NULL,
-  loggedSubTime BIGINT UNSIGNED NOT NULL,
-  estimatedExpense BIGINT UNSIGNED NOT NULL,
-  loggedExpense BIGINT UNSIGNED NOT NULL,
-  estimatedSubExpense BIGINT UNSIGNED NOT NULL,
-  loggedSubExpense BIGINT UNSIGNED NOT NULL,
-  fileCount BIGINT UNSIGNED NOT NULL,
+  timeEst BIGINT UNSIGNED NOT NULL,
+  timeInc BIGINT UNSIGNED NOT NULL,
+  timeSubMin BIGINT UNSIGNED NOT NULL,
+  timeSubEst BIGINT UNSIGNED NOT NULL,
+  timeSubInc BIGINT UNSIGNED NOT NULL,
+  costEst BIGINT UNSIGNED NOT NULL,
+  costInc BIGINT UNSIGNED NOT NULL,
+  costSubEst BIGINT UNSIGNED NOT NULL,
+  costSubInc BIGINT UNSIGNED NOT NULL,
+  fileN BIGINT UNSIGNED NOT NULL,
   fileSize BIGINT UNSIGNED NOT NULL,
-  fileSubCount BIGINT UNSIGNED NOT NULL,
+  fileSubN BIGINT UNSIGNED NOT NULL,
   fileSubSize BIGINT UNSIGNED NOT NULL,
-  childCount BIGINT UNSIGNED NOT NULL,
-  descendantCount BIGINT UNSIGNED NOT NULL,
+  childN BIGINT UNSIGNED NOT NULL,
+  descN BIGINT UNSIGNED NOT NULL,
   isParallel BOOL NOT NULL,
   PRIMARY KEY (host, project, id),
   UNIQUE INDEX(host, user, id),
@@ -133,7 +134,7 @@ CREATE TABLE expenses(
   id BINARY(16) NOT NULL,
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
-  value BIGINT UNSIGNED NOT NULL,
+  cost BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NOT NULL,
   PRIMARY KEY(host, project, task, createdOn, createdBy),
   UNIQUE INDEX(host, project, task, id),
@@ -185,26 +186,27 @@ DELIMITER //
 CREATE PROCEDURE setAncestralChainAggregateValuesFromTask(_host BINARY(16), _project BINARY(16), _task BINARY(16))
 BEGIN
   
-  DECLARE currentParent BINARY(16) DEFAULT NULL;
-  DECLARE currentMinimumSubTime BIGINT UNSIGNED DEFAULT 0;
-  DECLARE currentEstimatedSubTime BIGINT UNSIGNED DEFAULT 0;
-  DECLARE currentLoggedSubTime BIGINT UNSIGNED DEFAULT 0;
-  DECLARE currentEstimatedSubExpense BIGINT UNSIGNED DEFAULT 0;
-  DECLARE currentLoggedSubExpense BIGINT UNSIGNED DEFAULT 0;
-  DECLARE currentFileSubCount BIGINT UNSIGNED DEFAULT 0;
-  DECLARE currentFileSubSize BIGINT UNSIGNED DEFAULT 0;
-  DECLARE currentChildCount BIGINT UNSIGNED DEFAULT 0;
-  DECLARE currentDescendantCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curParent BINARY(16) DEFAULT NULL;
 
-  DECLARE newMinimumSubTime BIGINT UNSIGNED DEFAULT 0;
-  DECLARE newEstimatedSubTime BIGINT UNSIGNED DEFAULT 0;
-  DECLARE newLoggedSubTime BIGINT UNSIGNED DEFAULT 0;
-  DECLARE newEstimatedSubExpense BIGINT UNSIGNED DEFAULT 0;
-  DECLARE newLoggedSubExpense BIGINT UNSIGNED DEFAULT 0;
-  DECLARE newFileSubCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curTimeSubEst BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curTimeSubInc BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curTimeSubMin BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curCostSubEst BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curCostSubInc BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curFileSubN BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curFileSubSize BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curChildN BIGINT UNSIGNED DEFAULT 0;
+  DECLARE curDescN BIGINT UNSIGNED DEFAULT 0;
+
+  DECLARE newTimeSubEst BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newTimeSubInc BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newTimeSubMin BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newCostSubEst BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newCostSubInc BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newFileSubN BIGINT UNSIGNED DEFAULT 0;
   DECLARE newFileSubSize BIGINT UNSIGNED DEFAULT 0;
-  DECLARE newChildCount BIGINT UNSIGNED DEFAULT 0;
-  DECLARE newDescendantCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newChildN BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newDescN BIGINT UNSIGNED DEFAULT 0;
 
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   CREATE TEMPORARY TABLE tempUpdatedIds(
@@ -216,47 +218,47 @@ BEGIN
     
     SELECT
       t.parent,
-      t.minimumSubTime,
-      t.estimatedSubTime,
-      t.loggedSubTime,
-      t.estimatedSubExpense,
-      t.loggedSubExpense,
-      t.fileSubCount,
+      t.timeSubMin,
+      t.timeSubEst,
+      t.timeSubInc,
+      t.costSubEst,
+      t.costSubInc,
+      t.fileSubN,
       t.fileSubSize,
-      t.childCount,
-      t.descendantCount,
+      t.childN,
+      t.descN,
+      COALESCE(SUM(c.timeEst + c.timeSubEst), 0),
+      COALESCE(SUM(c.timeInc + c.timeSubInc), 0),
       CASE t.isParallel
-        WHEN 0 THEN COALESCE(SUM(c.estimatedTime + c.minimumSubTime), 0)
-        WHEN 1 THEN COALESCE(MAX(c.estimatedTime + c.minimumSubTime), 0)
+        WHEN 0 THEN COALESCE(SUM(c.timeEst + c.timeSubMin), 0)
+        WHEN 1 THEN COALESCE(MAX(c.timeEst + c.timeSubMin), 0)
       END,
-      COALESCE(SUM(c.estimatedTime + c.estimatedSubTime), 0),
-      COALESCE(SUM(c.loggedTime + c.loggedSubTime), 0),
-      COALESCE(SUM(c.estimatedExpense + c.estimatedSubExpense), 0),
-      COALESCE(SUM(c.loggedExpense + c.loggedSubExpense), 0),
-      COALESCE(SUM(c.fileCount + c.fileSubCount), 0),
+      COALESCE(SUM(c.costEst + c.costSubEst), 0),
+      COALESCE(SUM(c.costInc + c.costSubInc), 0),
+      COALESCE(SUM(c.fileN + c.fileSubN), 0),
       COALESCE(SUM(c.fileSize + c.fileSubSize), 0),
       COALESCE(COUNT(DISTINCT c.id), 0),
-      COALESCE(COALESCE(COUNT(DISTINCT c.id), 0) + COALESCE(SUM(c.descendantCount), 0), 0)
+      COALESCE(COALESCE(COUNT(DISTINCT c.id), 0) + COALESCE(SUM(c.descN), 0), 0)
     INTO
-      currentParent,
-      currentMinimumSubTime,
-      currentEstimatedSubTime,
-      currentLoggedSubTime,
-      currentEstimatedSubExpense,
-      currentLoggedSubExpense,
-      currentFileSubCount,
-      currentFileSubSize,
-      currentChildCount,
-      currentDescendantCount,
-      newMinimumSubTime,
-      newEstimatedSubTime,
-      newLoggedSubTime,
-      newEstimatedSubExpense,
-      newLoggedSubExpense,
-      newFileSubCount,
+      curParent,
+      curTimeSubMin,
+      curTimeSubEst,
+      curTimeSubInc,
+      curCostSubEst,
+      curCostSubInc,
+      curFileSubN,
+      curFileSubSize,
+      curChildN,
+      curDescN,
+      newtimeSubMin,
+      newtimeSubEst,
+      newTimeSubInc,
+      newCostSubEst,
+      newCostSubInc,
+      newFileSubN,
       newFileSubSize,
-      newChildCount,
-      newDescendantCount
+      newChildN,
+      newDescN
     FROM
       tasks t
     LEFT JOIN
@@ -276,28 +278,28 @@ BEGIN
     GROUP BY
       t.id;
 
-    IF currentMinimumSubTime <> newMinimumSubTime OR
-      currentEstimatedSubTime <> newEstimatedSubTime OR
-      currentLoggedSubTime <> newLoggedSubTime OR
-      currentEstimatedSubExpense <> newEstimatedSubExpense OR
-      currentLoggedSubExpense <> newLoggedSubExpense OR
-      currentFileSubCount <> newFileSubCount OR
-      currentFileSubSize <> newFileSubSize OR
-      currentChildCount <> newChildCount OR
-      currentDescendantCount <> newDescendantCount THEN
+    IF curTimeSubMin <> newtimeSubMin OR
+      curTimeSubEst <> newtimeSubEst OR
+      curTimeSubInc <> newTimeSubInc OR
+      curCostSubEst <> newCostSubEst OR
+      curCostSubInc <> newCostSubInc OR
+      curFileSubN <> newFileSubN OR
+      curFileSubSize <> newFileSubSize OR
+      curChildN <> newChildN OR
+      curDescN <> newDescN THEN
 
       UPDATE
         tasks
       SET
-        minimumSubTime=newMinimumSubTime,
-        estimatedSubTime=newEstimatedSubTime,
-        loggedSubTime=newLoggedSubTime,
-        estimatedSubExpense=newEstimatedSubExpense,
-        loggedSubExpense=newLoggedSubExpense,
-        fileSubCount=newFileSubCount,
+        timeSubMin=newtimeSubMin,
+        timeSubEst=newtimeSubEst,
+        timeSubInc=newTimeSubInc,
+        costSubEst=newCostSubEst,
+        costSubInc=newCostSubInc,
+        fileSubN=newFileSubN,
         fileSubSize=newFileSubSize,
-        childCount=newChildCount,
-        descendantCount=newDescendantCount
+        childN=newChildN,
+        descN=newDescN
       WHERE
         host=_host
       AND
@@ -307,7 +309,7 @@ BEGIN
 
       INSERT INTO tempUpdatedIds VALUES (_task);
       
-      SET _task = currentParent;
+      SET _task = curParent;
     
     ELSE
 
@@ -322,7 +324,7 @@ END //
 DELIMITER ;
 
 #useful helper query for manual verifying/debugging test results
-#SELECT  t1.name, t2.name AS parent, t3.name AS nextSibling, t4.name AS firstChild, t1.description, t1.minimumSubTime, t1.estimatedTime, t1.loggedTime, t1.estimatedSubTime, t1.loggedSubTime, t1.estimatedExpense, t1.loggedExpense, t1.estimatedSubExpense, t1.loggedSubExpense, t1.childCount, t1.descendantCount FROM trees_data.tasks t1 LEFT JOIN trees_data.tasks t2 ON t1.parent = t2.id LEFT JOIN trees_data.tasks t3 ON t1.nextSibling = t3.id LEFT JOIN trees_data.tasks t4 ON t1.firstChild = t4.id ORDER BY t1.name;
+#SELECT  t1.name, t2.name AS parent, t3.name AS nextSibling, t4.name AS firstChild, t1.description, t1.timeEst, t1.timeInc, t1.timeSubMin, t1.timeSubEst, t1.timeSubInc, t1.costEst, t1.costInc, t1.costSubEst, t1.costSubInc, t1.childN, t1.descN FROM trees_data.tasks t1 LEFT JOIN trees_data.tasks t2 ON t1.parent = t2.id LEFT JOIN trees_data.tasks t3 ON t1.nextSibling = t3.id LEFT JOIN trees_data.tasks t4 ON t1.firstChild = t4.id ORDER BY t1.name;
 
 
 DROP USER IF EXISTS 'trees_data'@'%';

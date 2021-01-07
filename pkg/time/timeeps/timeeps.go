@@ -64,8 +64,8 @@ var (
 				// insert new time
 				_, err := tx.Exec(`INSERT INTO times (host, project, task, id, createdBy, createdOn, duration, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, t.ID, t.CreatedBy, t.CreatedOn, t.Duration, t.Note)
 				PanicOn(err)
-				// update task loggedTime
-				_, err = tx.Exec(`UPDATE tasks SET loggedTime=loggedTime+? WHERE host=? AND project=? AND id=?`, args.Duration, args.Host, args.Project, args.Task)
+				// update task timeInc
+				_, err = tx.Exec(`UPDATE tasks SET timeInc=timeInc+? WHERE host=? AND project=? AND id=?`, args.Duration, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				// propogate aggregate values upwards
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
@@ -136,7 +136,7 @@ var (
 				_, err := tx.Exec(`UPDATE times SET duration=?, note=? WHERE host=? AND project=? AND task=? AND id=?`, t.Duration, t.Note, args.Host, args.Project, t.Task, t.ID)
 				PanicOn(err)
 				if treeUpdate {
-					_, err = tx.Exec(Strf(`UPDATE tasks SET loggedTime=loggedTime%s? WHERE host=? AND project=? AND id=?`, sign), diff, args.Host, args.Project, t.Task)
+					_, err = tx.Exec(Strf(`UPDATE tasks SET timeInc=timeInc%s? WHERE host=? AND project=? AND id=?`, sign), diff, args.Host, args.Project, t.Task)
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
@@ -179,7 +179,7 @@ var (
 				// delete time
 				_, err := tx.Exec(`DELETE FROM times WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
 				PanicOn(err)
-				_, err = tx.Exec(`UPDATE tasks SET loggedTime=loggedTime-? WHERE host=? AND project=? AND id=?`, t.Duration, args.Host, args.Project, args.Task)
+				_, err = tx.Exec(`UPDATE tasks SET timeInc=timeInc-? WHERE host=? AND project=? AND id=?`, t.Duration, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted

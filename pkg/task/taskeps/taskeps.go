@@ -40,7 +40,7 @@ var (
 					Description:     "do the thing you're supposed to do",
 					IsParallel:      true,
 					User:            ptr.ID(app.ExampleID()),
-					EstimatedTime:   40,
+					TimeEst:         40,
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -55,31 +55,31 @@ var (
 				validate.Str("description", args.Description, tlbx, 0, descriptionMaxLen)
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
 				t := &task.Task{
-					ID:                  tlbx.NewID(),
-					Parent:              &args.Parent,
-					FirstChild:          nil,
-					NextSibling:         nil,
-					User:                args.User,
-					Name:                args.Name,
-					Description:         args.Description,
-					CreatedBy:           me,
-					CreatedOn:           NowMilli(),
-					MinimumSubTime:      args.EstimatedTime,
-					EstimatedTime:       args.EstimatedTime,
-					LoggedTime:          0,
-					EstimatedSubTime:    0,
-					LoggedSubTime:       0,
-					EstimatedExpense:    args.EstimatedExpense,
-					LoggedExpense:       0,
-					EstimatedSubExpense: 0,
-					LoggedSubExpense:    0,
-					FileCount:           0,
-					FileSize:            0,
-					FileSubCount:        0,
-					FileSubSize:         0,
-					ChildCount:          0,
-					DescendantCount:     0,
-					IsParallel:          args.IsParallel,
+					ID:          tlbx.NewID(),
+					Parent:      &args.Parent,
+					FirstChild:  nil,
+					NextSibling: nil,
+					User:        args.User,
+					Name:        args.Name,
+					Description: args.Description,
+					CreatedBy:   me,
+					CreatedOn:   NowMilli(),
+					TimeSubMin:  args.TimeEst,
+					TimeEst:     args.TimeEst,
+					TimeInc:     0,
+					TimeSubEst:  0,
+					TimeSubInc:  0,
+					CostEst:     args.CostEst,
+					CostInc:     0,
+					CostSubEst:  0,
+					CostSubInc:  0,
+					FileN:       0,
+					FileSize:    0,
+					FileSubN:    0,
+					FileSubSize: 0,
+					ChildN:      0,
+					DescN:       0,
+					IsParallel:  args.IsParallel,
 				}
 				if args.User != nil && !args.User.Equal(me) {
 					// if Im assigning to someone that isnt me,
@@ -116,7 +116,7 @@ var (
 					PanicOn(err)
 				}
 				// insert new task
-				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.MinimumSubTime, t.EstimatedTime, t.LoggedTime, t.EstimatedSubTime, t.LoggedSubTime, t.EstimatedExpense, t.LoggedExpense, t.EstimatedSubExpense, t.LoggedSubExpense, t.FileCount, t.FileSize, t.FileSubCount, t.FileSubSize, t.ChildCount, t.DescendantCount, t.IsParallel)
+				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.TimeSubMin, t.TimeEst, t.TimeInc, t.TimeSubEst, t.TimeSubInc, t.CostEst, t.CostInc, t.CostSubEst, t.CostSubInc, t.FileN, t.FileSize, t.FileSubN, t.FileSubSize, t.ChildN, t.DescN, t.IsParallel)
 				PanicOn(err)
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &t.ID, t.ID, cnsts.TypeTask, cnsts.ActionCreated, nil, nil)
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
@@ -137,17 +137,17 @@ var (
 			},
 			GetExampleArgs: func() interface{} {
 				return &task.Update{
-					Host:             app.ExampleID(),
-					Project:          app.ExampleID(),
-					ID:               app.ExampleID(),
-					Parent:           &field.ID{V: app.ExampleID()},
-					PreviousSibling:  &field.IDPtr{V: ptr.ID(app.ExampleID())},
-					Name:             &field.String{V: "new name"},
-					Description:      &field.String{V: "new description"},
-					IsParallel:       &field.Bool{V: true},
-					User:             &field.IDPtr{V: ptr.ID(app.ExampleID())},
-					EstimatedTime:    &field.UInt64{V: 123},
-					EstimatedExpense: &field.UInt64{V: 123},
+					Host:            app.ExampleID(),
+					Project:         app.ExampleID(),
+					ID:              app.ExampleID(),
+					Parent:          &field.ID{V: app.ExampleID()},
+					PreviousSibling: &field.IDPtr{V: ptr.ID(app.ExampleID())},
+					Name:            &field.String{V: "new name"},
+					Description:     &field.String{V: "new description"},
+					IsParallel:      &field.Bool{V: true},
+					User:            &field.IDPtr{V: ptr.ID(app.ExampleID())},
+					TimeEst:         &field.UInt64{V: 123},
+					CostEst:         &field.UInt64{V: 123},
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -162,8 +162,8 @@ var (
 					args.Description == nil &&
 					args.IsParallel == nil &&
 					args.User == nil &&
-					args.EstimatedTime == nil &&
-					args.EstimatedExpense == nil {
+					args.TimeEst == nil &&
+					args.CostEst == nil {
 					// nothing to update
 					return nil
 				}
@@ -181,8 +181,8 @@ var (
 				simpleUpdateRequired := false
 				if args.Parent != nil ||
 					args.PreviousSibling != nil ||
-					args.EstimatedExpense != nil ||
-					args.EstimatedTime != nil ||
+					args.CostEst != nil ||
+					args.TimeEst != nil ||
 					args.IsParallel != nil {
 					// if moving the task or setting an aggregate value effecting property
 					// we must lock
@@ -304,12 +304,12 @@ var (
 					t.User = args.User.V
 					simpleUpdateRequired = true
 				}
-				if args.EstimatedTime != nil && t.EstimatedTime != args.EstimatedTime.V {
-					t.EstimatedTime = args.EstimatedTime.V
+				if args.TimeEst != nil && t.TimeEst != args.TimeEst.V {
+					t.TimeEst = args.TimeEst.V
 					treeUpdateRequired = true
 				}
-				if args.EstimatedExpense != nil && t.EstimatedExpense != args.EstimatedExpense.V {
-					t.EstimatedExpense = args.EstimatedExpense.V
+				if args.CostEst != nil && t.CostEst != args.CostEst.V {
+					t.CostEst = args.CostEst.V
 					treeUpdateRequired = true
 				}
 				update := func(ts ...*task.Task) {
@@ -321,7 +321,7 @@ var (
 							// thus saving a duplicated update query
 							if !updated[idStr] {
 								updated[idStr] = true
-								_, err := tx.Exec(`UPDATE tasks SET parent=?, firstChild=?, nextSibling=?, name=?, description=?, isParallel=?, user=?, estimatedTime=?, estimatedExpense=? WHERE host=? AND project=? AND id=?`, t.Parent, t.FirstChild, t.NextSibling, t.Name, t.Description, t.IsParallel, t.User, t.EstimatedTime, t.EstimatedExpense, args.Host, args.Project, t.ID)
+								_, err := tx.Exec(`UPDATE tasks SET parent=?, firstChild=?, nextSibling=?, name=?, description=?, isParallel=?, user=?, timeEst=?, costEst=? WHERE host=? AND project=? AND id=?`, t.Parent, t.FirstChild, t.NextSibling, t.Name, t.Description, t.IsParallel, t.User, t.TimeEst, t.CostEst, args.Host, args.Project, t.ID)
 								PanicOn(err)
 							}
 						}
@@ -382,8 +382,8 @@ var (
 				// at this point we need to get the task
 				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
-				app.BadReqIf(t.DescendantCount > 100, "may not delete more than 100 task per delete action")
-				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.DescendantCount > 0 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own tasks within an hour of creating them and they must have no children")
+				app.BadReqIf(t.DescN > 100, "may not delete more than 100 task per delete action")
+				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.DescN > 0 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own tasks within an hour of creating them and they must have no children")
 				previousNode := getPreviousSibling(tx, args.Host, args.Project, args.ID)
 				if previousNode == nil {
 					previousNode = getOne(tx, args.Host, args.Project, *t.Parent)
@@ -392,8 +392,8 @@ var (
 				} else {
 					previousNode.NextSibling = t.NextSibling
 				}
-				tasksWithFiles := make(IDs, 0, t.DescendantCount+1)
-				tasksToDelete := make(IDs, 0, t.DescendantCount+1)
+				tasksWithFiles := make(IDs, 0, t.DescN+1)
+				tasksToDelete := make(IDs, 0, t.DescN+1)
 				tx.Query(func(rows isql.Rows) {
 					for rows.Next() {
 						i := ID{}
@@ -404,7 +404,7 @@ var (
 							tasksWithFiles = append(tasksWithFiles, i)
 						}
 					}
-				}, `WITH RECURSIVE descendants (id, hasFiles) AS (SELECT id, fileCount > 0 AS hasFiles  FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id, t.fileCount > 0 AS hasFiles FROM tasks t, descendants d WHERE t.host=? AND t.project=? AND t.parent=d.id) CYCLE id RESTRICT SELECT id, hasFiles FROM descendants`, args.Host, args.Project, args.ID, args.Host, args.Project)
+				}, `WITH RECURSIVE descendants (id, hasFiles) AS (SELECT id, fileN > 0 AS hasFiles  FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT t.id, t.fileN > 0 AS hasFiles FROM tasks t, descendants d WHERE t.host=? AND t.project=? AND t.parent=d.id) CYCLE id RESTRICT SELECT id, hasFiles FROM descendants`, args.Host, args.Project, args.ID, args.Host, args.Project)
 				if len(tasksToDelete) > 0 {
 					queryArgs := make([]interface{}, 0, len(tasksToDelete)+2)
 					queryArgs = append(queryArgs, args.Host, args.Project)
@@ -602,31 +602,31 @@ var (
 	nameMaxLen        = 250
 	descriptionMaxLen = 1250
 	exampleTask       = &task.Task{
-		ID:                  app.ExampleID(),
-		Parent:              ptr.ID(app.ExampleID()),
-		FirstChild:          ptr.ID(app.ExampleID()),
-		NextSibling:         ptr.ID(app.ExampleID()),
-		User:                ptr.ID(app.ExampleID()),
-		Name:                "do it",
-		Description:         "do that thing you're supposed to do",
-		CreatedBy:           app.ExampleID(),
-		CreatedOn:           app.ExampleTime(),
-		MinimumSubTime:      100,
-		EstimatedTime:       100,
-		LoggedTime:          100,
-		EstimatedSubTime:    100,
-		LoggedSubTime:       100,
-		EstimatedExpense:    100,
-		LoggedExpense:       100,
-		EstimatedSubExpense: 100,
-		LoggedSubExpense:    100,
-		FileCount:           100,
-		FileSize:            100,
-		FileSubCount:        100,
-		FileSubSize:         100,
-		ChildCount:          100,
-		DescendantCount:     100,
-		IsParallel:          true,
+		ID:          app.ExampleID(),
+		Parent:      ptr.ID(app.ExampleID()),
+		FirstChild:  ptr.ID(app.ExampleID()),
+		NextSibling: ptr.ID(app.ExampleID()),
+		User:        ptr.ID(app.ExampleID()),
+		Name:        "do it",
+		Description: "do that thing you're supposed to do",
+		CreatedBy:   app.ExampleID(),
+		CreatedOn:   app.ExampleTime(),
+		TimeSubMin:  100,
+		TimeEst:     100,
+		TimeInc:     100,
+		TimeSubEst:  100,
+		TimeSubInc:  100,
+		CostEst:     100,
+		CostInc:     100,
+		CostSubEst:  100,
+		CostSubInc:  100,
+		FileN:       100,
+		FileSize:    100,
+		FileSubN:    100,
+		FileSubSize: 100,
+		ChildN:      100,
+		DescN:       100,
+		IsParallel:  true,
 	}
 )
 
@@ -656,21 +656,21 @@ func Scan(r isql.Row) (*task.Task, error) {
 		&t.Description,
 		&t.CreatedBy,
 		&t.CreatedOn,
-		&t.MinimumSubTime,
-		&t.EstimatedTime,
-		&t.LoggedTime,
-		&t.EstimatedSubTime,
-		&t.LoggedSubTime,
-		&t.EstimatedExpense,
-		&t.LoggedExpense,
-		&t.EstimatedSubExpense,
-		&t.LoggedSubExpense,
-		&t.FileCount,
+		&t.TimeSubMin,
+		&t.TimeEst,
+		&t.TimeInc,
+		&t.TimeSubEst,
+		&t.TimeSubInc,
+		&t.CostEst,
+		&t.CostInc,
+		&t.CostSubEst,
+		&t.CostSubInc,
+		&t.FileN,
 		&t.FileSize,
-		&t.FileSubCount,
+		&t.FileSubN,
 		&t.FileSubSize,
-		&t.ChildCount,
-		&t.DescendantCount,
+		&t.ChildN,
+		&t.DescN,
 		&t.IsParallel)
 	if t.ID.IsZero() {
 		t = nil
@@ -679,7 +679,7 @@ func Scan(r isql.Row) (*task.Task, error) {
 }
 
 var (
-	Sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.minimumSubTime, t.estimatedTime, t.loggedTime, t.estimatedSubTime, t.loggedSubTime, t.estimatedExpense, t.loggedExpense, t.estimatedSubExpense, t.loggedSubExpense, t.fileCount, t.fileSize, t.fileSubCount, t.fileSubSize, t.childCount, t.descendantCount, t.isParallel`
+	Sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeSubMin, t.timeEst, t.timeInc, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel`
 	sql_task_columns          = strings.ReplaceAll(Sql_task_columns_prefixed, `t.`, ``)
 	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id) AS (SELECT 0, parent FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.id) CYCLE id RESTRICT`
 )

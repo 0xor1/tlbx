@@ -74,7 +74,7 @@ func Everything(t *testing.T) {
 		Description:     "",
 		IsParallel:      true,
 		User:            ptr.ID(r.Bob().ID()),
-		EstimatedTime:   100,
+		TimeEst:         100,
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 

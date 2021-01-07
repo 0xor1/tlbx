@@ -66,15 +66,15 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 
 	t1p0 := (&task.Create{
-		Host:             r.Ali().ID(),
-		Project:          p.ID,
-		Parent:           p.ID,
-		PreviousSibling:  nil,
-		Name:             "1.0",
-		Description:      "",
-		IsParallel:       true,
-		User:             ptr.ID(r.Bob().ID()),
-		EstimatedExpense: 100,
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		Parent:          p.ID,
+		PreviousSibling: nil,
+		Name:            "1.0",
+		Description:     "",
+		IsParallel:      true,
+		User:            ptr.ID(r.Bob().ID()),
+		CostEst:         100,
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 
@@ -82,7 +82,7 @@ func Everything(t *testing.T) {
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
-		Value:   77,
+		Cost:    77,
 		Note:    "yolo",
 	}).MustDo(ac)
 	a.NotNil(e1)
@@ -92,7 +92,7 @@ func Everything(t *testing.T) {
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      e1.ID,
-		Value:   &field.UInt64{V: 33},
+		Cost:    &field.UInt64{V: 33},
 		Note:    &field.String{V: "polo"},
 	}).MustDo(ac)
 	a.NotNil(e1)
@@ -102,7 +102,7 @@ func Everything(t *testing.T) {
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      e1.ID,
-		Value:   &field.UInt64{V: 44},
+		Cost:    &field.UInt64{V: 44},
 		Note:    &field.String{V: "polo"},
 	}).MustDo(ac)
 	a.NotNil(e1)
@@ -139,7 +139,7 @@ func Everything(t *testing.T) {
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
-		Value:   77,
+		Cost:    77,
 		Note:    "solo",
 	}).MustDo(ac)
 	a.NotNil(e2)

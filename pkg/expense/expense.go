@@ -13,7 +13,7 @@ type Expense struct {
 	ID        ID        `json:"id"`
 	CreatedBy ID        `json:"createdBy"`
 	CreatedOn time.Time `json:"createdOn"`
-	Value     uint64    `json:"value"`
+	Cost      uint64    `json:"cost"`
 	Note      string    `json:"note"`
 }
 
@@ -21,7 +21,7 @@ type Create struct {
 	Host    ID     `json:"host"`
 	Project ID     `json:"project"`
 	Task    ID     `json:"task"`
-	Value   uint64 `json:"value"`
+	Cost    uint64 `json:"cost"`
 	Note    string `json:"note,omitempty"`
 }
 
@@ -46,7 +46,7 @@ type Update struct {
 	Project ID            `json:"project"`
 	Task    ID            `json:"task"`
 	ID      ID            `json:"id"`
-	Value   *field.UInt64 `json:"value,omitempty"`
+	Cost    *field.UInt64 `json:"cost,omitempty"`
 	Note    *field.String `json:"note,omitempty"`
 }
 

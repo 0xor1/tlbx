@@ -112,7 +112,7 @@ var (
 				_, err := tx.Exec(`UPDATE files SET isFinalized=1, createdOn=? WHERE host=? AND project=? AND task=? AND id=?`, f.CreatedOn, args.Host, args.Project, args.Task, args.ID)
 				PanicOn(err)
 				// update task file values
-				_, err = tx.Exec(`UPDATE tasks SET fileCount=fileCount+1, fileSize=fileSize+? WHERE host=? AND project=? AND id=?`, f.Size, args.Host, args.Project, args.Task)
+				_, err = tx.Exec(`UPDATE tasks SET fileN=fileN+1, fileSize=fileSize+? WHERE host=? AND project=? AND id=?`, f.Size, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				// propogate aggregate sizes upwards
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
@@ -277,7 +277,7 @@ var (
 				// delete file
 				_, err := tx.Exec(`DELETE FROM files WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
 				PanicOn(err)
-				_, err = tx.Exec(`UPDATE tasks SET fileCount=fileCount-1, fileSize=fileSize-? WHERE host=? AND project=? AND id=?`, f.Size, args.Host, args.Project, args.Task)
+				_, err = tx.Exec(`UPDATE tasks SET fileN=fileN-1, fileSize=fileSize-? WHERE host=? AND project=? AND id=?`, f.Size, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted

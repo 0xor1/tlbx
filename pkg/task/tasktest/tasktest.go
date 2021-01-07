@@ -70,7 +70,7 @@ func Everything(t *testing.T) {
 		Name:            "1.0",
 		IsParallel:      true,
 		User:            ptr.ID(r.Bob().ID()),
-		EstimatedTime:   100,
+		TimeEst:         100,
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 
@@ -83,7 +83,7 @@ func Everything(t *testing.T) {
 		Description:     "1.1",
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
-		EstimatedTime:   100,
+		TimeEst:         100,
 	}).MustDo(ac)
 	a.NotNil(t1p1)
 
@@ -96,7 +96,7 @@ func Everything(t *testing.T) {
 		Description:     "",
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
-		EstimatedTime:   100,
+		TimeEst:         100,
 	}).MustDo(ac)
 	a.NotNil(t2p0)
 
@@ -109,7 +109,7 @@ func Everything(t *testing.T) {
 		Description:     "",
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
-		EstimatedTime:   100,
+		TimeEst:         100,
 	}).MustDo(ac)
 	a.NotNil(t3p0)
 
@@ -122,7 +122,7 @@ func Everything(t *testing.T) {
 		Description:     "",
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
-		EstimatedTime:   100,
+		TimeEst:         100,
 	}).MustDo(ac)
 	a.NotNil(t4p0)
 
@@ -135,32 +135,32 @@ func Everything(t *testing.T) {
 		Description:     "",
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
-		EstimatedTime:   100,
+		TimeEst:         100,
 	}).MustDo(ac)
 	a.NotNil(t1p2)
 
 	t1p1 = (&task.Update{
-		Host:             r.Ali().ID(),
-		Project:          p.ID,
-		ID:               t1p1.ID,
-		Parent:           &field.ID{V: t2p0.ID},
-		PreviousSibling:  nil,
-		Name:             &field.String{V: "1.1 - updated"},
-		Description:      &field.String{V: "an actual description"},
-		IsParallel:       &field.Bool{V: false},
-		User:             &field.IDPtr{V: nil},
-		EstimatedTime:    &field.UInt64{V: 50},
-		EstimatedExpense: &field.UInt64{V: 50},
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		ID:              t1p1.ID,
+		Parent:          &field.ID{V: t2p0.ID},
+		PreviousSibling: nil,
+		Name:            &field.String{V: "1.1 - updated"},
+		Description:     &field.String{V: "an actual description"},
+		IsParallel:      &field.Bool{V: false},
+		User:            &field.IDPtr{V: nil},
+		TimeEst:         &field.UInt64{V: 50},
+		CostEst:         &field.UInt64{V: 50},
 	}).MustDo(ac)
 	a.NotNil(t1p1)
 
 	tp := (&task.Update{
-		Host:             r.Ali().ID(),
-		Project:          p.ID,
-		ID:               p.ID,
-		IsParallel:       &field.Bool{V: false},
-		EstimatedTime:    &field.UInt64{V: 50},
-		EstimatedExpense: &field.UInt64{V: 50},
+		Host:       r.Ali().ID(),
+		Project:    p.ID,
+		ID:         p.ID,
+		IsParallel: &field.Bool{V: false},
+		TimeEst:    &field.UInt64{V: 50},
+		CostEst:    &field.UInt64{V: 50},
 	}).MustDo(ac)
 	a.NotNil(tp)
 

@@ -35,7 +35,7 @@ var (
 					Host:    app.ExampleID(),
 					Project: app.ExampleID(),
 					Task:    app.ExampleID(),
-					Value:   60,
+					Cost:    60,
 					Note:    "I did an hours work",
 				}
 			},
@@ -45,7 +45,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*expense.Create)
 				me := me.Get(tlbx)
-				app.ReturnIf(args.Value == 0, http.StatusBadRequest, "value must be between 1 and 1440")
+				app.ReturnIf(args.Cost == 0, http.StatusBadRequest, "cost must be between 1 and 1440")
 				args.Note = StrTrimWS(args.Note)
 				validate.Str("note", args.Note, tlbx, 0, noteMaxLen)
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
@@ -58,16 +58,16 @@ var (
 					ID:        tlbx.NewID(),
 					CreatedBy: me,
 					CreatedOn: NowMilli(),
-					Value:     args.Value,
+					Cost:      args.Cost,
 					Note:      args.Note,
 				}
 				// insert new expense
-				_, err := tx.Exec(`INSERT INTO expenses (host, project, task, id, createdBy, createdOn, value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, e.ID, e.CreatedBy, e.CreatedOn, e.Value, e.Note)
+				_, err := tx.Exec(`INSERT INTO expenses (host, project, task, id, createdBy, createdOn, cost, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, e.ID, e.CreatedBy, e.CreatedOn, e.Cost, e.Note)
 				PanicOn(err)
-				// update task loggedExpense
-				_, err = tx.Exec(`UPDATE tasks SET loggedExpense=loggedExpense+? WHERE host=? AND project=? AND id=?`, args.Value, args.Host, args.Project, args.Task)
+				// update task costInc
+				_, err = tx.Exec(`UPDATE tasks SET costInc=costInc+? WHERE host=? AND project=? AND id=?`, args.Cost, args.Host, args.Project, args.Task)
 				PanicOn(err)
-				// propogate aggregate values upwards
+				// propogate aggregate costs upwards
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, e.ID, cnsts.TypeExpense, cnsts.ActionCreated, nil, args)
 				tx.Commit()
@@ -89,7 +89,7 @@ var (
 					Project: app.ExampleID(),
 					Task:    app.ExampleID(),
 					ID:      app.ExampleID(),
-					Value:   &field.UInt64{V: 60},
+					Cost:    &field.UInt64{V: 60},
 					Note:    &field.String{V: "woo"},
 				}
 			},
@@ -99,12 +99,12 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*expense.Update)
 				me := me.Get(tlbx)
-				if args.Value == nil &&
+				if args.Cost == nil &&
 					args.Note == nil {
 					// nothing to update
 					return nil
 				}
-				app.ReturnIf(args.Value != nil && (args.Value.V == 0), http.StatusBadRequest, "value must be 1 or greater")
+				app.ReturnIf(args.Cost != nil && (args.Cost.V == 0), http.StatusBadRequest, "cost must be 1 or greater")
 				if args.Note != nil {
 					args.Note.V = StrTrimWS(args.Note.V)
 					validate.Str("note", args.Note.V, tlbx, 0, noteMaxLen)
@@ -119,24 +119,24 @@ var (
 				treeUpdate := false
 				var diff uint64
 				var sign string
-				if args.Value != nil && args.Value.V != t.Value {
-					if args.Value.V > t.Value {
-						diff = args.Value.V - t.Value
+				if args.Cost != nil && args.Cost.V != t.Cost {
+					if args.Cost.V > t.Cost {
+						diff = args.Cost.V - t.Cost
 						sign = "+"
 					} else {
-						diff = t.Value - args.Value.V
+						diff = t.Cost - args.Cost.V
 						sign = "-"
 					}
-					t.Value = args.Value.V
+					t.Cost = args.Cost.V
 					treeUpdate = true
 				}
 				if args.Note != nil && args.Note.V != t.Note {
 					t.Note = args.Note.V
 				}
-				_, err := tx.Exec(`UPDATE expenses SET value=?, note=? WHERE host=? AND project=? AND task=? AND id=?`, t.Value, t.Note, args.Host, args.Project, t.Task, t.ID)
+				_, err := tx.Exec(`UPDATE expenses SET cost=?, note=? WHERE host=? AND project=? AND task=? AND id=?`, t.Cost, t.Note, args.Host, args.Project, t.Task, t.ID)
 				PanicOn(err)
 				if treeUpdate {
-					_, err = tx.Exec(Strf(`UPDATE tasks SET loggedExpense=loggedExpense%s? WHERE host=? AND project=? AND id=?`, sign), diff, args.Host, args.Project, t.Task)
+					_, err = tx.Exec(Strf(`UPDATE tasks SET costInc=costInc%s? WHERE host=? AND project=? AND id=?`, sign), diff, args.Host, args.Project, t.Task)
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
@@ -179,7 +179,7 @@ var (
 				// delete expense
 				_, err := tx.Exec(`DELETE FROM expenses WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
 				PanicOn(err)
-				_, err = tx.Exec(`UPDATE tasks SET loggedExpense=loggedExpense-? WHERE host=? AND project=? AND id=?`, t.Value, args.Host, args.Project, args.Task)
+				_, err = tx.Exec(`UPDATE tasks SET costInc=costInc-? WHERE host=? AND project=? AND id=?`, t.Cost, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
@@ -229,7 +229,7 @@ var (
 					Set:  make([]*expense.Expense, 0, args.Limit),
 					More: false,
 				}
-				qry := bytes.NewBufferString(`SELECT task, id, createdBy, createdOn, value, note FROM expenses WHERE host=? AND project=?`)
+				qry := bytes.NewBufferString(`SELECT task, id, createdBy, createdOn, cost, note FROM expenses WHERE host=? AND project=?`)
 				qryArgs := make([]interface{}, 0, len(args.IDs)+8)
 				qryArgs = append(qryArgs, args.Host, args.Project)
 				if len(args.IDs) > 0 {
@@ -284,13 +284,13 @@ var (
 		ID:        app.ExampleID(),
 		CreatedBy: app.ExampleID(),
 		CreatedOn: app.ExampleTime(),
-		Value:     60,
+		Cost:      60,
 		Note:      "I bought something",
 	}
 )
 
 func getOne(tx service.Tx, host, project, task, id ID) *expense.Expense {
-	row := tx.QueryRow(`SELECT task, id, createdBy, createdOn, value, note FROM expenses WHERE host=? AND project=? AND task=? AND id=?`, host, project, task, id)
+	row := tx.QueryRow(`SELECT task, id, createdBy, createdOn, cost, note FROM expenses WHERE host=? AND project=? AND task=? AND id=?`, host, project, task, id)
 	t, err := Scan(row)
 	sql.PanicIfIsntNoRows(err)
 	return t
@@ -303,7 +303,7 @@ func Scan(r isql.Row) (*expense.Expense, error) {
 		&t.ID,
 		&t.CreatedBy,
 		&t.CreatedOn,
-		&t.Value,
+		&t.Cost,
 		&t.Note)
 	if t.ID.IsZero() {
 		t = nil
