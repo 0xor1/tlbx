@@ -25,13 +25,20 @@
               {{c.name}}
             </th>
           </tr>
-          <tr class="row">
+          <tr class="row this-task">
             <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{c.name == "user"? "" : c.get(task)}}
               <user v-if="c.name=='user'" :userId="c.get(task)"></user>
             </td>
           </tr>
+          <tr class="row" v-for="(t, index) in children" :key="index">
+            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              {{c.name == "user"? "" : c.get(t)}}
+              <user v-if="c.name=='user'" :userId="c.get(t)"></user>
+            </td>
+          </tr>
         </table>
+        <button v-if="moreChildren" @click="loadMoreChildren()">load more</button>
       </div>
       <div class="subs">
       </div>
@@ -78,11 +85,13 @@
           pMe: null,
           ancestors: [],
           moreAncestors: false,
+          loadingMoreAncestors: false,
           task: null,
           estTime: "0m",
           estExp: "0.00",
           children: [],
           moreChildren: false,
+          loadingMoreChildren: false,
           times: [],
           moreTimes: false,
           expenses: [],
@@ -91,7 +100,6 @@
           moreFiles: false,
           comments: [],
           moreComments: false,
-          loadingMoreAncestors: false,
           commonSections: [
             {
               name: "name",
@@ -246,6 +254,17 @@
             this.loadingMoreAncestors = false
           })
         }
+      },
+      getMoreChildren(){
+        if (!this.loadingMoreChildren) {
+          this.loadingMoreChildren = true;
+          this.$api.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), this.children[this.children.length - 1].id, 10).then((res)=>{
+            this.children = this.children.concat(res.set)
+            this.moreAncestors = res.more
+          }).finally(()=>{
+            this.loadingMoreChildren = false
+          })
+        }
       }
     },
     mounted(){
@@ -267,24 +286,18 @@ div.root {
       white-space: nowrap;
       overflow-y: auto;
     }
-    h1 input {
-      font-size: 2pc;
-      font-weight: bold;
-      width: 30pc;
-    }
-    textarea {
-      width: 30pc;
-      height: 4pc;
-    }
-    p {
-      margin: 0.5pc 0;
-    }
     table {
       margin: 1pc 0 1pc 0;
       border-collapse: collapse;
       th, td {
         text-align: center;
         min-width: 100px;
+        &.name{
+          min-width: 18pc;
+        }
+      }
+      tr.this-task {
+        font-weight: 1000;
       }
     }
   }

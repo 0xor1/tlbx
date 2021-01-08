@@ -204,6 +204,7 @@ $inputPlaceholderColor: #aaa;
       > .fields{
         text-align: center;
         > div{
+          background: $inputColor;
           width: 100%;
           cursor: pointer;
           &:hover{
@@ -211,9 +212,6 @@ $inputPlaceholderColor: #aaa;
           }
           &:active{
             background-color: $inputActiveColor
-          }
-          >span{
-            padding-left: 2.5pc;
           }
           >span, >input {
             cursor: pointer;

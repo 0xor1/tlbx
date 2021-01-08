@@ -299,7 +299,7 @@ table {
       min-width: 100px;
     }
     &.name{
-      min-width: 250px;
+      min-width: 18pc;
     }
   }
   tr.row {
