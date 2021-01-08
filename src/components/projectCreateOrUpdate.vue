@@ -21,8 +21,8 @@
       </span>
       <input v-model.number="hoursPerDay" :min="0" :max="24" type="number" placeholder="hours per day" @blur="validate" @keydown.enter="ok">
       <input v-model.number="daysPerWeek" :min="0" :max="7" type="number" placeholder="days per week" @blur="validate" @keydown.enter="ok">
-      <datepicker monday-first="true" v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
-      <datepicker monday-first="true" v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
+      <datepicker :monday-first="true" v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
+      <datepicker :monday-first="true" v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
       <button @click="ok">{{isCreate? 'create': 'update'}}</button>
       <button @click="cancel">cancel</button>
       <span v-if="err.length > 0" class="err">{{err}}</span>
