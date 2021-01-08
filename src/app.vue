@@ -12,25 +12,8 @@
               fields
             </div>
             <div class="fields" v-if="showFields">
-              <div @click.stop.prevent="$root.show.dates = !$root.show.dates">
-                <label @click.stop for="dates">dates</label>
-                <input @click.stop type="checkbox" v-model="$root.show.dates" id="dates">
-              </div>
-              <div @click.stop.prevent="$root.show.times = !$root.show.times">
-                <label @click.stop for="times">times</label>
-                <input @click.stop type="checkbox" v-model="$root.show.times" id="times">
-              </div>
-              <div @click.stop.prevent="$root.show.expenses = !$root.show.expenses">
-                <label @click.stop for="expenses">expenses</label>
-                <input @click.stop type="checkbox" v-model="$root.show.expenses" id="expenses">
-              </div>
-              <div @click.stop.prevent="$root.show.files = !$root.show.files">
-                <label @click.stop for="files">files</label>
-                <input @click.stop type="checkbox" v-model="$root.show.files" id="files">
-              </div>
-              <div @click.stop.prevent="$root.show.tasks = !$root.show.tasks">
-                <label @click.stop for="tasks">tasks</label>
-                <input @click.stop type="checkbox" v-model="$root.show.tasks" id="tasks">
+              <div v-for="(f, index) in fields" :key="index" @click.stop.prevent="$root.show[f] = !$root.show[f]">
+                <span>{{f}}<input @click.stop type="checkbox" v-model="$root.show[f]"></span>
               </div>
             </div>
             <div class="btn" @click.stop.prevent="loginout">
@@ -58,6 +41,14 @@
           loading: true,
           showMenu: this.showMenu || false,
           showFields: this.showFields || false,
+          fields: [
+            "date",
+            "user",
+            "time",
+            "cost",
+            "file",
+            "task"
+          ],
           me: null
         }
       },
@@ -221,7 +212,10 @@ $inputPlaceholderColor: #aaa;
           &:active{
             background-color: $inputActiveColor
           }
-          > label, >input {
+          >span{
+            padding-left: 2.5pc;
+          }
+          >span, >input {
             cursor: pointer;
             background: transparent;
           }

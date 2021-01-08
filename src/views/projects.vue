@@ -15,12 +15,17 @@
         <div class="projects">
           <table>
             <tr class="header">
-              <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name" v-for="(s, index) in sections" :key="index">
+                {{s.name}}
+              </th>
+            </tr>
+            <tr class="header">
+              <th :class="c.name" v-for="(c, index) in colHeaders" :key="index">
                 {{c.name}}
               </th>
             </tr>
-            <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
-              <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+            <tr class="row" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
+              <td :class="c.class" v-for="(c, index) in cols" :key="index">
                 {{ c.get(p) }}
               </td>
               <td v-if="isMe" class="action" @click.stop="updateId = p.id; showUpdate = true">
@@ -37,17 +42,22 @@
           <h1>Others Projects</h1>
           <table>
             <tr class="header">
-              <th class="host">
-                Host
+              <th colspan="1" rowspan="2">
+                host
               </th>
-              <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+              <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name" v-for="(s, index) in sections" :key="index">
+                {{s.name}}
+              </th>
+            </tr>
+            <tr class="header">
+              <th :class="c.name" v-for="(c, index) in colHeaders" :key="index">
                 {{c.name}}
               </th>
             </tr>
             <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p) in others" :key="p.id">
               <td >
-                <user v-bind:userId="p.host"></user>
-              </td><td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+                <user :userId="p.host"></user>
+              </td><td :class="c.class" v-for="(c, index) in cols" :key="index">
                 {{ c.get(p) }}
               </td>
             </tr>
@@ -72,8 +82,24 @@
       isMe(){
         return this.me != null && this.me.id === this.host
       },
+      sections(){
+        return this.commonSections.filter(i => i.show())
+      },
+      colHeaders(){
+        let res = []
+        this.sections.forEach((section)=>{
+          if (section.cols.length > 1) {
+            res = res.concat(section.cols)
+          }
+        })
+        return res
+      },
       cols(){
-        return this.commonCols.filter(i => i.show())
+        let res = []
+        this.sections.forEach((section)=>{
+          res = res.concat(section.cols)
+        })
+        return res
       }
     },
     methods: {
@@ -86,96 +112,102 @@
           me: null,
           user: null,
           loading: true,
-          commonCols: [
+          commonSections: [
             {
               name: "name",
-              class: "name",
-              get: (p)=> p.name,
-              show: () => true
+              show: () => true,
+              cols: [
+                {
+                  name: "name",
+                  get: (p)=> p.name
+                }
+              ]
             },
             {
-              name: "created on",
-              class: "createOn",
-              get: (p)=> this.$u.fmt.date(p.createdOn),
-              show: () => this.$root.show.dates
+              name: "date",
+              show: () => this.$root.show.date,
+              cols: [
+                {
+                  name: "created",
+                  get: (p)=> this.$u.fmt.date(p.createdOn)
+                },
+                {
+                  name: "start",
+                  get: (p)=> this.$u.fmt.date(p.startOn)
+                },
+                {
+                  name: "end",
+                  get: (p)=> this.$u.fmt.date(p.endOn)
+                },
+                {
+                  name: "hrs/day",
+                  get: (p)=> p.hoursPerDay
+                },
+                {
+                  name: "days/wk",
+                  get: (p)=> p.daysPerWeek
+                }
+              ]
             },
             {
-              name: "start on",
-              class: "startOn",
-              get: (p)=> this.$u.fmt.date(p.startOn),
-              show: () => this.$root.show.dates
+              name: "time",
+              show: () => this.$root.show.time,
+              cols: [
+                { 
+                  name: "min",
+                  get: (p)=> this.$u.fmt.duration(p.timeEst + p.timeSubMin, p.hoursPerDay, p.daysPerWeek)                  
+                },
+                {
+                  name: "est",
+                  get: (p)=> this.$u.fmt.duration(p.timeEst + p.timeSubEst, p.hoursPerDay, p.daysPerWeek)
+                },
+                {
+                  name: "inc",
+                  get: (p)=> this.$u.fmt.duration(p.timeInc + p.timeSubInc, p.hoursPerDay, p.daysPerWeek)
+                }
+              ]
             },
             {
-              name: "end on",
-              class: "endOn",
-              get: (p)=> this.$u.fmt.date(p.endOn),
-              show: () => this.$root.show.dates
+              name: "cost",
+              show: () => this.$root.show.cost,
+              cols: [
+                {
+                  name: "est",
+                  get: (p)=> this.$u.fmt.cost(p.currencyCode, p.costEst + p.costSubEst)
+                },
+                {
+                  name: "inc",
+                  get: (p)=> this.$u.fmt.cost(p.currencyCode, p.costInc + p.costSubInc)
+                }
+              ]
             },
             {
-              name: "hours per day",
-              class: "hoursPerDay",
-              get: (p)=> p.hoursPerDay,
-              show: () => this.$root.show.dates
+              name: "file",
+              show: () => this.$root.show.file,
+              cols: [
+                {
+                  name: "n",
+                  get: (p)=> p.fileN + p.fileSubN
+                },
+                {
+                  name: "size",
+                  get: (p)=> this.$u.fmt.bytes(p.fileSize + p.fileSubSize)
+                }
+              ]
             },
             {
-              name: "days per week",
-              class: "daysPerWeek",
-              get: (p)=> p.daysPerWeek,
-              show: () => this.$root.show.dates
-            },
-            {
-              name: "min time",
-              class: "minimumSubTime",
-              get: (p)=> this.$u.fmt.duration(p.estimatedTime + p.minimumSubTime, p.hoursPerDay, p.daysPerWeek),
-              show: () => this.$root.show.times
-            },
-            {
-              name: "est time",
-              class: "estimatedTime",
-              get: (p)=> this.$u.fmt.duration(p.estimatedTime + p.estimatedSubTime, p.hoursPerDay, p.daysPerWeek),
-              show: () => this.$root.show.times
-            },
-            {
-              name: "log time",
-              class: "loggedTime",
-              get: (p)=> this.$u.fmt.duration(p.loggedTime + p.loggedSubTime, p.hoursPerDay, p.daysPerWeek),
-              show: () => this.$root.show.times
-            },
-            {
-              name: "est exp",
-              class: "estimatedExpense",
-              get: (p)=> this.$u.fmt.cost(p.currencyCode, p.estimatedExpense + p.estimatedSubExpense),
-              show: () => this.$root.show.expenses
-            },
-            {
-              name: "log exp",
-              class: "loggedExpense",
-              get: (p)=> this.$u.fmt.cost(p.currencyCode, p.loggedExpense + p.loggedSubExpense),
-              show: () => this.$root.show.expenses
-            },
-            {
-              name: "files",
-              class: "fileCount",
-              get: (p)=> p.fileCount + p.fileSubCount,
-              show: () => this.$root.show.files
-            },
-            {
-              name: "file size",
-              class: "fileSize",
-              get: (p) => this.$u.fmt.bytes(p.fileSize + p.fileSubSize),
-              show: () => this.$root.show.files
-            },
-            {
-              name: "children",
-              class: "tasks",
-              get: (p)=> p.childCount,
-              show: () => this.$root.show.tasks
-            },
-            {
-              name: "descendants",
-              class: "tasks",
-              get: (p)=> p.descendantCount,
-              show: () => this.$root.show.tasks
+              name: "task",
+              show: () => this.$root.show.task,
+              cols: [
+                {
+                  name: "childn",
+                  get: (p)=> p.childN
+                },
+                {
+                  name: "descn",
+                  get: (p)=> p.descN
+                }
+              ]
             }
           ],
           sort: "createon",
@@ -251,7 +283,7 @@
   }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 div.root {
   padding: 2.6pc 0 0 1.3pc;
 }
@@ -270,7 +302,7 @@ table {
       min-width: 250px;
     }
   }
-  tr.project {
+  tr.row {
     cursor: pointer;
     td.action img {
       margin: 2px 2px 0px 2px;

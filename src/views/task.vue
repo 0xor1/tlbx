@@ -13,42 +13,27 @@
           <a :title="a.name" :href="'/#/host/'+$u.rtr.host()+'/project/'+$u.rtr.project()+'/task/'+a.id">{{$u.fmt.ellipsis(a.name, 20)}}</a>      
         </span>
       </div>
-      <div class="task">
-        <h1><input :disabled="pMe == null || pMe.id != $u.rtr.host()" type="text" v-model="task.name"></h1>
-        <textarea style="" :disabled="!$u.perm.canWrite(pMe)" v-model="task.description" placeholder="description"></textarea>
-        <p>created by: <user :userId="task.createdBy"></user></p>
-        <p>created on: {{$u.fmt.datetime(task.createdOn)}}</p>
-        <p>assignee: <user :userId="task.user"></user></p>
-        <p>parallel: <input :disabled="!$u.perm.canWrite(pMe)" type="checkbox" v-model="task.isParallel"></p>
-        <p>est time: <input :disabled="!$u.perm.canWrite(pMe)" type="text" v-model="estTime" placeholder="[#]h [#]m"></p>
-        <p>log time: {{$u.fmt.duration(task.loggedTime, project.hoursPerDay, project.daysPerWeek)}}</p>
-        <p>est exp: <input :disabled="!$u.perm.canWrite(pMe)" type="text" v-model="estExp" placeholder="0.00"></p>
-        <p>log exp: {{$u.fmt.cost(project.currencyCode, task.loggedExpense)}}</p>
+      <div class="summary">
         <table>
           <tr class="header">
-            <th rowspan="2">
-            </th>
-            <th :colspan="s.cols.length" v-bind:class="s.name" v-for="(s, index) in sections" :key="index">
+            <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name" v-for="(s, index) in sections" :key="index">
               {{s.name}}
             </th>
           </tr>
           <tr class="header">
-            <th v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+            <th :class="c.name" v-for="(c, index) in colHeaders" :key="index">
               {{c.name}}
             </th>
           </tr>
           <tr class="row">
-            <td>
-              sub task summary
-            </td>
             <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
-              {{ c.get(task) }}
+              {{c.name == "user"? "" : c.get(task)}}
+              <user v-if="c.name=='user'" :userId="c.get(task)"></user>
             </td>
           </tr>
         </table>
       </div>
       <div class="subs">
-
       </div>
     </div>
   </div>
@@ -64,7 +49,16 @@
     },
     computed: {
       sections(){
-        return this.subSummary.filter(i => i.show())
+        return this.commonSections.filter(i => i.show())
+      },
+      colHeaders(){
+        let res = []
+        this.sections.forEach((section)=>{
+          if (section.cols.length > 1) {
+            res = res.concat(section.cols)
+          }
+        })
+        return res
       },
       cols(){
         let res = []
@@ -98,63 +92,94 @@
           comments: [],
           moreComments: false,
           loadingMoreAncestors: false,
-          subSummary: [
+          commonSections: [
             {
-              name: "time",
-              show: () => this.$root.show.times,
+              name: "name",
+              show: () => true,
               cols: [
-                { name: "min",
-                  get: (t)=> this.$u.fmt.duration(t.minimumSubTime, this.project.hoursPerDay, this.project.daysPerWeek)                  
-                },
                 {
-                  name: "est",
-                  get: (t)=> this.$u.fmt.duration(t.estimatedSubTime, this.project.hoursPerDay, this.project.daysPerWeek)
-                },
-                {
-                  name: "log",
-                  get: (t)=> this.$u.fmt.duration(t.loggedSubTime, this.project.hoursPerDay, this.project.daysPerWeek)
+                  name: "name",
+                  get: (t)=> t.name
                 }
               ]
             },
             {
-              name: "expense",
-              show: () => this.$root.show.expenses,
+              name: "created",
+              show: () => this.$root.show.date,
+              cols: [
+                {
+                  name: "created",
+                  get: (t)=> this.$u.fmt.date(t.createdOn)
+                }
+              ]
+            },
+            {
+              name: "user",
+              show: () => this.$root.show.user,
+              cols: [
+                {
+                  name: "user",
+                  get: (t)=> t.user
+                }
+              ]
+            },
+            {
+              name: "time",
+              show: () => this.$root.show.time,
+              cols: [
+                { 
+                  name: "min",
+                  get: (t)=> this.$u.fmt.duration(t.timeEst + t.timeSubMin, this.project.hoursPerDay, this.project.daysPerWeek)                  
+                },
+                {
+                  name: "est",
+                  get: (t)=> this.$u.fmt.duration(t.timeEst + t.timeSubEst, this.project.hoursPerDay, this.project.daysPerWeek)
+                },
+                {
+                  name: "inc",
+                  get: (t)=> this.$u.fmt.duration(t.timeInc + t.timeSubInc, this.project.hoursPerDay, this.project.daysPerWeek)
+                }
+              ]
+            },
+            {
+              name: "cost",
+              show: () => this.$root.show.cost,
               cols: [
                 {
                   name: "est",
-                  get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.estimatedSubExpense)
+                  get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.costEst + t.costSubEst)
                 },
                 {
-                  name: "log",
-                  get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.loggedSubExpense)
+                  name: "inc",
+                  get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.costInc + t.costSubInc)
                 }
               ]
             },
             {
               name: "file",
-              show: () => this.$root.show.files,
+              show: () => this.$root.show.file,
               cols: [
                 {
-                  name: "count",
-                  get: (t)=> t.fileSubCount
+                  name: "n",
+                  get: (t)=> t.fileN + t.fileSubN
                 },
                 {
                   name: "size",
-                  get: (t)=> t.fileSubSize
+                  get: (t)=> this.$u.fmt.bytes(t.fileSize + t.fileSubSize)
                 }
               ]
             },
             {
               name: "task",
-              show: () => this.$root.show.tasks,
+              show: () => this.$root.show.task,
               cols: [
                 {
-                  name: "children",
-                  get: (t)=> t.childCount
+                  name: "childn",
+                  get: (p)=> p.childN
                 },
                 {
-                  name: "descendants",
-                  get: (t)=> t.descendantCount
+                  name: "descn",
+                  get: (p)=> p.descN
                 }
               ]
             }

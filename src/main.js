@@ -26,11 +26,12 @@ let v = new Vue({
     initState(){
       let res = {
         show: this.show || {
-          dates: false,
-          times: true,
-          expenses: true,
-          files: false,
-          tasks: false
+          date: false,
+          user: false,
+          time: true,
+          cost: true,
+          file: false,
+          task: false
         },
         _ctx: this._ctx || {
           currentProjectId: null,
