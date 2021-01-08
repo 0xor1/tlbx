@@ -296,7 +296,8 @@ div.root {
           min-width: 18pc;
         }
       }
-      tr.this-task {
+      tr.this-task td{
+        color: rgb(75, 214, 224);
         font-weight: 1000;
       }
     }
