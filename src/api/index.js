@@ -371,8 +371,9 @@ function newApi(isMDoApi) {
       create(host, project, parent, previousSibling, name, description, isParallel, user, timeEst, costEst) {
         return doReq('/task/create', {host, project, parent, previousSibling, name, description, isParallel, user, timeEst, costEst})
       },
-      update(host, project, id, parent, previousSibling, name, description, isParallel, user, timeEst, costEst) {
-        return doReq('/task/update', {host, project, id, parent, previousSibling, name, description, isParallel, user, timeEst, costEst})
+      update(args) {
+        // {host, project, id, parent, previousSibling, name, description, isParallel, user, timeEst, costEst}
+        return doReq('/task/update', args)
       },
       delete(host, project, id) {
         return doReq('/task/delete', {host, project, id})

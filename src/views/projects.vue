@@ -28,10 +28,10 @@
               <td :class="c.class" v-for="(c, index) in cols" :key="index">
                 {{ c.get(p) }}
               </td>
-              <td v-if="isMe" class="action" @click.stop="updateId = p.id; showUpdate = true">
+              <td v-if="isMe" class="action" @click.stop="updateId = p.id; showUpdate = true" title="update">
                 <img src="@/assets/edit.svg">
               </td>
-              <td v-if="isMe" class="action" @click.stop="trash(p, index)">
+              <td v-if="isMe" class="action" @click.stop="trash(p, index)" title="delete">
                 <img src="@/assets/trash.svg">
               </td>
             </tr>

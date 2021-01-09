@@ -3,7 +3,16 @@
     <div class="loading" v-if="loading">
       loading...
     </div>
-    <div class="content" v-else>
+    <div v-else-if="showCreate || showUpdate">
+      <task-create-or-update 
+        :isCreate="showCreate" 
+        :taskId="updateId"
+        :hostId="$u.rtr.host()" 
+        :projectId="$u.rtr.project()"
+        @close="showCreate = showUpdate = false">
+      </task-create-or-update>
+    </div>
+    <div v-else class="content" >
       <div class="breadcrumb">
         <span v-if="ancestors.length > 0 && ancestors[0].parent != null">
           <a title="load more ancestors" :click="getMoreAncestors">..</a>
@@ -26,26 +35,38 @@
             </th>
           </tr>
           <tr class="row this-task">
-            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+            <td :title="task.description" v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{c.name == "user"? "" : c.get(task)}}
               <user v-if="c.name=='user'" :userId="c.get(task)"></user>
             </td>
-            <td v-if="canEdit(task)" class="action" @click.stop="updateId = task.id; showUpdate = true">
+            <td class="action">
+              
+            </td>
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="updateId = task.id; showCreate = true" title="insert first child">
+              <img src="@/assets/insert-below.svg">
+            </td>
+            <td v-if="canEdit(task)" class="action" @click.stop="updateId = task.id; showUpdate = true" title="update">
               <img src="@/assets/edit.svg">
             </td>
-            <td v-if="canDelete(task)" class="action" @click.stop="trash(task, -1)">
+            <td v-if="canDelete(task)" class="action" @click.stop="trash(task, -1)" title="delete">
               <img src="@/assets/trash.svg">
             </td>
           </tr>
-          <tr class="row" v-for="(t, index) in children" :key="index">
-            <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+          <tr class="row" v-for="(t, index) in children" :key="index" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
+            <td :title="t.description" v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
-            <td v-if="canEdit(t)" class="action" @click.stop="updateId = t.id; showUpdate = true">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="updateId = task.id; showCreate = true" title="insert above">
+              <img src="@/assets/insert-above.svg">
+            </td>
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="updateId = task.id; showCreate = true" title="insert below">
+              <img src="@/assets/insert-below.svg">
+            </td>
+            <td v-if="canEdit(t)" class="action" @click.stop="updateId = t.id; showUpdate = true" title="update">
               <img src="@/assets/edit.svg">
             </td>
-            <td v-if="canDelete(t)" class="action" @click.stop="trash(t, index)">
+            <td v-if="canDelete(t)" class="action" @click.stop="trash(t, index)" title="delete">
               <img src="@/assets/trash.svg">
             </td>
           </tr>
@@ -60,9 +81,10 @@
 
 <script>
   import user from '../components/user'
+  import taskCreateOrUpdate from '../components/taskCreateOrUpdate'
   export default {
     name: 'tasks',
-    components: {user},
+    components: {user, taskCreateOrUpdate},
     data: function() {
       return this.initState()
     },
@@ -90,6 +112,8 @@
     methods: {
       initState(){
         return {
+          showCreate: false,
+          showUpdate: false,
           updating: false,
           loading: true,
           me: null,
@@ -339,6 +363,10 @@ div.root {
         }
       }
       tr.this-task {
+        cursor: default;
+        .action{
+          cursor: pointer;
+        }
         font-size: 1.5pc;
         font-weight: bold;
       }
