@@ -30,11 +30,23 @@
               {{c.name == "user"? "" : c.get(task)}}
               <user v-if="c.name=='user'" :userId="c.get(task)"></user>
             </td>
+            <td v-if="canEdit(task)" class="action" @click.stop="updateId = task.id; showUpdate = true">
+              <img src="@/assets/edit.svg">
+            </td>
+            <td v-if="canDelete(task)" class="action" @click.stop="trash(task, -1)">
+              <img src="@/assets/trash.svg">
+            </td>
           </tr>
           <tr class="row" v-for="(t, index) in children" :key="index">
             <td v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
+            </td>
+            <td v-if="canEdit(t)" class="action" @click.stop="updateId = t.id; showUpdate = true">
+              <img src="@/assets/edit.svg">
+            </td>
+            <td v-if="canDelete(t)" class="action" @click.stop="trash(t, index)">
+              <img src="@/assets/trash.svg">
             </td>
           </tr>
         </table>
@@ -87,8 +99,6 @@
           moreAncestors: false,
           loadingMoreAncestors: false,
           task: null,
-          estTime: "0m",
-          estExp: "0.00",
           children: [],
           moreChildren: false,
           loadingMoreChildren: false,
@@ -265,6 +275,36 @@
             this.loadingMoreChildren = false
           })
         }
+      },
+      canEdit(t){
+        if (this.$u.perm.canWrite(this.pMe)) {
+          if ((t.parent == null && this.$u.rtr.host() == this.pMe.id) || 
+            (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
+            return true
+          }
+        }
+        return false
+      },
+      canDelete(t){
+        if (this.$u.perm.canWrite(this.pMe)) {
+          if ((t.parent == null && this.$u.rtr.host() == this.pMe.id) || 
+            (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
+            return true
+          }
+        }
+        return false
+      },
+      trash(t, index){
+        this.$api.task.delete(this.$u.rtr.host(), this.$u.rtr.project(), t.id).then(()=>{
+          if (index > -1) {
+            this.children.splice(index, 1)
+          }
+          if (t.parent == null) {
+            this.$u.rtr.goHome()
+          } else {
+            this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.parent}`)
+          }
+        })
       }
     },
     mounted(){
@@ -290,15 +330,17 @@ div.root {
       margin: 1pc 0 1pc 0;
       border-collapse: collapse;
       th, td {
-        text-align: center;
-        min-width: 100px;
-        &.name{
-          min-width: 18pc;
+        &:not(.action) {
+          text-align: center;
+          min-width: 100px;
+          &.name{
+            min-width: 18pc;
+          }
         }
       }
-      tr.this-task td{
-        color: rgb(75, 214, 224);
-        font-weight: 1000;
+      tr.this-task {
+        font-size: 1.5pc;
+        font-weight: bold;
       }
     }
   }

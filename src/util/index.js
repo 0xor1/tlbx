@@ -98,10 +98,14 @@ export default {
                     let h = Math.floor(minutes / 60)
                     let m = minutes % 60
                     if (hoursPerDay == null || hoursPerDay === 0) {
+                        let res = ""
                         if (h > 0) {
-                            return h + "h " + m + "m"
+                            res += h + "h "
                         }
-                        return m + "m"
+                        if (m > 0 || h == 0) {
+                            res += m + "m"
+                        }
+                        return res
                     }
                     let d = Math.floor(h / hoursPerDay)
                     h = h % hoursPerDay
