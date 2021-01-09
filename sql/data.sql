@@ -188,9 +188,9 @@ BEGIN
   
   DECLARE curParent BINARY(16) DEFAULT NULL;
 
+  DECLARE curTimeSubMin BIGINT UNSIGNED DEFAULT 0;
   DECLARE curTimeSubEst BIGINT UNSIGNED DEFAULT 0;
   DECLARE curTimeSubInc BIGINT UNSIGNED DEFAULT 0;
-  DECLARE curTimeSubMin BIGINT UNSIGNED DEFAULT 0;
   DECLARE curCostSubEst BIGINT UNSIGNED DEFAULT 0;
   DECLARE curCostSubInc BIGINT UNSIGNED DEFAULT 0;
   DECLARE curFileSubN BIGINT UNSIGNED DEFAULT 0;
@@ -198,9 +198,9 @@ BEGIN
   DECLARE curChildN BIGINT UNSIGNED DEFAULT 0;
   DECLARE curDescN BIGINT UNSIGNED DEFAULT 0;
 
+  DECLARE newTimeSubMin BIGINT UNSIGNED DEFAULT 0;
   DECLARE newTimeSubEst BIGINT UNSIGNED DEFAULT 0;
   DECLARE newTimeSubInc BIGINT UNSIGNED DEFAULT 0;
-  DECLARE newTimeSubMin BIGINT UNSIGNED DEFAULT 0;
   DECLARE newCostSubEst BIGINT UNSIGNED DEFAULT 0;
   DECLARE newCostSubInc BIGINT UNSIGNED DEFAULT 0;
   DECLARE newFileSubN BIGINT UNSIGNED DEFAULT 0;
@@ -227,12 +227,12 @@ BEGIN
       t.fileSubSize,
       t.childN,
       t.descN,
-      COALESCE(SUM(c.timeEst + c.timeSubEst), 0),
-      COALESCE(SUM(c.timeInc + c.timeSubInc), 0),
       CASE t.isParallel
         WHEN 0 THEN COALESCE(SUM(c.timeEst + c.timeSubMin), 0)
         WHEN 1 THEN COALESCE(MAX(c.timeEst + c.timeSubMin), 0)
       END,
+      COALESCE(SUM(c.timeEst + c.timeSubEst), 0),
+      COALESCE(SUM(c.timeInc + c.timeSubInc), 0),
       COALESCE(SUM(c.costEst + c.costSubEst), 0),
       COALESCE(SUM(c.costInc + c.costSubInc), 0),
       COALESCE(SUM(c.fileN + c.fileSubN), 0),

@@ -657,9 +657,9 @@ func Scan(r isql.Row) (*task.Task, error) {
 		&t.Description,
 		&t.CreatedBy,
 		&t.CreatedOn,
-		&t.TimeSubMin,
 		&t.TimeEst,
 		&t.TimeInc,
+		&t.TimeSubMin,
 		&t.TimeSubEst,
 		&t.TimeSubInc,
 		&t.CostEst,
@@ -680,7 +680,7 @@ func Scan(r isql.Row) (*task.Task, error) {
 }
 
 var (
-	Sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeSubMin, t.timeEst, t.timeInc, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel`
+	Sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel`
 	sql_task_columns          = strings.ReplaceAll(Sql_task_columns_prefixed, `t.`, ``)
 	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id) AS (SELECT 0, parent FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.id) CYCLE id RESTRICT`
 )

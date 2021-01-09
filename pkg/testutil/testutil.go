@@ -37,7 +37,7 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 		if t.IsParallel {
 			p = 1
 		}
-		v := Strf(`[n: %s, p: %d, m: %d, et: %d, est: %d, lt: %d, lst: %d, ee: %d, ese: %d, le: %d, lse: %d, fc: %d, fsc: %d, fs: %d, fss: %d]`, t.Name, p, t.TimeSubMin, t.TimeEst, t.TimeSubEst, t.TimeInc, t.TimeSubInc, t.CostEst, t.CostSubEst, t.CostInc, t.CostSubInc, t.FileN, t.FileSubN, t.FileSize, t.FileSubSize)
+		v := Strf(`[n: %s, p: %d, te: %d, ti: %d, tsm: %d, tse: %d, tsi: %d, ce: %d, ci: %d, cse: %d, csi: %d, fn: %d, fsn: %d, fs: %d, fss: %d]`, t.Name, p, t.TimeEst, t.TimeInc, t.TimeSubMin, t.TimeSubEst, t.TimeSubInc, t.CostEst, t.CostInc, t.CostSubEst, t.CostSubInc, t.FileN, t.FileSubN, t.FileSize, t.FileSubSize)
 		if len(as) > 0 {
 			pre := ``
 			for _, a := range as[1:] {
@@ -62,17 +62,17 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 	}
 	println("n: name")
 	println("p: isParallel")
-	println("m: timeSubMin")
-	println("et: timeEst")
-	println("est: timeSubEst")
-	println("lt: timeInc")
-	println("lst: timeSubInc")
-	println("ee: costEst")
-	println("ese: costSubEst")
-	println("le: costInc")
-	println("lse: costSubInc")
-	println("fc: fileN")
-	println("fsc: fileSubN")
+	println("te: timeEst")
+	println("ti: timeInc")
+	println("tsm: timeSubMin")
+	println("tse: timeSubEst")
+	println("tsi: timeSubInc")
+	println("ce: costEst")
+	println("ci: costInc")
+	println("cse: costSubEst")
+	println("csi: costSubInc")
+	println("fn: fileN")
+	println("fsn: fileSubN")
 	println("fs: fileSize")
 	println("fss: fileSubSize")
 	println()
