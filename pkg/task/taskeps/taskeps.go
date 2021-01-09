@@ -65,9 +65,9 @@ var (
 					Description: args.Description,
 					CreatedBy:   me,
 					CreatedOn:   NowMilli(),
-					TimeSubMin:  args.TimeEst,
 					TimeEst:     args.TimeEst,
 					TimeInc:     0,
+					TimeSubMin:  0,
 					TimeSubEst:  0,
 					TimeSubInc:  0,
 					CostEst:     args.CostEst,
@@ -117,7 +117,7 @@ var (
 					PanicOn(err)
 				}
 				// insert new task
-				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.TimeSubMin, t.TimeEst, t.TimeInc, t.TimeSubEst, t.TimeSubInc, t.CostEst, t.CostInc, t.CostSubEst, t.CostSubInc, t.FileN, t.FileSize, t.FileSubN, t.FileSubSize, t.ChildN, t.DescN, t.IsParallel)
+				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.TimeEst, t.TimeInc, t.TimeSubMin, t.TimeSubEst, t.TimeSubInc, t.CostEst, t.CostInc, t.CostSubEst, t.CostSubInc, t.FileN, t.FileSize, t.FileSubN, t.FileSubSize, t.ChildN, t.DescN, t.IsParallel)
 				PanicOn(err)
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &t.ID, t.ID, cnsts.TypeTask, cnsts.ActionCreated, nil, nil)
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
