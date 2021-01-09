@@ -31,7 +31,7 @@
 
 <script>
   export default {
-    name: 'projectCreateOrUpdate',
+    name: 'taskCreateOrUpdate',
     props: {
       isCreate: Boolean,
       hostId: String,
