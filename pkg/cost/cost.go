@@ -1,4 +1,4 @@
-package expense
+package cost
 
 import (
 	"time"
@@ -8,12 +8,12 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
-type Expense struct {
+type Cost struct {
 	Task      ID        `json:"task"`
 	ID        ID        `json:"id"`
 	CreatedBy ID        `json:"createdBy"`
 	CreatedOn time.Time `json:"createdOn"`
-	Cost      uint64    `json:"cost"`
+	Value     uint64    `json:"value"`
 	Note      string    `json:"note"`
 }
 
@@ -21,21 +21,21 @@ type Create struct {
 	Host    ID     `json:"host"`
 	Project ID     `json:"project"`
 	Task    ID     `json:"task"`
-	Cost    uint64 `json:"cost"`
+	Value   uint64 `json:"value"`
 	Note    string `json:"note,omitempty"`
 }
 
 func (_ *Create) Path() string {
-	return "/expense/create"
+	return "/cost/create"
 }
 
-func (a *Create) Do(c *app.Client) (*Expense, error) {
-	res := &Expense{}
+func (a *Create) Do(c *app.Client) (*Cost, error) {
+	res := &Cost{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Create) MustDo(c *app.Client) *Expense {
+func (a *Create) MustDo(c *app.Client) *Cost {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -46,21 +46,21 @@ type Update struct {
 	Project ID            `json:"project"`
 	Task    ID            `json:"task"`
 	ID      ID            `json:"id"`
-	Cost    *field.UInt64 `json:"cost,omitempty"`
+	Value   *field.UInt64 `json:"value,omitempty"`
 	Note    *field.String `json:"note,omitempty"`
 }
 
 func (_ *Update) Path() string {
-	return "/expense/update"
+	return "/cost/update"
 }
 
-func (a *Update) Do(c *app.Client) (*Expense, error) {
-	res := &Expense{}
+func (a *Update) Do(c *app.Client) (*Cost, error) {
+	res := &Cost{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Update) MustDo(c *app.Client) *Expense {
+func (a *Update) MustDo(c *app.Client) *Cost {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -80,12 +80,12 @@ type Get struct {
 }
 
 type GetRes struct {
-	Set  []*Expense `json:"set"`
-	More bool       `json:"more"`
+	Set  []*Cost `json:"set"`
+	More bool    `json:"more"`
 }
 
 func (_ *Get) Path() string {
-	return "/expense/get"
+	return "/cost/get"
 }
 
 func (a *Get) Do(c *app.Client) (*GetRes, error) {
@@ -108,7 +108,7 @@ type Delete struct {
 }
 
 func (_ *Delete) Path() string {
-	return "/expense/delete"
+	return "/cost/delete"
 }
 
 func (a *Delete) Do(c *app.Client) error {

@@ -126,15 +126,15 @@ CREATE TABLE times(
   UNIQUE INDEX(host, project, createdOn, createdBy, task)
 );
 
-DROP TABLE IF EXISTS expenses;
-CREATE TABLE expenses(
+DROP TABLE IF EXISTS costs;
+CREATE TABLE costs(
   host BINARY(16) NOT NULL,
   project BINARY(16) NOT NULL,
   task BINARY(16) NOT NULL,
   id BINARY(16) NOT NULL,
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
-  cost BIGINT UNSIGNED NOT NULL,
+  value BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NOT NULL,
   PRIMARY KEY(host, project, task, createdOn, createdBy),
   UNIQUE INDEX(host, project, task, id),

@@ -8,7 +8,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/0xor1/trees/pkg/comment/commenteps"
 	"github.com/0xor1/trees/pkg/config"
-	"github.com/0xor1/trees/pkg/expense/expenseeps"
+	"github.com/0xor1/trees/pkg/cost/costeps"
 	"github.com/0xor1/trees/pkg/file/fileeps"
 	"github.com/0xor1/trees/pkg/project/projecteps"
 	"github.com/0xor1/trees/pkg/task/taskeps"
@@ -43,7 +43,7 @@ func main() {
 			projecteps.Eps,
 			taskeps.Eps,
 			timeeps.Eps,
-			expenseeps.Eps,
+			costeps.Eps,
 			fileeps.Eps,
 			commenteps.Eps)
 	})

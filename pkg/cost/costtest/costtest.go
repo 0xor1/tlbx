@@ -1,4 +1,4 @@
-package expensetest
+package costtest
 
 import (
 	"testing"
@@ -10,8 +10,8 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/trees/pkg/cnsts"
 	"github.com/0xor1/trees/pkg/config"
-	"github.com/0xor1/trees/pkg/expense"
-	"github.com/0xor1/trees/pkg/expense/expenseeps"
+	"github.com/0xor1/trees/pkg/cost"
+	"github.com/0xor1/trees/pkg/cost/costeps"
 	"github.com/0xor1/trees/pkg/project"
 	"github.com/0xor1/trees/pkg/project/projecteps"
 	"github.com/0xor1/trees/pkg/task"
@@ -33,7 +33,7 @@ func Everything(t *testing.T) {
 	a := assert.New(t)
 	r := test.NewRig(
 		config.Get(),
-		append(append(projecteps.Eps, taskeps.Eps...), expenseeps.Eps...),
+		append(append(projecteps.Eps, taskeps.Eps...), costeps.Eps...),
 		true,
 		nil,
 		projecteps.OnDelete,
@@ -78,37 +78,37 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.NotNil(t1p0)
 
-	e1 := (&expense.Create{
+	e1 := (&cost.Create{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
-		Cost:    77,
+		Value:   77,
 		Note:    "yolo",
 	}).MustDo(ac)
 	a.NotNil(e1)
 
-	e1 = (&expense.Update{
+	e1 = (&cost.Update{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      e1.ID,
-		Cost:    &field.UInt64{V: 33},
+		Value:   &field.UInt64{V: 33},
 		Note:    &field.String{V: "polo"},
 	}).MustDo(ac)
 	a.NotNil(e1)
 
-	e1 = (&expense.Update{
+	e1 = (&cost.Update{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      e1.ID,
-		Cost:    &field.UInt64{V: 44},
+		Value:   &field.UInt64{V: 44},
 		Note:    &field.String{V: "polo"},
 	}).MustDo(ac)
 	a.NotNil(e1)
 
 	// nil
-	eNil := (&expense.Update{
+	eNil := (&cost.Update{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
@@ -116,7 +116,7 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.Nil(eNil)
 
-	es := (&expense.Get{
+	es := (&cost.Get{
 		Host:         r.Ali().ID(),
 		Project:      p.ID,
 		Task:         &t1p0.ID,
@@ -127,7 +127,7 @@ func Everything(t *testing.T) {
 	a.Equal(e1, es.Set[0])
 	a.False(es.More)
 
-	es = (&expense.Get{
+	es = (&cost.Get{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		IDs:     IDs{e1.ID},
@@ -135,16 +135,16 @@ func Everything(t *testing.T) {
 	a.Equal(e1, es.Set[0])
 	a.False(es.More)
 
-	e2 := (&expense.Create{
+	e2 := (&cost.Create{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
-		Cost:    77,
+		Value:   77,
 		Note:    "solo",
 	}).MustDo(ac)
 	a.NotNil(e2)
 
-	es = (&expense.Get{
+	es = (&cost.Get{
 		Host:         r.Ali().ID(),
 		Project:      p.ID,
 		Task:         &t1p0.ID,
@@ -156,7 +156,7 @@ func Everything(t *testing.T) {
 	a.Equal(e1, es.Set[1])
 	a.False(es.More)
 
-	es = (&expense.Get{
+	es = (&cost.Get{
 		Host:         r.Ali().ID(),
 		Project:      p.ID,
 		Task:         &t1p0.ID,
@@ -168,7 +168,7 @@ func Everything(t *testing.T) {
 	a.Equal(e2, es.Set[0])
 	a.True(es.More)
 
-	es = (&expense.Get{
+	es = (&cost.Get{
 		Host:         r.Ali().ID(),
 		Project:      p.ID,
 		Task:         &t1p0.ID,
@@ -181,7 +181,7 @@ func Everything(t *testing.T) {
 	a.Equal(e1, es.Set[0])
 	a.False(es.More)
 
-	(&expense.Delete{
+	(&cost.Delete{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,

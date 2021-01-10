@@ -417,7 +417,7 @@ var (
 					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, nil, nil)
 
-					// first get all time/expense/file/comment ids being deleted then
+					// first get all time/cost/file/comment ids being deleted then
 					sql_in_tasks := sqlh.InCondition(true, `task`, len(tasksToDelete))
 					toDelete := make(IDs, 0, 50)
 					scanToDelete := func(rows isql.Rows) {
@@ -430,8 +430,8 @@ var (
 					PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM times WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...))
 					_, err = tx.Exec(Strf(`DELETE FROM times WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
-					PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM expenses WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...))
-					_, err = tx.Exec(Strf(`DELETE FROM expenses WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM costs WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...))
+					_, err = tx.Exec(Strf(`DELETE FROM costs WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
 					if len(tasksWithFiles) > 0 {
 						filesArgs := make([]interface{}, 0, len(tasksWithFiles)+2)
