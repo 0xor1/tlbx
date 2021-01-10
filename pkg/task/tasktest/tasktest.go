@@ -62,7 +62,7 @@ func Everything(t *testing.T) {
 		},
 	}).MustDo(ac)
 
-	t1p0 := (&task.Create{
+	createRes := (&task.Create{
 		Host:            r.Ali().ID(),
 		Project:         p.ID,
 		Parent:          p.ID,
@@ -72,7 +72,10 @@ func Everything(t *testing.T) {
 		User:            ptr.ID(r.Bob().ID()),
 		TimeEst:         100,
 	}).MustDo(ac)
-	a.NotNil(t1p0)
+	a.NotNil(createRes)
+	a.True(p.ID.Equal(createRes.Parent.ID))
+
+	t1p0 := createRes.Task
 
 	t1p1 := (&task.Create{
 		Host:            r.Ali().ID(),
@@ -84,8 +87,8 @@ func Everything(t *testing.T) {
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
 		TimeEst:         100,
-	}).MustDo(ac)
-	a.NotNil(t1p1)
+	}).MustDo(ac).Task
+	a.NotNil(createRes)
 
 	t2p0 := (&task.Create{
 		Host:            r.Ali().ID(),
@@ -97,7 +100,7 @@ func Everything(t *testing.T) {
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
 		TimeEst:         100,
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t2p0)
 
 	t3p0 := (&task.Create{
@@ -110,7 +113,7 @@ func Everything(t *testing.T) {
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
 		TimeEst:         100,
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t3p0)
 
 	t4p0 := (&task.Create{
@@ -123,7 +126,7 @@ func Everything(t *testing.T) {
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
 		TimeEst:         100,
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	t1p2 := (&task.Create{
@@ -136,7 +139,7 @@ func Everything(t *testing.T) {
 		IsParallel:      true,
 		User:            ptr.ID(r.Ali().ID()),
 		TimeEst:         100,
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t1p2)
 
 	uRes := (&task.Update{

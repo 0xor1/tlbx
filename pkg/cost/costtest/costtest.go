@@ -75,7 +75,7 @@ func Everything(t *testing.T) {
 		IsParallel:      true,
 		User:            ptr.ID(r.Bob().ID()),
 		CostEst:         100,
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 
 	e1 := (&cost.Create{

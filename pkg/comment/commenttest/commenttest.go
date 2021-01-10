@@ -73,7 +73,7 @@ func Everything(t *testing.T) {
 		Description:     "",
 		IsParallel:      true,
 		User:            ptr.ID(r.Bob().ID()),
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 
 	e1 := (&comment.Create{

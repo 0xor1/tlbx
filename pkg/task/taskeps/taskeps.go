@@ -45,7 +45,10 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleTask
+				return &task.UpdateRes{
+					Parent: exampleTask,
+					Task:   exampleTask,
+				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Create)
@@ -123,8 +126,12 @@ var (
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
 				// all that remains to do is update aggregate values
 				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Parent)
+				p := getOne(tx, args.Host, args.Project, *t.Parent)
 				tx.Commit()
-				return t
+				return &task.UpdateRes{
+					Parent: p,
+					Task:   t,
+				}
 			},
 		},
 		{

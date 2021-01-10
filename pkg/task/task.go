@@ -53,13 +53,13 @@ func (_ *Create) Path() string {
 	return "/task/create"
 }
 
-func (a *Create) Do(c *app.Client) (*Task, error) {
-	res := &Task{}
+func (a *Create) Do(c *app.Client) (*UpdateRes, error) {
+	res := &UpdateRes{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Create) MustDo(c *app.Client) *Task {
+func (a *Create) MustDo(c *app.Client) *UpdateRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
