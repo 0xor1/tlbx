@@ -5,12 +5,13 @@
     </div>
     <div v-else-if="showCreateOrUpdate">
       <task-create-or-update 
+        :isCreate="isCreate"
         :hostId="$u.rtr.host()" 
         :projectId="$u.rtr.project()"
-        :task="update"
-        :parentId="parentId"
-        :previousSiblingId="previousSiblingId"
-        @close="showCreateOrUpdate = false">
+        :task="task"
+        :children="children"
+        :index="index"
+        @close="onCreateOrUpdateClose">
       </task-create-or-update>
     </div>
     <div v-else class="content" >
@@ -44,10 +45,10 @@
             <td class="action">
               
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(-1)" title="insert first child">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(0)" title="insert first child">
               <img src="@/assets/insert-below.svg">
             </td>
-            <td v-if="canUpdate(task)" class="action" @click.stop="showUpdate = true; update = task; parentId = task.parent; previousSiblingId = null;" title="update">
+            <td v-if="canUpdate(task)" class="action" @click.stop="showUpdate(-1)" title="update">
               <img src="@/assets/edit.svg">
             </td>
             <td v-if="canDelete(task)" class="action" @click.stop="trash(task, -1)" title="delete">
@@ -59,13 +60,13 @@
               {{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index-1)" title="insert above">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index)" title="insert above">
               <img src="@/assets/insert-above.svg">
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index)" title="insert below">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index+1)" title="insert below">
               <img src="@/assets/insert-below.svg">
             </td>
-            <td v-if="canUpdate(t)" class="action" @click.stop="update = t; showUpdate = true" title="update">
+            <td v-if="canUpdate(t)" class="action" @click.stop="showUpdate(index)" title="update">
               <img src="@/assets/edit.svg">
             </td>
             <td v-if="canDelete(t)" class="action" @click.stop="trash(t, index)" title="delete">
@@ -73,7 +74,7 @@
             </td>
           </tr>
         </table>
-        <button v-if="moreChildren" @click="loadMoreChildren()">load more</button>
+        <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
       </div>
       <div class="subs">
       </div>
@@ -115,7 +116,7 @@
       initState(){
         return {
           showCreateOrUpdate: false,
-          updating: false,
+          index: null,
           loading: true,
           me: null,
           project: null,
@@ -293,7 +294,7 @@
           this.loadingMoreChildren = true;
           this.$api.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), this.children[this.children.length - 1].id, 10).then((res)=>{
             this.children = this.children.concat(res.set)
-            this.moreAncestors = res.more
+            this.moreChildren = res.more
           }).finally(()=>{
             this.loadingMoreChildren = false
           })
@@ -321,27 +322,43 @@
       },
       showCreate(index) {
         this.showCreateOrUpdate = true
-        this.update = null
-        this.parentId = this.task.id
+        this.isCreate = true
+        this.index = index
+      },
+      showUpdate(index) {
+        this.showCreateOrUpdate = true
+        this.isCreate = false
         if (index == -1) {
-          // inserting new first child
-          this.previousSiblingId = null
+          this.update = this.task
         } else {
-          // inserting none first child
-          this.previousSiblingId = this.children[index].id
+          this.update = this.children[index]
         }
+        this.parentId = this.update.parent
+        this.index = index
+      },
+      onCreateOrUpdateClose() {
+        this.showCreateOrUpdate = false
+        this.index = null
       },
       trash(t, index){
-        this.$api.task.delete(this.$u.rtr.host(), this.$u.rtr.project(), t.id).then(()=>{
-          if (index > -1) {
-            this.children.splice(index, 1)
-          }
-          if (t.parent == null) {
+        if (t.id == this.$u.rtr.project()) {
+          this.$api.project.delete([this.$u.rtr.project()]).then(()=>{
             this.$u.rtr.goHome()
-          } else {
-            this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.parent}`)
-          }
-        })
+          })
+        } else {
+          this.$api.task.delete(this.$u.rtr.host(), this.$u.rtr.project(), t.id).then((t)=>{
+            if (index > -1) {
+              this.children.splice(index, 1)
+              this.task = t
+            } else {
+              if (t.parent == null) {
+                this.$u.rtr.goHome()
+              } else {
+                this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.parent}`)
+              }
+            }
+          })
+        }
       }
     },
     mounted(){

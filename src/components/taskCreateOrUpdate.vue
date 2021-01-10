@@ -24,7 +24,7 @@
         <input v-model="previousSiblingId" placeholder="previous sibling Id" @blur="validate" @keydown.enter="ok">
       </div>
       <button @click="ok">{{isCreate? 'create': 'update'}}</button>
-      <button @click="cancel">cancel</button>
+      <button @click="close()">close</button>
       <span v-if="err.length > 0" class="err">{{err}}</span>
     </div>
   </div>
@@ -34,16 +34,14 @@
   export default {
     name: 'taskCreateOrUpdate',
     props: {
+      isCreate: Boolean,
       hostId: String,
       projectId: String,
       task: Object,
+      children: Array,
+      index: Number,
       parentId: String,
       previousSiblingId: String
-    },
-    computed: {
-      isCreate(){
-        return this.task == null 
-      }
     },
     data: function() {
       return this.initState()
@@ -74,12 +72,16 @@
         this.$root.ctx().then((ctx)=>{
             this.project = ctx.project
             if (!this.isCreate) {
-              this.name = this.task.name
-              this.description = this.task.description
-              this.user = this.task.user
-              this.isParallel = this.task.isParallel
-              this.timeEst = this.task.timeEst
-              this.costEst = this.task.costEst
+              let t = this.task
+              if (this.index > -1) {
+                t = this.children[this.index]
+              }
+              this.name = t.name
+              this.description = t.description
+              this.user = t.user
+              this.isParallel = t.isParallel
+              this.timeEst = t.timeEst
+              this.costEst = t.costEst
             } 
             this.timeEstDisplay = this.$u.fmt.duration(this.timeEst)
             this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode) 
@@ -135,31 +137,31 @@
       ok(){
         if (this.validate()) {
           if (this.isCreate) {
-            this.$api.task.create(this.hostId, this.projectId, this.parentId, this.previousSiblingId, this.name, this.description, this.isParallel, this.user, this.timeEst, this.costEst).then((t)=>{
-              this.$u.rtr.goto(`/host/${this.hostId}/project/${this.projectId}/task/${t.id}`)
+            this.$api.task.create(this.hostId, this.projectId, this.task.id, this.previousSiblingId, this.name, this.description, this.isParallel, this.user, this.timeEst, this.costEst).then((res)=>{
+              this.children.splice(this.index, 0, res.task)
+              for(const [key, value] of Object.entries(res.parent)) {
+                this.task[key] = value
+              }
+              this.close()
             })
           } else {
             let args = {
               host: this.hostId,
               project: this.projectId,
               id: this.task.id,
-              parent: {v:this.parentId}, 
-              name: {v: this.name},
-              isPublic: {v: this.isPublic},
-              currencyCode: {v: this.currencyCode},
-              hoursPerDay: {v: this.hoursPerDay},
-              daysPerWeek: {v: this.daysPerWeek},
-              startOn: {v: this.startOn},
-              endOn: {v: this.endOn}
             }
-            this.$api.task.update(args).then((t)=>{
-              this.task = t
-              this.cancel()
+            this.$api.task.update(args).then((res)=>{
+              // todo update correct objs
+              console.log(res)
+              for(const [key, value] of Object.entries(res.parent)) {
+                this.task[key] = value
+              }
+              this.close()
             })
           }
         }
       },
-      cancel(){
+      close(){
         this.$emit('close')
       }
     },
