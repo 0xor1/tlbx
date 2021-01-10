@@ -152,7 +152,10 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleTask
+				return &task.UpdateRes{
+					Parent: exampleTask,
+					Task:   exampleTask,
+				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Update)
@@ -347,12 +350,19 @@ var (
 				if nameUpdated {
 					epsutil.ActivityItemRename(tx, args.Host, args.Project, args.ID, t.Name, true)
 				}
+				var p *task.Task
+				if t.Parent != nil {
+					p = getOne(tx, args.Host, args.Project, *t.Parent)
+				}
 				tx.Commit()
-				return t
+				return &task.UpdateRes{
+					Parent: p,
+					Task:   t,
+				}
 			},
 		},
 		{
-			Description:  "Delete a task",
+			Description:  "Delete a task (returns the parent of the deleted task)",
 			Path:         (&task.Delete{}).Path(),
 			Timeout:      0,
 			MaxBodyBytes: app.KB,
@@ -368,7 +378,7 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return nil
+				return exampleTask
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Delete)
@@ -455,8 +465,10 @@ var (
 						srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(args.Host, args.Project, t))
 					}
 				}
+				parent := getOne(tx, args.Host, args.Project, *t.Parent)
 				tx.Commit()
-				return nil
+				// return parent to show aggregate value changes
+				return parent
 			},
 		},
 		{

@@ -139,7 +139,7 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.NotNil(t1p2)
 
-	t1p1 = (&task.Update{
+	uRes := (&task.Update{
 		Host:            r.Ali().ID(),
 		Project:         p.ID,
 		ID:              t1p1.ID,
@@ -152,7 +152,9 @@ func Everything(t *testing.T) {
 		TimeEst:         &field.UInt64{V: 50},
 		CostEst:         &field.UInt64{V: 50},
 	}).MustDo(ac)
-	a.NotNil(t1p1)
+	a.NotNil(uRes)
+	a.True(t1p1.ID.Equal(uRes.Task.ID))
+	a.True(t2p0.ID.Equal(uRes.Parent.ID))
 
 	tp := (&task.Update{
 		Host:       r.Ali().ID(),
@@ -197,7 +199,7 @@ func Everything(t *testing.T) {
 		ID:              t4p0.ID,
 		Parent:          &field.ID{V: t2p0.ID},
 		PreviousSibling: &field.IDPtr{V: ptr.ID(t1p1.ID)},
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	t4p0 = (&task.Update{
@@ -206,7 +208,7 @@ func Everything(t *testing.T) {
 		ID:              t4p0.ID,
 		Parent:          &field.ID{V: p.ID},
 		PreviousSibling: &field.IDPtr{V: ptr.ID(t1p2.ID)},
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	// illegal horizontal move
@@ -227,7 +229,7 @@ func Everything(t *testing.T) {
 		ID:              t4p0.ID,
 		Parent:          &field.ID{V: p.ID},
 		PreviousSibling: &field.IDPtr{V: ptr.ID(t1p0.ID)},
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	// horizontal move to first position
@@ -238,7 +240,7 @@ func Everything(t *testing.T) {
 		Parent:          &field.ID{V: p.ID},
 		PreviousSibling: &field.IDPtr{V: nil},
 		User:            &field.IDPtr{V: ptr.ID(r.Bob().ID())},
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	t1p0 = (&task.Update{
@@ -247,7 +249,7 @@ func Everything(t *testing.T) {
 		ID:              t1p0.ID,
 		PreviousSibling: &field.IDPtr{V: &t1p2.ID},
 		Description:     &field.String{V: ""},
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 
 	// repeat call should not change anything
@@ -256,17 +258,25 @@ func Everything(t *testing.T) {
 		Project:         p.ID,
 		ID:              t1p0.ID,
 		PreviousSibling: &field.IDPtr{V: &t1p2.ID},
-	}).MustDo(ac)
+	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 
 	f := testutil.MustUploadFile(ac, r.Ali().ID(), p.ID, t3p0.ID, "yolo.test.txt", "text/plain", []byte(`yolo`))
 	a.NotNil(f)
 
-	(&task.Delete{
+	t2p0 = (&task.Get{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t2p0.ID,
+	}).MustDo(ac)
+
+	deleteParent := (&task.Delete{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		ID:      t3p0.ID,
 	}).MustDo(ac)
+	a.True(t2p0.ID.Equal(deleteParent.ID))
+	a.Equal(t2p0.ChildN-1, deleteParent.ChildN)
 
 	t1p0Get := (&task.Get{
 		Host:    r.Ali().ID(),

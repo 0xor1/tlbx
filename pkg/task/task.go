@@ -79,17 +79,22 @@ type Update struct {
 	CostEst         *field.UInt64 `json:"costEst,omitempty"`
 }
 
+type UpdateRes struct {
+	Parent *Task `json:"parent"`
+	Task   *Task `json:"task"`
+}
+
 func (_ *Update) Path() string {
 	return "/task/update"
 }
 
-func (a *Update) Do(c *app.Client) (*Task, error) {
-	res := &Task{}
+func (a *Update) Do(c *app.Client) (*UpdateRes, error) {
+	res := &UpdateRes{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Update) MustDo(c *app.Client) *Task {
+func (a *Update) MustDo(c *app.Client) *UpdateRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -123,13 +128,16 @@ func (_ *Delete) Path() string {
 	return "/task/delete"
 }
 
-func (a *Delete) Do(c *app.Client) error {
-	err := app.Call(c, a.Path(), a, nil)
-	return err
+func (a *Delete) Do(c *app.Client) (*Task, error) {
+	res := &Task{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
 }
 
-func (a *Delete) MustDo(c *app.Client) {
-	PanicOn(a.Do(c))
+func (a *Delete) MustDo(c *app.Client) *Task {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
 }
 
 type GetSetRes struct {
