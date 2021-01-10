@@ -100,9 +100,12 @@ export default {
                     if (hoursPerDay == null || hoursPerDay === 0) {
                         let res = ""
                         if (h > 0) {
-                            res += h + "h "
+                            res += h + "h"
                         }
                         if (m > 0 || h == 0) {
+                            if (res != "") {
+                                res += " "
+                            }
                             res += m + "m"
                         }
                         return res
@@ -112,12 +115,18 @@ export default {
                     if (daysPerWeek == null || daysPerWeek == 0) {
                         let res = ""
                         if (d > 0) {
-                            res += d + "d "
+                            res += d + "d"
                         }
                         if (h > 0) {
-                            res += h + "h "
+                            if (res != "") {
+                                res += " "
+                            }
+                            res += h + "h"
                         }
                         if (m > 0 || (h == 0 && d == 0)) {
+                            if (res != "") {
+                                res += " "
+                            }
                             res += m + "m"
                         }
                         return res
@@ -126,20 +135,29 @@ export default {
                     d = d % daysPerWeek
                     let res = ""
                     if (w > 0) {
-                        res += w + "w "
+                        res += w + "w"
                     }
                     if (d > 0) {
-                        res += d + "d "
+                        if (res != "") {
+                            res += " "
+                        }
+                        res += d + "d"
                     }
                     if (h > 0) {
-                        res += h + "h "
+                        if (res != "") {
+                            res += " "
+                        }
+                        res += h + "h"
                     }
                     if (m > 0 || (h == 0 && d == 0 && w == 0)) {
+                        if (res != "") {
+                            res += " "
+                        }
                         res += m + "m"
                     }
                     return res
                 },
-                cost(currencyCode, value) {
+                cost(value, currencyCode) {
                     let symbol = currencyCode
                     // only support symbols for the major currencies
                     switch(currencyCode) {

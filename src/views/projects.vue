@@ -1,7 +1,11 @@
 <template>
   <div class="root">
     <div v-if="showCreate || showUpdate">
-      <project-create-or-update v-bind:isCreate="showCreate" v-bind:projectId="updateId" @close="showCreate = showUpdate = false"></project-create-or-update>
+      <project-create-or-update 
+        :isCreate="showCreate"
+        :project="update"
+        @close="showCreate = showUpdate = false">
+      </project-create-or-update>
     </div>
     <div v-else>
       <div class="header">
@@ -28,7 +32,7 @@
               <td :class="c.class" v-for="(c, index) in cols" :key="index">
                 {{ c.get(p) }}
               </td>
-              <td v-if="isMe" class="action" @click.stop="updateId = p.id; showUpdate = true" title="update">
+              <td v-if="isMe" class="action" @click.stop="update = p; showUpdate = true" title="update">
                 <img src="@/assets/edit.svg">
               </td>
               <td v-if="isMe" class="action" @click.stop="trash(p, index)" title="delete">
@@ -173,11 +177,11 @@
               cols: [
                 {
                   name: "est",
-                  get: (p)=> this.$u.fmt.cost(p.currencyCode, p.costEst + p.costSubEst)
+                  get: (p)=> this.$u.fmt.cost(p.costEst + p.costSubEst, p.currencyCode)
                 },
                 {
                   name: "inc",
-                  get: (p)=> this.$u.fmt.cost(p.currencyCode, p.costInc + p.costSubInc)
+                  get: (p)=> this.$u.fmt.cost(p.costInc + p.costSubInc, p.currencyCode)
                 }
               ]
             },

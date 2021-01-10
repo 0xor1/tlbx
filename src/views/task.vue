@@ -3,13 +3,14 @@
     <div class="loading" v-if="loading">
       loading...
     </div>
-    <div v-else-if="showCreate || showUpdate">
+    <div v-else-if="showCreateOrUpdate">
       <task-create-or-update 
-        :isCreate="showCreate" 
-        :taskId="updateId"
         :hostId="$u.rtr.host()" 
         :projectId="$u.rtr.project()"
-        @close="showCreate = showUpdate = false">
+        :task="update"
+        :parentId="parentId"
+        :previousSiblingId="previousSiblingId"
+        @close="showCreateOrUpdate = false">
       </task-create-or-update>
     </div>
     <div v-else class="content" >
@@ -43,10 +44,10 @@
             <td class="action">
               
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="updateId = task.id; showCreate = true" title="insert first child">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(-1)" title="insert first child">
               <img src="@/assets/insert-below.svg">
             </td>
-            <td v-if="canEdit(task)" class="action" @click.stop="updateId = task.id; showUpdate = true" title="update">
+            <td v-if="canUpdate(task)" class="action" @click.stop="showUpdate = true; update = task; parentId = task.parent; previousSiblingId = null;" title="update">
               <img src="@/assets/edit.svg">
             </td>
             <td v-if="canDelete(task)" class="action" @click.stop="trash(task, -1)" title="delete">
@@ -58,13 +59,13 @@
               {{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="updateId = task.id; showCreate = true" title="insert above">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index-1)" title="insert above">
               <img src="@/assets/insert-above.svg">
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="updateId = task.id; showCreate = true" title="insert below">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index)" title="insert below">
               <img src="@/assets/insert-below.svg">
             </td>
-            <td v-if="canEdit(t)" class="action" @click.stop="updateId = t.id; showUpdate = true" title="update">
+            <td v-if="canUpdate(t)" class="action" @click.stop="update = t; showUpdate = true" title="update">
               <img src="@/assets/edit.svg">
             </td>
             <td v-if="canDelete(t)" class="action" @click.stop="trash(t, index)" title="delete">
@@ -113,8 +114,7 @@
     methods: {
       initState(){
         return {
-          showCreate: false,
-          showUpdate: false,
+          showCreateOrUpdate: false,
           updating: false,
           loading: true,
           me: null,
@@ -190,11 +190,11 @@
               cols: [
                 {
                   name: "est",
-                  get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.costEst + t.costSubEst)
+                  get: (t)=> this.$u.fmt.cost(t.costEst + t.costSubEst, this.project.currencyCode)
                 },
                 {
                   name: "inc",
-                  get: (t)=> this.$u.fmt.cost(this.project.currencyCode, t.costInc + t.costSubInc)
+                  get: (t)=> this.$u.fmt.cost(t.costInc + t.costSubInc, this.project.currencyCode)
                 }
               ]
             },
@@ -246,8 +246,6 @@
             })
             mapi.task.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((t)=>{
               this.task = t
-              this.estTime = this.$u.fmt.duration(t.estimatedTime, this.project.hoursPerDay, this.project.daysPerWeek)
-              this.estExp = this.$u.fmt.cost(this.project.currencyCode, t.estimatedExpense)
             })
             mapi.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
               this.children = res.set
@@ -301,8 +299,9 @@
           })
         }
       },
-      canEdit(t){
+      canUpdate(t){
         if (this.$u.perm.canWrite(this.pMe)) {
+          // TODO put same logic as server in here for writer checks
           if ((t.parent == null && this.$u.rtr.host() == this.pMe.id) || 
             (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
             return true
@@ -312,12 +311,25 @@
       },
       canDelete(t){
         if (this.$u.perm.canWrite(this.pMe)) {
+          // TODO put same logic as server in here for writer checks
           if ((t.parent == null && this.$u.rtr.host() == this.pMe.id) || 
             (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
             return true
           }
         }
         return false
+      },
+      showCreate(index) {
+        this.showCreateOrUpdate = true
+        this.update = null
+        this.parentId = this.task.id
+        if (index == -1) {
+          // inserting new first child
+          this.previousSiblingId = null
+        } else {
+          // inserting none first child
+          this.previousSiblingId = this.children[index].id
+        }
       },
       trash(t, index){
         this.$api.task.delete(this.$u.rtr.host(), this.$u.rtr.project(), t.id).then(()=>{

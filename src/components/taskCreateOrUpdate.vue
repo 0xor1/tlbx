@@ -8,19 +8,20 @@
       <input v-model="name" placeholder="name" @blur="validate" @keydown.enter="ok">
       <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
       <input v-model="description" placeholder="description" @blur="validate" @keydown.enter="ok">
-      <span v-if="nameErr.length > 0" class="err">{{descriptionErr}}</span>
+      <span v-if="descriptionErr.length > 0" class="err">{{descriptionErr}}</span>
+      <input v-model="user" placeholder="user id" @blur="validate" @keydown.enter="ok">
       <span>
+        <label for="checkbox">parallel </label>
         <input type="checkbox" v-model="isParallel" placeholder="isParallel" @keydown.enter="ok">
-        <label for="checkbox"> parallel</label>
       </span>
-      <input v-model.number="timeEst" :min="0" :max="1440" type="number" placeholder="minutes estimate" @blur="validate" @keydown.enter="ok">
-      <input v-model.number="costEst" :min="0" :max="7" type="number" placeholder="cost estimate" @blur="validate" @keydown.enter="ok">
-      <span>
+      <input v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate" @keydown.enter="ok">
+      <input v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate" @keydown.enter="ok">
+      <span v-if="!isCreate && task.id != project.id && task.id != $u.rtr.task()">
         <button @click.stop.prevent="showMove=!showMove">move</button>
       </span>
       <div v-if="showMove">
-        <input v-model="newParentId" placeholder="new parent Id" @blur="validate" @keydown.enter="ok">
-        <input v-model="newPreviousSiblingId" placeholder="new previous sibling Id" @blur="validate" @keydown.enter="ok">
+        <input v-model="parentId" placeholder="parent Id" @blur="validate" @keydown.enter="ok">
+        <input v-model="previousSiblingId" placeholder="previous sibling Id" @blur="validate" @keydown.enter="ok">
       </div>
       <button @click="ok">{{isCreate? 'create': 'update'}}</button>
       <button @click="cancel">cancel</button>
@@ -33,10 +34,16 @@
   export default {
     name: 'taskCreateOrUpdate',
     props: {
-      isCreate: Boolean,
       hostId: String,
       projectId: String,
-      taskId: String
+      task: Object,
+      parentId: String,
+      previousSiblingId: String
+    },
+    computed: {
+      isCreate(){
+        return this.task == null 
+      }
     },
     data: function() {
       return this.initState()
@@ -50,11 +57,13 @@
           nameErr: true,
           description: "",
           descriptionErr: true,
+          user: null,
           isParallel: false,
-          timeEst: null,
-          costEst: null,
-          newParentId: null,
-          newPreviousSiblingId: null,
+          timeEst: 0,
+          costEst: 0,
+          timeEstDisplay: "",
+          costEstDisplay: "",
+          project: null,
           err: "",
         }
       },
@@ -62,63 +71,79 @@
         for(const [key, value] of Object.entries(this.initState())) {
           this[key] = value
         }
-        if (!this.isCreate) {
-          this.$api.task.get(this.hostId, this.projectId, this.taskId).then((t)=>{
-            this.name = t.name
-            this.description = t.description
-            this.isParallel = t.isParallel
-            this.timeEst = t.timeEst
-            this.costEst = t.costEst
+        this.$root.ctx().then((ctx)=>{
+            this.project = ctx.project
+            if (!this.isCreate) {
+              this.name = this.task.name
+              this.description = this.task.description
+              this.user = this.task.user
+              this.isParallel = this.task.isParallel
+              this.timeEst = this.task.timeEst
+              this.costEst = this.task.costEst
+            } 
+            this.timeEstDisplay = this.$u.fmt.duration(this.timeEst)
+            this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode) 
             this.loading = false
-          })
-        } else {
-          this.loading = false
-        }
+        })
       },
       validate(){
+        let isOk = true
         if (this.name.length > 250) {
-            this.nameErr = "name must be less than 250 characters long"
+          isOk = false
+          this.nameErr = "name must not be over 250 characters"
         } else {
-            this.nameErr = ""
+          this.nameErr = ""
         }
-        if (this.hoursPerDay != null) {
-          if (this.hoursPerDay > 24) {
-            this.hoursPerDay = 24
+        if (this.description.length > 1250) {
+          isOk = false
+          this.descriptionErr = "description must not be over 1250 characters"
+        } else {
+          this.descriptionErr = ""
+        }
+        if (this.user == "") {
+          this.user = null
+        }
+        if (this.timeEstDisplay != "") {
+          let match = this.timeEstDisplay.match(/\D*((\d+)h)?\D*((\d+)m)?\D*/)
+          if (match != null && match[0] != null && match[0].length > 0) {
+            let value = 0
+            if (match[2] != null) {
+              value += parseInt(match[2], 10) * 60
+            }
+            if (match[4] != null) {
+              value += parseInt(match[4], 10)
+            }
+            if (!isNaN(value) && value != null) {
+              this.timeEst = value
+            }
           }
-          if (this.hoursPerDay < 1) {
-            this.hoursPerDay = null
+        } 
+        this.timeEstDisplay = this.$u.fmt.duration(this.timeEst)
+        if (this.costEstDisplay != "") {
+          let match = this.costEstDisplay.match(/[^\d.,]*(\d*)(\.|,)?(\d*)?\D*/)
+          if (match != null && match[0] != null && match[0].length > 0) {
+            let value = parseFloat(match[1]+"."+match[3]) * 100
+            value = Math.floor(value)
+            if (!isNaN(value) && value != null) {
+              this.costEst = value
+            }
           }
-        }
-        if (this.daysPerWeek != null) { 
-          if (this.daysPerWeek > 7) {
-            this.daysPerWeek = 7
-          }
-          if (this.daysPerWeek < 1) {
-            this.daysPerWeek = null
-          }
-        }
-        if (this.startOn != null) {
-            this.startOn.setHours(0, 0, 0, 0)
-        }
-        if (this.endOn != null) {
-            this.endOn.setHours(0, 0, 0, 0)
-        }
-        if (this.startOn != null && 
-          this.endOn != null &&
-          this.startOn.getTime() >= this.endOn.getTime()) {
-            this.endOn.setDate(this.startOn.getDate()+1)
-        }
-        return this.nameErr.length === 0
+        } 
+        this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode)
+        return isOk
       },
       ok(){
         if (this.validate()) {
           if (this.isCreate) {
-            this.$api.project.create(this.name, this.isPublic, this.currencyCode, this.hoursPerDay, this.daysPerWeek, this.startOn, this.endOn).then((p)=>{
-              this.$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)
+            this.$api.task.create(this.hostId, this.projectId, this.parentId, this.previousSiblingId, this.name, this.description, this.isParallel, this.user, this.timeEst, this.costEst).then((t)=>{
+              this.$u.rtr.goto(`/host/${this.hostId}/project/${this.projectId}/task/${t.id}`)
             })
           } else {
-            this.$api.project.updateOne({
-              id: this.projectId, 
+            let args = {
+              host: this.hostId,
+              project: this.projectId,
+              id: this.task.id,
+              parent: {v:this.parentId}, 
               name: {v: this.name},
               isPublic: {v: this.isPublic},
               currencyCode: {v: this.currencyCode},
@@ -126,8 +151,10 @@
               daysPerWeek: {v: this.daysPerWeek},
               startOn: {v: this.startOn},
               endOn: {v: this.endOn}
-            }).then((p)=>{
-              this.$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)
+            }
+            this.$api.task.update(args).then((t)=>{
+              this.task = t
+              this.cancel()
             })
           }
         }

@@ -8,16 +8,16 @@
       <input v-model="name" placeholder="name" @blur="validate" @keydown.enter="ok">
       <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
       <span>
+        <label for="checkbox">public </label>
         <input type="checkbox" v-model="isPublic" placeholder="isPublic" @keydown.enter="ok">
-        <label for="checkbox"> public</label>
       </span>
       <span>
+        <label>currency code </label>
         <select v-model="currencyCode">
           <option v-for="currency in currencies" v-bind:value="currency" v-bind:key="currency">
             {{currency}}
           </option>
         </select>
-        <label> currency code</label>
       </span>
       <input v-model.number="hoursPerDay" :min="0" :max="24" type="number" placeholder="hours per day" @blur="validate" @keydown.enter="ok">
       <input v-model.number="daysPerWeek" :min="0" :max="7" type="number" placeholder="days per week" @blur="validate" @keydown.enter="ok">
@@ -37,7 +37,7 @@
     components: {datepicker},
     props: {
       isCreate: Boolean,
-      projectId: String
+      project: Object
     },
     data: function() {
       return this.initState()
@@ -248,20 +248,18 @@
               this.$u.rtr.goHome()
               return
             }
-            this.$api.project.one(this.$u.rtr.host(), this.projectId).then((p)=>{
-              this.name = p.name
-              this.isPublic = p.isPublic
-              this.currencyCode = p.currencyCode
-              this.hoursPerDay = p.hoursPerDay
-              this.daysPerWeek = p.daysPerWeek
-              if (p.startOn != null) {
-                this.startOn = new Date(p.startOn)
-              }
-              if (p.endOn != null) {
-                this.endOn = new Date(p.endOn)
-              }
-              this.loading = false
-            })
+            this.name = this.project.name
+            this.isPublic = this.project.isPublic
+            this.currencyCode = this.project.currencyCode
+            this.hoursPerDay = this.project.hoursPerDay
+            this.daysPerWeek = this.project.daysPerWeek
+            if (this.project.startOn != null) {
+              this.startOn = new Date(this.project.startOn)
+            }
+            if (this.project.endOn != null) {
+              this.endOn = new Date(this.project.endOn)
+            }
+            this.loading = false
           })
         } else {
           this.loading = false
