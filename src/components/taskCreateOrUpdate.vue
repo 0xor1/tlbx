@@ -39,9 +39,23 @@
       projectId: String,
       task: Object,
       children: Array,
-      index: Number,
-      parentId: String,
-      previousSiblingId: String
+      index: Number
+    },
+    computed: {
+      updateTask(){
+        if (this.index == -1) {
+          return this.task
+        } else {
+          return this.children[this.index]
+        }
+      },
+      previousSiblingId(){
+        if (this.index == 0) {
+          return null
+        } else {
+          return this.children[this.index - 1].id
+        }
+      }
     },
     data: function() {
       return this.initState()
@@ -72,10 +86,7 @@
         this.$root.ctx().then((ctx)=>{
             this.project = ctx.project
             if (!this.isCreate) {
-              let t = this.task
-              if (this.index > -1) {
-                t = this.children[this.index]
-              }
+              let t = this.updateTask
               this.name = t.name
               this.description = t.description
               this.user = t.user
@@ -148,7 +159,7 @@
             let args = {
               host: this.hostId,
               project: this.projectId,
-              id: this.task.id,
+              id: this.updateTask.id,
             }
             this.$api.task.update(args).then((res)=>{
               // todo update correct objs
