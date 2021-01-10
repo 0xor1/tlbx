@@ -5,23 +5,44 @@
     </div>
     <div v-else>
       <h1>task {{isCreate? 'create': 'update'}}</h1>
-      <input v-model="name" placeholder="name" @blur="validate" @keydown.enter="ok">
-      <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
-      <input v-model="description" placeholder="description" @blur="validate" @keydown.enter="ok">
-      <span v-if="descriptionErr.length > 0" class="err">{{descriptionErr}}</span>
-      <input v-model="user" placeholder="user id" @blur="validate" @keydown.enter="ok">
       <span>
-        <label for="checkbox">parallel </label>
-        <input type="checkbox" v-model="isParallel" placeholder="isParallel" @keydown.enter="ok">
+        <input v-model="name" placeholder="name" @blur="validate" @keydown.enter="ok">
+        <label> name</label>
       </span>
-      <input v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate" @keydown.enter="ok">
-      <input v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate" @keydown.enter="ok">
-      <span v-if="!isCreate && task.id != project.id && task.id != $u.rtr.task()">
+      <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
+      <span>
+        <input v-model="description" placeholder="description" @blur="validate" @keydown.enter="ok">
+        <label> description</label>
+      </span>
+      <span v-if="descriptionErr.length > 0" class="err">{{descriptionErr}}</span>
+      <span>
+        <input v-model="user" placeholder="user id" @blur="validate" @keydown.enter="ok"> 
+        <label> user id</label>
+      </span>
+      <span>
+        <input type="checkbox" v-model="isParallel" @keydown.enter="ok">
+        <label> parallel</label>
+      </span>
+      <span>
+        <input v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate" @keydown.enter="ok">
+        <label> time estimate</label>
+      </span>
+      <span>
+        <input v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate" @keydown.enter="ok">
+        <label> cost estimate</label>
+      </span>
+      <span v-if="!isCreate && updateTask.id != project.id && updateTask.id != $u.rtr.task()">
         <button @click.stop.prevent="showMove=!showMove">move</button>
       </span>
       <div v-if="showMove">
-        <input v-model="parentId" placeholder="parent Id" @blur="validate" @keydown.enter="ok">
-        <input v-model="previousSiblingId" placeholder="previous sibling Id" @blur="validate" @keydown.enter="ok">
+        <span>
+          <input v-model="parentId" placeholder="parent id" @blur="validate" @keydown.enter="ok">
+          <label> parent id</label>
+        </span>
+        <span>
+          <input v-model="previousSiblingId" placeholder="previous sibling d" @blur="validate" @keydown.enter="ok">
+          <label> previous sibling id</label>
+        </span>
       </div>
       <button @click="ok">{{isCreate? 'create': 'update'}}</button>
       <button @click="close()">close</button>
@@ -49,8 +70,8 @@
           return this.children[this.index]
         }
       },
-      previousSiblingId(){
-        if (this.index == 0) {
+      currentPreviousSiblingId(){
+        if (this.index < 1) {
           return null
         } else {
           return this.children[this.index - 1].id
@@ -75,6 +96,8 @@
           costEst: 0,
           timeEstDisplay: "",
           costEstDisplay: "",
+          parentId: null,
+          previousSiblingId: null,
           project: null,
           err: "",
         }
@@ -85,12 +108,14 @@
         }
         this.$root.ctx().then((ctx)=>{
             this.project = ctx.project
+            this.previousSiblingId = this.currentPreviousSiblingId
             if (!this.isCreate) {
               let t = this.updateTask
               this.name = t.name
               this.description = t.description
               this.user = t.user
               this.isParallel = t.isParallel
+              this.parentId = t.parent
               this.timeEst = t.timeEst
               this.costEst = t.costEst
             } 
@@ -101,9 +126,9 @@
       },
       validate(){
         let isOk = true
-        if (this.name.length > 250) {
+        if (this.name.length < 1 || this.name.length > 250) {
           isOk = false
-          this.nameErr = "name must not be over 250 characters"
+          this.nameErr = "name must 1 to 250 characters"
         } else {
           this.nameErr = ""
         }
@@ -143,6 +168,9 @@
           }
         } 
         this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode)
+        if (this.previousSiblingId == "") {
+          this.previousSiblingId = null
+        }
         return isOk
       },
       ok(){
@@ -161,19 +189,64 @@
               project: this.projectId,
               id: this.updateTask.id,
             }
-            this.$api.task.update(args).then((res)=>{
-              // todo update correct objs
-              console.log(res)
-              for(const [key, value] of Object.entries(res.parent)) {
-                this.task[key] = value
-              }
+            let isUpdate = false
+            let moved = false
+            if (this.updateTask.name != this.name) {
+              isUpdate = true
+              args.name = {v: this.name}
+              this.updateTask.name = this.name
+            }
+            if (this.updateTask.description != this.description) {
+              isUpdate = true
+              args.description = {v: this.description}
+              this.updateTask.description = this.description
+            }
+            if (this.updateTask.isParallel != this.isParallel) {
+              isUpdate = true
+              args.isParallel = {v: this.isParallel}
+              this.updateTask.isParallel = this.isParallel
+            }
+            if (this.updateTask.timeEst != this.timeEst) {
+              isUpdate = true
+              args.timeEst = {v: this.timeEst}
+              this.updateTask.timeEst = this.timeEst
+            }
+            if (this.updateTask.costEst != this.costEst) {
+              isUpdate = true
+              args.costEst = {v: this.costEst}
+              this.updateTask.costEst = this.costEst
+            }
+            if (this.updateTask.parent != this.parentId) {
+              isUpdate = true
+              moved = true
+              args.parent = {v: this.parentId}
+              this.updateTask.parent = this.parentId
+            }
+            if (this.currentPreviousSiblingId != this.previousSiblingId) {
+              isUpdate = true
+              moved = true
+              args.previousSibling = {v: this.previousSiblingId}
+            }
+            if (isUpdate) {
+              this.$api.task.update(args).then((res)=>{
+                if (res.parent != null) {
+                  for(const [key, value] of Object.entries(res.parent)) {
+                    this.task[key] = value
+                  }
+                }
+                this.close(moved)
+              })
+            } else {
               this.close()
-            })
+            }
           }
         }
       },
-      close(){
-        this.$emit('close')
+      close(fullRefresh){
+        if (fullRefresh !== true) {
+          fullRefresh = false
+        }
+        this.$emit('close', fullRefresh)
       }
     },
     mounted(){

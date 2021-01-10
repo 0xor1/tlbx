@@ -336,9 +336,12 @@
         this.parentId = this.update.parent
         this.index = index
       },
-      onCreateOrUpdateClose() {
+      onCreateOrUpdateClose(fullRefresh) {
         this.showCreateOrUpdate = false
         this.index = null
+        if (fullRefresh) {
+          this.init()
+        }
       },
       trash(t, index){
         if (t.id == this.$u.rtr.project()) {
