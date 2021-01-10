@@ -1,16 +1,15 @@
 <template>
   <div class="root">
-    <div v-if="showCreate || showUpdate">
+    <div v-if="showCreateOrUpdate">
       <project-create-or-update 
-        :isCreate="showCreate"
         :project="update"
-        @close="showCreate = showUpdate = false">
+        @close="onCreateOrUpdateClose()">
       </project-create-or-update>
     </div>
     <div v-else>
       <div class="header">
         <h1 v-if="user != null">{{user.handle+"s projects"}}</h1>
-        <button v-if="isMe" @click="showCreate = true">create</button>
+        <button v-if="isMe" @click="showCreate()">create</button>
       </div>
       <p v-if="loading">
         loading projects
@@ -32,7 +31,7 @@
               <td :class="c.class" v-for="(c, index) in cols" :key="index">
                 {{ c.get(p) }}
               </td>
-              <td v-if="isMe" class="action" @click.stop="update = p; showUpdate = true" title="update">
+              <td v-if="isMe" class="action" @click.stop="showUpdate(p)" title="update">
                 <img src="@/assets/edit.svg">
               </td>
               <td v-if="isMe" class="action" @click.stop="trash(p, index)" title="delete">
@@ -110,9 +109,8 @@
       initState (){
         return {
           host: this.$u.rtr.host(),
-          showCreate: false,
-          showUpdate: false,
-          updateId: null,
+          showCreateOrUpdate: false,
+          update: null,
           me: null,
           user: null,
           loading: true,
@@ -269,6 +267,18 @@
           }
           this.othersMore = res.psMore
         })
+      },
+      showCreate(){
+        this.showCreateOrUpdate = true
+        this.update = null
+      },
+      showUpdate(p){
+        this.showCreateOrUpdate = true
+        this.update = p
+      },
+      onCreateOrUpdateClose(){
+        this.showCreateOrUpdate = false
+        this.update = null
       },
       trash(p, index){
         this.$api.project.delete([p.id]).then(()=>{

@@ -24,7 +24,7 @@
       <datepicker :monday-first="true" v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
       <datepicker :monday-first="true" v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
       <button @click="ok">{{isCreate? 'create': 'update'}}</button>
-      <button @click="cancel">cancel</button>
+      <button @click="close">close</button>
       <span v-if="err.length > 0" class="err">{{err}}</span>
     </div>
   </div>
@@ -36,8 +36,12 @@
     name: 'projectCreateOrUpdate',
     components: {datepicker},
     props: {
-      isCreate: Boolean,
       project: Object
+    },
+    computed: {
+      isCreate(){
+        return this.project == null
+      }
     },
     data: function() {
       return this.initState()
@@ -308,7 +312,7 @@
             })
           } else {
             this.$api.project.updateOne({
-              id: this.projectId, 
+              id: this.project.id, 
               name: {v: this.name},
               isPublic: {v: this.isPublic},
               currencyCode: {v: this.currencyCode},
@@ -317,12 +321,15 @@
               startOn: {v: this.startOn},
               endOn: {v: this.endOn}
             }).then((p)=>{
-              this.$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)
+              for(const [key, value] of Object.entries(p)) {
+                this.project[key] = value
+              }
+              this.close()
             })
           }
         }
       },
-      cancel(){
+      close(){
         this.$emit('close')
       }
     },
