@@ -258,8 +258,14 @@ var (
 							currentPreviousSibling.ID.Equal(*args.PreviousSibling.V))) {
 						var newNextSibling *ID
 						// here we know that an actual change is being attempted
+						currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
+						PanicIf(currentParent == nil, "currentParent not found")
 						if args.PreviousSibling.V != nil {
 							// moving to a non first child position
+							if currentParent.FirstChild.Equal(t.ID) {
+								//moving the current first child away so need to repoint parent.firstChild
+								currentParent.FirstChild = t.NextSibling
+							}
 							app.BadReqIf(args.PreviousSibling.V.Equal(args.ID), "sibling loop detected, invalid previousSibling value")
 							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
 							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
@@ -268,8 +274,6 @@ var (
 							newPreviousSibling.NextSibling = &t.ID
 						} else {
 							// moving to the first child position
-							currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
-							PanicIf(currentParent == nil, "currentParent not found")
 							newNextSibling = currentParent.FirstChild
 							currentParent.FirstChild = &t.ID
 						}
