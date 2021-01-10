@@ -420,14 +420,14 @@ function newApi(isMDoApi) {
       create(host, project, task, name, mimeType, size, content) {
         return doReq('/file/getPresignedPutUrl', {host, project, task, name, mimeType, size}).then((res)=>{
           let id = res.id
-          doReq(res.url, content, {
+          return doReq(res.url, content, {
             "Host": (new URL(res.url)).hostname,
             "X-Amz-Acl": "private",
             "Content-Length": size, 
             "Content-Type": mimeType,
             "Content-Disposition": `attachment; filename=${name}`,
           }).then(()=>{
-            doReq("/file/finalize", {host, project, task, id})
+            return doReq("/file/finalize", {host, project, task, id})
           })
         })
       },
