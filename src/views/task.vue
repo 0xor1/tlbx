@@ -129,8 +129,8 @@
           loadingMoreChildren: false,
           times: [],
           moreTimes: false,
-          expenses: [],
-          moreExpenses: false,
+          costs: [],
+          moreCosts: false,
           files: [],
           moreFiles: false,
           comments: [],
@@ -255,9 +255,9 @@
               this.times = res.set
               this.moreTimes = res.more
             })
-            mapi.expense.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
-              this.expenses = res.set
-              this.moreExpenses = res.more
+            mapi.cost.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
+              this.costs = res.set
+              this.moreCosts = res.more
             })
             mapi.file.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
               this.file = res.set

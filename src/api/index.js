@@ -402,18 +402,18 @@ function newApi(isMDoApi) {
         return doReq('/time/delete', {host, project, task, id})
       }
     },
-    expense: {
+    cost: {
       create(host, project, task, value, note) {
-        return doReq('/expense/create', {host, project, task, value, note})
+        return doReq('/cost/create', {host, project, task, value, note})
       },
       update(host, project, task, id, value, note) {
-        return doReq('/expense/update', {host, project, task, id, value, note})
+        return doReq('/cost/update', {host, project, task, id, value, note})
       },
       get(host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
-        return doReq('/expense/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
+        return doReq('/cost/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
       },
       delete(host, project, task, id) {
-        return doReq('/expense/delete', {host, project, task, id})
+        return doReq('/cost/delete', {host, project, task, id})
       }
     },
     file: {
