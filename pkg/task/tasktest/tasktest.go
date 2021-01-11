@@ -90,6 +90,14 @@ func Everything(t *testing.T) {
 	}).MustDo(ac).Task
 	a.NotNil(createRes)
 
+	// move first child to a different position
+	t1p0 = (&task.Update{
+		Host:            r.Ali().ID(),
+		Project:         p.ID,
+		ID:              t1p0.ID,
+		PreviousSibling: &field.IDPtr{V: &t1p1.ID},
+	}).MustDo(ac).Task
+
 	t2p0 := (&task.Create{
 		Host:            r.Ali().ID(),
 		Project:         p.ID,

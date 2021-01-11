@@ -265,6 +265,10 @@ var (
 							if currentParent.FirstChild.Equal(t.ID) {
 								//moving the current first child away so need to repoint parent.firstChild
 								currentParent.FirstChild = t.NextSibling
+							} else {
+								// not moving first child therefor nil out currentParent to
+								// save an update query
+								currentParent = nil
 							}
 							app.BadReqIf(args.PreviousSibling.V.Equal(args.ID), "sibling loop detected, invalid previousSibling value")
 							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
