@@ -6,7 +6,7 @@
     <div v-else>
       <h1>task {{isCreate? 'create': 'update'}}</h1>
       <span>
-        <input v-model="name" placeholder="name" @blur="validate" @keydown.enter="ok">
+        <input ref="name" v-model="name" placeholder="name" @blur="validate" @keydown.enter="ok">
         <label> name</label>
       </span>
       <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
@@ -122,6 +122,9 @@
             this.timeEstDisplay = this.$u.fmt.duration(this.timeEst)
             this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode) 
             this.loading = false
+            this.$nextTick(()=>{
+              this.$refs.name.focus()
+            })
         })
       },
       validate(){

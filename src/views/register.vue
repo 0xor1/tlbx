@@ -1,7 +1,7 @@
 <template>
   <div class="root">
     <h1>register</h1>
-    <input v-model="alias" placeholder="alias" @blur="validate" @keydown.enter="register">
+    <input ref="alias" v-model="alias" placeholder="alias" @blur="validate" @keydown.enter="register">
     <span v-if="aliasErr.length > 0" class="err">{{aliasErr}}</span>
     <input v-model="handle" placeholder="handle" @blur="validate" @keydown.enter="register">
     <span v-if="handleErr.length > 0" class="err">{{handleErr}}</span>
@@ -91,6 +91,11 @@
           })
         }
       }
+    },
+    mounted(){
+      this.$nextTick(()=>{
+        this.$refs.alias.focus()
+      })
     }
   }
 </script>
