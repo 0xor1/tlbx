@@ -72,7 +72,7 @@ var (
 						User:       ptr.ID(me),
 						CreatedBy:  me,
 						CreatedOn:  NowMilli(),
-						IsParallel: true,
+						IsParallel: false,
 					},
 					Base: project.Base{
 						CurrencyCode: args.CurrencyCode,
