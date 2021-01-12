@@ -48,5 +48,9 @@
 div.root {
   padding: 0;
   display: inline-block;
+  background-color: transparent;
+  p, a {
+    background-color: transparent;
+  }
 }
 </style>
