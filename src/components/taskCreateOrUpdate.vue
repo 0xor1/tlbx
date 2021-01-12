@@ -6,7 +6,7 @@
     <div v-else>
       <h1>task {{isCreate? 'create': 'update'}}</h1>
       <span>
-        <input ref="name" v-model="name" placeholder="name" @blur="validate" @keydown.enter="ok">
+        <input ref="name" v-model="name" placeholder="name" @keydown.enter="ok">
         <label> name</label>
       </span>
       <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
@@ -45,7 +45,7 @@
         </span>
       </div>
       <button @click="ok">{{isCreate? 'create': 'update'}}</button>
-      <button @click="close()">close</button>
+      <button @click.stop.prevent="close()">close</button>
       <span v-if="err.length > 0" class="err">{{err}}</span>
     </div>
   </div>
@@ -58,6 +58,7 @@
       isCreate: Boolean,
       hostId: String,
       projectId: String,
+      parentUserId: String,
       task: Object,
       children: Array,
       index: Number
@@ -109,6 +110,7 @@
         this.$root.ctx().then((ctx)=>{
             this.project = ctx.project
             this.previousSiblingId = this.currentPreviousSiblingId
+            this.user = this.parentUserId
             if (!this.isCreate) {
               let t = this.updateTask
               this.name = t.name
@@ -174,7 +176,9 @@
         if (this.previousSiblingId == "") {
           this.previousSiblingId = null
         }
-        return isOk
+        if (isOk) {
+          return isOk
+        }
       },
       ok(){
         if (this.validate()) {

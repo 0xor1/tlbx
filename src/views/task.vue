@@ -10,6 +10,7 @@
         :projectId="$u.rtr.project()"
         :task="task"
         :children="children"
+        :parentUserId="task.user"
         :index="index"
         @close="onCreateOrUpdateClose">
       </task-create-or-update>
