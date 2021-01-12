@@ -354,11 +354,7 @@
               this.children.splice(index, 1)
               this.task = t
             } else {
-              if (t.parent == null) {
-                this.$u.rtr.goHome()
-              } else {
-                this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.parent}`)
-              }
+                this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.id}`)
             }
           })
         }
