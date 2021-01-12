@@ -5,7 +5,7 @@
     </div>
     <div v-else>
       <h1>project {{isCreate? 'create': 'update'}}</h1>
-      <input ref="name" v-model="name" placeholder="name" @blur="validate" @keydown.enter="ok">
+      <input ref="name" v-model="name" placeholder="name" @keydown.enter="ok">
       <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
       <span>
         <label for="checkbox">public </label>
@@ -276,8 +276,8 @@
         }
       },
       validate(){
-        if (this.name.length > 250) {
-            this.nameErr = "name must be less than 250 characters long"
+        if (this.name.length < 1 || this.name.length > 250) {
+            this.nameErr = "name must be 1 - 250 characters"
         } else {
             this.nameErr = ""
         }
