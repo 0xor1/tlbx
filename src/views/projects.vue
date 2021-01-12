@@ -121,7 +121,7 @@
               cols: [
                 {
                   name: "name",
-                  get: (p)=> p.name
+                  get: (p)=> this.$u.fmt.ellipsis(p.name, 30)
                 }
               ]
             },
@@ -314,6 +314,9 @@ table {
     }
     &.name{
       min-width: 18pc;
+    }
+    img{
+      background-color: transparent;
     }
   }
   tr.row {

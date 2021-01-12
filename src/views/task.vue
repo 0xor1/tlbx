@@ -38,15 +38,15 @@
             </th>
           </tr>
           <tr class="row this-task">
-            <td :title="task.description" v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+            <td :title="descriptionTitle(task)" v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{c.name == "user"? "" : c.get(task)}}
               <user v-if="c.name=='user'" :userId="c.get(task)"></user>
             </td>
-            <td class="action">
-              
-            </td>
             <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(0)" title="insert first child">
               <img src="@/assets/insert-below.svg">
+            </td>
+            <td class="action">
+              
             </td>
             <td v-if="canUpdate(task)" class="action" @click.stop="showUpdate(-1)" title="update">
               <img src="@/assets/edit.svg">
@@ -56,15 +56,15 @@
             </td>
           </tr>
           <tr class="row" v-for="(t, index) in children" :key="index" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
-            <td :title="t.description" v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+            <td :title="descriptionTitle(t)" v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
               {{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index)" title="insert above">
-              <img src="@/assets/insert-above.svg">
-            </td>
             <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index+1)" title="insert below">
               <img src="@/assets/insert-below.svg">
+            </td>
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index)" title="insert above">
+              <img src="@/assets/insert-above.svg">
             </td>
             <td v-if="canUpdate(t)" class="action" @click.stop="showUpdate(index)" title="update">
               <img src="@/assets/edit.svg">
@@ -143,7 +143,7 @@
               cols: [
                 {
                   name: "name",
-                  get: (t)=> t.name
+                  get: (t)=> this.$u.fmt.ellipsis(t.name, 30)
                 }
               ]
             },
@@ -362,6 +362,13 @@
             }
           })
         }
+      },
+      descriptionTitle(t) {
+        let res = t.name
+        if (t.description != "") {
+          res += " - " + t.description
+        }
+        return res
       }
     },
     mounted(){
@@ -394,13 +401,19 @@ div.root {
             min-width: 18pc;
           }
         }
+        img{
+          background-color: transparent;
+        }
       }
       tr.this-task {
         cursor: default;
         .action{
           cursor: pointer;
         }
-        font-size: 1.5pc;
+        > * {
+          background-color: #333;
+        }
+        font-size: 1.7pc;
         font-weight: bold;
       }
     }
