@@ -342,7 +342,7 @@ type GetActivitiesRes struct {
 }
 
 type Activity struct {
-	Task               *ID          `json:"id,omitempty"`
+	Task               *ID          `json:"task,omitempty"`
 	OccurredOn         time.Time    `json:"occurredOn"`
 	User               ID           `json:"user"`
 	Item               ID           `json:"item"`
