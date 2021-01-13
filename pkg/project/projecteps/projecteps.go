@@ -642,7 +642,7 @@ var (
 				args.Limit = sql.Limit100(args.Limit)
 				app.BadReqIf(args.OccuredAfter != nil && args.OccuredBefore != nil, "only one of occurredBefore or occurredAfter may be used")
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
-				query := bytes.NewBufferString(`SELECT occurredOn, user, item, itemType, itemHasBeenDeleted, action, itemName, extraInfo FROM activities WHERE host=? AND project=?`)
+				query := bytes.NewBufferString(`SELECT occurredOn, user, task, item, itemType, itemHasBeenDeleted, action, taskName, itemName, extraInfo FROM activities WHERE host=? AND project=?`)
 				queryArgs := make([]interface{}, 0, 7)
 				queryArgs = append(queryArgs, args.Host, args.Project)
 				if args.Item != nil {
@@ -676,7 +676,7 @@ var (
 						}
 						pa := &project.Activity{}
 						var extraInfo *string
-						PanicOn(rows.Scan(&pa.OccurredOn, &pa.User, &pa.Item, &pa.ItemType, &pa.ItemHasBeenDeleted, &pa.Action, &pa.ItemName, &extraInfo))
+						PanicOn(rows.Scan(&pa.OccurredOn, &pa.User, &pa.Task, &pa.Item, &pa.ItemType, &pa.ItemHasBeenDeleted, &pa.Action, &pa.TaskName, &pa.ItemName, &extraInfo))
 						if extraInfo != nil {
 							pa.ExtraInfo = json.MustFromString(*extraInfo)
 						}
