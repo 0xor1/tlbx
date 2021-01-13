@@ -348,7 +348,11 @@ var (
 				}
 				if simpleUpdateRequired || treeUpdateRequired {
 					update(t, currentParent, currentPreviousSibling, newParent, newPreviousSibling)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionUpdated, &t.Name, args)
+					itemType := cnsts.TypeTask
+					if args.ID.Equal(args.Project) {
+						itemType = cnsts.TypeProject
+					}
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, itemType, cnsts.ActionUpdated, &t.Name, args)
 				}
 				if treeUpdateRequired {
 					if currentParent != nil {
