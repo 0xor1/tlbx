@@ -5,6 +5,7 @@ import (
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
+	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/trees/pkg/cnsts"
@@ -348,6 +349,7 @@ type Activity struct {
 	ItemType           cnsts.Type   `json:"itemType"`
 	ItemHasBeenDeleted bool         `json:"itemHasBeenDeleted"`
 	Action             cnsts.Action `json:"action"`
+	TaskName           *string      `json:"taskName,omitempty"`
 	ItemName           *string      `json:"itemName,omitempty"`
-	ExtraInfo          *string      `json:"extraInfo,omitempty"`
+	ExtraInfo          *json.Json   `json:"extraInfo,omitempty"`
 }

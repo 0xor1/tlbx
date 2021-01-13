@@ -142,8 +142,12 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project ID, task *ID, item ID, 
 	_, err := tx.Exec(Strf(`INSERT INTO activities(host, project, task, occurredOn, user, item, itemType, itemHasBeenDeleted, action, taskName, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, %s, ?, ?)`, nameQry), qryArgs...)
 	PanicOn(err)
 	if itemHasBeenDeleted {
+		t := "item"
+		if itemType == cnsts.TypeTask {
+			t = "task"
+		}
 		// if this is deleting an item we need to update all previous activities on this item to have itemHasBeenDeleted
-		_, err = tx.Exec(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND item=?`, host, project, item)
+		_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND %s=?`, t), host, project, item)
 		PanicOn(err)
 	}
 }

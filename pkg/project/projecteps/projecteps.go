@@ -8,6 +8,7 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/isql"
+	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
@@ -631,7 +632,7 @@ var (
 							ItemHasBeenDeleted: false,
 							Action:             cnsts.ActionUpdated,
 							ItemName:           ptr.String("my task"),
-							ExtraInfo:          ptr.String(`{"isParallel":true}`),
+							ExtraInfo:          json.MustFromString(`{"isParallel":true}`),
 						},
 					},
 				}
@@ -674,7 +675,11 @@ var (
 							break
 						}
 						pa := &project.Activity{}
-						PanicOn(rows.Scan(&pa.OccurredOn, &pa.User, &pa.Item, &pa.ItemType, &pa.ItemHasBeenDeleted, &pa.Action, &pa.ItemName, &pa.ExtraInfo))
+						var extraInfo *string
+						PanicOn(rows.Scan(&pa.OccurredOn, &pa.User, &pa.Item, &pa.ItemType, &pa.ItemHasBeenDeleted, &pa.Action, &pa.ItemName, &extraInfo))
+						if extraInfo != nil {
+							pa.ExtraInfo = json.MustFromString(*extraInfo)
+						}
 						res.Set = append(res.Set, pa)
 					}
 				}, query.String(), queryArgs...))
