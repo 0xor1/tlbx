@@ -102,7 +102,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, timeEst, timeInc, timeSubMin, timeSubEst, timeSubInc, costEst, costInc, costSubEst, costSubInc, fileN, fileSize, fileSubN, fileSubSize, childN, descN) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.TimeEst, p.TimeInc, p.TimeSubMin, p.TimeSubEst, p.TimeSubInc, p.CostEst, p.CostInc, p.CostSubEst, p.CostSubInc, p.FileN, p.FileSize, p.FileSubN, p.FileSubSize, p.ChildN, p.DescN)
 				PanicOn(err)
-				epsutil.LogActivity(tlbx, tx, me, p.ID, &p.ID, p.ID, cnsts.TypeProject, cnsts.ActionCreated, ptr.String(p.Name), nil)
+				epsutil.LogActivity(tlbx, tx, me, p.ID, &p.ID, p.ID, cnsts.TypeTask, cnsts.ActionCreated, ptr.String(p.Name), nil)
 				tx.Commit()
 				return p
 			},
@@ -307,7 +307,7 @@ var (
 						PanicOn(err)
 						epsutil.ActivityItemRename(tx, me, p.ID, p.ID, p.Name, true)
 					}
-					epsutil.LogActivity(tlbx, tx, me, p.ID, &p.ID, p.ID, cnsts.TypeProject, cnsts.ActionUpdated, ptr.String(p.Name), args[i])
+					epsutil.LogActivity(tlbx, tx, me, p.ID, &p.ID, p.ID, cnsts.TypeTask, cnsts.ActionUpdated, ptr.String(p.Name), args[i])
 				}
 				tx.Commit()
 				return ps
