@@ -233,7 +233,6 @@ $inputPlaceholderColor: #aaa;
   > .slide-out {
     position: absolute;
     top: 0;
-    padding-top: 2.6pc;
     overflow: hidden;
     width: 0;
     height: 100%;
@@ -243,6 +242,9 @@ $inputPlaceholderColor: #aaa;
       @media only screen and (min-width: 480px) {
         width: 15pc;
       }
+    }
+    > * {
+      margin-top: 2.6pc;
     }
   }
   > .menu{
@@ -256,7 +258,6 @@ $inputPlaceholderColor: #aaa;
       justify-content: flex-start;
       align-items: stretch;
       overflow-y: auto;
-      height: calc(100% - 2.5pc);
       > .btn{
         cursor: pointer;
         text-align: center;
