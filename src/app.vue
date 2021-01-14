@@ -174,6 +174,9 @@ $inputPlaceholderColor: #aaa;
     width: 100%;
     height: 100%;
     overflow: auto;
+    > :first-child {
+      margin: 2.6pc 1.3pc 0 1.3pc;
+    }
     &.show-menu{
       @media only screen and (min-width: 480px) {
         left: 15.1pc;

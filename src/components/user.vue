@@ -46,7 +46,6 @@
 
 <style scoped lang="scss">
 div.root {
-  padding: 0;
   display: inline-block;
   background-color: transparent;
   p, a {

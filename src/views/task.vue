@@ -381,7 +381,6 @@
 
 <style lang="scss">
 div.root {
-  padding: 2.6pc 1.3pc 0 1.3pc;
   > .content{
     > .breadcrumb {
       white-space: nowrap;

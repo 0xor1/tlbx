@@ -298,9 +298,6 @@
 </script>
 
 <style lang="scss">
-div.root {
-  padding: 2.6pc 0 0 1.3pc;
-}
 .column-filters {
   margin: 0.6pc 0 0.6pc 0;
 }
