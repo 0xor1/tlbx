@@ -29,16 +29,17 @@
         </div>
         <!-- project activity stream -->
         <div v-if="showProjectActivityToggle && showProjectActivity" v-bind:class="{'show':showProjectActivity}" class="project-activity slide-out">
-          <div class="entry" v-for="(a, index) in projectActivity" :key="index">
-            <p>
-              user: <user :userId="a.user"></user>
-            </p>
-            <p>
-              action: {{a.action}}
-            </p>
-            <p>
-              type: {{a.itemType}}
-            </p>
+          <div class="entries">
+            <div :class="{entry: true, deleted: a.itemHasBeenDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
+              <user :userId="a.user"></user> 
+              <span v-if="a.itemType == `task`">
+                {{a.action}} {{a.itemType}} {{a.taskName}}
+              </span>
+              <span v-else>
+                {{a.action}} {{a.itemType}}<span v-if="a.itemName != null"> {{a.itemName}}</span>, on task {{a.taskName}}
+              </span>
+              <span class="datetime"> {{$u.fmt.datetime(a.occurredOn)}}</span>
+            </div>
           </div>
         </div>
         <div title="project activity" v-if="showProjectActivityToggle" @click.stop.prevent="showProjectActivity=!showProjectActivity" class="slide-out-toggle project-activity-toggle">
@@ -113,6 +114,14 @@
       },
       goHome(){
         this.goto(`/host/${this.me.id}/projects`)
+      },
+      gotoActivityTask(a){
+        if (!a.itemHasBeenDeleted) {
+          this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${a.task}`)
+          if (window.innerWidth <= 480) {
+            this.showProjectActivity = false
+          }
+        }
       },
       goto(path){
         this.$u.rtr.goto(path)
@@ -246,7 +255,7 @@ $inputPlaceholderColor: #aaa;
         width: 15pc;
       }
     }
-    > * {
+    > div {
       margin-top: 2.6pc;
     }
   }
@@ -304,12 +313,27 @@ $inputPlaceholderColor: #aaa;
     &.show{
       @include border($dir: left);
     }
-    > .entry{
-      width: 100%;
-      overflow-wrap: anywhere;
-      margin-bottom: 1pc;
-      > p {
-        margin: 0.2pc 0;
+    > .entries {
+      > .entry{
+        overflow-wrap: anywhere;
+        padding: 0.6pc;
+        &:not(.deleted) {
+          cursor: pointer;
+          &:hover {
+            background-color: $inputActiveColor;
+          }
+        }
+        &.deleted{
+          cursor: default;
+          background-color: #200;
+        }
+        * {
+          background-color: transparent;
+        }
+        .datetime{
+          font-size: 0.7pc;
+        }
+        @include border($dir: 'bottom');
       }
     }
   }
