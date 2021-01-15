@@ -7,7 +7,15 @@ module.exports = {
         '/api/': {
           target: 'https://task-trees.com',
           ws: true,
-          changeOrigin: true
+          changeOrigin: true,
+          onProxyRes: proxyResponse => {
+            if (proxyResponse.headers['set-cookie']) {
+              const cookies = proxyResponse.headers['set-cookie'].map(cookie =>
+                cookie.replace(/; secure/gi, '')
+              );
+              proxyResponse.headers['set-cookie'] = cookies;
+            }
+          }
         }
       }
     }
