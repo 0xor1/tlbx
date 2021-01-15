@@ -157,8 +157,65 @@ export default {
                     }
                     return res
                 },
-                cost(value, currencyCode) {
+                cost(value, currencyCode, abbreviate) {
                     let symbol = currencyCode
+                    let div = 1
+                    let decPlaces = 2
+                    let orderSymbol = ""
+                    value /= 100 
+                    if (abbreviate) {
+                        if (value < 1000) {
+                            div = 1
+                        } else if (value < 10000) {
+                            div = 1000
+                            decPlaces = 2
+                            orderSymbol = "k"
+                        } else if (value < 100000) {
+                            div = 1000
+                            decPlaces = 1
+                            orderSymbol = "k"
+                        } else if (value < 1000000) {
+                            div = 1000
+                            decPlaces = 0
+                            orderSymbol = "k"
+                        } else if (value < 10000000) {
+                            div = 1000000
+                            decPlaces = 2
+                            orderSymbol = "m"
+                        } else if (value < 100000000) {
+                            div = 1000000
+                            decPlaces = 1
+                            orderSymbol = "m"
+                        } else if (value < 1000000000) {
+                            div = 1000000
+                            decPlaces = 0
+                            orderSymbol = "m"
+                        } else if (value < 10000000000) {
+                            div = 1000000000
+                            decPlaces = 2
+                            orderSymbol = "b"
+                        } else if (value < 100000000000) {
+                            div = 1000000000
+                            decPlaces = 1
+                            orderSymbol = "b"
+                        } else if (value < 1000000000000) {
+                            div = 1000000000
+                            decPlaces = 0
+                            orderSymbol = "b"
+                        } else if (value < 10000000000000) {
+                            div = 1000000000000
+                            decPlaces = 2
+                            orderSymbol = "t"
+                        } else if (value < 100000000000000) {
+                            div = 1000000000000
+                            decPlaces = 1
+                            orderSymbol = "t"
+                        } else if (value < 1000000000000000) {
+                            div = 1000000000000
+                            decPlaces = 0
+                            orderSymbol = "t"
+                        }
+                    }
                     // only support symbols for the major currencies
                     switch(currencyCode) {
                         case "USD":
@@ -189,7 +246,7 @@ export default {
                             symbol= 'NZ$'
                             break;
                     }
-                    return symbol + (value/100).toFixed(2)
+                    return symbol + (value/div).toFixed(decPlaces) + orderSymbol
                 },
                 bytes(size) {
                     let unit = "B"

@@ -18,7 +18,7 @@
     <div v-else class="content" >
       <div class="breadcrumb">
         <span v-if="ancestors.length > 0 && ancestors[0].parent != null">
-          <a title="load more ancestors" :click="getMoreAncestors">..</a>
+          <a title="load more ancestors" @click.stop.prevent="getMoreAncestors">..</a>
           /
         </span>
         <span v-for="(a, index) in ancestors" :key="a.id">
@@ -192,11 +192,11 @@
               cols: [
                 {
                   name: "est",
-                  get: (t)=> this.$u.fmt.cost(t.costEst + t.costSubEst, this.project.currencyCode)
+                  get: (t)=> this.$u.fmt.cost(t.costEst + t.costSubEst, this.project.currencyCode, true)
                 },
                 {
                   name: "inc",
-                  get: (t)=> this.$u.fmt.cost(t.costInc + t.costSubInc, this.project.currencyCode)
+                  get: (t)=> this.$u.fmt.cost(t.costInc + t.costSubInc, this.project.currencyCode, true)
                 }
               ]
             },

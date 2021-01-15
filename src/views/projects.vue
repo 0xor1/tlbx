@@ -175,11 +175,11 @@
               cols: [
                 {
                   name: "est",
-                  get: (p)=> this.$u.fmt.cost(p.costEst + p.costSubEst, p.currencyCode)
+                  get: (p)=> this.$u.fmt.cost(p.costEst + p.costSubEst, p.currencyCode, true)
                 },
                 {
                   name: "inc",
-                  get: (p)=> this.$u.fmt.cost(p.costInc + p.costSubInc, p.currencyCode)
+                  get: (p)=> this.$u.fmt.cost(p.costInc + p.costSubInc, p.currencyCode, true)
                 }
               ]
             },
