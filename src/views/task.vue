@@ -302,18 +302,33 @@
         }
       },
       canUpdate(t){
-        if (this.$u.perm.canWrite(this.pMe)) {
-          // TODO put same logic as server in here for writer checks
-          if ((t.parent == null && this.$u.rtr.host() == this.pMe.id) || 
-            (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
-            return true
-          }
+        if (this.$u.rtr.host() == this.pMe.id || 
+          (t.parent != null && this.$u.perm.canWrite(this.pMe))) {
+          // if I'm the host I can edit anything,
+          // or if I'm an admin or writer I can edit any none root node
+          return true
         }
         return false
       },
       canDelete(t){
-        if (this.$u.perm.canWrite(this.pMe)) {
-          // TODO put same logic as server in here for writer checks
+        if (t.descN > 100) {
+          // can't delete a task that would 
+          // result in deleting more than 100 
+          // sub tasks in one go.
+          return false
+        }
+        if (this.$u.rtr.host() == this.pMe.id || 
+          (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
+          // if I'm the host I can delete anything,
+          // or if I'm an admin I can delete any none root node
+          return true
+        }
+        if (this.$u.perm.canWrite(this.pMe) && 
+          t.createdBy == this.pMe.id &&
+          (Date.now() - (new Date(t.createdOn))) < 3600000 &&
+          t.descN == 0) {
+          // writers may only delete their own tasks within an hour of creating them
+          // and if the have no children tasks.
           if ((t.parent == null && this.$u.rtr.host() == this.pMe.id) || 
             (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
             return true
