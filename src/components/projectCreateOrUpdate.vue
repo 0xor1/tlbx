@@ -337,10 +337,19 @@
       },
       close(){
         this.$emit('close')
+      },
+      handleEsc(e){
+        if (e.key == "Escape") {
+          this.close()
+        }
       }
     },
     mounted(){
       this.init()
+      window.addEventListener('keydown', this.handleEsc)
+    },
+    destroyed(){
+      window.removeEventListener('keydown', this.handleEsc)
     },
     watch: {
       $route () {

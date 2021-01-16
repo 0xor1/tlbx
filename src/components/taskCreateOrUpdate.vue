@@ -15,7 +15,7 @@
         <label> description</label>
       </span>
       <span v-if="descriptionErr.length > 0" class="err">{{descriptionErr}}</span>
-      <span>
+      <span v-if="$u.rtr.project() != updateTask.id">
         <input v-model="user" placeholder="user id" @blur="validate" @keydown.enter="ok"> 
         <label> user id</label>
       </span>
@@ -254,10 +254,19 @@
           fullRefresh = false
         }
         this.$emit('close', fullRefresh)
+      },
+      handleEsc(e){
+        if (e.key == "Escape") {
+          this.close()
+        }
       }
     },
     mounted(){
       this.init()
+      window.addEventListener('keydown', this.handleEsc)
+    },
+    destroyed(){
+      window.removeEventListener('keydown', this.handleEsc)
     },
     watch: {
       $route () {
