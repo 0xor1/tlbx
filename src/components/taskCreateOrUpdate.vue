@@ -15,7 +15,7 @@
         <label> description</label>
       </span>
       <span v-if="descriptionErr.length > 0" class="err">{{descriptionErr}}</span>
-      <span v-if="$u.rtr.project() != updateTask.id">
+      <span v-if="!isCreate && $u.rtr.project() != updateTask.id">
         <input v-model="user" placeholder="user id" @blur="validate" @keydown.enter="ok"> 
         <label> user id</label>
       </span>
@@ -236,6 +236,7 @@
             }
             if (isUpdate) {
               this.$api.task.update(args).then((res)=>{
+                this.children[this.index] = res.task
                 if (res.parent != null) {
                   for(const [key, value] of Object.entries(res.parent)) {
                     this.task[key] = value
