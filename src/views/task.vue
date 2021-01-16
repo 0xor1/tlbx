@@ -46,7 +46,7 @@
             <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(0)" title="insert first child">
               <img src="@/assets/insert-below.svg">
             </td>
-            <td class="action">
+            <td v-if="this.children.length > 0" class="action">
               
             </td>
             <td v-if="canUpdate(task)" class="action" @click.stop="showUpdate(-1)" title="update">
