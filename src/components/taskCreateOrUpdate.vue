@@ -23,11 +23,11 @@
         <input type="checkbox" v-model="isParallel" @keydown.enter="ok">
         <label> parallel</label>
       </span>
-      <span>
+      <span v-if="$root.show.time">
         <input v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate" @keydown.enter="ok">
         <label> time estimate</label>
       </span>
-      <span>
+      <span v-if="$root.show.cost">
         <input v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate" @keydown.enter="ok">
         <label> cost estimate</label>
       </span>
