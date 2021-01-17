@@ -5,24 +5,39 @@
     </div>
     <div v-else>
       <h1>project {{isCreate? 'create': 'update'}}</h1>
-      <input ref="name" v-model="name" placeholder="name" @keydown.enter="ok">
-      <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
       <span>
-        <label for="checkbox">public </label>
-        <input type="checkbox" v-model="isPublic" placeholder="isPublic" @keydown.enter="ok">
+        <input ref="name" v-model="name" placeholder="name" @keydown.enter="ok">
+        <label> name</label>
+        <p v-if="nameErr.length > 0" class="err">{{nameErr}}</p>
       </span>
       <span>
-        <label>currency code </label>
+        <input id="public" type="checkbox" v-model="isPublic" placeholder="isPublic" @keydown.enter="ok">
+        <label for="public"> public</label>
+      </span>
+      <span>
         <select v-model="currencyCode">
           <option v-for="currency in currencies" v-bind:value="currency" v-bind:key="currency">
             {{currency}}
           </option>
         </select>
+        <label> currency code</label>
       </span>
-      <input v-model.number="hoursPerDay" :min="0" :max="24" type="number" placeholder="hours per day" @blur="validate" @keydown.enter="ok">
-      <input v-model.number="daysPerWeek" :min="0" :max="7" type="number" placeholder="days per week" @blur="validate" @keydown.enter="ok">
-      <datepicker :monday-first="true" v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
-      <datepicker :monday-first="true" v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
+      <span>
+        <input v-model.number="hoursPerDay" :min="0" :max="24" type="number" placeholder="hours per day" @blur="validate" @keydown.enter="ok">
+        <label> hours per day</label>
+      </span>
+      <span>
+        <input v-model.number="daysPerWeek" :min="0" :max="7" type="number" placeholder="days per week" @blur="validate" @keydown.enter="ok">
+        <label> days per week</label>
+      </span>
+      <span class="date">
+        <datepicker :monday-first="true" v-model="startOn" placeholder="start on" @closed="validate"></datepicker>
+        <label> start on</label>
+      </span>
+      <span class="date">
+        <datepicker :monday-first="true" v-model="endOn" placeholder="end on" @closed="validate"></datepicker>
+        <label> end on</label>
+      </span>
       <button @click="ok">{{isCreate? 'create': 'update'}}</button>
       <button @click="close">close</button>
       <span v-if="err.length > 0" class="err">{{err}}</span>
@@ -371,6 +386,17 @@ div > div {
   }
   input[type="number"] {
     width: 10pc;
+  }
+  p {
+    margin: 0.3pc 0;
+  }
+  span.date {
+    &> * {
+      display: inline-block;
+    }
+    label{
+      margin-left: 0.8pc;
+    }
   }
 }
 .err{

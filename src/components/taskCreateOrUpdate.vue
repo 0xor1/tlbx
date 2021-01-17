@@ -20,8 +20,8 @@
         <label> user id</label>
       </span>
       <span>
-        <input type="checkbox" v-model="isParallel" @keydown.enter="ok">
-        <label> parallel</label>
+        <input id="parallel" type="checkbox" v-model="isParallel" @keydown.enter="ok">
+        <label for="parallel"> parallel</label>
       </span>
       <span v-if="$root.show.time">
         <input v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate" @keydown.enter="ok">
