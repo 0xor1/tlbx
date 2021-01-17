@@ -158,6 +158,7 @@
           // if we're forcing an update then
           // set lastGotOn to null to refresh now.
           this.projectActivityLastGotOn = null
+          clearTimeout(this.projectActivitySetTimeoutId)
           this.projectActivitySetTimeoutId = null
         }
         if (this.$u.rtr.project() != null && 
