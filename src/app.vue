@@ -1,7 +1,7 @@
 <template>
     <div class="app-root">
         <div v-bind:class="{'show-menu':showMenu, 'show-project-activity': showProjectActivity && showProjectActivityToggle}" class="body">
-            <router-view/>
+            <router-view @refreshProjectActivity="refreshProjectActivity"/>
         </div>
         <!-- main menu -->
         <div v-if="showMenu" v-bind:class="{'show':showMenu}" class="menu slide-out">
@@ -29,6 +29,7 @@
         </div>
         <!-- project activity stream -->
         <div v-if="showProjectActivityToggle && showProjectActivity" v-bind:class="{'show':showProjectActivity}" class="project-activity slide-out">
+          <div v-if="loadingProjectActivity">loading...</div>
           <div class="entries">
             <div :class="{entry: true, deleted: a.itemHasBeenDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
               <user :userId="a.user"></user> 
@@ -41,8 +42,10 @@
               <span class="datetime"> {{$u.fmt.datetime(a.occurredOn)}}</span>
             </div>
           </div>
+          <button v-if="!loadingProjectActivity && moreProjectActivity" @click.stop.prevent="loadMoreProjectActivity">load more</button>
+          <div v-if="loadingProjectActivity && projectActivity.length > 0">loading...</div>
         </div>
-        <div title="project activity" v-if="showProjectActivityToggle" @click.stop.prevent="showProjectActivity=!showProjectActivity" class="slide-out-toggle project-activity-toggle">
+        <div title="project activity" v-if="showProjectActivityToggle" @click.stop.prevent="projectActivityToggle()" class="slide-out-toggle project-activity-toggle">
           <img src="@/assets/activity.svg">
         </div>
     </div>
@@ -67,6 +70,12 @@
           showFields: this.showFields || false,
           projectActivity: this.projectActivity || [],
           moreProjectActivity: this.moreProjectActivity || false,
+          loadingProjectActivity: false,
+          projectActivityLastGotOn: null,
+          projectActivityCurrentPollDelayMs: 60000,
+          projectActivityMinPollDelayMs: 60000,
+          projectActivityMaxPollDelayMs: 3600000,
+          projectActivitySetTimeoutId: null,
           fields: [
             "date",
             "user",
@@ -95,12 +104,8 @@
           this.currentProjectId = this.$u.rtr.project()
           this.projectActivity = []
           this.moreProjectActivity = false
-          if (this.$u.rtr.project() != null) {
-            this.$api.project.getActivities(this.$u.rtr.host(), this.$u.rtr.project()).then((res)=>{
-              this.projectActivity = res.set
-              this.moreProjectActivity = res.more
-            })
-          }
+          this.projectActivityLastGotOn = null
+          this.refreshProjectActivity()
         }
       },
       loginout() {
@@ -127,6 +132,58 @@
         this.$u.rtr.goto(path)
         if (window.innerWidth <= 480) {
           this.showMenu = false
+        }
+      },
+      loadMoreProjectActivity(){
+        if (this.$u.rtr.project() != null && this.showProjectActivity && this.moreProjectActivity) {
+          this.$api.project.getActivities(this.$u.rtr.host(), this.$u.rtr.project()).then((res)=>{
+            this.projectActivity = res.set.concat(this.projectActivity)
+            this.moreProjectActivity = res.more
+          })
+        }
+      },
+      projectActivityToggle() {
+        this.showProjectActivity = !this.showProjectActivity
+        if (this.showProjectActivity) {
+          // if opening project activity refresh data
+          this.refreshProjectActivity();
+        } else {
+          // else if closing then clear polling timeout
+          clearTimeout(this.projectActivitySetTimeoutId)
+        }
+      },
+      refreshProjectActivity(force){
+        if (force) {
+          // if we're forcing an update then
+          // set lastGotOn to null to refresh now.
+          this.projectActivityLastGotOn = null
+        }
+        if (this.$u.rtr.project() != null && 
+          this.showProjectActivity && 
+          this.projectActivityLastGotOn + this.projectActivityCurrentPollDelayMs < Date.now()) {
+          this.projectActivityLastGotOn = Date.now()
+          clearTimeout(this.projectActivitySetTimeoutId)
+          this.$api.project.getActivities(this.$u.rtr.host(), this.$u.rtr.project()).then((res)=>{
+            if ((this.projectActivity.length == 0 && res.set.length == 0) ||
+              (this.projectActivity.length > 0 &&
+              res.set.length > 0 &&
+              this.projectActivity[0].occurredOn == res.set[0].occurredOn)) {
+              // there was no updated entries so half polling rate
+              this.projectActivityCurrentPollDelayMs *= 2
+              if (this.projectActivityCurrentPollDelayMs > this.projectActivityMaxPollDelayMs) {
+                this.projectActivityCurrentPollDelayMs = this.projectActivityMaxPollDelayMs
+              }
+            } else {
+              // there was some new activity so reset polling rate to minimum rate
+              this.projectActivityCurrentPollDelayMs = this.projectActivityMinPollDelayMs
+            }
+            this.projectActivity = res.set
+            this.moreProjectActivity = res.more
+            // poll again!
+            this.projectActivitySetTimeoutId = setTimeout(()=>{
+              this.refreshProjectActivity()
+            }, this.projectActivityCurrentPollDelayMs)
+          })
         }
       }
     },

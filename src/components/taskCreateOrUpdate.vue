@@ -189,6 +189,7 @@
                 this.task[key] = value
               }
               this.close()
+              this.$emit("refreshProjectActivity", true)
             })
           } else {
             let args = {
@@ -243,6 +244,7 @@
                   }
                 }
                 this.close(moved)
+                this.$emit("refreshProjectActivity", true)
               })
             } else {
               this.close()

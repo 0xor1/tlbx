@@ -12,7 +12,8 @@
         :children="children"
         :parentUserId="task.user"
         :index="index"
-        @close="onCreateOrUpdateClose">
+        @close="onCreateOrUpdateClose"
+        @refreshProjectActivity="refreshProjectActivity">
       </task-create-or-update>
     </div>
     <div v-else class="content" >
@@ -381,6 +382,9 @@
           res += " - " + t.description
         }
         return res
+      },
+      refreshProjectActivity(force){
+        this.$emit("refreshProjectActivity", force)
       }
     },
     mounted(){
