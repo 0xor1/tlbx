@@ -150,6 +150,7 @@
         } else {
           // else if closing then clear polling timeout
           clearTimeout(this.projectActivitySetTimeoutId)
+          this.projectActivitySetTimeoutId = null
         }
       },
       refreshProjectActivity(force){
@@ -157,33 +158,45 @@
           // if we're forcing an update then
           // set lastGotOn to null to refresh now.
           this.projectActivityLastGotOn = null
+          this.projectActivitySetTimeoutId = null
         }
         if (this.$u.rtr.project() != null && 
           this.showProjectActivity && 
-          this.projectActivityLastGotOn + this.projectActivityCurrentPollDelayMs < Date.now()) {
-          this.projectActivityLastGotOn = Date.now()
-          clearTimeout(this.projectActivitySetTimeoutId)
-          this.$api.project.getActivities(this.$u.rtr.host(), this.$u.rtr.project()).then((res)=>{
-            if ((this.projectActivity.length == 0 && res.set.length == 0) ||
-              (this.projectActivity.length > 0 &&
-              res.set.length > 0 &&
-              this.projectActivity[0].occurredOn == res.set[0].occurredOn)) {
-              // there was no updated entries so half polling rate
-              this.projectActivityCurrentPollDelayMs *= 2
-              if (this.projectActivityCurrentPollDelayMs > this.projectActivityMaxPollDelayMs) {
-                this.projectActivityCurrentPollDelayMs = this.projectActivityMaxPollDelayMs
-              }
-            } else {
-              // there was some new activity so reset polling rate to minimum rate
-              this.projectActivityCurrentPollDelayMs = this.projectActivityMinPollDelayMs
-            }
-            this.projectActivity = res.set
-            this.moreProjectActivity = res.more
-            // poll again!
+          this.projectActivitySetTimeoutId == null) {
+          if (this.projectActivityLastGotOn + this.projectActivityCurrentPollDelayMs >= Date.now()) {
+            // set up correct poll again!
+            let delay = this.projectActivityLastGotOn + this.projectActivityCurrentPollDelayMs + 1000 - Date.now()
             this.projectActivitySetTimeoutId = setTimeout(()=>{
+              this.projectActivitySetTimeoutId = null
               this.refreshProjectActivity()
-            }, this.projectActivityCurrentPollDelayMs)
-          })
+            }, delay)
+          } else {
+            this.projectActivityLastGotOn = Date.now()
+            this.loadingProjectActivity = true
+            this.$api.project.getActivities(this.$u.rtr.host(), this.$u.rtr.project()).then((res)=>{
+              this.loadingProjectActivity = false
+              if ((this.projectActivity.length == 0 && res.set.length == 0) ||
+                (this.projectActivity.length > 0 &&
+                res.set.length > 0 &&
+                this.projectActivity[0].occurredOn == res.set[0].occurredOn)) {
+                // there was no updated entries so half polling rate
+                this.projectActivityCurrentPollDelayMs *= 2
+                if (this.projectActivityCurrentPollDelayMs > this.projectActivityMaxPollDelayMs) {
+                  this.projectActivityCurrentPollDelayMs = this.projectActivityMaxPollDelayMs
+                }
+              } else {
+                // there was some new activity so reset polling rate to minimum rate
+                this.projectActivityCurrentPollDelayMs = this.projectActivityMinPollDelayMs
+              }
+              this.projectActivity = res.set
+              this.moreProjectActivity = res.more
+              // poll again
+              this.projectActivitySetTimeoutId = setTimeout(()=>{
+                this.projectActivitySetTimeoutId = null
+                this.refreshProjectActivity()
+              }, this.projectActivityCurrentPollDelayMs+1000)
+            })
+          }
         }
       }
     },
