@@ -364,6 +364,7 @@
         if (t.id == this.$u.rtr.project()) {
           this.$api.project.delete([this.$u.rtr.project()]).then(()=>{
             this.$u.rtr.goHome()
+            this.refreshProjectActivity(true)
           })
         } else {
           this.$api.task.delete(this.$u.rtr.host(), this.$u.rtr.project(), t.id).then((t)=>{
@@ -373,6 +374,7 @@
             } else {
                 this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.id}`)
             }
+            this.refreshProjectActivity(true)
           })
         }
       },

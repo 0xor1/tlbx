@@ -363,8 +363,9 @@ function newApi(isMDoApi) {
       removeUsers(host, project, users) {
         return doReq('/project/removeUsers', {host, project, users})
       },
-      getActivities(host, project, task, item, user, occuredAfter, occuredBefore, limit) {
-        return doReq('/project/getActivities', {host, project, task, item, user, occuredAfter, occuredBefore, limit})
+      getActivities(args) {
+        // host, project, task, item, user, occuredAfter, occuredBefore, limit
+        return doReq('/project/getActivities', args)
       }
     },
     task: {

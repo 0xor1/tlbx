@@ -136,8 +136,14 @@
       },
       loadMoreProjectActivity(){
         if (this.$u.rtr.project() != null && this.showProjectActivity && this.moreProjectActivity) {
-          this.$api.project.getActivities(this.$u.rtr.host(), this.$u.rtr.project()).then((res)=>{
-            this.projectActivity = res.set.concat(this.projectActivity)
+          this.loadingProjectActivity = true
+          this.$api.project.getActivities({
+            host: this.$u.rtr.host(),
+            project: this.$u.rtr.project(),
+            occurredBefore: this.projectActivity[this.projectActivity.length - 1].occurredOn
+          }).then((res)=>{
+            this.loadingProjectActivity = false
+            this.projectActivity = this.projectActivity.concat(res.set)
             this.moreProjectActivity = res.more
           })
         }
@@ -174,7 +180,10 @@
           } else {
             this.projectActivityLastGotOn = Date.now()
             this.loadingProjectActivity = true
-            this.$api.project.getActivities(this.$u.rtr.host(), this.$u.rtr.project()).then((res)=>{
+            this.$api.project.getActivities({
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project()
+            }).then((res)=>{
               this.loadingProjectActivity = false
               if ((this.projectActivity.length == 0 && res.set.length == 0) ||
                 (this.projectActivity.length > 0 &&
