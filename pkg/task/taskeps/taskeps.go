@@ -356,10 +356,14 @@ var (
 						epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, currentParent.ID)
 					}
 					updatedTaskIDs := epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, t.ID)
-					if len(updatedTaskIDs) <= 1 && t.Parent != nil {
-						// if updating aggregate values on the task being updated results in only that task or none
-						// beign updated, need to make sure we explicitly update through the new parent also
+					if len(updatedTaskIDs) == 0 && t.Parent != nil {
+						// if updating aggregate values on the task being updated results in no change,
+						// need to make sure we explicitly update through the new parent also
 						epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
+					} else {
+						// else all updates did occur and t was definitely updated
+						// so call getOne again make sure we'r returning fresh aggregate values
+						t = getOne(tx, args.Host, args.Project, t.ID)
 					}
 				}
 				if nameUpdated {
