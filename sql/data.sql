@@ -40,9 +40,11 @@ CREATE TABLE activities(
   itemName VARCHAR(250) NULL,
   extraInfo VARCHAR(10000) NULL,
   PRIMARY KEY (host, project, occurredOn, item, user),
+  UNIQUE INDEX (host, project, itemHasBeenDeleted, occurredOn, item, user),
   UNIQUE INDEX (host, project, item, occurredOn, user),
   UNIQUE INDEX (host, project, task, item, occurredOn, user),
-  UNIQUE INDEX (host, project, user, occurredOn, item)
+  UNIQUE INDEX (host, project, user, occurredOn, item),
+  UNIQUE INDEX (host, project, user, itemHasBeenDeleted, occurredOn, item)
 );
 
 DROP TABLE IF EXISTS projectLocks;

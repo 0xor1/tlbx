@@ -605,19 +605,21 @@ var (
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
 				return &project.GetActivities{
-					Limit: 100,
+					ExcludeDeletedItems: false,
+					Limit:               100,
 				}
 			},
 			GetExampleArgs: func() interface{} {
 				return &project.GetActivities{
-					Host:          app.ExampleID(),
-					Project:       app.ExampleID(),
-					Task:          ptr.ID(app.ExampleID()),
-					Item:          ptr.ID(app.ExampleID()),
-					User:          ptr.ID(app.ExampleID()),
-					OccuredAfter:  ptr.Time(app.ExampleTime()),
-					OccuredBefore: ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-					Limit:         100,
+					Host:                app.ExampleID(),
+					Project:             app.ExampleID(),
+					ExcludeDeletedItems: true,
+					Task:                ptr.ID(app.ExampleID()),
+					Item:                ptr.ID(app.ExampleID()),
+					User:                ptr.ID(app.ExampleID()),
+					OccuredAfter:        ptr.Time(app.ExampleTime()),
+					OccuredBefore:       ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+					Limit:               100,
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -645,6 +647,9 @@ var (
 				query := bytes.NewBufferString(`SELECT occurredOn, user, task, item, itemType, itemHasBeenDeleted, action, taskName, itemName, extraInfo FROM activities WHERE host=? AND project=?`)
 				queryArgs := make([]interface{}, 0, 7)
 				queryArgs = append(queryArgs, args.Host, args.Project)
+				if args.ExcludeDeletedItems {
+					query.WriteString(` AND itemHasBeenDeleted=0`)
+				}
 				if args.Item != nil {
 					query.WriteString(` AND item=?`)
 					queryArgs = append(queryArgs, *args.Item)

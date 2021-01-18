@@ -310,14 +310,15 @@ func (a *RemoveUsers) MustDo(c *app.Client) {
 }
 
 type GetActivities struct {
-	Host          ID         `json:"host"`
-	Project       ID         `json:"project"`
-	Task          *ID        `json:"task,omitempty"`
-	Item          *ID        `json:"item,omitempty"`
-	User          *ID        `json:"user,omitempty"`
-	OccuredAfter  *time.Time `json:"occurredAfter,omitempty"`
-	OccuredBefore *time.Time `json:"occurredBefore,omitempty"`
-	Limit         uint16     `json:"limit,omitempty"`
+	Host                ID         `json:"host"`
+	Project             ID         `json:"project"`
+	ExcludeDeletedItems bool       `json:"excludeDeletedItems,omitempty"`
+	Task                *ID        `json:"task,omitempty"`
+	Item                *ID        `json:"item,omitempty"`
+	User                *ID        `json:"user,omitempty"`
+	OccuredAfter        *time.Time `json:"occurredAfter,omitempty"`
+	OccuredBefore       *time.Time `json:"occurredBefore,omitempty"`
+	Limit               uint16     `json:"limit,omitempty"`
 }
 
 func (_ *GetActivities) Path() string {

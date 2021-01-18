@@ -359,9 +359,10 @@ func Everything(t *testing.T) {
 	a.False(as.More)
 
 	as = (&project.GetActivities{
-		Host:    r.Ali().ID(),
-		Project: p1.ID,
-		Item:    ptr.ID(p1.ID),
+		Host:                r.Ali().ID(),
+		Project:             p1.ID,
+		ExcludeDeletedItems: true,
+		Item:                ptr.ID(p1.ID),
 	}).MustDo(ac)
 	a.Len(as.Set, 1)
 	a.False(as.More)
