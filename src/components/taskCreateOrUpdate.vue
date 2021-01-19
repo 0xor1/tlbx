@@ -237,10 +237,16 @@
             }
             if (isUpdate) {
               this.$api.task.update(args).then((res)=>{
-                this.children[this.index] = res.task
-                if (res.parent != null) {
-                  for(const [key, value] of Object.entries(res.parent)) {
+                if (this.index == -1) {
+                  for(const [key, value] of Object.entries(res.task)) {
                     this.task[key] = value
+                  }
+                } else {
+                  this.children[this.index] = res.task
+                  if (res.parent != null) {
+                    for(const [key, value] of Object.entries(res.parent)) {
+                      this.task[key] = value
+                    }
                   }
                 }
                 this.close(moved)
