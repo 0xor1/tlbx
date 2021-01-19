@@ -40,6 +40,7 @@
               <span v-else>
                 {{a.action}} {{a.itemType}}<span v-if="a.itemName != null"> {{a.itemName}}</span>, on task {{a.taskName}}
               </span>
+              <br>
               <span class="datetime"> {{$u.fmt.datetime(a.occurredOn)}}</span>
             </div>
           </div>
