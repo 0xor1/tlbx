@@ -82,7 +82,7 @@ CREATE TABLE tasks(
   id BINARY(16) NOT NULL,
   parent BINARY(16) NULL,
   firstChild BINARY(16) NULL,
-  nextSibling BINARY(16) NULL,
+  nextSib BINARY(16) NULL,
   user BINARY(16) NULL,
   name VARCHAR(250) NOT NULL,
   description VARCHAR(1250) NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE tasks(
   PRIMARY KEY (host, project, id),
   UNIQUE INDEX(host, user, id),
   UNIQUE INDEX(host, project, parent, id),
-  UNIQUE INDEX(host, project, nextSibling, id),
+  UNIQUE INDEX(host, project, nextSib, id),
   UNIQUE INDEX(host, project, user, id)
 );
 
@@ -326,7 +326,7 @@ END //
 DELIMITER ;
 
 #useful helper query for manual verifying/debugging test results
-#SELECT  t1.name, t2.name AS parent, t3.name AS nextSibling, t4.name AS firstChild, t1.description, t1.timeEst, t1.timeInc, t1.timeSubMin, t1.timeSubEst, t1.timeSubInc, t1.costEst, t1.costInc, t1.costSubEst, t1.costSubInc, t1.childN, t1.descN FROM trees_data.tasks t1 LEFT JOIN trees_data.tasks t2 ON t1.parent = t2.id LEFT JOIN trees_data.tasks t3 ON t1.nextSibling = t3.id LEFT JOIN trees_data.tasks t4 ON t1.firstChild = t4.id ORDER BY t1.name;
+#SELECT  t1.name, t2.name AS parent, t3.name AS nextSib, t4.name AS firstChild, t1.description, t1.timeEst, t1.timeInc, t1.timeSubMin, t1.timeSubEst, t1.timeSubInc, t1.costEst, t1.costInc, t1.costSubEst, t1.costSubInc, t1.childN, t1.descN FROM trees_data.tasks t1 LEFT JOIN trees_data.tasks t2 ON t1.parent = t2.id LEFT JOIN trees_data.tasks t3 ON t1.nextSib = t3.id LEFT JOIN trees_data.tasks t4 ON t1.firstChild = t4.id ORDER BY t1.name;
 
 
 DROP USER IF EXISTS 'trees_data'@'%';

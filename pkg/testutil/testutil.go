@@ -41,7 +41,7 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 		if len(as) > 0 {
 			pre := ``
 			for _, a := range as[1:] {
-				if a.NextSibling != nil {
+				if a.NextSib != nil {
 					pre += `|    `
 				} else {
 					pre += `     `
@@ -56,8 +56,8 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 		if t.FirstChild != nil {
 			print(tree[t.FirstChild.String()], append(as, t))
 		}
-		if t.NextSibling != nil {
-			print(tree[t.NextSibling.String()], as)
+		if t.NextSib != nil {
+			print(tree[t.NextSib.String()], as)
 		}
 	}
 	println("n: name")

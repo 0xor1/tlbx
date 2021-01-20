@@ -33,15 +33,15 @@ var (
 			},
 			GetExampleArgs: func() interface{} {
 				return &task.Create{
-					Host:            app.ExampleID(),
-					Project:         app.ExampleID(),
-					Parent:          app.ExampleID(),
-					PreviousSibling: ptr.ID(app.ExampleID()),
-					Name:            "do it",
-					Description:     "do the thing you're supposed to do",
-					IsParallel:      true,
-					User:            ptr.ID(app.ExampleID()),
-					TimeEst:         40,
+					Host:        app.ExampleID(),
+					Project:     app.ExampleID(),
+					Parent:      app.ExampleID(),
+					PrevSib:     ptr.ID(app.ExampleID()),
+					Name:        "do it",
+					Description: "do the thing you're supposed to do",
+					IsParallel:  true,
+					User:        ptr.ID(app.ExampleID()),
+					TimeEst:     40,
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -62,7 +62,7 @@ var (
 					ID:          tlbx.NewID(),
 					Parent:      &args.Parent,
 					FirstChild:  nil,
-					NextSibling: nil,
+					NextSib:     nil,
 					User:        args.User,
 					Name:        args.Name,
 					Description: args.Description,
@@ -96,31 +96,31 @@ var (
 				defer tx.Rollback()
 				// lock project, required for any action that will change aggregate values nad/or tree structure
 				epsutil.MustLockProject(tx, args.Host, args.Project)
-				// get correct next sibling value from either previousSibling if
-				// specified or parent.FirstChild otherwise. Then update previousSiblings nextSibling value
+				// get correct next sib value from either prevSib if
+				// specified or parent.FirstChild otherwise. Then update prevSibs nextSib value
 				// or parents firstChild value depending on the scenario.
-				var previousSibling *task.Task
-				if args.PreviousSibling != nil {
-					previousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling)
-					app.ReturnIf(previousSibling == nil, http.StatusNotFound, "previousSibling not found")
-					t.NextSibling = previousSibling.NextSibling
-					previousSibling.NextSibling = &t.ID
-					// point previous sibling at new task
-					_, err := tx.Exec(`UPDATE tasks SET nextSibling=? WHERE host=? AND project=? AND id=?`, t.ID, args.Host, args.Project, previousSibling.ID)
+				var prevSib *task.Task
+				if args.PrevSib != nil {
+					prevSib = getOne(tx, args.Host, args.Project, *args.PrevSib)
+					app.ReturnIf(prevSib == nil, http.StatusNotFound, "prevSib not found")
+					t.NextSib = prevSib.NextSib
+					prevSib.NextSib = &t.ID
+					// point prev sib at new task
+					_, err := tx.Exec(`UPDATE tasks SET nextSib=? WHERE host=? AND project=? AND id=?`, t.ID, args.Host, args.Project, prevSib.ID)
 					PanicOn(err)
 				} else {
 					// else newTask is being inserted as firstChild, so set any current firstChild
-					// as newTask's NextSibling
+					// as newTask's NextSib
 					// get parent for updating child/descendant counts and firstChild if required
 					parent := getOne(tx, args.Host, args.Project, args.Parent)
 					app.ReturnIf(parent == nil, http.StatusNotFound, "parent not found")
-					t.NextSibling = parent.FirstChild
+					t.NextSib = parent.FirstChild
 					// increment parents child and descendant counters and firstChild pointer incase that was changed
 					_, err := tx.Exec(`UPDATE tasks SET firstChild=? WHERE host=? AND project=? AND id=?`, t.ID, args.Host, args.Project, t.Parent)
 					PanicOn(err)
 				}
 				// insert new task
-				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSibling, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.TimeEst, t.TimeInc, t.TimeSubMin, t.TimeSubEst, t.TimeSubInc, t.CostEst, t.CostInc, t.CostSubEst, t.CostSubInc, t.FileN, t.FileSize, t.FileSubN, t.FileSubSize, t.ChildN, t.DescN, t.IsParallel)
+				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSib, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.TimeEst, t.TimeInc, t.TimeSubMin, t.TimeSubEst, t.TimeSubInc, t.CostEst, t.CostInc, t.CostSubEst, t.CostSubInc, t.FileN, t.FileSize, t.FileSubN, t.FileSubSize, t.ChildN, t.DescN, t.IsParallel)
 				PanicOn(err)
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &t.ID, t.ID, cnsts.TypeTask, cnsts.ActionCreated, &t.Name, nil)
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
@@ -145,17 +145,17 @@ var (
 			},
 			GetExampleArgs: func() interface{} {
 				return &task.Update{
-					Host:            app.ExampleID(),
-					Project:         app.ExampleID(),
-					ID:              app.ExampleID(),
-					Parent:          &field.ID{V: app.ExampleID()},
-					PreviousSibling: &field.IDPtr{V: ptr.ID(app.ExampleID())},
-					Name:            &field.String{V: "new name"},
-					Description:     &field.String{V: "new description"},
-					IsParallel:      &field.Bool{V: true},
-					User:            &field.IDPtr{V: ptr.ID(app.ExampleID())},
-					TimeEst:         &field.UInt64{V: 123},
-					CostEst:         &field.UInt64{V: 123},
+					Host:        app.ExampleID(),
+					Project:     app.ExampleID(),
+					ID:          app.ExampleID(),
+					Parent:      &field.ID{V: app.ExampleID()},
+					PrevSib:     &field.IDPtr{V: ptr.ID(app.ExampleID())},
+					Name:        &field.String{V: "new name"},
+					Description: &field.String{V: "new description"},
+					IsParallel:  &field.Bool{V: true},
+					User:        &field.IDPtr{V: ptr.ID(app.ExampleID())},
+					TimeEst:     &field.UInt64{V: 123},
+					CostEst:     &field.UInt64{V: 123},
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -168,7 +168,7 @@ var (
 				args := a.(*task.Update)
 				me := me.Get(tlbx)
 				if args.Parent == nil &&
-					args.PreviousSibling == nil &&
+					args.PrevSib == nil &&
 					args.Name == nil &&
 					args.Description == nil &&
 					args.IsParallel == nil &&
@@ -182,7 +182,7 @@ var (
 					app.ReturnIf(!me.Equal(args.Host), http.StatusForbidden, "only the host may edit the project root node")
 					app.ReturnIf(args.User != nil, http.StatusForbidden, "user value is not settable on the project root node")
 					app.ReturnIf(args.Parent != nil, http.StatusForbidden, "parent value is not settable on the project root node")
-					app.ReturnIf(args.PreviousSibling != nil, http.StatusForbidden, "previousSibling value is not settable on the project root node")
+					app.ReturnIf(args.PrevSib != nil, http.StatusForbidden, "prevSib value is not settable on the project root node")
 				} else {
 					epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
 				}
@@ -191,7 +191,7 @@ var (
 				treeUpdateRequired := false
 				simpleUpdateRequired := false
 				if args.Parent != nil ||
-					args.PreviousSibling != nil ||
+					args.PrevSib != nil ||
 					args.CostEst != nil ||
 					args.TimeEst != nil ||
 					args.IsParallel != nil {
@@ -201,10 +201,10 @@ var (
 				}
 				t := getOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
-				var newParent, newPreviousSibling, currentParent, currentPreviousSibling *task.Task
+				var newParent, newPrevSib, currentParent, currentPrevSib *task.Task
 				if args.Parent != nil {
 					if !args.Parent.V.Equal(*t.Parent) {
-						var newNextSibling *ID
+						var newNextSib *ID
 						// validate new parent exists
 						newParent = getOne(tx, args.Host, args.Project, args.Parent.V)
 						app.ReturnIf(newParent == nil, http.StatusNotFound, "parent not found")
@@ -213,35 +213,35 @@ var (
 						ancestorLoopDetected := false
 						PanicOn(row.Scan(&ancestorLoopDetected))
 						app.BadReqIf(ancestorLoopDetected || t.ID.Equal(args.Parent.V), "ancestor loop detected, invalid parent value")
-						if args.PreviousSibling != nil && args.PreviousSibling.V != nil {
-							app.BadReqIf(args.PreviousSibling.V.Equal(args.ID), "sibling loop detected, invalid previousSibling value")
-							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
-							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
-							app.BadReqIf(!newPreviousSibling.Parent.Equal(args.Parent.V), "previousSiblings parent does not match the specified parent arg")
-							newNextSibling = newPreviousSibling.NextSibling
-							newPreviousSibling.NextSibling = &t.ID
+						if args.PrevSib != nil && args.PrevSib.V != nil {
+							app.BadReqIf(args.PrevSib.V.Equal(args.ID), "sib loop detected, invalid prevSib value")
+							newPrevSib = getOne(tx, args.Host, args.Project, *args.PrevSib.V)
+							app.ReturnIf(newPrevSib == nil, http.StatusNotFound, "prevSib not found")
+							app.BadReqIf(!newPrevSib.Parent.Equal(args.Parent.V), "prevSibs parent does not match the specified parent arg")
+							newNextSib = newPrevSib.NextSib
+							newPrevSib.NextSib = &t.ID
 						} else {
-							newNextSibling = newParent.FirstChild
+							newNextSib = newParent.FirstChild
 							newParent.FirstChild = &t.ID
 						}
-						// need to reconnect currentPreviousSibling with current nextSibling
-						currentPreviousSibling = getPreviousSibling(tx, args.Host, args.Project, args.ID)
+						// need to reconnect currentPrevSib with current nextSib
+						currentPrevSib = getPrevSib(tx, args.Host, args.Project, args.ID)
 						// need to get current parent for ancestor value updates
-						// !!!SPECIAL CASE!! currentParent may be the newPreviousSibling
-						if newPreviousSibling != nil && newPreviousSibling.ID.Equal(*t.Parent) {
-							currentParent = newPreviousSibling
+						// !!!SPECIAL CASE!! currentParent may be the newPrevSib
+						if newPrevSib != nil && newPrevSib.ID.Equal(*t.Parent) {
+							currentParent = newPrevSib
 						} else {
 							currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
 						}
 						app.ReturnIf(currentParent == nil, http.StatusNotFound, "currentParent not found")
-						if currentPreviousSibling != nil {
-							currentPreviousSibling.NextSibling = t.NextSibling
+						if currentPrevSib != nil {
+							currentPrevSib.NextSib = t.NextSib
 						} else {
 							// need to update currentParent firstChild as t is it
-							currentParent.FirstChild = t.NextSibling
+							currentParent.FirstChild = t.NextSib
 						}
 						t.Parent = &newParent.ID
-						t.NextSibling = newNextSibling
+						t.NextSib = newNextSib
 						treeUpdateRequired = true
 					} else {
 						// if args.Parent is set and it's equal to the current value
@@ -249,49 +249,49 @@ var (
 						args.Parent = nil
 					}
 				}
-				if args.Parent == nil && args.PreviousSibling != nil {
+				if args.Parent == nil && args.PrevSib != nil {
 					// we now know we are doing a purely horizontal move, i.e. not changing parent node
-					// get current previousSibling
-					currentPreviousSibling = getPreviousSibling(tx, args.Host, args.Project, args.ID)
-					if !((currentPreviousSibling == nil && args.PreviousSibling.V == nil) ||
-						(currentPreviousSibling != nil && args.PreviousSibling.V != nil &&
-							currentPreviousSibling.ID.Equal(*args.PreviousSibling.V))) {
-						var newNextSibling *ID
+					// get current prevSib
+					currentPrevSib = getPrevSib(tx, args.Host, args.Project, args.ID)
+					if !((currentPrevSib == nil && args.PrevSib.V == nil) ||
+						(currentPrevSib != nil && args.PrevSib.V != nil &&
+							currentPrevSib.ID.Equal(*args.PrevSib.V))) {
+						var newNextSib *ID
 						// here we know that an actual change is being attempted
 						currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
 						PanicIf(currentParent == nil, "currentParent not found")
-						if args.PreviousSibling.V != nil {
+						if args.PrevSib.V != nil {
 							// moving to a non first child position
 							if currentParent.FirstChild.Equal(t.ID) {
 								//moving the current first child away so need to repoint parent.firstChild
-								currentParent.FirstChild = t.NextSibling
+								currentParent.FirstChild = t.NextSib
 							} else {
 								// not moving first child therefor nil out currentParent to
 								// save an update query
 								currentParent = nil
 							}
-							app.BadReqIf(args.PreviousSibling.V.Equal(args.ID), "sibling loop detected, invalid previousSibling value")
-							newPreviousSibling = getOne(tx, args.Host, args.Project, *args.PreviousSibling.V)
-							app.ReturnIf(newPreviousSibling == nil, http.StatusNotFound, "previousSibling not found")
-							app.BadReqIf(!newPreviousSibling.Parent.Equal(*t.Parent), "previousSiblings parent does not match the current tasks parent")
-							newNextSibling = newPreviousSibling.NextSibling
-							newPreviousSibling.NextSibling = &t.ID
+							app.BadReqIf(args.PrevSib.V.Equal(args.ID), "sib loop detected, invalid prevSib value")
+							newPrevSib = getOne(tx, args.Host, args.Project, *args.PrevSib.V)
+							app.ReturnIf(newPrevSib == nil, http.StatusNotFound, "prevSib not found")
+							app.BadReqIf(!newPrevSib.Parent.Equal(*t.Parent), "prevSibs parent does not match the current tasks parent")
+							newNextSib = newPrevSib.NextSib
+							newPrevSib.NextSib = &t.ID
 						} else {
 							// moving to the first child position
-							newNextSibling = currentParent.FirstChild
+							newNextSib = currentParent.FirstChild
 							currentParent.FirstChild = &t.ID
 						}
-						// need to reconnect currentPreviousSibling with current nextSibling
-						if currentPreviousSibling != nil {
-							currentPreviousSibling.NextSibling = t.NextSibling
+						// need to reconnect currentPrevSib with current nextSib
+						if currentPrevSib != nil {
+							currentPrevSib.NextSib = t.NextSib
 						}
-						t.NextSibling = newNextSibling
+						t.NextSib = newNextSib
 						treeUpdateRequired = true
 					} else {
-						// here we know no change is being made so nil out currentPreviousSibling to save a sql update call
-						currentPreviousSibling = nil
+						// here we know no change is being made so nil out currentPrevSib to save a sql update call
+						currentPrevSib = nil
 						// and nil this out to remove redundant data from activity entry
-						args.PreviousSibling = nil
+						args.PrevSib = nil
 					}
 				}
 				nameUpdated := false
@@ -336,18 +336,18 @@ var (
 					for _, t := range ts {
 						if t != nil {
 							idStr := t.ID.String()
-							// this check is for the one special case that newPreviousSibling may also be the currentParent
+							// this check is for the one special case that newPrevSib may also be the currentParent
 							// thus saving a duplicated update query
 							if !updated[idStr] {
 								updated[idStr] = true
-								_, err := tx.Exec(`UPDATE tasks SET parent=?, firstChild=?, nextSibling=?, name=?, description=?, isParallel=?, user=?, timeEst=?, costEst=? WHERE host=? AND project=? AND id=?`, t.Parent, t.FirstChild, t.NextSibling, t.Name, t.Description, t.IsParallel, t.User, t.TimeEst, t.CostEst, args.Host, args.Project, t.ID)
+								_, err := tx.Exec(`UPDATE tasks SET parent=?, firstChild=?, nextSib=?, name=?, description=?, isParallel=?, user=?, timeEst=?, costEst=? WHERE host=? AND project=? AND id=?`, t.Parent, t.FirstChild, t.NextSib, t.Name, t.Description, t.IsParallel, t.User, t.TimeEst, t.CostEst, args.Host, args.Project, t.ID)
 								PanicOn(err)
 							}
 						}
 					}
 				}
 				if simpleUpdateRequired || treeUpdateRequired {
-					update(t, currentParent, currentPreviousSibling, newParent, newPreviousSibling)
+					update(t, currentParent, currentPrevSib, newParent, newPrevSib)
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionUpdated, &t.Name, args)
 				}
 				if treeUpdateRequired {
@@ -414,13 +414,13 @@ var (
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				app.BadReqIf(t.DescN > 100, "may not delete more than 100 task per delete action")
 				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.DescN > 0 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own tasks within an hour of creating them and they must have no children")
-				previousNode := getPreviousSibling(tx, args.Host, args.Project, args.ID)
-				if previousNode == nil {
-					previousNode = getOne(tx, args.Host, args.Project, *t.Parent)
-					PanicIf(!previousNode.FirstChild.Equal(t.ID), "invalid data detected, deleting task %s", t.ID)
-					previousNode.FirstChild = t.NextSibling
+				prevNode := getPrevSib(tx, args.Host, args.Project, args.ID)
+				if prevNode == nil {
+					prevNode = getOne(tx, args.Host, args.Project, *t.Parent)
+					PanicIf(!prevNode.FirstChild.Equal(t.ID), "invalid data detected, deleting task %s", t.ID)
+					prevNode.FirstChild = t.NextSib
 				} else {
-					previousNode.NextSibling = t.NextSibling
+					prevNode.NextSib = t.NextSib
 				}
 				tasksWithFiles := make(IDs, 0, t.DescN+1)
 				tasksToDelete := make(IDs, 0, t.DescN+1)
@@ -441,7 +441,7 @@ var (
 					queryArgs = append(queryArgs, tasksToDelete.ToIs()...)
 					_, err := tx.Exec(Strf(`DELETE FROM tasks WHERE host=? AND project=? %s`, sqlh.InCondition(true, `id`, len(tasksToDelete))), queryArgs...)
 					PanicOn(err)
-					_, err = tx.Exec(`UPDATE tasks SET firstChild=?, nextSibling=? WHERE host=? AND project=? AND id=?`, previousNode.FirstChild, previousNode.NextSibling, args.Host, args.Project, previousNode.ID)
+					_, err = tx.Exec(`UPDATE tasks SET firstChild=?, nextSib=? WHERE host=? AND project=? AND id=?`, prevNode.FirstChild, prevNode.NextSib, args.Host, args.Project, prevNode.ID)
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, &t.Name, t)
@@ -609,7 +609,7 @@ var (
 					sql_filter = `firstChild`
 					queryArgs = append(queryArgs, args.ID)
 				} else {
-					sql_filter = `nextSibling`
+					sql_filter = `nextSib`
 					queryArgs = append(queryArgs, *args.After)
 				}
 				queryArgs = append(queryArgs, args.Host, args.Project, args.Host, args.Project, args.Limit)
@@ -624,7 +624,7 @@ var (
 						PanicOn(err)
 						res.Set = append(res.Set, t)
 					}
-				}, Strf(`WITH RECURSIVE siblings (n, id) AS (SELECT 0 AS n, %s AS id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT s.n + 1 AS n, t.nextSibling AS id FROM tasks t, siblings s WHERE t.host=? AND t.project=? AND t.id = s.id) CYCLE id RESTRICT SELECT %s FROM tasks t JOIN siblings s ON t.id = s.id WHERE t.host=? AND t.project=? ORDER BY s.n ASC LIMIT ?`, sql_filter, Sql_task_columns_prefixed), queryArgs...))
+				}, Strf(`WITH RECURSIVE sibs (n, id) AS (SELECT 0 AS n, %s AS id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT s.n + 1 AS n, t.nextSib AS id FROM tasks t, sibs s WHERE t.host=? AND t.project=? AND t.id = s.id) CYCLE id RESTRICT SELECT %s FROM tasks t JOIN sibs s ON t.id = s.id WHERE t.host=? AND t.project=? ORDER BY s.n ASC LIMIT ?`, sql_filter, Sql_task_columns_prefixed), queryArgs...))
 				return res
 			},
 		},
@@ -637,7 +637,7 @@ var (
 		ID:          app.ExampleID(),
 		Parent:      ptr.ID(app.ExampleID()),
 		FirstChild:  ptr.ID(app.ExampleID()),
-		NextSibling: ptr.ID(app.ExampleID()),
+		NextSib:     ptr.ID(app.ExampleID()),
 		User:        ptr.ID(app.ExampleID()),
 		Name:        "do it",
 		Description: "do that thing you're supposed to do",
@@ -669,8 +669,8 @@ func getOne(tx sql.Tx, host, project, id ID) *task.Task {
 	return t
 }
 
-func getPreviousSibling(tx sql.Tx, host, project, nextSibling ID) *task.Task {
-	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.nextSibling=?`, Sql_task_columns_prefixed), host, project, nextSibling)
+func getPrevSib(tx sql.Tx, host, project, nextSib ID) *task.Task {
+	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND t.nextSib=?`, Sql_task_columns_prefixed), host, project, nextSib)
 	t, err := Scan(row)
 	sqlh.PanicIfIsntNoRows(err)
 	return t
@@ -682,7 +682,7 @@ func Scan(r isql.Row) (*task.Task, error) {
 		&t.ID,
 		&t.Parent,
 		&t.FirstChild,
-		&t.NextSibling,
+		&t.NextSib,
 		&t.User,
 		&t.Name,
 		&t.Description,
@@ -711,7 +711,7 @@ func Scan(r isql.Row) (*task.Task, error) {
 }
 
 var (
-	Sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel`
+	Sql_task_columns_prefixed = `t.id, t.parent, t.firstChild, t.nextSib, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel`
 	sql_task_columns          = strings.ReplaceAll(Sql_task_columns_prefixed, `t.`, ``)
 	sql_ancestors_cte         = `WITH RECURSIVE ancestors (n, id) AS (SELECT 0, parent FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT a.n + 1, t.parent FROM tasks t, ancestors a WHERE t.host=? AND t.project=? AND t.id = a.id) CYCLE id RESTRICT`
 )

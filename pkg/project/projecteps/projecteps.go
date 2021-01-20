@@ -100,7 +100,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.EndOn, p.IsPublic)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSibling, user, name, description, isParallel, createdBy, createdOn, timeEst, timeInc, timeSubMin, timeSubEst, timeSubInc, costEst, costInc, costSubEst, costSubInc, fileN, fileSize, fileSubN, fileSubSize, childN, descN) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSibling, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.TimeEst, p.TimeInc, p.TimeSubMin, p.TimeSubEst, p.TimeSubInc, p.CostEst, p.CostInc, p.CostSubEst, p.CostSubInc, p.FileN, p.FileSize, p.FileSubN, p.FileSubSize, p.ChildN, p.DescN)
+				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSib, user, name, description, isParallel, createdBy, createdOn, timeEst, timeInc, timeSubMin, timeSubEst, timeSubInc, costEst, costInc, costSubEst, costSubInc, fileN, fileSize, fileSubN, fileSubSize, childN, descN) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSib, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.TimeEst, p.TimeInc, p.TimeSubMin, p.TimeSubEst, p.TimeSubInc, p.CostEst, p.CostInc, p.CostSubEst, p.CostSubInc, p.FileN, p.FileSize, p.FileSubN, p.FileSubSize, p.ChildN, p.DescN)
 				PanicOn(err)
 				epsutil.LogActivity(tlbx, tx, me, p.ID, &p.ID, p.ID, cnsts.TypeTask, cnsts.ActionCreated, ptr.String(p.Name), nil)
 				tx.Commit()
@@ -794,7 +794,7 @@ func getSet(tlbx app.Tlbx, args *project.Get, others bool) *project.GetRes {
 	res := &project.GetRes{
 		Set: make([]*project.Project, 0, args.Limit),
 	}
-	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, t.parent, t.firstChild, t.nextSibling, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
+	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, t.parent, t.firstChild, t.nextSib, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
 	queryArgs := make([]interface{}, 0, 14)
 	idsLen := len(args.IDs)
 	if !others {
@@ -878,7 +878,7 @@ func getSet(tlbx app.Tlbx, args *project.Get, others bool) *project.GetRes {
 				break
 			}
 			p := &project.Project{}
-			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.EndOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSibling, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.TimeEst, &p.TimeInc, &p.TimeSubMin, &p.TimeSubEst, &p.TimeSubInc, &p.CostEst, &p.CostInc, &p.CostSubEst, &p.CostSubInc, &p.FileN, &p.FileSize, &p.FileSubN, &p.FileSubSize, &p.ChildN, &p.DescN, &p.IsParallel))
+			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.EndOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSib, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.TimeEst, &p.TimeInc, &p.TimeSubMin, &p.TimeSubEst, &p.TimeSubInc, &p.CostEst, &p.CostInc, &p.CostSubEst, &p.CostSubInc, &p.FileN, &p.FileSize, &p.FileSubN, &p.FileSubSize, &p.ChildN, &p.DescN, &p.IsParallel))
 			res.Set = append(res.Set, p)
 		}
 	}, query.String(), queryArgs...))

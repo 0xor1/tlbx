@@ -12,7 +12,7 @@ type Task struct {
 	ID          ID        `json:"id"`
 	Parent      *ID       `json:"parent"`
 	FirstChild  *ID       `json:"firstChild"`
-	NextSibling *ID       `json:"nextSibling"`
+	NextSib     *ID       `json:"nextSib"`
 	User        *ID       `json:"user"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
@@ -37,16 +37,16 @@ type Task struct {
 }
 
 type Create struct {
-	Host            ID     `json:"host"`
-	Project         ID     `json:"project"`
-	Parent          ID     `json:"parent"`
-	PreviousSibling *ID    `json:"previousSibling,omitempty"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	IsParallel      bool   `json:"isParallel"`
-	User            *ID    `json:"user,omitempty"`
-	TimeEst         uint64 `json:"timeEst"`
-	CostEst         uint64 `json:"costEst"`
+	Host        ID     `json:"host"`
+	Project     ID     `json:"project"`
+	Parent      ID     `json:"parent"`
+	PrevSib     *ID    `json:"prevSib,omitempty"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	IsParallel  bool   `json:"isParallel"`
+	User        *ID    `json:"user,omitempty"`
+	TimeEst     uint64 `json:"timeEst"`
+	CostEst     uint64 `json:"costEst"`
 }
 
 func (_ *Create) Path() string {
@@ -66,17 +66,17 @@ func (a *Create) MustDo(c *app.Client) *UpdateRes {
 }
 
 type Update struct {
-	Host            ID            `json:"host"`
-	Project         ID            `json:"project"`
-	ID              ID            `json:"id"`
-	Parent          *field.ID     `json:"parent,omitempty"`
-	PreviousSibling *field.IDPtr  `json:"previousSibling,omitempty"`
-	Name            *field.String `json:"name,omitempty"`
-	Description     *field.String `json:"description,omitempty"`
-	IsParallel      *field.Bool   `json:"isParallel,omitempty"`
-	User            *field.IDPtr  `json:"user,omitempty"`
-	TimeEst         *field.UInt64 `json:"timeEst,omitempty"`
-	CostEst         *field.UInt64 `json:"costEst,omitempty"`
+	Host        ID            `json:"host"`
+	Project     ID            `json:"project"`
+	ID          ID            `json:"id"`
+	Parent      *field.ID     `json:"parent,omitempty"`
+	PrevSib     *field.IDPtr  `json:"prevSib,omitempty"`
+	Name        *field.String `json:"name,omitempty"`
+	Description *field.String `json:"description,omitempty"`
+	IsParallel  *field.Bool   `json:"isParallel,omitempty"`
+	User        *field.IDPtr  `json:"user,omitempty"`
+	TimeEst     *field.UInt64 `json:"timeEst,omitempty"`
+	CostEst     *field.UInt64 `json:"costEst,omitempty"`
 }
 
 type UpdateRes struct {

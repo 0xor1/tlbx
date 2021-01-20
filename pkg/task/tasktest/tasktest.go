@@ -63,14 +63,14 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 
 	createRes := (&task.Create{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		Parent:          p.ID,
-		PreviousSibling: nil,
-		Name:            "1.0",
-		IsParallel:      true,
-		User:            ptr.ID(r.Bob().ID()),
-		TimeEst:         100,
+		Host:       r.Ali().ID(),
+		Project:    p.ID,
+		Parent:     p.ID,
+		PrevSib:    nil,
+		Name:       "1.0",
+		IsParallel: true,
+		User:       ptr.ID(r.Bob().ID()),
+		TimeEst:    100,
 	}).MustDo(ac)
 	a.NotNil(createRes)
 	a.True(p.ID.Equal(createRes.Parent.ID))
@@ -78,90 +78,90 @@ func Everything(t *testing.T) {
 	t1p0 := createRes.Task
 
 	t1p1 := (&task.Create{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		Parent:          p.ID,
-		PreviousSibling: ptr.ID(t1p0.ID),
-		Name:            "1.1",
-		Description:     "1.1",
-		IsParallel:      true,
-		User:            ptr.ID(r.Ali().ID()),
-		TimeEst:         100,
+		Host:        r.Ali().ID(),
+		Project:     p.ID,
+		Parent:      p.ID,
+		PrevSib:     ptr.ID(t1p0.ID),
+		Name:        "1.1",
+		Description: "1.1",
+		IsParallel:  true,
+		User:        ptr.ID(r.Ali().ID()),
+		TimeEst:     100,
 	}).MustDo(ac).Task
 	a.NotNil(createRes)
 
 	// move first child to a different position
 	t1p0 = (&task.Update{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		ID:              t1p0.ID,
-		PreviousSibling: &field.IDPtr{V: &t1p1.ID},
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t1p0.ID,
+		PrevSib: &field.IDPtr{V: &t1p1.ID},
 	}).MustDo(ac).Task
 
 	t2p0 := (&task.Create{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		Parent:          t1p0.ID,
-		PreviousSibling: nil,
-		Name:            "2.0",
-		Description:     "",
-		IsParallel:      true,
-		User:            ptr.ID(r.Ali().ID()),
-		TimeEst:         100,
+		Host:        r.Ali().ID(),
+		Project:     p.ID,
+		Parent:      t1p0.ID,
+		PrevSib:     nil,
+		Name:        "2.0",
+		Description: "",
+		IsParallel:  true,
+		User:        ptr.ID(r.Ali().ID()),
+		TimeEst:     100,
 	}).MustDo(ac).Task
 	a.NotNil(t2p0)
 
 	t3p0 := (&task.Create{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		Parent:          t2p0.ID,
-		PreviousSibling: nil,
-		Name:            "3.0",
-		Description:     "",
-		IsParallel:      true,
-		User:            ptr.ID(r.Ali().ID()),
-		TimeEst:         100,
+		Host:        r.Ali().ID(),
+		Project:     p.ID,
+		Parent:      t2p0.ID,
+		PrevSib:     nil,
+		Name:        "3.0",
+		Description: "",
+		IsParallel:  true,
+		User:        ptr.ID(r.Ali().ID()),
+		TimeEst:     100,
 	}).MustDo(ac).Task
 	a.NotNil(t3p0)
 
 	t4p0 := (&task.Create{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		Parent:          t1p1.ID,
-		PreviousSibling: nil,
-		Name:            "4.0",
-		Description:     "",
-		IsParallel:      true,
-		User:            ptr.ID(r.Ali().ID()),
-		TimeEst:         100,
+		Host:        r.Ali().ID(),
+		Project:     p.ID,
+		Parent:      t1p1.ID,
+		PrevSib:     nil,
+		Name:        "4.0",
+		Description: "",
+		IsParallel:  true,
+		User:        ptr.ID(r.Ali().ID()),
+		TimeEst:     100,
 	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	t1p2 := (&task.Create{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		Parent:          p.ID,
-		PreviousSibling: ptr.ID(t1p0.ID),
-		Name:            "1.2",
-		Description:     "",
-		IsParallel:      true,
-		User:            ptr.ID(r.Ali().ID()),
-		TimeEst:         100,
+		Host:        r.Ali().ID(),
+		Project:     p.ID,
+		Parent:      p.ID,
+		PrevSib:     ptr.ID(t1p0.ID),
+		Name:        "1.2",
+		Description: "",
+		IsParallel:  true,
+		User:        ptr.ID(r.Ali().ID()),
+		TimeEst:     100,
 	}).MustDo(ac).Task
 	a.NotNil(t1p2)
 
 	uRes := (&task.Update{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		ID:              t1p1.ID,
-		Parent:          &field.ID{V: t2p0.ID},
-		PreviousSibling: nil,
-		Name:            &field.String{V: "1.1 - updated"},
-		Description:     &field.String{V: "an actual description"},
-		IsParallel:      &field.Bool{V: false},
-		User:            &field.IDPtr{V: nil},
-		TimeEst:         &field.UInt64{V: 50},
-		CostEst:         &field.UInt64{V: 50},
+		Host:        r.Ali().ID(),
+		Project:     p.ID,
+		ID:          t1p1.ID,
+		Parent:      &field.ID{V: t2p0.ID},
+		PrevSib:     nil,
+		Name:        &field.String{V: "1.1 - updated"},
+		Description: &field.String{V: "an actual description"},
+		IsParallel:  &field.Bool{V: false},
+		User:        &field.IDPtr{V: nil},
+		TimeEst:     &field.UInt64{V: 50},
+		CostEst:     &field.UInt64{V: 50},
 	}).MustDo(ac)
 	a.NotNil(uRes)
 	a.True(t1p1.ID.Equal(uRes.Task.ID))
@@ -205,70 +205,70 @@ func Everything(t *testing.T) {
 	a.Error(err, "ancestor loop detected, invalid parent value")
 
 	t4p0 = (&task.Update{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		ID:              t4p0.ID,
-		Parent:          &field.ID{V: t2p0.ID},
-		PreviousSibling: &field.IDPtr{V: ptr.ID(t1p1.ID)},
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t4p0.ID,
+		Parent:  &field.ID{V: t2p0.ID},
+		PrevSib: &field.IDPtr{V: ptr.ID(t1p1.ID)},
 	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	t4p0 = (&task.Update{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		ID:              t4p0.ID,
-		Parent:          &field.ID{V: p.ID},
-		PreviousSibling: &field.IDPtr{V: ptr.ID(t1p2.ID)},
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t4p0.ID,
+		Parent:  &field.ID{V: p.ID},
+		PrevSib: &field.IDPtr{V: ptr.ID(t1p2.ID)},
 	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	// illegal horizontal move
 	tNil, err = (&task.Update{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		ID:              t4p0.ID,
-		Parent:          &field.ID{V: p.ID},
-		PreviousSibling: &field.IDPtr{V: ptr.ID(t4p0.ID)},
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t4p0.ID,
+		Parent:  &field.ID{V: p.ID},
+		PrevSib: &field.IDPtr{V: ptr.ID(t4p0.ID)},
 	}).Do(ac)
 	a.Nil(tNil)
-	a.Error(err, "sibling loop detected, invalid previousSibling value")
+	a.Error(err, "sib loop detected, invalid prevSib value")
 
 	// horizontal move
 	t4p0 = (&task.Update{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		ID:              t4p0.ID,
-		Parent:          &field.ID{V: p.ID},
-		PreviousSibling: &field.IDPtr{V: ptr.ID(t1p0.ID)},
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t4p0.ID,
+		Parent:  &field.ID{V: p.ID},
+		PrevSib: &field.IDPtr{V: ptr.ID(t1p0.ID)},
 	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	// horizontal move to first position
 	t4p0 = (&task.Update{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		ID:              t4p0.ID,
-		Parent:          &field.ID{V: p.ID},
-		PreviousSibling: &field.IDPtr{V: nil},
-		User:            &field.IDPtr{V: ptr.ID(r.Bob().ID())},
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t4p0.ID,
+		Parent:  &field.ID{V: p.ID},
+		PrevSib: &field.IDPtr{V: nil},
+		User:    &field.IDPtr{V: ptr.ID(r.Bob().ID())},
 	}).MustDo(ac).Task
 	a.NotNil(t4p0)
 
 	t1p0 = (&task.Update{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		ID:              t1p0.ID,
-		PreviousSibling: &field.IDPtr{V: &t1p2.ID},
-		Description:     &field.String{V: ""},
+		Host:        r.Ali().ID(),
+		Project:     p.ID,
+		ID:          t1p0.ID,
+		PrevSib:     &field.IDPtr{V: &t1p2.ID},
+		Description: &field.String{V: ""},
 	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 
 	// repeat call should not change anything
 	t1p0 = (&task.Update{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		ID:              t1p0.ID,
-		PreviousSibling: &field.IDPtr{V: &t1p2.ID},
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t1p0.ID,
+		PrevSib: &field.IDPtr{V: &t1p2.ID},
 	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 

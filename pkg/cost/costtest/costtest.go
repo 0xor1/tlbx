@@ -66,15 +66,15 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 
 	t1p0 := (&task.Create{
-		Host:            r.Ali().ID(),
-		Project:         p.ID,
-		Parent:          p.ID,
-		PreviousSibling: nil,
-		Name:            "1.0",
-		Description:     "",
-		IsParallel:      true,
-		User:            ptr.ID(r.Bob().ID()),
-		CostEst:         100,
+		Host:        r.Ali().ID(),
+		Project:     p.ID,
+		Parent:      p.ID,
+		PrevSib:     nil,
+		Name:        "1.0",
+		Description: "",
+		IsParallel:  true,
+		User:        ptr.ID(r.Bob().ID()),
+		CostEst:     100,
 	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 

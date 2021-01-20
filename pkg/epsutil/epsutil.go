@@ -146,7 +146,7 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project ID, task *ID, item ID, 
 		if itemType == cnsts.TypeTask {
 			t = "task"
 		}
-		// if this is deleting an item we need to update all previous activities on this item to have itemHasBeenDeleted
+		// if this is deleting an item we need to update all prev activities on this item to have itemHasBeenDeleted
 		_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND %s=?`, t), host, project, item)
 		PanicOn(err)
 	}
