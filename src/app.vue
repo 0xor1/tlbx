@@ -414,7 +414,7 @@ $inputPlaceholderColor: #aaa;
         }
         &.deleted{
           cursor: default;
-          background-color: #200;
+          background-color: #400;
         }
         * {
           background-color: transparent;
