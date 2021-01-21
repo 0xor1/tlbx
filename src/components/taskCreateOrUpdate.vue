@@ -40,7 +40,7 @@
           <label> parent id</label>
         </span>
         <span>
-          <input v-model="previousSiblingId" placeholder="previous sibling d" @blur="validate" @keydown.enter="ok">
+          <input v-model="prevSibId" placeholder="previous sibling Id" @blur="validate" @keydown.enter="ok">
           <label> previous sibling id</label>
         </span>
       </div>
@@ -71,7 +71,7 @@
           return this.children[this.index]
         }
       },
-      currentPreviousSiblingId(){
+      currentPrevSibId(){
         if (this.index < 1) {
           return null
         } else {
@@ -98,7 +98,7 @@
           timeEstDisplay: "",
           costEstDisplay: "",
           parentId: null,
-          previousSiblingId: null,
+          prevSibId: null,
           project: null,
           err: "",
         }
@@ -109,7 +109,7 @@
         }
         this.$root.ctx().then((ctx)=>{
             this.project = ctx.project
-            this.previousSiblingId = this.currentPreviousSiblingId
+            this.prevSibId = this.currentPrevSibId
             this.user = this.parentUserId
             if (!this.isCreate) {
               let t = this.updateTask
@@ -173,8 +173,8 @@
           }
         } 
         this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode)
-        if (this.previousSiblingId == "") {
-          this.previousSiblingId = null
+        if (this.prevSibId == "") {
+          this.prevSibId = null
         }
         if (isOk) {
           return isOk
@@ -183,7 +183,7 @@
       ok(){
         if (this.validate()) {
           if (this.isCreate) {
-            this.$api.task.create(this.hostId, this.projectId, this.task.id, this.previousSiblingId, this.name, this.description, this.isParallel, this.user, this.timeEst, this.costEst).then((res)=>{
+            this.$api.task.create(this.hostId, this.projectId, this.task.id, this.prevSibId, this.name, this.description, this.isParallel, this.user, this.timeEst, this.costEst).then((res)=>{
               this.children.splice(this.index, 0, res.task)
               for(const [key, value] of Object.entries(res.parent)) {
                 this.task[key] = value
@@ -230,10 +230,10 @@
               args.parent = {v: this.parentId}
               this.updateTask.parent = this.parentId
             }
-            if (this.currentPreviousSiblingId != this.previousSiblingId) {
+            if (this.currentPrevSibId != this.prevSibId) {
               isUpdate = true
               moved = true
-              args.previousSibling = {v: this.previousSiblingId}
+              args.prevSib = {v: this.prevSibId}
             }
             if (isUpdate) {
               this.$api.task.update(args).then((res)=>{
