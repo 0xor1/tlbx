@@ -40,7 +40,7 @@
           <label> parent id</label>
         </span>
         <span>
-          <input v-model="prevSibId" placeholder="previous sibling Id" @blur="validate" @keydown.enter="ok">
+          <input v-model="prevSibId" placeholder="previous sibling id" @blur="validate" @keydown.enter="ok">
           <label> previous sibling id</label>
         </span>
       </div>
