@@ -78,7 +78,13 @@
         </table>
         <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
       </div>
-      <div class="subs">
+      <div v-if="$root.show.time" class="items times">
+        <p class="heading">time</p>
+        <p>hello</p>
+        <div class="time" v-for="(t, index) in times" :key="index">
+          <span>{{}}</span>
+        </div>
+        <div v-if="moreTimes" class=""><button>load more</button></div>
       </div>
     </div>
   </div>
@@ -432,6 +438,15 @@ div.root {
         }
         font-size: 1.7pc;
         font-weight: bold;
+      }
+    }
+    .items {
+      .btn {
+        cursor: pointer;
+      }
+      img {
+        height: 1pc;
+        width: 1pc;
       }
     }
   }

@@ -29,7 +29,7 @@
         </div>
         <!-- project activity stream -->
         <div v-if="showProjectActivityToggle && showProjectActivity" v-bind:class="{'show':showProjectActivity}" class="project-activity slide-out">
-          <span class="exclude-deleted" @click.stop="toggleProjectActivityExcludeDeleted"><input id="hide-deleted" v-model="projectActivityExcludeDeleted" type="checkbox"><label for=""> hide deleted</label></span>
+          <span class="exclude-deleted" @click.stop="toggleProjectActivityExcludeDeleted"><input id="hide-deleted" :checked="projectActivityExcludeDeleted" type="checkbox"><label for=""> hide deleted</label></span>
           <div v-if="loadingProjectActivity">loading...</div>
           <div class="entries">
             <div :class="{entry: true, deleted: a.itemHasBeenDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
@@ -138,8 +138,10 @@
         }
       },
       toggleProjectActivityExcludeDeleted(){
-        this.projectActivityExcludeDeleted = !this.projectActivityExcludeDeleted
-        this.refreshProjectActivity(true)
+        if (!this.loadingProjectActivity) {
+          this.projectActivityExcludeDeleted = !this.projectActivityExcludeDeleted
+          this.refreshProjectActivity(true)
+        }
       },
       loadMoreProjectActivity(){
         if (this.$u.rtr.project() != null && this.showProjectActivity && this.moreProjectActivity) {
