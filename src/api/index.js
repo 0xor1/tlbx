@@ -389,32 +389,18 @@ function newApi(isMDoApi) {
         return doReq('/task/getChildren', {host, project, id, after, limit})
       }
     },
-    time: {
-      create(host, project, task, duration, note) {
-        return doReq('/time/create', {host, project, task, duration, note})
+    vitem: {
+      create(host, project, task, type, value, note) {
+        return doReq('/vitem/create', {host, project, task, type, value, note})
       },
-      update(host, project, task, id, duration, note) {
-        return doReq('/time/update', {host, project, task, id, duration, note})
+      update(host, project, task, type, id, value, note) {
+        return doReq('/vitem/update', {host, project, task, type, id, value, note})
       },
-      get(host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
-        return doReq('/time/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
+      get(host, project, task, type, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
+        return doReq('/vitem/get', {host, project, task, type, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
       },
-      delete(host, project, task, id) {
-        return doReq('/time/delete', {host, project, task, id})
-      }
-    },
-    cost: {
-      create(host, project, task, value, note) {
-        return doReq('/cost/create', {host, project, task, value, note})
-      },
-      update(host, project, task, id, value, note) {
-        return doReq('/cost/update', {host, project, task, id, value, note})
-      },
-      get(host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
-        return doReq('/cost/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
-      },
-      delete(host, project, task, id) {
-        return doReq('/cost/delete', {host, project, task, id})
+      delete(host, project, task, type, id) {
+        return doReq('/vitem/delete', {host, project, task, type, id})
       }
     },
     file: {

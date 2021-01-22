@@ -20,6 +20,10 @@ export default {
             _main_init_utils(vue){
                 self = vue
             },
+            cnsts: {
+                time: "time",
+                cost: "cost"
+            },
             nullOr: nullOr,
             rtr: {
                 goHome (){

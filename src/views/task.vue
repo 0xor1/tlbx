@@ -83,15 +83,15 @@
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div title="remaining estimate">
             <span>est</span><br>
-            <input :class="{err: timeEstErr}" v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validateTime" @keydown.enter="submitTime"/>
+            <input :class="{err: timeEstErr}" v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate('time')" @keydown.enter="submit('time')"/>
           </div>
           <div title="incurred">
             <span>inc</span><br>
-            <input :class="{err: timeIncErr}" v-model="timeIncDisplay" type="text" placeholder="0h 0m" @blur="validateTime" @keydown.enter="submitTime"/>
+            <input :class="{err: timeIncErr}" v-model="timeIncDisplay" type="text" placeholder="0h 0m" @blur="validate('time')" @keydown.enter="submit('time')"/>
           </div>
           <div title="note">
             <span>note</span><br>
-            <input class="note" v-model="timeNote" type="text" placeholder="note" @blur="validateTime" @keydown.enter="submitTime"/>
+            <input class="note" v-model="timeNote" type="text" placeholder="note" @blur="validate('time')" @keydown.enter="submit('time')"/>
           </div>
           <div>
             <button @click.stop="submitTime">log time</button>
@@ -295,11 +295,11 @@
               this.children = res.set
               this.moreChildren = res.more
             })
-            mapi.time.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
+            mapi.vitem.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), this.$u.cnsts.time).then((res)=>{
               this.times = res.set
               this.moreTimes = res.more
             })
-            mapi.cost.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
+            mapi.vitem.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), this.$u.cnsts.cost).then((res)=>{
               this.costs = res.set
               this.moreCosts = res.more
             })
@@ -419,31 +419,35 @@
           })
         }
       },
-      validateTime(){
-        if (this.timeEstDisplay != null && this.timeEstDisplay.length > 0) {
-          let parsed = this.$u.parse.time(this.timeEstDisplay)
+      validate(type){
+        if (this[type+'EstDisplay'] != null && this[type+'EstDisplay'].length > 0) {
+          let parsed = this.$u.parse[type](this[type+'EstDisplay'])
           if (parsed == null) {
-            this.timeEstErr = true
+            this[type+'EstErr'] = true
             return false
           } else {
-            this.timeEstDisplay = this.$u.fmt.time(parsed)
-            this.timeEstErr = false
+            this[type+'EstDisplay'] = this.$u.fmt[type](parsed)
+            this[type+'EstErr'] = false
           }
         }
-        if (this.timeIncDisplay != null && this.timeIncDisplay.length > 0) {
-          let parsed = this.$u.parse.time(this.timeIncDisplay)
+        if (this[type+'IncDisplay'] != null && this[type+'IncDisplay'].length > 0) {
+          let parsed = this.$u.parse[type](this[type+'IncDisplay'])
           if (parsed == null) {
-            this.timeIncErr = true
+            this[type+'IncErr'] = true
             return false
           } else {
-            this.timeIncDisplay = this.$u.fmt.time(parsed)
-            this.timeIncErr = false
+            this[type+'IncDisplay'] = this.$u.fmt[type](parsed)
+            this[type+'IncErr'] = false
           }
         }
-
+        return this[type+'Note'].length <= 250
       },
-      submitTime(){
-
+      submit(type){
+        if (this.validate(type)) {
+          let est = this.$u.parse.time(this[type+'EstDisplay'])
+          let inc = this.$u.parse.time(this[type+'IncDisplay'])
+          console.log(est, inc)
+        }
       },
       descriptionTitle(t) {
         let res = t.name
