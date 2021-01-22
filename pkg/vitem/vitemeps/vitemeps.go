@@ -1,4 +1,4 @@
-package timeeps
+package vitemeps
 
 import (
 	"bytes"
@@ -17,38 +17,49 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/0xor1/trees/pkg/cnsts"
 	"github.com/0xor1/trees/pkg/epsutil"
+	"github.com/0xor1/trees/pkg/task"
 	"github.com/0xor1/trees/pkg/task/taskeps"
-	"github.com/0xor1/trees/pkg/time"
+	"github.com/0xor1/trees/pkg/vitem"
 )
 
 var (
 	Eps = []*app.Endpoint{
 		{
-			Description:  "Create a new time",
-			Path:         (&time.Create{}).Path(),
+			Description:  "Create a new vitem",
+			Path:         (&vitem.Create{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &time.Create{}
+				return &vitem.Create{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &time.Create{
+				return &vitem.Create{
 					Host:    app.ExampleID(),
 					Project: app.ExampleID(),
 					Task:    app.ExampleID(),
-					TimeEst: ptr.Uint64(35),
+					Type:    vitem.TypeTime,
+					Est:     ptr.Uint64(35),
 					Value:   60,
 					Note:    "I did an hours work",
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleTimeRes
+				return exampleVitemRes
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*time.Create)
+				args := a.(*vitem.Create)
+				args.Type.Validate()
 				me := me.Get(tlbx)
-				app.ReturnIf(args.Value == 0 || args.Value > valueMax, http.StatusBadRequest, "value must be between 1 and 1440")
+				switch args.Type {
+				case vitem.TypeTime:
+					app.ReturnIf(args.Value == 0 || args.Value > timeValueMax, http.StatusBadRequest, "time value must be between 1 and 1440")
+				case vitem.TypeCost:
+					app.ReturnIf(args.Value == 0, http.StatusBadRequest, "cost value must be > 1")
+					// default:
+					//  // uneeded check due to args.Type.Validate()
+					// 	app.BadReqIf(true, "unknown type value %s", args.Type)
+				}
 				args.Note = StrTrimWS(args.Note)
 				validate.Str("note", args.Note, tlbx, 0, noteMaxLen)
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
@@ -57,65 +68,81 @@ var (
 				epsutil.MustLockProject(tx, args.Host, args.Project)
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				app.ReturnIf(tsk == nil, http.StatusNotFound, "task not found")
-				if args.TimeEst != nil {
-					tsk.TimeEst = *args.TimeEst
+				gtr := func(est bool) uint64 {
+					return taskValGetter(tsk, args.Type, est)()
 				}
-				tsk.TimeInc += args.Value
-				t := &time.Time{
+				if args.Est != nil {
+					// set the tasks estimated type value
+					taskValSetter(tsk, args.Type, true)(*args.Est)
+				}
+				// add to teh tasks incurred type value
+				taskValSetter(tsk, args.Type, false)(gtr(false) + args.Value)
+				i := &vitem.Vitem{
 					Task:      args.Task,
+					Type:      args.Type,
 					ID:        tlbx.NewID(),
 					CreatedBy: me,
 					CreatedOn: NowMilli(),
 					Value:     args.Value,
 					Note:      args.Note,
 				}
-				// insert new time
-				_, err := tx.Exec(`INSERT INTO times (host, project, task, id, createdBy, createdOn, value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, t.ID, t.CreatedBy, t.CreatedOn, t.Value, t.Note)
+				// insert new vitem
+				_, err := tx.Exec(`INSERT INTO vitems (host, project, task, type, id, createdBy, createdOn, value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, args.Type, i.ID, i.CreatedBy, i.CreatedOn, i.Value, i.Note)
 				PanicOn(err)
-				// update task timeInc
-				_, err = tx.Exec(`UPDATE tasks SET timeEst=?, timeInc=? WHERE host=? AND project=? AND id=?`, tsk.TimeEst, tsk.TimeInc, args.Host, args.Project, args.Task)
+				// update task vals
+				_, err = tx.Exec(Strf(`UPDATE tasks SET %sEst=?, %sInc=? WHERE host=? AND project=? AND id=?`, i.Type, i.Type), gtr(true), gtr(false), args.Host, args.Project, args.Task)
 				PanicOn(err)
 				// propogate aggregate values upwards
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, t.ID, cnsts.TypeTime, cnsts.ActionCreated, nil, args)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, i.ID, cnsts.TypeVitem, cnsts.ActionCreated, nil, args)
 				tx.Commit()
-				return time.TimeRes{
+				return vitem.VitemRes{
 					Task: tsk,
-					Time: t,
+					Item: i,
 				}
 			},
 		},
 		{
-			Description:  "Update a time",
-			Path:         (&time.Update{}).Path(),
+			Description:  "Update a vitem",
+			Path:         (&vitem.Update{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &time.Update{}
+				return &vitem.Update{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &time.Update{
+				return &vitem.Update{
 					Host:    app.ExampleID(),
 					Project: app.ExampleID(),
 					Task:    app.ExampleID(),
+					Type:    vitem.TypeTime,
 					ID:      app.ExampleID(),
 					Value:   &field.UInt64{V: 60},
 					Note:    &field.String{V: "woo"},
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleTimeRes
+				return exampleVitemRes
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*time.Update)
+				args := a.(*vitem.Update)
+				args.Type.Validate()
 				me := me.Get(tlbx)
 				if args.Value == nil &&
 					args.Note == nil {
 					// nothing to update
 					return nil
 				}
-				app.ReturnIf(args.Value != nil && (args.Value.V == 0 || args.Value.V > valueMax), http.StatusBadRequest, "value must be between 1 and 1440")
+				switch args.Type {
+				case vitem.TypeTime:
+					app.ReturnIf(args.Value != nil && (args.Value.V == 0 || args.Value.V > timeValueMax), http.StatusBadRequest, "value must be between 1 and 1440")
+				case vitem.TypeCost:
+					app.ReturnIf(args.Value != nil && args.Value.V == 0, http.StatusBadRequest, "value must be > 1")
+					// default:
+					//  // uneeded check due to args.Type.Validate()
+					// 	app.BadReqIf(true, "unknown type value %s", args.Type)
+				}
 				if args.Note != nil {
 					args.Note.V = StrTrimWS(args.Note.V)
 					validate.Str("note", args.Note.V, tlbx, 0, noteMaxLen)
@@ -124,9 +151,9 @@ var (
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
-				t := getOne(tx, args.Host, args.Project, args.Task, args.ID)
-				app.ReturnIf(t == nil, http.StatusNotFound, "time entry not found")
-				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time_.Hour))), http.StatusForbidden, "you may only edit your own time entries within an hour of creating it")
+				t := getOne(tx, args.Host, args.Project, args.Task, args.ID, args.Type)
+				app.ReturnIf(t == nil, http.StatusNotFound, "vitem entry not found")
+				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time_.Hour))), http.StatusForbidden, "you may only edit your own vitem entry within an hour of creating it")
 				treeUpdate := false
 				var diff uint64
 				var sign string
@@ -144,33 +171,33 @@ var (
 				if args.Note != nil && args.Note.V != t.Note {
 					t.Note = args.Note.V
 				}
-				_, err := tx.Exec(`UPDATE times SET value=?, note=? WHERE host=? AND project=? AND task=? AND id=?`, t.Value, t.Note, args.Host, args.Project, t.Task, t.ID)
+				_, err := tx.Exec(`UPDATE vitems SET value=?, note=? WHERE host=? AND project=? AND task=? AND id=? AND type=? `, t.Value, t.Note, args.Host, args.Project, t.Task, t.ID, t.Type)
 				PanicOn(err)
 				if treeUpdate {
-					_, err = tx.Exec(Strf(`UPDATE tasks SET timeInc=timeInc%s? WHERE host=? AND project=? AND id=?`, sign), diff, args.Host, args.Project, t.Task)
+					_, err = tx.Exec(Strf(`UPDATE tasks SET %sInc=%sInc%s? WHERE host=? AND project=? AND id=?`, args.Type, args.Type, sign), diff, args.Host, args.Project, t.Task)
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeTime, cnsts.ActionUpdated, nil, args)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionUpdated, nil, args)
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				tx.Commit()
-				return &time.TimeRes{
+				return &vitem.VitemRes{
 					Task: tsk,
-					Time: t,
+					Item: t,
 				}
 			},
 		},
 		{
 			Description:  "Delete time",
-			Path:         (&time.Delete{}).Path(),
+			Path:         (&vitem.Delete{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &time.Delete{}
+				return &vitem.Delete{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &time.Delete{
+				return &vitem.Delete{
 					Host:    app.ExampleID(),
 					Project: app.ExampleID(),
 					Task:    app.ExampleID(),
@@ -181,43 +208,44 @@ var (
 				return taskeps.ExampleTask
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*time.Delete)
+				args := a.(*vitem.Delete)
+				args.Type.Validate()
 				me := me.Get(tlbx)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
 				epsutil.MustLockProject(tx, args.Host, args.Project)
-				t := getOne(tx, args.Host, args.Project, args.Task, args.ID)
-				app.ReturnIf(t == nil, http.StatusNotFound, "time not found")
-				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time_.Hour))), http.StatusForbidden, "you may only delete your own time entries within an hour of creating it")
+				v := getOne(tx, args.Host, args.Project, args.Task, args.ID, args.Type)
+				app.ReturnIf(v == nil, http.StatusNotFound, "vitem not found")
+				app.ReturnIf(role == cnsts.RoleWriter && (!v.CreatedBy.Equal(me) || v.CreatedOn.Before(Now().Add(-1*time_.Hour))), http.StatusForbidden, "you may only delete your own vitem entry within an hour of creating it")
 				// delete time
-				_, err := tx.Exec(`DELETE FROM times WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
+				_, err := tx.Exec(`DELETE FROM vitems WHERE host=? AND project=? AND task=? AND id=? AND type=?`, args.Host, args.Project, args.Task, args.ID, args.Type)
 				PanicOn(err)
-				_, err = tx.Exec(`UPDATE tasks SET timeInc=timeInc-? WHERE host=? AND project=? AND id=?`, t.Value, args.Host, args.Project, args.Task)
+				_, err = tx.Exec(Strf(`UPDATE tasks SET %sInc=%sInc-? WHERE host=? AND project=? AND id=?`, args.Type, args.Type), v.Value, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeTime, cnsts.ActionDeleted, nil, nil)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionDeleted, nil, args.Type)
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				tx.Commit()
 				return tsk
 			},
 		},
 		{
-			Description:  "get times",
-			Path:         (&time.Get{}).Path(),
+			Description:  "get vitems",
+			Path:         (&vitem.Get{}).Path(),
 			Timeout:      500,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &time.Get{
+				return &vitem.Get{
 					Asc:   ptr.Bool(false),
 					Limit: 100,
 				}
 			},
 			GetExampleArgs: func() interface{} {
-				return &time.Get{
+				return &vitem.Get{
 					Host:    app.ExampleID(),
 					Project: app.ExampleID(),
 					Task:    ptr.ID(app.ExampleID()),
@@ -226,13 +254,14 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return &time.GetRes{
-					Set:  []*time.Time{exampleTime},
+				return &vitem.GetRes{
+					Set:  []*vitem.Vitem{exampleVitem},
 					More: true,
 				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*time.Get)
+				args := a.(*vitem.Get)
+				args.Type.Validate()
 				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 				app.BadReqIf(
 					args.CreatedOnMin != nil &&
@@ -241,13 +270,13 @@ var (
 					"createdOnMin must be before createdOnMax")
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)
-				res := &time.GetRes{
-					Set:  make([]*time.Time, 0, args.Limit),
+				res := &vitem.GetRes{
+					Set:  make([]*vitem.Vitem, 0, args.Limit),
 					More: false,
 				}
-				qry := bytes.NewBufferString(`SELECT task, id, createdBy, createdOn, value, note FROM times WHERE host=? AND project=?`)
-				qryArgs := make([]interface{}, 0, len(args.IDs)+8)
-				qryArgs = append(qryArgs, args.Host, args.Project)
+				qry := bytes.NewBufferString(`SELECT task, type, id, createdBy, createdOn, value, note FROM vitems WHERE host=? AND project=? AND type=?`)
+				qryArgs := make([]interface{}, 0, len(args.IDs)+9)
+				qryArgs = append(qryArgs, args.Host, args.Project, args.Type)
 				if len(args.IDs) > 0 {
 					qry.WriteString(sqlh.InCondition(true, `id`, len(args.IDs)))
 					qry.WriteString(sqlh.OrderByField(`id`, len(args.IDs)))
@@ -272,8 +301,8 @@ var (
 						qryArgs = append(qryArgs, *args.CreatedBy)
 					}
 					if args.After != nil {
-						qry.WriteString(Strf(` AND createdOn %s= (SELECT t.createdOn FROM times t WHERE t.host=? AND t.project=? AND t.id=?) AND id <> ?`, sqlh.GtLtSymbol(*args.Asc)))
-						qryArgs = append(qryArgs, args.Host, args.Project, *args.After, *args.After)
+						qry.WriteString(Strf(` AND createdOn %s= (SELECT v.createdOn FROM vitems v WHERE v.host=? AND v.project=? AND v.type=? AND v.id=?) AND id <> ?`, sqlh.GtLtSymbol(*args.Asc)))
+						qryArgs = append(qryArgs, args.Host, args.Project, args.Type, *args.After, *args.After)
 					}
 					qry.WriteString(sqlh.OrderLimit100(`createdOn`, *args.Asc, args.Limit))
 				}
@@ -294,14 +323,15 @@ var (
 		},
 	}
 
-	valueMax       uint64 = 1440 // 24hrs in mins
-	noteMaxLen            = 250
-	exampleTimeRes        = &time.TimeRes{
+	timeValueMax    uint64 = 1440 // 24hrs in mins
+	noteMaxLen             = 250
+	exampleVitemRes        = &vitem.VitemRes{
 		Task: taskeps.ExampleTask,
-		Time: exampleTime,
+		Item: exampleVitem,
 	}
-	exampleTime = &time.Time{
+	exampleVitem = &vitem.Vitem{
 		Task:      app.ExampleID(),
+		Type:      vitem.TypeTime,
 		ID:        app.ExampleID(),
 		CreatedBy: app.ExampleID(),
 		CreatedOn: app.ExampleTime(),
@@ -310,17 +340,78 @@ var (
 	}
 )
 
-func getOne(tx sql.Tx, host, project, task, id ID) *time.Time {
-	row := tx.QueryRow(`SELECT task, id, createdBy, createdOn, value, note FROM times WHERE host=? AND project=? AND task=? AND id=?`, host, project, task, id)
+func taskValSetter(tsk *task.Task, typ vitem.Type, est bool) func(uint64) {
+	switch typ {
+	case vitem.TypeTime:
+		if est {
+			return func(v uint64) {
+				tsk.TimeEst = v
+			}
+		} else {
+			return func(v uint64) {
+				tsk.TimeInc = v
+			}
+		}
+	case vitem.TypeCost:
+		if est {
+			return func(v uint64) {
+				tsk.CostEst = v
+			}
+		} else {
+			return func(v uint64) {
+				tsk.CostInc = v
+			}
+		}
+		// default:
+		//  // uneeded check due to args.Type.Validate()
+		// 	app.BadReqIf(true, "unknown type value %s", typ)
+		//  return nil
+	}
+	return nil
+}
+
+func taskValGetter(tsk *task.Task, typ vitem.Type, est bool) func() uint64 {
+	switch typ {
+	case vitem.TypeTime:
+		if est {
+			return func() uint64 {
+				return tsk.TimeEst
+			}
+		} else {
+			return func() uint64 {
+				return tsk.TimeInc
+			}
+		}
+	case vitem.TypeCost:
+		if est {
+			return func() uint64 {
+				return tsk.CostEst
+			}
+		} else {
+			return func() uint64 {
+				return tsk.CostInc
+			}
+		}
+		// default:
+		//  // uneeded check due to args.Type.Validate()
+		// 	app.BadReqIf(true, "unknown type value %s", typ)
+		//  return nil
+	}
+	return nil
+}
+
+func getOne(tx sql.Tx, host, project, task, id ID, typ vitem.Type) *vitem.Vitem {
+	row := tx.QueryRow(`SELECT task, type, id, createdBy, createdOn, value, note FROM vitems WHERE host=? AND project=? AND task=? AND id=? AND type=?`, host, project, task, id, typ)
 	t, err := Scan(row)
 	sqlh.PanicIfIsntNoRows(err)
 	return t
 }
 
-func Scan(r isql.Row) (*time.Time, error) {
-	t := &time.Time{}
+func Scan(r isql.Row) (*vitem.Vitem, error) {
+	t := &vitem.Vitem{}
 	err := r.Scan(
 		&t.Task,
+		&t.Type,
 		&t.ID,
 		&t.CreatedBy,
 		&t.CreatedOn,

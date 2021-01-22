@@ -446,38 +446,17 @@ var (
 					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, &t.Name, t)
 
-					// first get all time/cost/file/comment ids being deleted then
 					sql_in_tasks := sqlh.InCondition(true, `task`, len(tasksToDelete))
-					toDelete := make(IDs, 0, 50)
-					scanToDelete := func(rows isql.Rows) {
-						for rows.Next() {
-							i := ID{}
-							PanicOn(rows.Scan(&i))
-							toDelete = append(toDelete, i)
-						}
-					}
-					PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM times WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...))
-					_, err = tx.Exec(Strf(`DELETE FROM times WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					// first get all time/cost/file/comment ids being deleted then
+					_, err = tx.Exec(Strf(`DELETE FROM vitems WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
-					PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM costs WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...))
-					_, err = tx.Exec(Strf(`DELETE FROM costs WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					_, err = tx.Exec(Strf(`DELETE FROM files WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
-					if len(tasksWithFiles) > 0 {
-						filesArgs := make([]interface{}, 0, len(tasksWithFiles)+2)
-						filesArgs = append(filesArgs, args.Host, args.Project)
-						filesArgs = append(filesArgs, tasksWithFiles.ToIs()...)
-						sql_in_tasks_with_files := sqlh.InCondition(true, `task`, len(tasksWithFiles))
-						PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM files WHERE host=? AND project=? %s`, sql_in_tasks_with_files), filesArgs...))
-						_, err = tx.Exec(Strf(`DELETE FROM files WHERE host=? AND project=? %s`, sql_in_tasks_with_files), filesArgs...)
-						PanicOn(err)
-					}
-					PanicOn(tx.Query(scanToDelete, Strf(`SELECT id FROM comments WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...))
 					_, err = tx.Exec(Strf(`DELETE FROM comments WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
 
 					// set all relevant activity logs as itemHasBeenDeleted=1
-					queryArgs = append(queryArgs, toDelete.ToIs()...)
-					_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? %s`, sqlh.InCondition(true, `item`, len(queryArgs)-2)), queryArgs...)
+					_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
 
 					for _, t := range tasksWithFiles {

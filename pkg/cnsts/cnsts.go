@@ -42,14 +42,13 @@ const (
 	TypeProject Type = "project"
 	TypeUser    Type = "user"
 	TypeTask    Type = "task"
-	TypeTime    Type = "time"
-	TypeCost    Type = "cost"
+	TypeVitem   Type = "vitem"
 	TypeFile    Type = "file"
 	TypeComment Type = "comment"
 )
 
 func (t *Type) Validate() {
-	app.BadReqIf(t != nil && !(*t == TypeProject || *t == TypeUser || *t == TypeTask || *t == TypeTime || *t == TypeCost || *t == TypeFile || *t == TypeComment), "invalid type")
+	app.BadReqIf(t != nil && !(*t == TypeProject || *t == TypeUser || *t == TypeTask || *t == TypeVitem || *t == TypeFile || *t == TypeComment), "invalid type")
 }
 
 func (t *Type) String() string {

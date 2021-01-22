@@ -1,9 +1,9 @@
-package costeps_test
+package vitem_test
 
 import (
 	"testing"
 
-	test "github.com/0xor1/trees/pkg/cost/costtest"
+	test "github.com/0xor1/trees/pkg/vitem/vitemtest"
 )
 
 func TestEverything(t *testing.T) {

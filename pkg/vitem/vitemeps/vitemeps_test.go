@@ -1,9 +1,9 @@
-package time_test
+package vitemeps_test
 
 import (
 	"testing"
 
-	test "github.com/0xor1/trees/pkg/time/timetest"
+	test "github.com/0xor1/trees/pkg/vitem/vitemtest"
 )
 
 func TestEverything(t *testing.T) {

@@ -111,37 +111,22 @@ CREATE TABLE tasks(
   UNIQUE INDEX(host, project, user, id)
 );
 
-DROP TABLE IF EXISTS times;
-CREATE TABLE times(
+DROP TABLE IF EXISTS vitems;
+CREATE TABLE vitems(
   host BINARY(16) NOT NULL,
   project BINARY(16) NOT NULL,
   task BINARY(16) NOT NULL,
+  type VARCHAR(50) NOT NULL,
   id BINARY(16) NOT NULL,
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
   value BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NOT NULL,
-  PRIMARY KEY(host, project, task, createdOn, createdBy),
-  UNIQUE INDEX(host, project, id),
-  UNIQUE INDEX(host, project, task, id),
-  UNIQUE INDEX(host, project, createdBy, createdOn, task),
-  UNIQUE INDEX(host, project, createdOn, createdBy, task)
-);
-
-DROP TABLE IF EXISTS costs;
-CREATE TABLE costs(
-  host BINARY(16) NOT NULL,
-  project BINARY(16) NOT NULL,
-  task BINARY(16) NOT NULL,
-  id BINARY(16) NOT NULL,
-  createdBy BINARY(16) NOT NULL,
-  createdOn DATETIME(3) NOT NULL,
-  value BIGINT UNSIGNED NOT NULL,
-  note VARCHAR(250) NOT NULL,
-  PRIMARY KEY(host, project, task, createdOn, createdBy),
-  UNIQUE INDEX(host, project, task, id),
-  UNIQUE INDEX(host, project, createdBy, createdOn, task),
-  UNIQUE INDEX(host, project, createdOn, createdBy, task)
+  PRIMARY KEY(host, project, task, type, createdOn, createdBy),
+  UNIQUE INDEX(host, project, type, id),
+  UNIQUE INDEX(host, project, task, type, id),
+  UNIQUE INDEX(host, project, createdBy, type, createdOn, task),
+  UNIQUE INDEX(host, project, type, createdOn, createdBy, task)
 );
 
 DROP TABLE IF EXISTS files;
