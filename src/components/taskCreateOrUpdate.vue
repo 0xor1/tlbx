@@ -121,7 +121,7 @@
               this.timeEst = t.timeEst
               this.costEst = t.costEst
             } 
-            this.timeEstDisplay = this.$u.fmt.duration(this.timeEst)
+            this.timeEstDisplay = this.$u.fmt.time(this.timeEst)
             this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode) 
             this.loading = false
             this.$nextTick(()=>{
@@ -147,29 +147,16 @@
           this.user = null
         }
         if (this.timeEstDisplay != "") {
-          let match = this.timeEstDisplay.match(/\D*((\d+)h)?\D*((\d+)m)?\D*/)
-          if (match != null && match[0] != null && match[0].length > 0) {
-            let value = 0
-            if (match[2] != null) {
-              value += parseInt(match[2], 10) * 60
-            }
-            if (match[4] != null) {
-              value += parseInt(match[4], 10)
-            }
-            if (!isNaN(value) && value != null) {
-              this.timeEst = value
-            }
+          let parsed = this.$u.parse.time(this.timeEstDisplay)
+          if (parsed != null ) {
+            this.timeEst = parsed
           }
         } 
-        this.timeEstDisplay = this.$u.fmt.duration(this.timeEst)
+        this.timeEstDisplay = this.$u.fmt.time(this.timeEst)
         if (this.costEstDisplay != "") {
-          let match = this.costEstDisplay.match(/[^\d.,]*(\d*)(\.|,)?(\d*)?\D*/)
-          if (match != null && match[0] != null && match[0].length > 0) {
-            let value = parseFloat(match[1]+"."+match[3]) * 100
-            value = Math.floor(value)
-            if (!isNaN(value) && value != null) {
-              this.costEst = value
-            }
+          let parsed = this.$u.parse.cost(this.costEstDisplay)
+          if (parsed != null ) {
+            this.costEst = parsed
           }
         } 
         this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode)
@@ -298,8 +285,5 @@ div > div {
   input[type="number"] {
     width: 10pc;
   }
-}
-.err{
-  color: #c33;
 }
 </style>

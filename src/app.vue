@@ -233,40 +233,7 @@
 </script>
 
 <style lang="scss">
-$color: #ddd;
-$borderColor: #777;
-$bgColor: #000;
-$inputColor: #222;
-$inputHoverColor: #555;
-$inputActiveColor: #222;
-$inputPlaceholderColor: #aaa;
-
-@mixin border(
-  $dir: false,
-  $ticc: 1px, 
-  $style: solid, 
-  $color: $color) {
-  @if $dir {
-    border-#{$dir}: $ticc $style $color;
-  } @else {
-    border: $ticc $style $color;
-  }
-}
-
-@mixin basic(
-  $display: block,
-  $width: 100%,
-  $height: 100%,
-  $margin: 0,
-  $padding: 0,
-  $overflow: hidden) {
-    display: $display;
-    width: $width;
-    height: $height;
-    margin: $margin;
-    padding: $padding;
-    overflow: $overflow;
-}
+@import "./style.scss";
 
 .app-root{
   > .body{
@@ -428,6 +395,9 @@ $inputPlaceholderColor: #aaa;
       }
     }
   }
+  .err{
+    color: #c33;
+  }
 }
 // what follows is essentially a prelude
 // for the entire app
@@ -465,6 +435,9 @@ input, button {
     }
     &:disabled {
       background-color: $bgColor;
+    }
+    &.err {
+    @include border($color: $errColor);
     }
 }
 </style>

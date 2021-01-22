@@ -111,7 +111,4 @@ div.root {
     margin-right: 15px;
   }
 }
-.err{
-  color: #c33;
-}
 </style>

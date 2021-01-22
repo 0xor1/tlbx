@@ -92,7 +92,7 @@ export default {
                     }
                     return self.$dayjs(dt).format('YYYY-MM-DD HH:mm')
                 },
-                duration(minutes, hoursPerDay, daysPerWeek) {
+                time(minutes, hoursPerDay, daysPerWeek) {
                     // hoursPerDay and daysPerWeek are optional, if they arent passed
                     // or are passed as zero just show hours and minutes
                     let h = Math.floor(minutes / 60)
@@ -276,6 +276,44 @@ export default {
                         return (size / div) + unit
                     }
                     return (size / div).toPrecision(3) + unit
+                }
+            },
+            parse: {
+                time(str){
+                    if (str != null && str.length > 0) {
+                        str = str.trim()
+                        if (str == "0") {
+                            return 0
+                        }
+                        let match = str.match(/^((\d+)h)? *((\d+)m)?$/)
+                        if (match != null && match[0] != null && match[0].length > 0) {
+                            let newVal = null
+                            if (match[2] != null) {
+                                newVal += parseInt(match[2], 10) * 60
+                            }
+                            if (match[4] != null) {
+                                newVal += parseInt(match[4], 10)
+                            }
+                            if (!isNaN(newVal) && newVal != null) {
+                                return newVal
+                            }
+                        }
+                    }
+                    return null
+                },
+                cost(str) {
+                    if (str != null && str.length > 0) {
+                        str = str.trim()
+                        let match = str.match(/[^\d.,]*(\d*)(\.|,)?(\d*)?\D*/)
+                        if (match != null && match[0] != null && match[0].length > 0) {
+                            let newVal = parseFloat(match[1]+"."+match[3]) * 100
+                            newVal = Math.floor(newVal)
+                            if (!isNaN(newVal) && newVal != null) {
+                                return newVal
+                            }
+                        }
+                    }
+                    return null
                 }
             }
         }

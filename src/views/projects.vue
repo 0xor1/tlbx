@@ -157,15 +157,15 @@
               cols: [
                 { 
                   name: "min",
-                  get: (p)=> this.$u.fmt.duration(p.timeEst + p.timeSubMin, p.hoursPerDay, p.daysPerWeek)                  
+                  get: (p)=> this.$u.fmt.time(p.timeEst + p.timeSubMin, p.hoursPerDay, p.daysPerWeek)                  
                 },
                 {
                   name: "est",
-                  get: (p)=> this.$u.fmt.duration(p.timeEst + p.timeSubEst, p.hoursPerDay, p.daysPerWeek)
+                  get: (p)=> this.$u.fmt.time(p.timeEst + p.timeSubEst, p.hoursPerDay, p.daysPerWeek)
                 },
                 {
                   name: "inc",
-                  get: (p)=> this.$u.fmt.duration(p.timeInc + p.timeSubInc, p.hoursPerDay, p.daysPerWeek)
+                  get: (p)=> this.$u.fmt.time(p.timeInc + p.timeSubInc, p.hoursPerDay, p.daysPerWeek)
                 }
               ]
             },

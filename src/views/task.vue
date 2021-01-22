@@ -79,11 +79,32 @@
         <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
       </div>
       <div v-if="$root.show.time" class="items times">
-        <p class="heading">time</p>
-        <p>hello</p>
-        <div class="time" v-for="(t, index) in times" :key="index">
-          <span>{{}}</span>
+        <div class="heading">time</div>
+        <div v-if="$u.perm.canWrite(pMe)" class="create-form">
+          <div title="remaining estimate">
+            <span>est</span><br>
+            <input :class="{err: timeEstErr}" v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validateTime" @keydown.enter="submitTime"/>
+          </div>
+          <div title="incurred">
+            <span>inc</span><br>
+            <input :class="{err: timeIncErr}" v-model="timeIncDisplay" type="text" placeholder="0h 0m" @blur="validateTime" @keydown.enter="submitTime"/>
+          </div>
+          <div title="note">
+            <span>note</span><br>
+            <input class="note" v-model="timeNote" type="text" placeholder="note" @blur="validateTime" @keydown.enter="submitTime"/>
+          </div>
+          <div>
+            <button @click.stop="submitTime">log time</button>
+          </div>
         </div>
+        <table>
+          <tr class="header">
+            <th></th>
+          </tr>
+          <tr class="time" v-for="(t, index) in times" :key="index">
+            
+          </tr>
+        </table>
         <div v-if="moreTimes" class=""><button>load more</button></div>
       </div>
     </div>
@@ -144,6 +165,18 @@
           moreFiles: false,
           comments: [],
           moreComments: false,
+          timeEstDisplay: "",
+          timeEstErr: false,
+          timeIncDisplay: "",
+          timeIncErr: false,
+          timeNote: "",
+          costEstDisplay: "",
+          costEstErr: false,
+          costIncDisplay: "",
+          costIncErr: false,
+          costNote: "",
+          commentDisplay: "",
+          commentErr: "",
           commonSections: [
             {
               name: "name",
@@ -181,15 +214,15 @@
               cols: [
                 { 
                   name: "min",
-                  get: (t)=> this.$u.fmt.duration(t.timeEst + t.timeSubMin, this.project.hoursPerDay, this.project.daysPerWeek)                  
+                  get: (t)=> this.$u.fmt.time(t.timeEst + t.timeSubMin, this.project.hoursPerDay, this.project.daysPerWeek)                  
                 },
                 {
                   name: "est",
-                  get: (t)=> this.$u.fmt.duration(t.timeEst + t.timeSubEst, this.project.hoursPerDay, this.project.daysPerWeek)
+                  get: (t)=> this.$u.fmt.time(t.timeEst + t.timeSubEst, this.project.hoursPerDay, this.project.daysPerWeek)
                 },
                 {
                   name: "inc",
-                  get: (t)=> this.$u.fmt.duration(t.timeInc + t.timeSubInc, this.project.hoursPerDay, this.project.daysPerWeek)
+                  get: (t)=> this.$u.fmt.time(t.timeInc + t.timeSubInc, this.project.hoursPerDay, this.project.daysPerWeek)
                 }
               ]
             },
@@ -255,6 +288,8 @@
             })
             mapi.task.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((t)=>{
               this.task = t
+              this.timeEstDisplay = this.$u.fmt.time(this.task.timeEst)
+              this.costEstDisplay = this.$u.fmt.cost(this.task.costEst, this.project.currencyCode)
             })
             mapi.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
               this.children = res.set
@@ -384,6 +419,32 @@
           })
         }
       },
+      validateTime(){
+        if (this.timeEstDisplay != null && this.timeEstDisplay.length > 0) {
+          let parsed = this.$u.parse.time(this.timeEstDisplay)
+          if (parsed == null) {
+            this.timeEstErr = true
+            return false
+          } else {
+            this.timeEstDisplay = this.$u.fmt.time(parsed)
+            this.timeEstErr = false
+          }
+        }
+        if (this.timeIncDisplay != null && this.timeIncDisplay.length > 0) {
+          let parsed = this.$u.parse.time(this.timeIncDisplay)
+          if (parsed == null) {
+            this.timeIncErr = true
+            return false
+          } else {
+            this.timeIncDisplay = this.$u.fmt.time(parsed)
+            this.timeIncErr = false
+          }
+        }
+
+      },
+      submitTime(){
+
+      },
       descriptionTitle(t) {
         let res = t.name
         if (t.description != "") {
@@ -392,6 +453,8 @@
         return res
       },
       refreshProjectActivity(force){
+        this.timeEstDisplay = this.$u.fmt.time(this.task.timeEst)
+        this.costEstDisplay = this.$u.fmt.cost(this.task.costEst, this.project.currencyCode)    
         this.$emit("refreshProjectActivity", force)
       }
     },
@@ -407,6 +470,7 @@
 </script>
 
 <style lang="scss">
+@import "../style.scss";
 div.root {
   > .content{
     > .breadcrumb {
@@ -441,6 +505,23 @@ div.root {
       }
     }
     .items {
+      > .heading {
+        font-size: 1.7pc;
+        font-weight: bold;
+        border-bottom: 1px solid #777;
+      }
+      > .create-form {
+        > div {
+          display: inline-block;
+          margin: 1pc 1pc 0 0;
+          > input {
+            width: 5pc;
+            &.note {
+              width: 20pc;
+            }
+          }
+        }
+      }
       .btn {
         cursor: pointer;
       }

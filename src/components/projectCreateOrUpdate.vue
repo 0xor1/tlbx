@@ -399,7 +399,4 @@ div > div {
     }
   }
 }
-.err{
-  color: #c33;
-}
 </style>
