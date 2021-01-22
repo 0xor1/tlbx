@@ -46,8 +46,8 @@ var (
 			},
 			GetExampleResponse: func() interface{} {
 				return &task.UpdateRes{
-					Parent: exampleTask,
-					Task:   exampleTask,
+					Parent: ExampleTask,
+					Task:   ExampleTask,
 				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
@@ -101,7 +101,7 @@ var (
 				// or parents firstChild value depending on the scenario.
 				var prevSib *task.Task
 				if args.PrevSib != nil {
-					prevSib = getOne(tx, args.Host, args.Project, *args.PrevSib)
+					prevSib = GetOne(tx, args.Host, args.Project, *args.PrevSib)
 					app.ReturnIf(prevSib == nil, http.StatusNotFound, "prevSib not found")
 					t.NextSib = prevSib.NextSib
 					prevSib.NextSib = &t.ID
@@ -112,7 +112,7 @@ var (
 					// else newTask is being inserted as firstChild, so set any current firstChild
 					// as newTask's NextSib
 					// get parent for updating child/descendant counts and firstChild if required
-					parent := getOne(tx, args.Host, args.Project, args.Parent)
+					parent := GetOne(tx, args.Host, args.Project, args.Parent)
 					app.ReturnIf(parent == nil, http.StatusNotFound, "parent not found")
 					t.NextSib = parent.FirstChild
 					// increment parents child and descendant counters and firstChild pointer incase that was changed
@@ -126,7 +126,7 @@ var (
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
 				// all that remains to do is update aggregate values
 				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Parent)
-				p := getOne(tx, args.Host, args.Project, *t.Parent)
+				p := GetOne(tx, args.Host, args.Project, *t.Parent)
 				tx.Commit()
 				return &task.UpdateRes{
 					Parent: p,
@@ -160,8 +160,8 @@ var (
 			},
 			GetExampleResponse: func() interface{} {
 				return &task.UpdateRes{
-					Parent: exampleTask,
-					Task:   exampleTask,
+					Parent: ExampleTask,
+					Task:   ExampleTask,
 				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
@@ -199,14 +199,14 @@ var (
 					// we must lock
 					epsutil.MustLockProject(tx, args.Host, args.Project)
 				}
-				t := getOne(tx, args.Host, args.Project, args.ID)
+				t := GetOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				var newParent, newPrevSib, currentParent, currentPrevSib *task.Task
 				if args.Parent != nil {
 					if !args.Parent.V.Equal(*t.Parent) {
 						var newNextSib *ID
 						// validate new parent exists
-						newParent = getOne(tx, args.Host, args.Project, args.Parent.V)
+						newParent = GetOne(tx, args.Host, args.Project, args.Parent.V)
 						app.ReturnIf(newParent == nil, http.StatusNotFound, "parent not found")
 						// we must ensure we dont allow recursive loops
 						row := tx.QueryRow(Strf("%s SELECT COUNT(*)=1 FROM ancestors a WHERE id=?", sql_ancestors_cte), args.Host, args.Project, args.Parent.V, args.Host, args.Project, args.ID)
@@ -215,7 +215,7 @@ var (
 						app.BadReqIf(ancestorLoopDetected || t.ID.Equal(args.Parent.V), "ancestor loop detected, invalid parent value")
 						if args.PrevSib != nil && args.PrevSib.V != nil {
 							app.BadReqIf(args.PrevSib.V.Equal(args.ID), "sib loop detected, invalid prevSib value")
-							newPrevSib = getOne(tx, args.Host, args.Project, *args.PrevSib.V)
+							newPrevSib = GetOne(tx, args.Host, args.Project, *args.PrevSib.V)
 							app.ReturnIf(newPrevSib == nil, http.StatusNotFound, "prevSib not found")
 							app.BadReqIf(!newPrevSib.Parent.Equal(args.Parent.V), "prevSibs parent does not match the specified parent arg")
 							newNextSib = newPrevSib.NextSib
@@ -231,7 +231,7 @@ var (
 						if newPrevSib != nil && newPrevSib.ID.Equal(*t.Parent) {
 							currentParent = newPrevSib
 						} else {
-							currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
+							currentParent = GetOne(tx, args.Host, args.Project, *t.Parent)
 						}
 						app.ReturnIf(currentParent == nil, http.StatusNotFound, "currentParent not found")
 						if currentPrevSib != nil {
@@ -258,7 +258,7 @@ var (
 							currentPrevSib.ID.Equal(*args.PrevSib.V))) {
 						var newNextSib *ID
 						// here we know that an actual change is being attempted
-						currentParent = getOne(tx, args.Host, args.Project, *t.Parent)
+						currentParent = GetOne(tx, args.Host, args.Project, *t.Parent)
 						PanicIf(currentParent == nil, "currentParent not found")
 						if args.PrevSib.V != nil {
 							// moving to a non first child position
@@ -271,7 +271,7 @@ var (
 								currentParent = nil
 							}
 							app.BadReqIf(args.PrevSib.V.Equal(args.ID), "sib loop detected, invalid prevSib value")
-							newPrevSib = getOne(tx, args.Host, args.Project, *args.PrevSib.V)
+							newPrevSib = GetOne(tx, args.Host, args.Project, *args.PrevSib.V)
 							app.ReturnIf(newPrevSib == nil, http.StatusNotFound, "prevSib not found")
 							app.BadReqIf(!newPrevSib.Parent.Equal(*t.Parent), "prevSibs parent does not match the current tasks parent")
 							newNextSib = newPrevSib.NextSib
@@ -363,7 +363,7 @@ var (
 					} else {
 						// else all updates did occur and t was definitely updated
 						// so call getOne again make sure we'r returning fresh aggregate values
-						t = getOne(tx, args.Host, args.Project, t.ID)
+						t = GetOne(tx, args.Host, args.Project, t.ID)
 					}
 				}
 				if nameUpdated {
@@ -371,7 +371,7 @@ var (
 				}
 				var p *task.Task
 				if t.Parent != nil {
-					p = getOne(tx, args.Host, args.Project, *t.Parent)
+					p = GetOne(tx, args.Host, args.Project, *t.Parent)
 				}
 				tx.Commit()
 				return &task.UpdateRes{
@@ -397,7 +397,7 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleTask
+				return ExampleTask
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Delete)
@@ -410,13 +410,13 @@ var (
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "you don't have permission to delete a task")
 				epsutil.MustLockProject(tx, args.Host, args.Project)
 				// at this point we need to get the task
-				t := getOne(tx, args.Host, args.Project, args.ID)
+				t := GetOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				app.BadReqIf(t.DescN > 100, "may not delete more than 100 task per delete action")
 				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.DescN > 0 || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own tasks within an hour of creating them and they must have no children")
 				prevNode := getPrevSib(tx, args.Host, args.Project, args.ID)
 				if prevNode == nil {
-					prevNode = getOne(tx, args.Host, args.Project, *t.Parent)
+					prevNode = GetOne(tx, args.Host, args.Project, *t.Parent)
 					PanicIf(!prevNode.FirstChild.Equal(t.ID), "invalid data detected, deleting task %s", t.ID)
 					prevNode.FirstChild = t.NextSib
 				} else {
@@ -484,7 +484,7 @@ var (
 						srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(args.Host, args.Project, t))
 					}
 				}
-				parent := getOne(tx, args.Host, args.Project, *t.Parent)
+				parent := GetOne(tx, args.Host, args.Project, *t.Parent)
 				tx.Commit()
 				// return parent to show aggregate value changes
 				return parent
@@ -507,14 +507,14 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return exampleTask
+				return ExampleTask
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Get)
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
-				t := getOne(tx, args.Host, args.Project, args.ID)
+				t := GetOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				tx.Commit()
 				return t
@@ -541,7 +541,7 @@ var (
 			},
 			GetExampleResponse: func() interface{} {
 				return &task.GetSetRes{
-					Set:  []*task.Task{exampleTask},
+					Set:  []*task.Task{ExampleTask},
 					More: true,
 				}
 			},
@@ -590,7 +590,7 @@ var (
 			},
 			GetExampleResponse: func() interface{} {
 				return &task.GetSetRes{
-					Set:  []*task.Task{exampleTask},
+					Set:  []*task.Task{ExampleTask},
 					More: true,
 				}
 			},
@@ -633,7 +633,7 @@ var (
 	nameMinLen        = 1
 	nameMaxLen        = 250
 	descriptionMaxLen = 1250
-	exampleTask       = &task.Task{
+	ExampleTask       = &task.Task{
 		ID:          app.ExampleID(),
 		Parent:      ptr.ID(app.ExampleID()),
 		FirstChild:  ptr.ID(app.ExampleID()),
@@ -662,7 +662,7 @@ var (
 	}
 )
 
-func getOne(tx sql.Tx, host, project, id ID) *task.Task {
+func GetOne(tx sql.Tx, host, project, id ID) *task.Task {
 	row := tx.QueryRow(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.project=? AND id=?`, Sql_task_columns_prefixed), host, project, id)
 	t, err := Scan(row)
 	sqlh.PanicIfIsntNoRows(err)

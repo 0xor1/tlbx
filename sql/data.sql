@@ -4,9 +4,9 @@ CHARACTER SET = 'utf8mb4'
 COLLATE = 'utf8mb4_unicode_ci';
 USE trees_data;
 
-#BIGINT UNSIGNED duration values are all in units of minutes
+#BIGINT UNSIGNED time values are all in units of minutes
 #BIGINT UNSIGNED fileSize values are all in units of bytes
-## abbreviations used est=estimate inc=incurred sub=subtask(s) and N suffix means count
+## abbreviations used est=estimate inc=incurred sub=subtask(s) prev=previous sib=siblings and N suffix means count
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users(
@@ -119,7 +119,7 @@ CREATE TABLE times(
   id BINARY(16) NOT NULL,
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
-  duration BIGINT UNSIGNED NOT NULL,
+  value BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NOT NULL,
   PRIMARY KEY(host, project, task, createdOn, createdBy),
   UNIQUE INDEX(host, project, id),

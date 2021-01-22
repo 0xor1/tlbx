@@ -78,36 +78,42 @@ func Everything(t *testing.T) {
 	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 
-	t1 := (&time.Create{
-		Host:     r.Ali().ID(),
-		Project:  p.ID,
-		Task:     t1p0.ID,
-		Duration: 77,
-		Note:     "yolo",
+	t1Res := (&time.Create{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    t1p0.ID,
+		TimeEst: ptr.Uint64(45),
+		Value:   77,
+		Note:    "yolo",
 	}).MustDo(ac)
+	a.NotNil(t1Res)
+	a.True(t1Res.Task.ID.Equal(t1p0.ID))
+	a.True(t1Res.Task.TimeEst == 45)
+	t1 := t1Res.Time
 	a.NotNil(t1)
+
+	t1Res = (&time.Update{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    t1p0.ID,
+		ID:      t1.ID,
+		Value:   &field.UInt64{V: 33},
+		Note:    &field.String{V: "polo"},
+	}).MustDo(ac)
+	a.NotNil(t1Res)
+	a.True(t1Res.Task.TimeInc == 33)
+	a.True(t1Res.Time.Value == 33)
 
 	t1 = (&time.Update{
-		Host:     r.Ali().ID(),
-		Project:  p.ID,
-		Task:     t1p0.ID,
-		ID:       t1.ID,
-		Duration: &field.UInt64{V: 33},
-		Note:     &field.String{V: "polo"},
-	}).MustDo(ac)
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    t1p0.ID,
+		ID:      t1.ID,
+		Value:   &field.UInt64{V: 44},
+		Note:    &field.String{V: "polo"},
+	}).MustDo(ac).Time
 	a.NotNil(t1)
 
-	t1 = (&time.Update{
-		Host:     r.Ali().ID(),
-		Project:  p.ID,
-		Task:     t1p0.ID,
-		ID:       t1.ID,
-		Duration: &field.UInt64{V: 44},
-		Note:     &field.String{V: "polo"},
-	}).MustDo(ac)
-	a.NotNil(t1)
-
-	// nil
 	tNil := (&time.Update{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
@@ -136,12 +142,12 @@ func Everything(t *testing.T) {
 	a.False(ts.More)
 
 	t2 := (&time.Create{
-		Host:     r.Ali().ID(),
-		Project:  p.ID,
-		Task:     t1p0.ID,
-		Duration: 77,
-		Note:     "solo",
-	}).MustDo(ac)
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    t1p0.ID,
+		Value:   77,
+		Note:    "solo",
+	}).MustDo(ac).Time
 	a.NotNil(t2)
 
 	ts = (&time.Get{
@@ -181,12 +187,13 @@ func Everything(t *testing.T) {
 	a.Equal(t1, ts.Set[0])
 	a.False(ts.More)
 
-	(&time.Delete{
+	t1p0 = (&time.Delete{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      t1.ID,
 	}).MustDo(ac)
+	a.True(t1p0.TimeInc == 77)
 
 	pID = p.ID
 	tree = testutil.GrabFullTree(r, r.Ali().ID(), p.ID)
