@@ -37,7 +37,7 @@ type Vitem struct {
 	ID        ID        `json:"id"`
 	CreatedBy ID        `json:"createdBy"`
 	CreatedOn time.Time `json:"createdOn"`
-	Value     uint64    `json:"value"`
+	Inc       uint64    `json:"inc"`
 	Note      string    `json:"note"`
 }
 
@@ -47,7 +47,7 @@ type Create struct {
 	Task    ID      `json:"task"`
 	Type    Type    `json:"type"`
 	Est     *uint64 `json:"est,omitempty"`
-	Value   uint64  `json:"value"`
+	Inc     uint64  `json:"inc"`
 	Note    string  `json:"note,omitempty"`
 }
 
@@ -78,7 +78,7 @@ type Update struct {
 	Task    ID            `json:"task"`
 	Type    Type          `json:"type"`
 	ID      ID            `json:"id"`
-	Value   *field.UInt64 `json:"value,omitempty"`
+	Inc     *field.UInt64 `json:"inc,omitempty"`
 	Note    *field.String `json:"note,omitempty"`
 }
 

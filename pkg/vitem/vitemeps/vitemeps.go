@@ -40,7 +40,7 @@ var (
 					Task:    app.ExampleID(),
 					Type:    vitem.TypeTime,
 					Est:     ptr.Uint64(35),
-					Value:   60,
+					Inc:     60,
 					Note:    "I did an hours work",
 				}
 			},
@@ -53,9 +53,9 @@ var (
 				me := me.Get(tlbx)
 				switch args.Type {
 				case vitem.TypeTime:
-					app.ReturnIf(args.Value == 0 || args.Value > timeValueMax, http.StatusBadRequest, "time value must be between 1 and 1440")
+					app.ReturnIf(args.Inc == 0 || args.Inc > timeValueMax, http.StatusBadRequest, "time inc must be between 1 and 1440")
 				case vitem.TypeCost:
-					app.ReturnIf(args.Value == 0, http.StatusBadRequest, "cost value must be > 1")
+					app.ReturnIf(args.Inc == 0, http.StatusBadRequest, "cost inc must be > 1")
 					// default:
 					//  // uneeded check due to args.Type.Validate()
 					// 	app.BadReqIf(true, "unknown type value %s", args.Type)
@@ -76,18 +76,18 @@ var (
 					taskValSetter(tsk, args.Type, true)(*args.Est)
 				}
 				// add to teh tasks incurred type value
-				taskValSetter(tsk, args.Type, false)(gtr(false) + args.Value)
+				taskValSetter(tsk, args.Type, false)(gtr(false) + args.Inc)
 				i := &vitem.Vitem{
 					Task:      args.Task,
 					Type:      args.Type,
 					ID:        tlbx.NewID(),
 					CreatedBy: me,
 					CreatedOn: NowMilli(),
-					Value:     args.Value,
+					Inc:       args.Inc,
 					Note:      args.Note,
 				}
 				// insert new vitem
-				_, err := tx.Exec(`INSERT INTO vitems (host, project, task, type, id, createdBy, createdOn, value, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, args.Type, i.ID, i.CreatedBy, i.CreatedOn, i.Value, i.Note)
+				_, err := tx.Exec(`INSERT INTO vitems (host, project, task, type, id, createdBy, createdOn, inc, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, args.Type, i.ID, i.CreatedBy, i.CreatedOn, i.Inc, i.Note)
 				PanicOn(err)
 				// update task vals
 				_, err = tx.Exec(Strf(`UPDATE tasks SET %sEst=?, %sInc=? WHERE host=? AND project=? AND id=?`, i.Type, i.Type), gtr(true), gtr(false), args.Host, args.Project, args.Task)
@@ -118,7 +118,7 @@ var (
 					Task:    app.ExampleID(),
 					Type:    vitem.TypeTime,
 					ID:      app.ExampleID(),
-					Value:   &field.UInt64{V: 60},
+					Inc:     &field.UInt64{V: 60},
 					Note:    &field.String{V: "woo"},
 				}
 			},
@@ -129,16 +129,16 @@ var (
 				args := a.(*vitem.Update)
 				args.Type.Validate()
 				me := me.Get(tlbx)
-				if args.Value == nil &&
+				if args.Inc == nil &&
 					args.Note == nil {
 					// nothing to update
 					return nil
 				}
 				switch args.Type {
 				case vitem.TypeTime:
-					app.ReturnIf(args.Value != nil && (args.Value.V == 0 || args.Value.V > timeValueMax), http.StatusBadRequest, "value must be between 1 and 1440")
+					app.ReturnIf(args.Inc != nil && (args.Inc.V == 0 || args.Inc.V > timeValueMax), http.StatusBadRequest, "inc must be between 1 and 1440")
 				case vitem.TypeCost:
-					app.ReturnIf(args.Value != nil && args.Value.V == 0, http.StatusBadRequest, "value must be > 1")
+					app.ReturnIf(args.Inc != nil && args.Inc.V == 0, http.StatusBadRequest, "inc must be > 1")
 					// default:
 					//  // uneeded check due to args.Type.Validate()
 					// 	app.BadReqIf(true, "unknown type value %s", args.Type)
@@ -157,21 +157,21 @@ var (
 				treeUpdate := false
 				var diff uint64
 				var sign string
-				if args.Value != nil && args.Value.V != t.Value {
-					if args.Value.V > t.Value {
-						diff = args.Value.V - t.Value
+				if args.Inc != nil && args.Inc.V != t.Inc {
+					if args.Inc.V > t.Inc {
+						diff = args.Inc.V - t.Inc
 						sign = "+"
 					} else {
-						diff = t.Value - args.Value.V
+						diff = t.Inc - args.Inc.V
 						sign = "-"
 					}
-					t.Value = args.Value.V
+					t.Inc = args.Inc.V
 					treeUpdate = true
 				}
 				if args.Note != nil && args.Note.V != t.Note {
 					t.Note = args.Note.V
 				}
-				_, err := tx.Exec(`UPDATE vitems SET value=?, note=? WHERE host=? AND project=? AND task=? AND id=? AND type=? `, t.Value, t.Note, args.Host, args.Project, t.Task, t.ID, t.Type)
+				_, err := tx.Exec(`UPDATE vitems SET inc=?, note=? WHERE host=? AND project=? AND task=? AND id=? AND type=? `, t.Inc, t.Note, args.Host, args.Project, t.Task, t.ID, t.Type)
 				PanicOn(err)
 				if treeUpdate {
 					_, err = tx.Exec(Strf(`UPDATE tasks SET %sInc=%sInc%s? WHERE host=? AND project=? AND id=?`, args.Type, args.Type, sign), diff, args.Host, args.Project, t.Task)
@@ -222,7 +222,7 @@ var (
 				// delete time
 				_, err := tx.Exec(`DELETE FROM vitems WHERE host=? AND project=? AND task=? AND id=? AND type=?`, args.Host, args.Project, args.Task, args.ID, args.Type)
 				PanicOn(err)
-				_, err = tx.Exec(Strf(`UPDATE tasks SET %sInc=%sInc-? WHERE host=? AND project=? AND id=?`, args.Type, args.Type), v.Value, args.Host, args.Project, args.Task)
+				_, err = tx.Exec(Strf(`UPDATE tasks SET %sInc=%sInc-? WHERE host=? AND project=? AND id=?`, args.Type, args.Type), v.Inc, args.Host, args.Project, args.Task)
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
@@ -274,7 +274,7 @@ var (
 					Set:  make([]*vitem.Vitem, 0, args.Limit),
 					More: false,
 				}
-				qry := bytes.NewBufferString(`SELECT task, type, id, createdBy, createdOn, value, note FROM vitems WHERE host=? AND project=? AND type=?`)
+				qry := bytes.NewBufferString(`SELECT task, type, id, createdBy, createdOn, inc, note FROM vitems WHERE host=? AND project=? AND type=?`)
 				qryArgs := make([]interface{}, 0, len(args.IDs)+9)
 				qryArgs = append(qryArgs, args.Host, args.Project, args.Type)
 				if len(args.IDs) > 0 {
@@ -335,7 +335,7 @@ var (
 		ID:        app.ExampleID(),
 		CreatedBy: app.ExampleID(),
 		CreatedOn: app.ExampleTime(),
-		Value:     60,
+		Inc:       60,
 		Note:      "I did something",
 	}
 )
@@ -401,7 +401,7 @@ func taskValGetter(tsk *task.Task, typ vitem.Type, est bool) func() uint64 {
 }
 
 func getOne(tx sql.Tx, host, project, task, id ID, typ vitem.Type) *vitem.Vitem {
-	row := tx.QueryRow(`SELECT task, type, id, createdBy, createdOn, value, note FROM vitems WHERE host=? AND project=? AND task=? AND id=? AND type=?`, host, project, task, id, typ)
+	row := tx.QueryRow(`SELECT task, type, id, createdBy, createdOn, inc, note FROM vitems WHERE host=? AND project=? AND task=? AND id=? AND type=?`, host, project, task, id, typ)
 	t, err := Scan(row)
 	sqlh.PanicIfIsntNoRows(err)
 	return t
@@ -415,7 +415,7 @@ func Scan(r isql.Row) (*vitem.Vitem, error) {
 		&t.ID,
 		&t.CreatedBy,
 		&t.CreatedOn,
-		&t.Value,
+		&t.Inc,
 		&t.Note)
 	if t.ID.IsZero() {
 		t = nil

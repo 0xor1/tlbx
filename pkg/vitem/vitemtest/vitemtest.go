@@ -84,7 +84,7 @@ func Everything(t *testing.T) {
 		Task:    t1p0.ID,
 		Type:    vitem.TypeTime,
 		Est:     ptr.Uint64(45),
-		Value:   77,
+		Inc:     77,
 		Note:    "yolo",
 	}).MustDo(ac)
 	a.NotNil(t1Res)
@@ -99,12 +99,12 @@ func Everything(t *testing.T) {
 		Task:    t1p0.ID,
 		Type:    vitem.TypeTime,
 		ID:      t1.ID,
-		Value:   &field.UInt64{V: 33},
+		Inc:     &field.UInt64{V: 33},
 		Note:    &field.String{V: "polo"},
 	}).MustDo(ac)
 	a.NotNil(t1Res)
 	a.True(t1Res.Task.TimeInc == 33)
-	a.True(t1Res.Item.Value == 33)
+	a.True(t1Res.Item.Inc == 33)
 
 	t1 = (&vitem.Update{
 		Host:    r.Ali().ID(),
@@ -112,7 +112,7 @@ func Everything(t *testing.T) {
 		Task:    t1p0.ID,
 		Type:    vitem.TypeTime,
 		ID:      t1.ID,
-		Value:   &field.UInt64{V: 44},
+		Inc:     &field.UInt64{V: 44},
 		Note:    &field.String{V: "polo"},
 	}).MustDo(ac).Item
 	a.NotNil(t1)
@@ -152,7 +152,7 @@ func Everything(t *testing.T) {
 		Project: p.ID,
 		Task:    t1p0.ID,
 		Type:    vitem.TypeTime,
-		Value:   77,
+		Inc:     77,
 		Note:    "solo",
 	}).MustDo(ac).Item
 	a.NotNil(t2)
@@ -215,7 +215,7 @@ func Everything(t *testing.T) {
 		Task:    t1p0.ID,
 		Type:    vitem.TypeCost,
 		Est:     ptr.Uint64(45),
-		Value:   77,
+		Inc:     77,
 		Note:    "yolo",
 	}).MustDo(ac)
 	a.NotNil(t1Res)
@@ -230,12 +230,12 @@ func Everything(t *testing.T) {
 		Task:    t1p0.ID,
 		Type:    vitem.TypeCost,
 		ID:      t1.ID,
-		Value:   &field.UInt64{V: 33},
+		Inc:     &field.UInt64{V: 33},
 		Note:    &field.String{V: "polo"},
 	}).MustDo(ac)
 	a.NotNil(t1Res)
 	a.True(t1Res.Task.CostInc == 33)
-	a.True(t1Res.Item.Value == 33)
+	a.True(t1Res.Item.Inc == 33)
 
 	t1 = (&vitem.Update{
 		Host:    r.Ali().ID(),
@@ -243,7 +243,7 @@ func Everything(t *testing.T) {
 		Task:    t1p0.ID,
 		Type:    vitem.TypeCost,
 		ID:      t1.ID,
-		Value:   &field.UInt64{V: 44},
+		Inc:     &field.UInt64{V: 44},
 		Note:    &field.String{V: "polo"},
 	}).MustDo(ac).Item
 	a.NotNil(t1)
@@ -283,7 +283,7 @@ func Everything(t *testing.T) {
 		Project: p.ID,
 		Task:    t1p0.ID,
 		Type:    vitem.TypeCost,
-		Value:   77,
+		Inc:     77,
 		Note:    "solo",
 	}).MustDo(ac).Item
 	a.NotNil(t2)

@@ -120,7 +120,7 @@ CREATE TABLE vitems(
   id BINARY(16) NOT NULL,
   createdBy BINARY(16) NOT NULL,
   createdOn DATETIME(3) NOT NULL,
-  value BIGINT UNSIGNED NOT NULL,
+  inc BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NOT NULL,
   PRIMARY KEY(host, project, task, type, createdOn, createdBy),
   UNIQUE INDEX(host, project, type, id),
