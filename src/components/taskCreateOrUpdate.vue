@@ -29,7 +29,7 @@
       </span>
       <span v-if="$root.show.cost">
         <input :class="{err: costEstErr}" v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate(true)" @keyup="validate" @keydown.enter="ok">
-        <label> ({{$u.fmt.currencySymbol(this.project.currencyCode)}})cost estimate</label>
+        <label> {{$u.fmt.currencySymbol(this.project.currencyCode)}} cost estimate</label>
       </span>
       <span v-if="!isCreate && updateTask.id != project.id && updateTask.id != $u.rtr.task()">
         <button @click.stop.prevent="showMove=!showMove">move</button>
@@ -160,7 +160,10 @@
             this.timeEstErr = true
             isOk = false
           }
-        } 
+        } else {
+            this.timeEst = 0
+            this.timeEstErr = false
+        }
         if (this.costEstDisplay != "") {
           let parsed = this.$u.parse.cost(this.costEstDisplay)
           if (parsed != null ) {
@@ -173,7 +176,10 @@
             this.costEstErr = true
             isOk = false
           }
-        } 
+        } else {
+            this.costEst = 0
+            this.costEstErr = false
+        }
         if (this.prevSibId == "") {
           this.prevSibId = null
         }

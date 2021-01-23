@@ -390,17 +390,21 @@ function newApi(isMDoApi) {
       }
     },
     vitem: {
-      create(host, project, task, type, value, note) {
-        return doReq('/vitem/create', {host, project, task, type, value, note})
+      create(args) {
+        // host, project, task, type, est, inc, note
+        return doReq('/vitem/create', args)
       },
-      update(host, project, task, type, id, value, note) {
-        return doReq('/vitem/update', {host, project, task, type, id, value, note})
+      update(args) {
+        // host, project, task, type, id, value, note
+        return doReq('/vitem/update', args)
       },
-      get(host, project, task, type, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
-        return doReq('/vitem/get', {host, project, task, type, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
+      get(args) {
+        // host, project, task, type, ids, createOnMin, createdOnMax, createdBy, after, asc, limit
+        return doReq('/vitem/get', args)
       },
-      delete(host, project, task, type, id) {
-        return doReq('/vitem/delete', {host, project, task, type, id})
+      delete(args) {
+        // host, project, task, type, id
+        return doReq('/vitem/delete', args)
       }
     },
     file: {

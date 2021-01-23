@@ -80,18 +80,18 @@
       </div>
       <div v-for="(type, index) in ['time', 'cost']" :key="index">
         <div v-if="$root.show[type]" :class="['items', type+'s']">
-          <div class="heading">{{type}}</div>
+          <div class="heading">{{type}} <span class="medium" v-if="type == 'cost'">{{$u.fmt.currencySymbol(project.currencyCode)}}</span> <span class="medium">{{$u.fmt[type](task[type+'Inc'])}} | {{$u.fmt[type](task[type+'SubInc'])}}</span></div>
           <div v-if="$u.perm.canWrite(pMe)" class="create-form">
             <div title="remaining estimate">
-              <span>est</span><br>
+              <span>est <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></span><br>
               <input :class="{err: vitems[type].estErr}" v-model="vitems[type].estDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validate(type, true)" @keyup="validate(type)" @keydown.enter="submit(type)"/>
             </div>
             <div title="incurred">
-              <span>inc</span><br>
+              <span>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></span><br>
               <input :class="{err: vitems[type].incErr}" v-model="vitems[type].incDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validate(type, true)" @keyup="validate(type)" @keydown.enter="submit(type)"/>
             </div>
             <div title="note">
-              <span>note <span :class="{err: vitems[type].note.length > 250, 'note-length': true}">({{250 - vitems[type].note.length}})</span></span><br>
+              <span>note <span :class="{err: vitems[type].note.length > 250, 'small': true}">({{250 - vitems[type].note.length}})</span></span><br>
               <input :class="{err: vitems[type].note.length > 250, note: true}" v-model="vitems[type].note" type="text" placeholder="note" @blur="validate(type)" @keyup="validate(type)" @keydown.enter="submit(type)"/>
             </div>
             <div>
@@ -100,10 +100,16 @@
           </div>
           <table>
             <tr class="header">
-              <th></th>
+              <th>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></th>
+              <th v-if="$root.show.date">created</th>
+              <th v-if="$root.show.user">user</th>
+              <th>note</th>
             </tr>
             <tr class="item" v-for="(i, index) in vitems[type].set" :key="index">
-              
+              <td>{{$u.fmt[type](i.inc)}}</td>
+              <td v-if="$root.show.date">{{$u.fmt.date(i.createdOn)}}</td>
+              <td v-if="$root.show.user"><user :userId="i.createdBy"></user></td>
+              <td>{{i.note}}</td>
             </tr>
           </table>
           <div v-if="vitems[type].more" class=""><button>load more</button></div>
@@ -173,8 +179,7 @@
               incErr: false,
               note: "",
               placeholder: "0h 0m",
-              estLabel: "est",
-              incLabel: "inc"
+              creating: false
             },
             cost: {
               set: [],
@@ -185,8 +190,7 @@
               incErr: false,
               note: "",
               placeholder: "0.00",
-              estLabel: "est",
-              incLabel: "inc"
+              creating: false
             }
           },
           commentDisplay: "",
@@ -241,7 +245,7 @@
               ]
             },
             {
-              name: () => `(${this.$u.fmt.currencySymbol(this.project.currencyCode)}) cost`,
+              name: () => `cost ${this.$u.fmt.currencySymbol(this.project.currencyCode)}`,
               show: () => this.$root.show.cost,
               cols: [
                 {
@@ -302,18 +306,28 @@
             })
             mapi.task.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((t)=>{
               this.task = t
-              this.timeEstDisplay = this.$u.fmt.time(this.task.timeEst)
-              this.costEstDisplay = this.$u.fmt.cost(this.task.costEst)
+              this.vitems.time.estDisplay = this.$u.fmt.time(this.task.timeEst)
+              this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)
             })
             mapi.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
               this.children = res.set
               this.moreChildren = res.more
             })
-            mapi.vitem.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), this.$u.cnsts.time).then((res)=>{
+            mapi.vitem.get({
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project(), 
+              task: this.$u.rtr.task(), 
+              type: this.$u.cnsts.time
+            }).then((res)=>{
               this.vitems.time.set = res.set
               this.vitems.time.more = res.more
             })
-            mapi.vitem.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), this.$u.cnsts.cost).then((res)=>{
+            mapi.vitem.get({
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project(), 
+              task: this.$u.rtr.task(), 
+              type: this.$u.cnsts.cost
+            }).then((res)=>{
               this.vitems.cost.set = res.set
               this.vitems.cost.more = res.more
             })
@@ -447,6 +461,8 @@
             }
             obj.estErr = false
           }
+        } else {
+          obj.estErr = false
         }
         if (obj.incDisplay != null && obj.incDisplay.length > 0) {
           let parsed = this.$u.parse[type](obj.incDisplay)
@@ -459,15 +475,60 @@
             }
             obj.incErr = false
           }
+        }else {
+          obj.incErr = false
         }
-        return isOK && obj.note.length <= 250
+        obj.note = obj.note.substring(0, 250)
+        return isOK
       },
       submit(type){
         if (this.validate(type)) {
           let obj = this.vitems[type]
-          let est = this.$u.parse.time(obj.estDisplay)
-          let inc = this.$u.parse.time(obj.incDisplay)
-          console.log(est, inc)
+          if (obj.creating) {
+            return
+          }
+          let est = this.$u.parse[type](obj.estDisplay)
+          let inc = this.$u.parse[type](obj.incDisplay)
+          if ((inc == null || inc == 0) &&
+            (est != null && est != this.task[type+'Est'])) {
+            // only changing est value
+            let args = {
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project(),
+              id: this.$u.rtr.task(),
+            }
+            args[type+'Est'] = {v:est}
+            obj.creating = true
+            this.$api.task.update(args).then((res)=>{
+              this.task = res.task
+              this.refreshProjectActivity(true)
+            }).finally(()=>{
+              obj.creating = false
+            })
+          } else if (inc != null && inc != 0) {
+            let args = {
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project(),
+              task: this.$u.rtr.task(),
+              type: type,
+              inc: inc,
+              note: obj.note
+            }
+            if (est != null && est != this.task[type+'Est']) {
+              args.est = est
+            }
+            obj.creating = true
+            this.$api.vitem.create(args).then((res)=>{
+              this.task = res.task
+              obj.inc = 0
+              obj.incDisplay = ""
+              obj.note = ""
+              obj.set.splice(0, 0, res.item)
+              this.refreshProjectActivity(true)
+            }).finally(()=>{
+              obj.creating = false
+            })
+          }
         }
       },
       descriptionTitle(t) {
@@ -478,8 +539,8 @@
         return res
       },
       refreshProjectActivity(force){
-        this.timeEstDisplay = this.$u.fmt.time(this.task.timeEst)
-        this.costEstDisplay = this.$u.fmt.cost(this.task.costEst)    
+        this.vitems.time.estDisplay = this.$u.fmt.time(this.task.timeEst)
+        this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)    
         this.$emit("refreshProjectActivity", force)
       }
     },
@@ -535,8 +596,11 @@ div.root {
         font-weight: bold;
         border-bottom: 1px solid #777;
       }
-      .note-length{
-        font-size: 0.62pc;
+      .small{
+        font-size: 0.8pc;
+      }
+      .medium{
+        font-size: 1pc;
       }
       > .create-form {
         > div {
