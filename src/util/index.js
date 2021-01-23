@@ -313,9 +313,15 @@ export default {
                 cost(str) {
                     if (str != null && str.length > 0) {
                         str = str.trim()
-                        let match = str.match(/^(\d*)(\.|,)?(\d*)?/)
+                        let match = str.match(/^(\d*)(\.|,)?(\d{0,2})?$/)
                         if (match != null && match[0] != null && match[0].length > 0) {
-                            let newVal = parseFloat(match[1]+"."+match[3]) * 100
+                            if (match[3] == null) {
+                                match[3] = "00"
+                            }
+                            if (match[3].length == 1) {
+                                match[3] += "0"
+                            }
+                            let newVal = parseInt(match[1]+match[3])
                             newVal = Math.floor(newVal)
                             if (!isNaN(newVal) && newVal != null) {
                                 return newVal

@@ -28,7 +28,7 @@
         <label> time estimate</label>
       </span>
       <span v-if="$root.show.cost">
-        <input :class="{err: costEstErr}" v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate" @keyup="validate" @keydown.enter="ok">
+        <input :class="{err: costEstErr}" v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate(true)" @keyup="validate" @keydown.enter="ok">
         <label> ({{$u.fmt.currencySymbol(this.project.currencyCode)}})cost estimate</label>
       </span>
       <span v-if="!isCreate && updateTask.id != project.id && updateTask.id != $u.rtr.task()">
@@ -131,7 +131,7 @@
             })
         })
       },
-      validate(){
+      validate(isBlur){
         let isOk = true
         if (this.name.length < 1 || this.name.length > 250) {
           isOk = false
@@ -162,9 +162,12 @@
         if (this.costEstDisplay != "") {
           let parsed = this.$u.parse.cost(this.costEstDisplay)
           if (parsed != null ) {
+            console.log(parsed)
             this.costEst = parsed
             this.costEstErr = false
-            this.costEstDisplay = this.$u.fmt.cost(this.costEst)
+            if (isBlur === true) {
+              this.costEstDisplay = this.$u.fmt.cost(this.costEst)
+            }
           } else {
             this.costEstErr = true
             isOk = false

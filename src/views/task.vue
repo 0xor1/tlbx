@@ -90,7 +90,7 @@
             <input :class="{err: timeIncErr}" v-model="timeIncDisplay" type="text" placeholder="0h 0m" @blur="validate('time')" @keyup="validate('time')" @keydown.enter="submit('time')"/>
           </div>
           <div title="note">
-            <span>note <span :class="{err: timeNote.length > 250, 'note-length': true}">{{250 - timeNote.length}}</span></span><br>
+            <span>note <span :class="{err: timeNote.length > 250, 'note-length': true}">({{250 - timeNote.length}})</span></span><br>
             <input class="note" v-model="timeNote" type="text" placeholder="note" @blur="validate('time')" @keyup="validate('time')" @keydown.enter="submit('time')"/>
           </div>
           <div>
@@ -513,6 +513,9 @@ div.root {
         font-size: 1.7pc;
         font-weight: bold;
         border-bottom: 1px solid #777;
+      }
+      .note-length{
+        font-size: 0.7pc;
       }
       > .create-form {
         > div {
