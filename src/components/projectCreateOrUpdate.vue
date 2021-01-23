@@ -6,7 +6,7 @@
     <div v-else>
       <h1>project {{isCreate? 'create': 'update'}}</h1>
       <span>
-        <input ref="name" v-model="name" placeholder="name" @keydown.enter="ok">
+        <input ref="name" v-model="name" placeholder="name" @keyup="validate" @keydown.enter="ok">
         <label> name</label>
         <p v-if="nameErr.length > 0" class="err">{{nameErr}}</p>
       </span>
@@ -23,11 +23,11 @@
         <label> currency code</label>
       </span>
       <span>
-        <input v-model.number="hoursPerDay" :min="0" :max="24" type="number" placeholder="hours per day" @blur="validate" @keydown.enter="ok">
+        <input v-model.number="hoursPerDay" :min="0" :max="24" type="number" placeholder="hours per day" @blur="validate" @keyup="validate" @keydown.enter="ok">
         <label> hours per day</label>
       </span>
       <span>
-        <input v-model.number="daysPerWeek" :min="0" :max="7" type="number" placeholder="days per week" @blur="validate" @keydown.enter="ok">
+        <input v-model.number="daysPerWeek" :min="0" :max="7" type="number" placeholder="days per week" @blur="validate" @keyup="validate" @keydown.enter="ok">
         <label> days per week</label>
       </span>
       <span class="date">

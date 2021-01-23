@@ -31,7 +31,7 @@
         <table>
           <tr class="header">
             <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name" v-for="(s, index) in sections" :key="index">
-              {{s.name}}
+              {{s.name()}}
             </th>
           </tr>
           <tr class="header">
@@ -94,7 +94,7 @@
             <input class="note" v-model="timeNote" type="text" placeholder="note" @blur="validate('time')" @keydown.enter="submit('time')"/>
           </div>
           <div>
-            <button @click.stop="submitTime">log time</button>
+            <button @click.stop="submitTime">create</button>
           </div>
         </div>
         <table>
@@ -179,7 +179,7 @@
           commentErr: "",
           commonSections: [
             {
-              name: "name",
+              name: () => "name",
               show: () => true,
               cols: [
                 {
@@ -189,7 +189,7 @@
               ]
             },
             {
-              name: "created",
+              name: () => "created",
               show: () => this.$root.show.date,
               cols: [
                 {
@@ -199,7 +199,7 @@
               ]
             },
             {
-              name: "user",
+              name: () => "user",
               show: () => this.$root.show.user,
               cols: [
                 {
@@ -209,7 +209,7 @@
               ]
             },
             {
-              name: "time",
+              name: () => "time",
               show: () => this.$root.show.time,
               cols: [
                 { 
@@ -227,21 +227,21 @@
               ]
             },
             {
-              name: "cost",
+              name: () => `(${this.$u.fmt.currencySymbol(this.project.currencyCode)}) cost`,
               show: () => this.$root.show.cost,
               cols: [
                 {
                   name: "est",
-                  get: (t)=> this.$u.fmt.cost(t.costEst + t.costSubEst, this.project.currencyCode, true)
+                  get: (t)=> this.$u.fmt.cost(t.costEst + t.costSubEst, true)
                 },
                 {
                   name: "inc",
-                  get: (t)=> this.$u.fmt.cost(t.costInc + t.costSubInc, this.project.currencyCode, true)
+                  get: (t)=> this.$u.fmt.cost(t.costInc + t.costSubInc, true)
                 }
               ]
             },
             {
-              name: "file",
+              name: () => "file",
               show: () => this.$root.show.file,
               cols: [
                 {
@@ -255,7 +255,7 @@
               ]
             },
             {
-              name: "task",
+              name: () => "task",
               show: () => this.$root.show.task,
               cols: [
                 {
@@ -289,7 +289,7 @@
             mapi.task.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((t)=>{
               this.task = t
               this.timeEstDisplay = this.$u.fmt.time(this.task.timeEst)
-              this.costEstDisplay = this.$u.fmt.cost(this.task.costEst, this.project.currencyCode)
+              this.costEstDisplay = this.$u.fmt.cost(this.task.costEst)
             })
             mapi.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
               this.children = res.set
@@ -458,7 +458,7 @@
       },
       refreshProjectActivity(force){
         this.timeEstDisplay = this.$u.fmt.time(this.task.timeEst)
-        this.costEstDisplay = this.$u.fmt.cost(this.task.costEst, this.project.currencyCode)    
+        this.costEstDisplay = this.$u.fmt.cost(this.task.costEst)    
         this.$emit("refreshProjectActivity", force)
       }
     },

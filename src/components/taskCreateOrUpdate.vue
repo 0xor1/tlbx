@@ -6,12 +6,12 @@
     <div v-else>
       <h1>task {{isCreate? 'create': 'update'}}</h1>
       <span>
-        <input ref="name" v-model="name" placeholder="name" @keydown.enter="ok">
+        <input ref="name" v-model="name" placeholder="name" @keyup="validate" @keydown.enter="ok">
         <label> name</label>
       </span>
       <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
       <span>
-        <input v-model="description" placeholder="description" @blur="validate" @keydown.enter="ok">
+        <input v-model="description" placeholder="description" @blur="validate" @keyup="validate" @keydown.enter="ok">
         <label> description</label>
       </span>
       <span v-if="descriptionErr.length > 0" class="err">{{descriptionErr}}</span>
@@ -24,12 +24,12 @@
         <label for="parallel"> parallel</label>
       </span>
       <span v-if="$root.show.time">
-        <input v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate" @keydown.enter="ok">
+        <input :class="{err: timeEstErr}" v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate" @keyup="validate" @keydown.enter="ok">
         <label> time estimate</label>
       </span>
       <span v-if="$root.show.cost">
-        <input v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate" @keydown.enter="ok">
-        <label> cost estimate</label>
+        <input :class="{err: costEstErr}" v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate" @keyup="validate" @keydown.enter="ok">
+        <label> ({{$u.fmt.currencySymbol(this.project.currencyCode)}})cost estimate</label>
       </span>
       <span v-if="!isCreate && updateTask.id != project.id && updateTask.id != $u.rtr.task()">
         <button @click.stop.prevent="showMove=!showMove">move</button>
@@ -94,7 +94,9 @@
           user: null,
           isParallel: false,
           timeEst: 0,
+          timeEstErr: false,
           costEst: 0,
+          costEstErr: false,
           timeEstDisplay: "",
           costEstDisplay: "",
           parentId: null,
@@ -122,7 +124,7 @@
               this.costEst = t.costEst
             } 
             this.timeEstDisplay = this.$u.fmt.time(this.timeEst)
-            this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode) 
+            this.costEstDisplay = this.$u.fmt.cost(this.costEst) 
             this.loading = false
             this.$nextTick(()=>{
               this.$refs.name.focus()
@@ -150,16 +152,24 @@
           let parsed = this.$u.parse.time(this.timeEstDisplay)
           if (parsed != null ) {
             this.timeEst = parsed
+            this.timeEstErr = false
+            this.timeEstDisplay = this.$u.fmt.time(this.timeEst)
+          } else {
+            this.timeEstErr = true
+            isOk = false
           }
         } 
-        this.timeEstDisplay = this.$u.fmt.time(this.timeEst)
         if (this.costEstDisplay != "") {
           let parsed = this.$u.parse.cost(this.costEstDisplay)
           if (parsed != null ) {
             this.costEst = parsed
+            this.costEstErr = false
+            this.costEstDisplay = this.$u.fmt.cost(this.costEst)
+          } else {
+            this.costEstErr = true
+            isOk = false
           }
         } 
-        this.costEstDisplay = this.$u.fmt.cost(this.costEst, this.project.currencyCode)
         if (this.prevSibId == "") {
           this.prevSibId = null
         }

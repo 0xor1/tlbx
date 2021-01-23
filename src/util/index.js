@@ -161,8 +161,43 @@ export default {
                     }
                     return res
                 },
-                cost(value, currencyCode, abbreviate) {
-                    let symbol = currencyCode
+                currencySymbol(code){
+                    let symbol = ""
+                    if (code != null) {
+                        // only support symbols for the major currencies
+                        switch(code) {
+                            case "USD":
+                                symbol= '$'
+                                break;
+                            case "EUR":
+                                symbol= '€'
+                                break;
+                            case "CAD":
+                                symbol= 'C$'
+                                break;
+                            case "AUD":
+                                symbol= 'A$'
+                                break;
+                            case "JPY":
+                                symbol= '¥'
+                                break;
+                            case "GBP":
+                                symbol= '£'
+                                break;
+                            case "CNY", "CNH":
+                                symbol= 'CN¥'
+                                break;
+                            case "CHF":
+                                symbol= 'Fr'
+                                break;
+                            case "NZD":
+                                symbol= 'NZ$'
+                                break;
+                        }
+                    }
+                    return symbol
+                },
+                cost(value, abbreviate) {
                     let div = 1
                     let decPlaces = 2
                     let orderSymbol = ""
@@ -220,37 +255,7 @@ export default {
                             orderSymbol = "t"
                         }
                     }
-                    // only support symbols for the major currencies
-                    switch(currencyCode) {
-                        case "USD":
-                            symbol= '$'
-                            break;
-                        case "EUR":
-                            symbol= '€'
-                            break;
-                        case "CAD":
-                            symbol= 'C$'
-                            break;
-                        case "AUD":
-                            symbol= 'A$'
-                            break;
-                        case "JPY":
-                            symbol= '¥'
-                            break;
-                        case "GBP":
-                            symbol= '£'
-                            break;
-                        case "CNY", "CNH":
-                            symbol= 'CN¥'
-                            break;
-                        case "CHF":
-                            symbol= 'Fr'
-                            break;
-                        case "NZD":
-                            symbol= 'NZ$'
-                            break;
-                    }
-                    return symbol + (value/div).toFixed(decPlaces) + orderSymbol
+                    return (value/div).toFixed(decPlaces) + orderSymbol
                 },
                 bytes(size) {
                     let unit = "B"
@@ -308,7 +313,7 @@ export default {
                 cost(str) {
                     if (str != null && str.length > 0) {
                         str = str.trim()
-                        let match = str.match(/[^\d.,]*(\d*)(\.|,)?(\d*)?\D*/)
+                        let match = str.match(/^(\d*)(\.|,)?(\d*)?/)
                         if (match != null && match[0] != null && match[0].length > 0) {
                             let newVal = parseFloat(match[1]+"."+match[3]) * 100
                             newVal = Math.floor(newVal)
