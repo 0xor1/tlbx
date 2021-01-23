@@ -83,15 +83,15 @@
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div title="remaining estimate">
             <span>est</span><br>
-            <input :class="{err: timeEstErr}" v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate('time')" @keydown.enter="submit('time')"/>
+            <input :class="{err: timeEstErr}" v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate('time')" @keyup="validate('time')" @keydown.enter="submit('time')"/>
           </div>
           <div title="incurred">
             <span>inc</span><br>
-            <input :class="{err: timeIncErr}" v-model="timeIncDisplay" type="text" placeholder="0h 0m" @blur="validate('time')" @keydown.enter="submit('time')"/>
+            <input :class="{err: timeIncErr}" v-model="timeIncDisplay" type="text" placeholder="0h 0m" @blur="validate('time')" @keyup="validate('time')" @keydown.enter="submit('time')"/>
           </div>
           <div title="note">
-            <span>note</span><br>
-            <input class="note" v-model="timeNote" type="text" placeholder="note" @blur="validate('time')" @keydown.enter="submit('time')"/>
+            <span>note <span :class="{err: timeNote.length > 250, 'note-length': true}">{{250 - timeNote.length}}</span></span><br>
+            <input class="note" v-model="timeNote" type="text" placeholder="note" @blur="validate('time')" @keyup="validate('time')" @keydown.enter="submit('time')"/>
           </div>
           <div>
             <button @click.stop="submitTime">create</button>
