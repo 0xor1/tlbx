@@ -21,6 +21,10 @@
               {{ me? 'logout': 'login'}}
             </div>
           </div>
+
+          <div title="report a bug" class="bug">
+            <a href="https://github.com/0xor1/trees_client/issues/new?assignees=0xor1&labels=bug&template=bug_report.md&title=%5BBUG%5D" target="_blank"><img src="@/assets/bug.svg"></a>
+          </div>
         </div>
         <div title="menu" @click.stop.prevent="showMenu=!showMenu" class="slide-out-toggle menu-toggle">
           <div></div>
@@ -363,6 +367,18 @@
         &:active{
           background-color: $inputActiveColor
         }
+      }
+    }
+    > .bug {
+      margin: 0;
+      background: transparent;
+      cursor: pointer;
+      position: absolute;
+      bottom: 0;
+      left: 0.5pc;
+      a img{
+        width: 1.5pc;
+        height: 1.5pc;
       }
     }
   }

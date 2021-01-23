@@ -78,34 +78,36 @@
         </table>
         <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
       </div>
-      <div v-if="$root.show.time" class="items times">
-        <div class="heading">time</div>
-        <div v-if="$u.perm.canWrite(pMe)" class="create-form">
-          <div title="remaining estimate">
-            <span>est</span><br>
-            <input :class="{err: timeEstErr}" v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate('time')" @keyup="validate('time')" @keydown.enter="submit('time')"/>
+      <div v-for="(type, index) in ['time', 'cost']" :key="index">
+        <div v-if="$root.show[type]" :class="['items', type+'s']">
+          <div class="heading">{{type}}</div>
+          <div v-if="$u.perm.canWrite(pMe)" class="create-form">
+            <div title="remaining estimate">
+              <span>est</span><br>
+              <input :class="{err: vitems[type].estErr}" v-model="vitems[type].estDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validate(type, true)" @keyup="validate(type)" @keydown.enter="submit(type)"/>
+            </div>
+            <div title="incurred">
+              <span>inc</span><br>
+              <input :class="{err: vitems[type].incErr}" v-model="vitems[type].incDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validate(type, true)" @keyup="validate(type)" @keydown.enter="submit(type)"/>
+            </div>
+            <div title="note">
+              <span>note <span :class="{err: vitems[type].note.length > 250, 'note-length': true}">({{250 - vitems[type].note.length}})</span></span><br>
+              <input :class="{err: vitems[type].note.length > 250, note: true}" v-model="vitems[type].note" type="text" placeholder="note" @blur="validate(type)" @keyup="validate(type)" @keydown.enter="submit(type)"/>
+            </div>
+            <div>
+              <button @click.stop="submit(type)">create</button>
+            </div>
           </div>
-          <div title="incurred">
-            <span>inc</span><br>
-            <input :class="{err: timeIncErr}" v-model="timeIncDisplay" type="text" placeholder="0h 0m" @blur="validate('time')" @keyup="validate('time')" @keydown.enter="submit('time')"/>
-          </div>
-          <div title="note">
-            <span>note <span :class="{err: timeNote.length > 250, 'note-length': true}">({{250 - timeNote.length}})</span></span><br>
-            <input class="note" v-model="timeNote" type="text" placeholder="note" @blur="validate('time')" @keyup="validate('time')" @keydown.enter="submit('time')"/>
-          </div>
-          <div>
-            <button @click.stop="submitTime">create</button>
-          </div>
+          <table>
+            <tr class="header">
+              <th></th>
+            </tr>
+            <tr class="item" v-for="(i, index) in vitems[type].set" :key="index">
+              
+            </tr>
+          </table>
+          <div v-if="vitems[type].more" class=""><button>load more</button></div>
         </div>
-        <table>
-          <tr class="header">
-            <th></th>
-          </tr>
-          <tr class="time" v-for="(t, index) in times" :key="index">
-            
-          </tr>
-        </table>
-        <div v-if="moreTimes" class=""><button>load more</button></div>
       </div>
     </div>
   </div>
@@ -157,24 +159,36 @@
           children: [],
           moreChildren: false,
           loadingMoreChildren: false,
-          times: [],
-          moreTimes: false,
-          costs: [],
-          moreCosts: false,
           files: [],
           moreFiles: false,
           comments: [],
           moreComments: false,
-          timeEstDisplay: "",
-          timeEstErr: false,
-          timeIncDisplay: "",
-          timeIncErr: false,
-          timeNote: "",
-          costEstDisplay: "",
-          costEstErr: false,
-          costIncDisplay: "",
-          costIncErr: false,
-          costNote: "",
+          vitems: {
+            time: {
+              set: [],
+              more: false,
+              estDisplay: "",
+              estErr: false,
+              incDisplay: "",
+              incErr: false,
+              note: "",
+              placeholder: "0h 0m",
+              estLabel: "est",
+              incLabel: "inc"
+            },
+            cost: {
+              set: [],
+              more: false,
+              estDisplay: "",
+              estErr: false,
+              incDisplay: "",
+              incErr: false,
+              note: "",
+              placeholder: "0.00",
+              estLabel: "est",
+              incLabel: "inc"
+            }
+          },
           commentDisplay: "",
           commentErr: "",
           commonSections: [
@@ -296,12 +310,12 @@
               this.moreChildren = res.more
             })
             mapi.vitem.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), this.$u.cnsts.time).then((res)=>{
-              this.times = res.set
-              this.moreTimes = res.more
+              this.vitems.time.set = res.set
+              this.vitems.time.more = res.more
             })
             mapi.vitem.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), this.$u.cnsts.cost).then((res)=>{
-              this.costs = res.set
-              this.moreCosts = res.more
+              this.vitems.cost.set = res.set
+              this.vitems.cost.more = res.more
             })
             mapi.file.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
               this.file = res.set
@@ -419,33 +433,40 @@
           })
         }
       },
-      validate(type){
-        if (this[type+'EstDisplay'] != null && this[type+'EstDisplay'].length > 0) {
-          let parsed = this.$u.parse[type](this[type+'EstDisplay'])
+      validate(type, isBlur){
+        let isOK = true
+        let obj = this.vitems[type]
+        if (obj.estDisplay != null && obj.estDisplay.length > 0) {
+          let parsed = this.$u.parse[type](obj.estDisplay)
           if (parsed == null) {
-            this[type+'EstErr'] = true
-            return false
+            obj.estErr = true
+            isOK = false
           } else {
-            this[type+'EstDisplay'] = this.$u.fmt[type](parsed)
-            this[type+'EstErr'] = false
+            if (isBlur === true) {
+              obj.estDisplay = this.$u.fmt[type](parsed)
+            }
+            obj.estErr = false
           }
         }
-        if (this[type+'IncDisplay'] != null && this[type+'IncDisplay'].length > 0) {
-          let parsed = this.$u.parse[type](this[type+'IncDisplay'])
+        if (obj.incDisplay != null && obj.incDisplay.length > 0) {
+          let parsed = this.$u.parse[type](obj.incDisplay)
           if (parsed == null) {
-            this[type+'IncErr'] = true
-            return false
+            obj.incErr = true
+            isOK = false
           } else {
-            this[type+'IncDisplay'] = this.$u.fmt[type](parsed)
-            this[type+'IncErr'] = false
+            if (isBlur === true) {
+              obj.incDisplay = this.$u.fmt[type](parsed)
+            }
+            obj.incErr = false
           }
         }
-        return this[type+'Note'].length <= 250
+        return isOK && obj.note.length <= 250
       },
       submit(type){
         if (this.validate(type)) {
-          let est = this.$u.parse.time(this[type+'EstDisplay'])
-          let inc = this.$u.parse.time(this[type+'IncDisplay'])
+          let obj = this.vitems[type]
+          let est = this.$u.parse.time(obj.estDisplay)
+          let inc = this.$u.parse.time(obj.incDisplay)
           console.log(est, inc)
         }
       },
@@ -515,7 +536,7 @@ div.root {
         border-bottom: 1px solid #777;
       }
       .note-length{
-        font-size: 0.7pc;
+        font-size: 0.62pc;
       }
       > .create-form {
         > div {

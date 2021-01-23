@@ -24,7 +24,7 @@
         <label for="parallel"> parallel</label>
       </span>
       <span v-if="$root.show.time">
-        <input :class="{err: timeEstErr}" v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate" @keyup="validate" @keydown.enter="ok">
+        <input :class="{err: timeEstErr}" v-model="timeEstDisplay" type="text" placeholder="0h 0m" @blur="validate(true)" @keyup="validate" @keydown.enter="ok">
         <label> time estimate</label>
       </span>
       <span v-if="$root.show.cost">
@@ -153,7 +153,9 @@
           if (parsed != null ) {
             this.timeEst = parsed
             this.timeEstErr = false
-            this.timeEstDisplay = this.$u.fmt.time(this.timeEst)
+            if (isBlur === true) {
+              this.timeEstDisplay = this.$u.fmt.time(this.timeEst)
+            }
           } else {
             this.timeEstErr = true
             isOk = false
@@ -162,7 +164,6 @@
         if (this.costEstDisplay != "") {
           let parsed = this.$u.parse.cost(this.costEstDisplay)
           if (parsed != null ) {
-            console.log(parsed)
             this.costEst = parsed
             this.costEstErr = false
             if (isBlur === true) {
