@@ -23,7 +23,7 @@
           </div>
 
           <div title="report a bug" class="bug">
-            <a href="https://github.com/0xor1/trees_client/issues/new?assignees=0xor1&labels=bug&template=bug_report.md&title=%5BBUG%5D" target="_blank"><img src="@/assets/bug.svg"></a>
+            <a href="https://github.com/0xor1/trees_client/issues/new?assignees=0xor1&labels=bug&template=bug_report.md" target="_blank"><img src="@/assets/bug.svg"></a>
           </div>
         </div>
         <div title="menu" @click.stop.prevent="showMenu=!showMenu" class="slide-out-toggle menu-toggle">
