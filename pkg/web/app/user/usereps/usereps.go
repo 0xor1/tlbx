@@ -48,7 +48,7 @@ func New(
 		{
 			Description:  "register a new account (requires email link)",
 			Path:         (&user.Register{}).Path(),
-			Timeout:      500,
+			Timeout:      1000,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
@@ -285,7 +285,7 @@ func New(
 		{
 			Description:  "reset password (requires email link)",
 			Path:         (&user.ResetPwd{}).Path(),
-			Timeout:      500,
+			Timeout:      1000,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
@@ -327,7 +327,7 @@ func New(
 		{
 			Description:  "set password",
 			Path:         (&user.SetPwd{}).Path(),
-			Timeout:      500,
+			Timeout:      1000,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
@@ -359,7 +359,7 @@ func New(
 		{
 			Description:  "delete account",
 			Path:         (&user.Delete{}).Path(),
-			Timeout:      500,
+			Timeout:      1000,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
@@ -393,7 +393,7 @@ func New(
 		{
 			Description:  "login",
 			Path:         (&user.Login{}).Path(),
-			Timeout:      500,
+			Timeout:      1000,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
