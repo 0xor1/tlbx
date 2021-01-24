@@ -635,6 +635,7 @@
         }).then((t)=>{
           this.task = t
           obj.set.splice(index, 1)
+          this.refreshProjectActivity(true)
         }).finally(()=>{
           obj.loading = false
         })
