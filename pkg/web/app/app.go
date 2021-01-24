@@ -159,7 +159,6 @@ func Run(configs ...func(*Config)) {
 			}
 		}()
 		// set common headers
-		tlbx.resp.Header().Set("Cache-Control", "no-cache, no-store")
 		tlbx.resp.Header().Set("X-Version", c.Version)
 		// check method
 		method := tlbx.req.Method
@@ -177,12 +176,14 @@ func Run(configs ...func(*Config)) {
 		// serve static file
 		if method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefixSegment) {
 			// set common headers
+			tlbx.resp.Header().Set("Cache-Control", "max-age=3600")
 			tlbx.resp.Header().Set("X-Frame-Options", "DENY")
 			tlbx.resp.Header().Set("X-XSS-Protection", "1; mode=block")
 			tlbx.resp.Header().Set("Content-Security-Policy", csps)
 			fileServer.ServeHTTP(tlbx.resp, tlbx.req)
 			return
 		}
+		tlbx.resp.Header().Set("Cache-Control", "no-cache, no-store")
 		// lower path now we have passed static file server
 		tlbx.req.URL.Path = lPath
 		// endpoint docs
