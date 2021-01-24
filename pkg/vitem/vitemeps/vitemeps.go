@@ -157,7 +157,9 @@ var (
 				treeUpdate := false
 				var diff uint64
 				var sign string
+				isChange := false
 				if args.Inc != nil && args.Inc.V != t.Inc {
+					isChange = true
 					if args.Inc.V > t.Inc {
 						diff = args.Inc.V - t.Inc
 						sign = "+"
@@ -169,7 +171,11 @@ var (
 					treeUpdate = true
 				}
 				if args.Note != nil && args.Note.V != t.Note {
+					isChange = true
 					t.Note = args.Note.V
+				}
+				if !isChange {
+					return nil
 				}
 				_, err := tx.Exec(`UPDATE vitems SET inc=?, note=? WHERE host=? AND project=? AND task=? AND id=? AND type=? `, t.Inc, t.Note, args.Host, args.Project, t.Task, t.ID, t.Type)
 				PanicOn(err)
