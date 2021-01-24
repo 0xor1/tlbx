@@ -106,13 +106,21 @@
               <th>note</th>
             </tr>
             <tr class="item" v-for="(i, index) in vitems[type].set" :key="index">
-              <td>{{$u.fmt[type](i.inc)}}</td>
+              <td v-if="vitems[type].updateIndex != index">{{$u.fmt[type](i.inc)}}</td>
+              <td v-else><input :class="{err: vitems[type].updateIncErr}" v-model="vitems[type].updateIncDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
               <td v-if="$root.show.date">{{$u.fmt.date(i.createdOn)}}</td>
               <td v-if="$root.show.user"><user :userId="i.createdBy"></user></td>
-              <td>{{i.note}}</td>
+              <td v-if="vitems[type].updateIndex != index" class="note">{{i.note}}</td>
+              <td v-else><input :class="{err: vitems[type].updateNote > 250}" v-model="vitems[type].updateNote" type="text" placeholder="note" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
+              <td v-if="canUpdateVitem(i) && vitems[type].updateIndex != index" class="action" @click.stop="showVitemUpdate(i, index)" title="update">
+                <img src="@/assets/edit.svg">
+              </td>
+              <td v-if="canUpdateVitem(i) && vitems[type].updateIndex != index" class="action" @click.stop="trashVitem(i, index)" title="delete">
+                <img src="@/assets/trash.svg">
+              </td>
             </tr>
           </table>
-          <div v-if="vitems[type].more" class=""><button>load more</button></div>
+          <div v-if="vitems[type].more" class=""><button @click.stop.prevent="loadMoreVitems(type)">load more</button></div>
         </div>
       </div>
     </div>
@@ -179,7 +187,11 @@
               incErr: false,
               note: "",
               placeholder: "0h 0m",
-              creating: false
+              loading: false,
+              updateIndex: -1,
+              updateIncDisplay: "",
+              updateIncErr: false,
+              updateNote: ""
             },
             cost: {
               set: [],
@@ -190,7 +202,11 @@
               incErr: false,
               note: "",
               placeholder: "0.00",
-              creating: false
+              loading: false,
+              updateIndex: -1,
+              updateIncDisplay: "",
+              updateIncErr: false,
+              updateNote: ""
             }
           },
           commentDisplay: "",
@@ -484,7 +500,7 @@
       submit(type){
         if (this.validate(type)) {
           let obj = this.vitems[type]
-          if (obj.creating) {
+          if (obj.loading) {
             return
           }
           let est = this.$u.parse[type](obj.estDisplay)
@@ -498,12 +514,12 @@
               id: this.$u.rtr.task(),
             }
             args[type+'Est'] = {v:est}
-            obj.creating = true
+            obj.loading = true
             this.$api.task.update(args).then((res)=>{
               this.task = res.task
               this.refreshProjectActivity(true)
             }).finally(()=>{
-              obj.creating = false
+              obj.loading = false
             })
           } else if (inc != null && inc != 0) {
             let args = {
@@ -517,7 +533,7 @@
             if (est != null && est != this.task[type+'Est']) {
               args.est = est
             }
-            obj.creating = true
+            obj.loading = true
             this.$api.vitem.create(args).then((res)=>{
               this.task = res.task
               obj.inc = 0
@@ -526,10 +542,121 @@
               obj.set.splice(0, 0, res.item)
               this.refreshProjectActivity(true)
             }).finally(()=>{
-              obj.creating = false
+              obj.loading = false
             })
           }
         }
+      },
+      validateUpdate(type, isBlur){
+        let isOK = true
+        let obj = this.vitems[type]
+        if (obj.updateIncDisplay != null && obj.updateIncDisplay.length > 0) {
+          let parsed = this.$u.parse[type](obj.updateIncDisplay)
+          if (parsed == null) {
+            obj.updateIncErr = true
+            isOK = false
+          } else {
+            if (isBlur === true) {
+              obj.updateIncDisplay = this.$u.fmt[type](parsed)
+            }
+            obj.updateIncErr = false
+          }
+        }else {
+          obj.updateIncErr = false
+        }
+        obj.updateNote = obj.updateNote.substring(0, 250)
+        return isOK
+      },
+      submitUpdate(type){
+        if (this.validateUpdate(type)) {
+          let obj = this.vitems[type]
+          let curItem = obj.set[obj.updateIndex]
+          if (obj.loading) {
+            return
+          }
+          let inc = this.$u.parse[type](obj.updateIncDisplay)
+          if (inc != null && inc != 0 && 
+            (obj.updateNote != curItem.note ||
+            inc != curItem.inc)) {
+            let args = {
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project(),
+              task: this.$u.rtr.task(),
+              type: type,
+              id: curItem.id,
+              inc: {v:inc},
+              note: {v:obj.updateNote}
+            }
+            obj.loading = true
+            this.$api.vitem.update(args).then((res)=>{
+              this.task = res.task
+              obj.set[obj.updateIndex] = res.item
+              this.cancelUpdate(type)
+              this.refreshProjectActivity(true)
+            }).finally(()=>{
+              obj.loading = false
+            })
+          } else {
+            this.cancelUpdate(type)
+          }
+        }
+      },
+      cancelUpdate(type){
+        let obj = this.vitems[type]
+        obj.updateIndex = -1
+        obj.updateIncDisplay = ""
+        obj.updateIncErr = false
+        obj.updateNote = ""
+      },
+      canUpdateVitem(i){
+        return this.$u.perm.canAdmin(this.pMe) ||
+          (this.$u.perm.canWrite(this.pMe) && 
+          i.createdBy == this.pMe.id &&
+          (Date.now() - (new Date(i.createdOn))) < 3600000 )
+      },
+      showVitemUpdate(i, index) {
+        this.vitems[i.type].updateIndex = index
+        this.vitems[i.type].updateIncDisplay = this.$u.fmt[i.type](i.inc)
+        this.vitems[i.type].updateIncErr = false
+        this.vitems[i.type].updateNote = i.note
+      },
+      trashVitem(i, index) {
+        let obj = this.vitems[i.type]
+        if (obj.loading) {
+          return
+        }
+        obj.loading = true
+        this.$api.vitem.delete({
+          host: this.$u.rtr.host(),
+          project: this.$u.rtr.project(),
+          task: this.$u.rtr.task(),
+          type: i.type,
+          id: i.id
+        }).then((t)=>{
+          this.task = t
+          obj.set.splice(index, 1)
+        }).finally(()=>{
+          obj.loading = false
+        })
+      },
+      loadMoreVitems(type) {
+        let obj = this.vitems[type]
+        if (obj.loading) {
+          return
+        }
+        obj.loading = true
+        this.$api.vitem.get({
+          host: this.$u.rtr.host(),
+          project: this.$u.rtr.project(),
+          task: this.$u.rtr.task(),
+          type: type,
+          after: obj.set[obj.set.length - 1].id
+        }).then((res)=>{
+          obj.set = obj.set.concat(res.set)
+          obj.more = res.more
+        }).finally(()=>{
+          obj.loading = false
+        })
       },
       descriptionTitle(t) {
         let res = t.name
@@ -566,16 +693,25 @@ div.root {
     table {
       margin: 1pc 0 1pc 0;
       border-collapse: collapse;
-      th, td {
-        &:not(.action) {
-          text-align: center;
-          min-width: 100px;
-          &.name{
-            min-width: 18pc;
-          }
+      tr{
+        &:hover td img{
+          visibility: initial;
         }
-        img{
-          background-color: transparent;
+        th, td {
+          &.action {
+            cursor: pointer;
+          }
+          &:not(.action) {
+            text-align: center;
+            min-width: 100px;
+            &.name{
+              min-width: 18pc;
+            }
+          }
+          img{
+            background-color: transparent;
+            visibility: hidden;
+          }
         }
       }
       tr.this-task {
@@ -601,6 +737,9 @@ div.root {
       }
       .medium{
         font-size: 1pc;
+      }
+      td.note{
+        text-align: left;
       }
       > .create-form {
         > div {
