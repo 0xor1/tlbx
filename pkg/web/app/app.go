@@ -176,7 +176,7 @@ func Run(configs ...func(*Config)) {
 		// serve static file
 		if method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefixSegment) {
 			// set common headers
-			tlbx.resp.Header().Set("Cache-Control", "max-age=3600")
+			tlbx.resp.Header().Set("Cache-Control", "public, max-age=3600, immutable")
 			tlbx.resp.Header().Set("X-Frame-Options", "DENY")
 			tlbx.resp.Header().Set("X-XSS-Protection", "1; mode=block")
 			tlbx.resp.Header().Set("Content-Security-Policy", csps)
