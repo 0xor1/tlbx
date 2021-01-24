@@ -388,6 +388,9 @@
         }
       },
       canUpdate(t){
+        if (this.pMe == null) {
+          return false
+        }
         if (this.$u.rtr.host() == this.pMe.id || 
           (t.parent != null && this.$u.perm.canWrite(this.pMe))) {
           // if I'm the host I can edit anything,
@@ -401,6 +404,9 @@
           // can't delete a task that would 
           // result in deleting more than 100 
           // sub tasks in one go.
+          return false
+        }
+        if (this.pMe == null) {
           return false
         }
         if (this.$u.rtr.host() == this.pMe.id || 
@@ -609,6 +615,9 @@
         obj.updateNote = ""
       },
       canUpdateVitem(i){
+        if (this.pMe == null) {
+          return false
+        }
         return this.$u.perm.canAdmin(this.pMe) ||
           (this.$u.perm.canWrite(this.pMe) && 
           i.createdBy == this.pMe.id &&
