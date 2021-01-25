@@ -202,7 +202,7 @@ var (
 				}
 				t := GetOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
-				var newParent, newPrevSib, currentParent, currentPrevSib *task.Task
+				var newParent, newPrevSib, oldParent, oldPrevSib *task.Task
 				if args.Parent != nil {
 					if !args.Parent.V.Equal(*t.Parent) {
 						var newNextSib *ID
@@ -225,26 +225,26 @@ var (
 							newNextSib = newParent.FirstChild
 							newParent.FirstChild = &t.ID
 						}
-						// need to reconnect currentPrevSib with current nextSib
+						// need to reconnect oldPrevSib with oldNextSib
 						if newParent.NextSib != nil && newParent.NextSib.Equal(args.ID) {
-							// !!!SPECIAL CASE!!! newParent may be the currentPrevSib
-							currentPrevSib = newParent
+							// !!!SPECIAL CASE!!! oldPrevSib may be newParent
+							oldPrevSib = newParent
 						} else {
-							currentPrevSib = getPrevSib(tx, args.Host, args.Project, args.ID)
+							oldPrevSib = getPrevSib(tx, args.Host, args.Project, args.ID)
 						}
-						// need to get current parent for ancestor value updates
+						// need to get old parent for ancestor value updates
 						if newPrevSib != nil && newPrevSib.ID.Equal(*t.Parent) {
-							// !!!SPECIAL CASE!!! currentParent may be the newPrevSib
-							currentParent = newPrevSib
+							// !!!SPECIAL CASE!!! oldParent may be the newPrevSib
+							oldParent = newPrevSib
 						} else {
-							currentParent = GetOne(tx, args.Host, args.Project, *t.Parent)
+							oldParent = GetOne(tx, args.Host, args.Project, *t.Parent)
 						}
-						app.ReturnIf(currentParent == nil, http.StatusNotFound, "currentParent not found")
-						if currentPrevSib != nil {
-							currentPrevSib.NextSib = t.NextSib
+						app.ReturnIf(oldParent == nil, http.StatusNotFound, "oldParent not found")
+						if oldPrevSib != nil {
+							oldPrevSib.NextSib = t.NextSib
 						} else {
-							// need to update currentParent firstChild as t is it
-							currentParent.FirstChild = t.NextSib
+							// need to update oldParent firstChild as t is it
+							oldParent.FirstChild = t.NextSib
 						}
 						t.Parent = &newParent.ID
 						t.NextSib = newNextSib
@@ -257,24 +257,24 @@ var (
 				}
 				if args.Parent == nil && args.PrevSib != nil {
 					// we now know we are doing a purely horizontal move, i.e. not changing parent node
-					// get current prevSib
-					currentPrevSib = getPrevSib(tx, args.Host, args.Project, args.ID)
-					if !((currentPrevSib == nil && args.PrevSib.V == nil) ||
-						(currentPrevSib != nil && args.PrevSib.V != nil &&
-							currentPrevSib.ID.Equal(*args.PrevSib.V))) {
+					// get oldPrevSib
+					oldPrevSib = getPrevSib(tx, args.Host, args.Project, args.ID)
+					if !((oldPrevSib == nil && args.PrevSib.V == nil) ||
+						(oldPrevSib != nil && args.PrevSib.V != nil &&
+							oldPrevSib.ID.Equal(*args.PrevSib.V))) {
 						var newNextSib *ID
 						// here we know that an actual change is being attempted
-						currentParent = GetOne(tx, args.Host, args.Project, *t.Parent)
-						PanicIf(currentParent == nil, "currentParent not found")
+						oldParent = GetOne(tx, args.Host, args.Project, *t.Parent)
+						PanicIf(oldParent == nil, "oldParent not found")
 						if args.PrevSib.V != nil {
 							// moving to a non first child position
-							if currentParent.FirstChild.Equal(t.ID) {
-								//moving the current first child away so need to repoint parent.firstChild
-								currentParent.FirstChild = t.NextSib
+							if oldParent.FirstChild.Equal(t.ID) {
+								//moving the old first child away so need to repoint oldParent.firstChild
+								oldParent.FirstChild = t.NextSib
 							} else {
-								// not moving first child therefor nil out currentParent to
+								// not moving first child therefor nil out oldParent to
 								// save an update query
-								currentParent = nil
+								oldParent = nil
 							}
 							app.BadReqIf(args.PrevSib.V.Equal(args.ID), "sib loop detected, invalid prevSib value")
 							newPrevSib = GetOne(tx, args.Host, args.Project, *args.PrevSib.V)
@@ -284,18 +284,18 @@ var (
 							newPrevSib.NextSib = &t.ID
 						} else {
 							// moving to the first child position
-							newNextSib = currentParent.FirstChild
-							currentParent.FirstChild = &t.ID
+							newNextSib = oldParent.FirstChild
+							oldParent.FirstChild = &t.ID
 						}
-						// need to reconnect currentPrevSib with current nextSib
-						if currentPrevSib != nil {
-							currentPrevSib.NextSib = t.NextSib
+						// need to reconnect oldPrevSib with oldNextSib
+						if oldPrevSib != nil {
+							oldPrevSib.NextSib = t.NextSib
 						}
 						t.NextSib = newNextSib
 						treeUpdateRequired = true
 					} else {
-						// here we know no change is being made so nil out currentPrevSib to save a sql update call
-						currentPrevSib = nil
+						// here we know no change is being made so nil out oldPrevSib to save a sql update call
+						oldPrevSib = nil
 						// and nil this out to remove redundant data from activity entry
 						args.PrevSib = nil
 					}
@@ -342,7 +342,7 @@ var (
 					for _, t := range ts {
 						if t != nil {
 							idStr := t.ID.String()
-							// this check is for the one special case that newPrevSib may also be the currentParent
+							// this check is for the one special case that newPrevSib may also be the oldParent
 							// thus saving a duplicated update query
 							if !updated[idStr] {
 								updated[idStr] = true
@@ -353,13 +353,13 @@ var (
 					}
 				}
 				if simpleUpdateRequired || treeUpdateRequired {
-					update(t, currentParent, currentPrevSib, newParent, newPrevSib)
+					update(t, oldParent, oldPrevSib, newParent, newPrevSib)
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.ID, args.ID, cnsts.TypeTask, cnsts.ActionUpdated, &t.Name, args)
 				}
 				if treeUpdateRequired {
-					if currentParent != nil {
+					if oldParent != nil {
 						// if we moved parent we must recalculate aggregate values on the old parents ancestral chain
-						epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, currentParent.ID)
+						epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, oldParent.ID)
 					}
 					updatedTaskIDs := epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, t.ID)
 					if len(updatedTaskIDs) == 0 && t.Parent != nil {
@@ -380,7 +380,7 @@ var (
 				}
 				if args.Parent != nil {
 					// if the task moved parent get both old and new parents for response
-					res.OldParent = GetOne(tx, args.Host, args.Project, currentParent.ID)
+					res.OldParent = GetOne(tx, args.Host, args.Project, oldParent.ID)
 					res.NewParent = GetOne(tx, args.Host, args.Project, args.Parent.V)
 				} else if t.Parent != nil {
 					// task didnt move parent, and it's not the root project node
