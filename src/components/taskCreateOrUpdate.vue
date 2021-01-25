@@ -250,8 +250,8 @@
                   }
                 } else {
                   this.children[this.index] = res.task
-                  if (res.parent != null) {
-                    for(const [key, value] of Object.entries(res.parent)) {
+                  if (res.oldParent != null) {
+                    for(const [key, value] of Object.entries(res.oldParent)) {
                       this.task[key] = value
                     }
                   }
