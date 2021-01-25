@@ -165,7 +165,8 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 	a.NotNil(uRes)
 	a.True(t1p1.ID.Equal(uRes.Task.ID))
-	a.True(t2p0.ID.Equal(uRes.Parent.ID))
+	a.True(p.ID.Equal(uRes.OldParent.ID))
+	a.True(t2p0.ID.Equal(uRes.NewParent.ID))
 
 	tp := (&task.Update{
 		Host:       r.Ali().ID(),
@@ -212,6 +213,42 @@ func Everything(t *testing.T) {
 		PrevSib: &field.IDPtr{V: ptr.ID(t1p1.ID)},
 	}).MustDo(ac).Task
 	a.NotNil(t4p0)
+
+	// create new sub tree to test move special case
+	t5p0 := (&task.Create{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Parent:  t4p0.ID,
+		Name:    "5.0",
+	}).MustDo(ac).Task
+
+	t6p0 := (&task.Create{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Parent:  t5p0.ID,
+		Name:    "6.0",
+	}).MustDo(ac).Task
+
+	t6p1 := (&task.Create{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Parent:  t5p0.ID,
+		PrevSib: ptr.ID(t6p0.ID),
+		Name:    "6.1",
+	}).MustDo(ac).Task
+
+	//now move 6.1 under 6.0
+	uRes = (&task.Update{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      t6p1.ID,
+		Parent:  &field.ID{V: t6p0.ID},
+	}).MustDo(ac)
+	a.True(uRes.OldParent.ID.Equal(t5p0.ID))
+	a.True(uRes.NewParent.ID.Equal(t6p0.ID))
+	a.True(uRes.NewParent.NextSib == nil)
+	a.True(uRes.NewParent.FirstChild.Equal(uRes.Task.ID))
+	a.True(uRes.Task.ID.Equal(t6p1.ID))
 
 	t4p0 = (&task.Update{
 		Host:    r.Ali().ID(),

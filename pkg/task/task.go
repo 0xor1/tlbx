@@ -36,6 +36,11 @@ type Task struct {
 	IsParallel  bool      `json:"isParallel"`
 }
 
+type CreateRes struct {
+	Parent *Task `json:"parent,omitempty"`
+	Task   *Task `json:"task"`
+}
+
 type Create struct {
 	Host        ID     `json:"host"`
 	Project     ID     `json:"project"`
@@ -53,13 +58,13 @@ func (_ *Create) Path() string {
 	return "/task/create"
 }
 
-func (a *Create) Do(c *app.Client) (*UpdateRes, error) {
-	res := &UpdateRes{}
+func (a *Create) Do(c *app.Client) (*CreateRes, error) {
+	res := &CreateRes{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Create) MustDo(c *app.Client) *UpdateRes {
+func (a *Create) MustDo(c *app.Client) *CreateRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -80,8 +85,9 @@ type Update struct {
 }
 
 type UpdateRes struct {
-	Parent *Task `json:"parent"`
-	Task   *Task `json:"task"`
+	OldParent *Task `json:"oldParent,omitempty"`
+	NewParent *Task `json:"newParent,omitempty"`
+	Task      *Task `json:"task"`
 }
 
 func (_ *Update) Path() string {

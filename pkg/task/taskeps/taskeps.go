@@ -45,7 +45,7 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return &task.UpdateRes{
+				return &task.CreateRes{
 					Parent: ExampleTask,
 					Task:   ExampleTask,
 				}
@@ -128,7 +128,7 @@ var (
 				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Parent)
 				p := GetOne(tx, args.Host, args.Project, *t.Parent)
 				tx.Commit()
-				return &task.UpdateRes{
+				return &task.CreateRes{
 					Parent: p,
 					Task:   t,
 				}
@@ -160,8 +160,9 @@ var (
 			},
 			GetExampleResponse: func() interface{} {
 				return &task.UpdateRes{
-					Parent: ExampleTask,
-					Task:   ExampleTask,
+					OldParent: ExampleTask,
+					NewParent: ExampleTask,
+					Task:      ExampleTask,
 				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
@@ -225,10 +226,15 @@ var (
 							newParent.FirstChild = &t.ID
 						}
 						// need to reconnect currentPrevSib with current nextSib
-						currentPrevSib = getPrevSib(tx, args.Host, args.Project, args.ID)
+						if newParent.NextSib != nil && newParent.NextSib.Equal(args.ID) {
+							// !!!SPECIAL CASE!!! newParent may be the currentPrevSib
+							currentPrevSib = newParent
+						} else {
+							currentPrevSib = getPrevSib(tx, args.Host, args.Project, args.ID)
+						}
 						// need to get current parent for ancestor value updates
-						// !!!SPECIAL CASE!! currentParent may be the newPrevSib
 						if newPrevSib != nil && newPrevSib.ID.Equal(*t.Parent) {
+							// !!!SPECIAL CASE!!! currentParent may be the newPrevSib
 							currentParent = newPrevSib
 						} else {
 							currentParent = GetOne(tx, args.Host, args.Project, *t.Parent)
@@ -369,15 +375,19 @@ var (
 				if nameUpdated {
 					epsutil.ActivityItemRename(tx, args.Host, args.Project, args.ID, t.Name, true)
 				}
-				var p *task.Task
-				if t.Parent != nil {
-					p = GetOne(tx, args.Host, args.Project, *t.Parent)
+				res := &task.UpdateRes{
+					Task: t,
+				}
+				if args.Parent != nil {
+					// if the task moved parent get both old and new parents for response
+					res.OldParent = GetOne(tx, args.Host, args.Project, currentParent.ID)
+					res.NewParent = GetOne(tx, args.Host, args.Project, args.Parent.V)
+				} else if t.Parent != nil {
+					// task didnt move parent, and it's not the root project node
+					res.OldParent = GetOne(tx, args.Host, args.Project, *t.Parent)
 				}
 				tx.Commit()
-				return &task.UpdateRes{
-					Parent: p,
-					Task:   t,
-				}
+				return res
 			},
 		},
 		{
