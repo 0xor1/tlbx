@@ -27,7 +27,7 @@ var (
 		{
 			Description:  "Put a file",
 			Path:         (&file.Put{}).Path(),
-			Timeout:      500,
+			Timeout:      300000, // 5 mins
 			MaxBodyBytes: 5 * app.GB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
@@ -116,7 +116,7 @@ var (
 		{
 			Description:  "get file content",
 			Path:         (&file.GetContent{}).Path(),
-			Timeout:      0,
+			Timeout:      30000, // 5 mins
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
