@@ -328,6 +328,10 @@
               this.task = t
               this.vitems.time.estDisplay = this.$u.fmt.time(this.task.timeEst)
               this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)
+            }).catch((err)=>{
+              if (err.status == 404) {
+                this.$u.rtr.goto('/notfound')
+              }
             })
             mapi.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
               this.children = res.set

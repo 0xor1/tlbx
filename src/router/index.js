@@ -7,28 +7,10 @@ import login from '../views/login.vue'
 import projects from '../views/projects.vue'
 import projectUser from '../views/projectUser.vue'
 import task from '../views/task.vue'
+import notfound from '../views/notfound.vue'
 import api from '@/api'
 
 vue.use(vueRouter)
-
-// if session not authed redirect to login
-// const notAuthedCheck = (to, from, next)=>{
-//   let me = null
-//   api.user.me().then((res)=>{
-//     me = res
-//   }).finally(()=>{
-//     if (me != null) {
-//       next()
-//     } else {
-//       if (to.name != 'login' && 
-//         to.name != 'register') {
-//         next('/login')
-//       } else {
-//         next()
-//       }
-//     }
-//   })
-// }
 
 // if session is authed and going to login or register
 // redirect to my projects
@@ -82,6 +64,11 @@ const routes = [
     path: '/host/:host/project/:project/task/:task',
     name: 'task',
     component: task
+  },
+  {
+    path: '/notfound',
+    name: 'notfound',
+    component: notfound
   },
   {
     path: '*',

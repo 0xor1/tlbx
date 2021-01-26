@@ -230,6 +230,10 @@
           let mapi = this.$api.newMDoApi()
           mapi.user.one(this.host).then((user)=>{
             this.user = user
+          }).catch((err)=>{
+            if (err.status == 404) {
+              this.$u.rtr.goto('/notfound')
+            }
           })
           mapi.project.get({host: this.host}).then((res) => {
             for (let i = 0; i < res.set.length; i++) {
