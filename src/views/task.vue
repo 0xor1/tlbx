@@ -676,8 +676,10 @@
         return res
       },
       refreshProjectActivity(force){
-        this.vitems.time.estDisplay = this.$u.fmt.time(this.task.timeEst)
-        this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)    
+        if (this.task != null) {
+          this.vitems.time.estDisplay = this.$u.fmt.time(this.task.timeEst)
+          this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)    
+        }
         this.$emit("refreshProjectActivity", force)
       }
     },
