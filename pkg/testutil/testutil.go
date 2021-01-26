@@ -1,14 +1,8 @@
 package testutil
 
 import (
-	"bytes"
-	"io/ioutil"
-	"net/http"
-
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
-	"github.com/0xor1/trees/pkg/file"
 	"github.com/0xor1/trees/pkg/task"
 	"github.com/0xor1/trees/pkg/task/taskeps"
 )
@@ -77,54 +71,4 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 	println("fss: fileSubSize")
 	println()
 	print(tree[project.String()], nil)
-}
-
-func MustUploadFile(client *app.Client, host, project, task ID, name, mimeType string, content []byte) *file.File {
-	ppur := (&file.GetPresignedPutUrl{
-		Host:     host,
-		Project:  project,
-		Task:     task,
-		Size:     uint64(len(content)),
-		Name:     name,
-		MimeType: mimeType,
-	}).MustDo(client)
-	req, err := http.NewRequest(http.MethodPut, ppur.URL, bytes.NewBuffer(content))
-	PanicOn(err)
-	req.Header.Add("X-Amz-Acl", "private")
-	req.Header.Add("Content-Length", Strf(`%d`, len(content)))
-	req.Header.Add("Content-Type", mimeType)
-	req.Header.Add("Content-Disposition", Strf("attachment; filename=%s", name))
-	req.Header.Add("Host", req.Host)
-	resp, err := http.DefaultClient.Do(req)
-	PanicOn(err)
-	PanicOn(resp.Body.Close())
-	PanicIf(resp.StatusCode != 200, "resp.StatusCode - %d", resp.StatusCode)
-	f := (&file.Finalize{
-		Host:    host,
-		Project: project,
-		Task:    task,
-		ID:      ppur.ID,
-	}).MustDo(client)
-	PanicIf(!f.ID.Equal(ppur.ID), "file id unexpected")
-	return f
-}
-
-func MustDownloadFile(client *app.Client, host, project, task, id ID) []byte {
-	pgur := (&file.GetPresignedGetUrl{
-		Host:       host,
-		Project:    project,
-		Task:       task,
-		ID:         id,
-		IsDownload: true,
-	}).MustDo(client)
-	req, err := http.NewRequest(http.MethodGet, pgur, nil)
-	PanicOn(err)
-	req.Header.Add("Host", req.Host)
-	resp, err := http.DefaultClient.Do(req)
-	PanicOn(err)
-	defer resp.Body.Close()
-	PanicIf(resp.StatusCode != 200, "resp.StatusCode - %d", resp.StatusCode)
-	bs, err := ioutil.ReadAll(resp.Body)
-	PanicOn(err)
-	return bs
 }

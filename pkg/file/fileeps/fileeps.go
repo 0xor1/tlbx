@@ -2,6 +2,7 @@ package fileeps
 
 import (
 	"bytes"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -18,121 +19,111 @@ import (
 	"github.com/0xor1/trees/pkg/cnsts"
 	"github.com/0xor1/trees/pkg/epsutil"
 	"github.com/0xor1/trees/pkg/file"
+	"github.com/0xor1/trees/pkg/task/taskeps"
 )
 
 var (
 	Eps = []*app.Endpoint{
 		{
-			Description:  "Get a presigned put url to upload a new file",
-			Path:         (&file.GetPresignedPutUrl{}).Path(),
+			Description:  "Put a file",
+			Path:         (&file.Put{}).Path(),
 			Timeout:      500,
-			MaxBodyBytes: app.KB,
+			MaxBodyBytes: 5 * app.GB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &file.GetPresignedPutUrl{}
-			},
-			GetExampleArgs: func() interface{} {
-				return &file.GetPresignedPutUrl{
-					Host:     app.ExampleID(),
-					Project:  app.ExampleID(),
-					Task:     app.ExampleID(),
-					Name:     "my_cool_file.pdf",
-					MimeType: "application/pdf",
-					Size:     100,
+				return &app.UpStream{
+					Args: &file.PutArgs{},
 				}
 			},
+			GetExampleArgs: func() interface{} {
+				res := &app.UpStream{}
+				res.Name = "my_cool_file.pdf"
+				res.Size = 100
+				res.Type = "application/pdf"
+				return res
+			},
 			GetExampleResponse: func() interface{} {
-				return &file.GetPresignedPutUrlRes{
-					URL: "https://minio.com/put/your/file/here",
-					ID:  app.ExampleID(),
+				return &file.PutRes{
+					Task: taskeps.ExampleTask,
+					File: exampleFile,
 				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*file.GetPresignedPutUrl)
+				args := a.(*app.UpStream)
+				defer args.Content.Close()
 				me := me.Get(tlbx)
-				app.ReturnIf(args.Size == 0, http.StatusBadRequest, "size must be between 1 and 1440")
+				innerArgs := args.Args.(*file.PutArgs)
+				app.BadReqIf(innerArgs.Host.IsZero() || innerArgs.Project.IsZero() || innerArgs.Task.IsZero(), "Content-Args header must be set")
+				app.ReturnIf(args.Size > maxFileSize, http.StatusBadRequest, "max file size is %d", maxFileSize)
 				args.Name = StrTrimWS(args.Name)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
-				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
-				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, innerArgs.Host, innerArgs.Project, cnsts.RoleWriter)
 				f := &file.File{
-					Task:      args.Task,
+					Task:      innerArgs.Task,
 					ID:        tlbx.NewID(),
 					CreatedBy: me,
 					CreatedOn: NowMilli(),
-					Size:      args.Size,
-					MimeType:  args.MimeType,
+					Size:      uint64(args.Size),
+					Type:      args.Type,
 					Name:      args.Name,
 				}
-				// insert new file NOT finalized
-				_, err := tx.Exec(`INSERT INTO files (host, project, task, isFinalized, id, name, createdBy, createdOn, size, mimeType) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, f.ID, f.Name, f.CreatedBy, f.CreatedOn, f.Size, f.MimeType)
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
+				// insert new file
+				_, err := tx.Exec(`INSERT INTO files (host, project, task, id, name, createdBy, createdOn, size, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID, f.Name, f.CreatedBy, f.CreatedOn, f.Size, f.Type)
 				PanicOn(err)
-				res := &file.GetPresignedPutUrlRes{
-					URL: srv.Store().MustPresignedPutUrl(cnsts.TempFileBucket, store.Key("", args.Host, args.Project, args.Task, f.ID), f.Name, f.MimeType, int64(f.Size)),
-					ID:  f.ID,
+				// update task file values
+				_, err = tx.Exec(`UPDATE tasks SET fileN=fileN+1, fileSize=fileSize+? WHERE host=? AND project=? AND id=?`, f.Size, innerArgs.Host, innerArgs.Project, innerArgs.Task)
+				PanicOn(err)
+				// propogate aggregate sizes upwards
+				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task)
+				epsutil.LogActivity(tlbx, tx, innerArgs.Host, innerArgs.Project, &innerArgs.Task, f.ID, cnsts.TypeFile, cnsts.ActionCreated, &f.Name, struct {
+					Name string `json:"name"`
+					Size uint64 `json:"size"`
+					Type string `json:"type"`
+				}{
+					Name: args.Name,
+					Size: uint64(args.Size),
+					Type: args.Type,
+				})
+				putUrl := srv.Store().MustPresignedPutUrl(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size))
+				req, err := http.NewRequest(http.MethodPut, putUrl, args.Content)
+				PanicOn(err)
+				req.Header.Add("X-Amz-Acl", "private")
+				req.Header.Add("Content-Length", Strf(`%d`, args.Size))
+				req.Header.Add("Content-Type", args.Type)
+				req.Header.Add("Content-Disposition", Strf("attachment; filename=%s", args.Name))
+				req.Header.Add("Host", req.Host)
+				req.ContentLength = args.Size
+				resp, err := http.DefaultClient.Do(req)
+				if resp != nil && resp.Body != nil {
+					defer resp.Body.Close()
+				}
+				PanicOn(err)
+				body, err := ioutil.ReadAll(resp.Body)
+				PanicOn(err)
+				PanicOn(resp.Body.Close())
+				PanicIf(resp.StatusCode != 200, "resp.StatusCode: %d, resp.Body: %s", resp.StatusCode, string(body))
+				res := &file.PutRes{
+					Task: taskeps.GetOne(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task),
+					File: f,
 				}
 				tx.Commit()
 				return res
 			},
 		},
 		{
-			Description:  "Finalize an uploaded file",
-			Path:         (&file.Finalize{}).Path(),
+			Description:  "get file content",
+			Path:         (&file.GetContent{}).Path(),
 			Timeout:      0,
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &file.Finalize{}
+				return &file.GetContent{}
 			},
 			GetExampleArgs: func() interface{} {
-				return &file.Finalize{
-					Host:    app.ExampleID(),
-					Project: app.ExampleID(),
-					Task:    app.ExampleID(),
-					ID:      app.ExampleID(),
-				}
-			},
-			GetExampleResponse: func() interface{} {
-				return exampleFile
-			},
-			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*file.Finalize)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
-				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
-				defer tx.Rollback()
-				epsutil.MustLockProject(tx, args.Host, args.Project)
-				epsutil.TaskMustExist(tx, args.Host, args.Project, args.Task)
-				f := getOne(tx, args.Host, args.Project, args.Task, args.ID, false)
-				app.ReturnIf(f == nil || !f.CreatedBy.Equal(me.Get(tlbx)), http.StatusNotFound, "temp file not found")
-				f.CreatedOn = NowMilli()
-				srv.Store().MustCopy(cnsts.TempFileBucket, cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
-				// update new file to finalized status
-				_, err := tx.Exec(`UPDATE files SET isFinalized=1, createdOn=? WHERE host=? AND project=? AND task=? AND id=?`, f.CreatedOn, args.Host, args.Project, args.Task, args.ID)
-				PanicOn(err)
-				// update task file values
-				_, err = tx.Exec(`UPDATE tasks SET fileN=fileN+1, fileSize=fileSize+? WHERE host=? AND project=? AND id=?`, f.Size, args.Host, args.Project, args.Task)
-				PanicOn(err)
-				// propogate aggregate sizes upwards
-				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, f.ID, cnsts.TypeFile, cnsts.ActionCreated, &f.Name, nil)
-				tx.Commit()
-				return f
-			},
-		},
-		{
-			Description:  "Get a presigend get url",
-			Path:         (&file.GetPresignedGetUrl{}).Path(),
-			Timeout:      500,
-			MaxBodyBytes: app.KB,
-			IsPrivate:    false,
-			GetDefaultArgs: func() interface{} {
-				return &file.GetPresignedGetUrl{}
-			},
-			GetExampleArgs: func() interface{} {
-				return &file.GetPresignedGetUrl{
+				return &file.GetContent{
 					Host:       app.ExampleID(),
 					Project:    app.ExampleID(),
 					Task:       app.ExampleID(),
@@ -141,19 +132,26 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return "https://minio.com/get/your/file/here"
+				return &app.DownStream{}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*file.GetPresignedGetUrl)
+				args := a.(*file.GetContent)
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
-				f := getOne(tx, args.Host, args.Project, args.Task, args.ID, true)
-				app.ReturnIf(f == nil, http.StatusNotFound, "file not found")
-				url := srv.Store().MustPresignedGetUrl(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID), f.Name, args.IsDownload)
+				f := getOne(tx, args.Host, args.Project, args.Task, args.ID)
 				tx.Commit()
-				return url
+				app.ReturnIf(f == nil, http.StatusNotFound, "file not found")
+				res := &app.DownStream{
+					ID:         f.ID,
+					IsDownload: args.IsDownload,
+				}
+				res.Name = f.Name
+				res.Size = int64(f.Size)
+				res.Type = f.Type
+				_, _, _, res.Content = srv.Store().MustGet(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
+				return res
 			},
 		},
 		{
@@ -197,7 +195,7 @@ var (
 					Set:  make([]*file.File, 0, args.Limit),
 					More: false,
 				}
-				qry := bytes.NewBufferString(`SELECT task, id, name, createdBy, createdOn, size, mimeType FROM files WHERE isFinalized=1 AND host=? AND project=?`)
+				qry := bytes.NewBufferString(`SELECT task, id, name, createdBy, createdOn, size, type FROM files WHERE host=? AND project=?`)
 				qryArgs := make([]interface{}, 0, len(args.IDs)+8)
 				qryArgs = append(qryArgs, args.Host, args.Project)
 				if len(args.IDs) > 0 {
@@ -272,7 +270,7 @@ var (
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
 				epsutil.MustLockProject(tx, args.Host, args.Project)
-				f := getOne(tx, args.Host, args.Project, args.Task, args.ID, true)
+				f := getOne(tx, args.Host, args.Project, args.Task, args.ID)
 				app.ReturnIf(f == nil, http.StatusNotFound, "file not found")
 				app.ReturnIf(role == cnsts.RoleWriter && (!f.CreatedBy.Equal(me) || f.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own file entries within an hour of creating it")
 				// delete file
@@ -291,19 +289,20 @@ var (
 
 	nameMinLen  = 1
 	nameMaxLen  = 250
+	maxFileSize = 5 * app.GB
 	exampleFile = &file.File{
 		Task:      app.ExampleID(),
 		ID:        app.ExampleID(),
 		CreatedBy: app.ExampleID(),
 		CreatedOn: app.ExampleTime(),
 		Size:      60,
-		MimeType:  "application/pdf",
+		Type:      "application/pdf",
 		Name:      "my_file.pdf",
 	}
 )
 
-func getOne(tx sql.Tx, host, project, task, id ID, isFinalized bool) *file.File {
-	row := tx.QueryRow(`SELECT task, id, name, createdBy, createdOn, size, mimeType FROM files WHERE host=? AND project=? AND task=? AND isFinalized=? AND id=?`, host, project, task, isFinalized, id)
+func getOne(tx sql.Tx, host, project, task, id ID) *file.File {
+	row := tx.QueryRow(`SELECT task, id, name, createdBy, createdOn, size, type FROM files WHERE host=? AND project=? AND task=? AND id=?`, host, project, task, id)
 	t, err := Scan(row)
 	sqlh.PanicIfIsntNoRows(err)
 	return t
@@ -318,7 +317,7 @@ func Scan(r isql.Row) (*file.File, error) {
 		&f.CreatedBy,
 		&f.CreatedOn,
 		&f.Size,
-		&f.MimeType)
+		&f.Type)
 	if f.ID.IsZero() {
 		f = nil
 	}

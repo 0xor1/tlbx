@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	TempFileBucket = `tempfiles`
-	FileBucket     = `files`
+	FileBucket = `files`
 )
 
 type Sort string

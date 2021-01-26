@@ -1,6 +1,8 @@
 package filetest
 
 import (
+	"bytes"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -38,7 +40,6 @@ func Everything(t *testing.T) {
 		projecteps.OnDelete,
 		true,
 		projecteps.OnSetSocials,
-		cnsts.TempFileBucket,
 		cnsts.FileBucket)
 	defer r.CleanUp()
 
@@ -77,14 +78,41 @@ func Everything(t *testing.T) {
 	a.NotNil(t1p0)
 
 	content1 := []byte("1")
-	f1 := testutil.MustUploadFile(ac, r.Ali().ID(), p.ID, t1p0.ID, "one", "text/plain", content1)
+	put := &file.Put{
+		Args: &file.PutArgs{
+			Host:    r.Ali().ID(),
+			Project: p.ID,
+			Task:    t1p0.ID,
+		},
+	}
+	put.Name = "one"
+	put.Type = "text/plain"
+	put.Size = int64(len(content1))
+	put.Content = ioutil.NopCloser(bytes.NewBuffer(content1))
+	putRes := put.MustDo(ac)
+	a.True(putRes.Task.ID.Equal(t1p0.ID))
+	a.Equal(putRes.Task.FileN, uint64(1))
+	a.Equal(putRes.Task.FileSize, uint64(1))
+	f1 := putRes.File
 	a.NotNil(f1)
 
-	bs := testutil.MustDownloadFile(ac, r.Ali().ID(), p.ID, t1p0.ID, f1.ID)
+	f1Get := (&file.GetContent{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		Task:    t1p0.ID,
+		ID:      f1.ID,
+	}).MustDo(ac)
+	bs, err := ioutil.ReadAll(f1Get.Content)
+	a.Nil(err)
 	a.Equal(content1, bs)
+	a.Equal(put.Name, f1Get.Name)
+	a.Equal(put.Size, f1Get.Size)
+	a.Equal(put.Type, f1Get.Type)
 
 	content2 := []byte("2")
-	f2 := testutil.MustUploadFile(ac, r.Ali().ID(), p.ID, t1p0.ID, "two", "text/plain", content2)
+	put.Content = ioutil.NopCloser(bytes.NewBuffer(content2))
+	put.Name = "two"
+	f2 := put.MustDo(ac).File
 	a.NotNil(f2)
 
 	res := (&file.Get{

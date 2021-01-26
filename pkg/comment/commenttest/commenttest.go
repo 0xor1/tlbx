@@ -38,7 +38,6 @@ func Everything(t *testing.T) {
 		projecteps.OnDelete,
 		true,
 		projecteps.OnSetSocials,
-		cnsts.TempFileBucket,
 		cnsts.FileBucket)
 	defer r.CleanUp()
 

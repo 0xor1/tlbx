@@ -1,6 +1,8 @@
 package tasktest
 
 import (
+	"bytes"
+	"io/ioutil"
 	"testing"
 
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -9,6 +11,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/trees/pkg/cnsts"
 	"github.com/0xor1/trees/pkg/config"
+	"github.com/0xor1/trees/pkg/file"
 	"github.com/0xor1/trees/pkg/file/fileeps"
 	"github.com/0xor1/trees/pkg/project"
 	"github.com/0xor1/trees/pkg/project/projecteps"
@@ -36,7 +39,6 @@ func Everything(t *testing.T) {
 		projecteps.OnDelete,
 		true,
 		projecteps.OnSetSocials,
-		cnsts.TempFileBucket,
 		cnsts.FileBucket)
 	defer r.CleanUp()
 
@@ -309,7 +311,19 @@ func Everything(t *testing.T) {
 	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 
-	f := testutil.MustUploadFile(ac, r.Ali().ID(), p.ID, t3p0.ID, "yolo.test.txt", "text/plain", []byte(`yolo`))
+	content1 := []byte("yolo")
+	put := &file.Put{
+		Args: &file.PutArgs{
+			Host:    r.Ali().ID(),
+			Project: p.ID,
+			Task:    t1p0.ID,
+		},
+	}
+	put.Name = "yolo.test.txt"
+	put.Type = "text/plain"
+	put.Size = int64(len(content1))
+	put.Content = ioutil.NopCloser(bytes.NewBuffer(content1))
+	f := put.MustDo(ac).File
 	a.NotNil(f)
 
 	t2p0 = (&task.Get{
