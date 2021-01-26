@@ -40,7 +40,7 @@
             </th>
           </tr>
           <tr class="row this-task">
-            <td :title="descriptionTitle(task)" v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+            <td :title="descriptionTitle(task)" :class="c.name" v-for="(c, index) in cols" :key="index">
               {{c.name == "user"? "" : c.get(task)}}
               <user v-if="c.name=='user'" :userId="c.get(task)"></user>
             </td>
@@ -58,7 +58,7 @@
             </td>
           </tr>
           <tr class="row" v-for="(t, index) in children" :key="index" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
-            <td :title="descriptionTitle(t)" v-bind:class="c.class" v-for="(c, index) in cols" :key="index">
+            <td :title="descriptionTitle(t)" v-bind:class="c.name" v-for="(c, index) in cols" :key="index">
               {{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
@@ -713,15 +713,19 @@ div.root {
         &:hover td img{
           visibility: initial;
         }
-        th, td {
+        th {
+          text-align: center;
+        }
+        td {
           &.action {
             cursor: pointer;
           }
           &:not(.action) {
-            text-align: center;
+            text-align: right;
             min-width: 100px;
             &.name{
-              min-width: 18pc;
+              text-align: left;
+              min-width: 20pc;
             }
           }
           img{

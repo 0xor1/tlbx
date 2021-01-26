@@ -28,7 +28,7 @@
               </th>
             </tr>
             <tr class="row" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
-              <td :class="c.class" v-for="(c, index) in cols" :key="index">
+              <td :class="c.name" v-for="(c, index) in cols" :key="index">
                 {{ c.get(p) }}
               </td>
               <td v-if="isMe" class="action" @click.stop="showUpdate(p)" title="update">
@@ -304,13 +304,17 @@
 table {
   margin: 1pc 0 1pc 0;
   border-collapse: collapse;
-  th, td {
+  th {
+    text-align: center;
+  }
+  td {
     &:not(.action){
-      text-align: center;
+      text-align: right;
       min-width: 100px;
     }
     &.name{
-      min-width: 18pc;
+      text-align: left;
+      min-width: 20pc;
     }
     img{
       background-color: transparent;
