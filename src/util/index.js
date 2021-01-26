@@ -1,3 +1,6 @@
+import marked from 'marked'
+import dompurify from 'dompurify'
+
 let kb = 1000
 let mb = kb * kb
 let gb = mb * kb
@@ -60,6 +63,9 @@ export default {
                 canRead: (pMe) => pMe != null && pMe.isActive === true && pMe.role < 3
             },
             fmt: {
+                md(txt) {
+                    return dompurify.sanitize(marked(txt))
+                },
                 ellipsis(txt, len) {
                     if (len == null || len < 3) {
                         throw new Error('len must be greater than 3')

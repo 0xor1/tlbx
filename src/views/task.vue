@@ -80,7 +80,7 @@
       </div>
       <div>
         <p v-if="children.length > 0">parallel: {{task.isParallel}}</p>
-        <p v-if="task.description.length > 0">description: {{task.description}}</p>
+        <p v-if="task.description.length > 0" v-html="$u.fmt.md(task.description)"></p>
       </div>
       <div v-for="(type, index) in ['time', 'cost']" :key="index">
         <div v-if="$root.show[type]" :class="['items', type+'s']">
@@ -114,7 +114,7 @@
               <td v-else><input :class="{err: vitems[type].updateIncErr}" v-model="vitems[type].updateIncDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
               <td v-if="$root.show.date">{{$u.fmt.date(i.createdOn)}}</td>
               <td v-if="$root.show.user"><user :userId="i.createdBy"></user></td>
-              <td v-if="vitems[type].updateIndex != index" class="note">{{i.note}}</td>
+              <td v-if="vitems[type].updateIndex != index" class="note" v-html="$u.fmt.md(i.note)"></td>
               <td v-else><input :class="{err: vitems[type].updateNote > 250}" v-model="vitems[type].updateNote" type="text" placeholder="note" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
               <td v-if="canUpdateVitem(i) && vitems[type].updateIndex != index" class="action" @click.stop="showVitemUpdate(i, index)" title="update">
                 <img src="@/assets/edit.svg">
@@ -760,6 +760,10 @@ div.root {
       }
       td.note{
         text-align: left;
+        > * {
+          // for markdown <p> elements
+          margin: 0;
+        }
       }
       > .create-form {
         > div {
