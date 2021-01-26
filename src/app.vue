@@ -10,7 +10,7 @@
               home
             </div>
             <div class="btn" @click.stop.prevent="showFields=!showFields">
-              fields
+              show
             </div>
             <div class="fields" v-if="showFields">
               <div v-for="(f, index) in fields" :key="index" @click.stop.prevent="$root.show[f] = !$root.show[f]">
