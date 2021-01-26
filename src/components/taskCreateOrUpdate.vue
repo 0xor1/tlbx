@@ -31,7 +31,7 @@
         <input :class="{err: costEstErr}" v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate(true)" @keyup="validate" @keydown.enter="ok">
         <label> {{$u.fmt.currencySymbol(this.project.currencyCode)}} cost estimate</label>
       </span>
-      <span v-if="!isCreate && updateTask.id != project.id && updateTask.id != $u.rtr.task()">
+      <span v-if="!isCreate && updateTask.id != project.id">
         <button @click.stop.prevent="showMove=!showMove">move</button>
       </span>
       <div v-if="showMove">
@@ -205,7 +205,6 @@
               id: this.updateTask.id,
             }
             let isUpdate = false
-            let moved = false
             if (this.updateTask.name != this.name) {
               isUpdate = true
               args.name = {v: this.name}
@@ -231,15 +230,10 @@
               args.costEst = {v: this.costEst}
               this.updateTask.costEst = this.costEst
             }
-            if (this.updateTask.parent != this.parentId) {
+            if (this.showMove) {
               isUpdate = true
-              moved = true
               args.parent = {v: this.parentId}
               this.updateTask.parent = this.parentId
-            }
-            if (this.currentPrevSibId != this.prevSibId) {
-              isUpdate = true
-              moved = true
               args.prevSib = {v: this.prevSibId}
             }
             if (isUpdate) {
@@ -256,7 +250,7 @@
                     }
                   }
                 }
-                this.close(moved)
+                this.close(this.showMove)
                 this.$emit("refreshProjectActivity", true)
               })
             } else {
