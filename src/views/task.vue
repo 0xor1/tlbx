@@ -715,6 +715,7 @@ div.root {
         }
         th {
           text-align: center;
+          min-width: 8pc;
         }
         td {
           &.action {
@@ -722,7 +723,6 @@ div.root {
           }
           &:not(.action) {
             text-align: right;
-            min-width: 100px;
             &.name{
               text-align: left;
               min-width: 20pc;
