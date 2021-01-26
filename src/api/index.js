@@ -408,22 +408,21 @@ function newApi(isMDoApi) {
       }
     },
     file: {
-      create(host, project, task, name, mimeType, size, content) {
-        return doReq('/file/getPresignedPutUrl', {host, project, task, name, mimeType, size}).then((res)=>{
-          let id = res.id
-          return doReq(res.url, content, {
-            "Host": (new URL(res.url)).hostname,
-            "X-Amz-Acl": "private",
-            "Content-Length": size, 
-            "Content-Type": mimeType,
-            "Content-Disposition": `attachment; filename=${name}`,
-          }).then(()=>{
-            return doReq("/file/finalize", {host, project, task, id})
+      create(args) {
+        // host, project, task, name, type, size, content
+        return doReq('/file/put', args.content, {
+          "Content-Name": args.name,
+          "Content-Length": args.size,
+          "Content-Type": args.type,
+          "Content-Args": JSON.stringify({
+            host: args.host,
+            project: args.project,
+            task: args.task
           })
         })
       },
-      getPresignedGetUrl(host, project, task, id, isDownload) {
-        return doReq('/file/getPresignedGetUrl', {host, project, task, id, isDownload})
+      getContent(host, project, task, id, isDownload) {
+        return doReq('/file/getContent', {host, project, task, id, isDownload})
       },
       get(host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
         return doReq('/file/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
