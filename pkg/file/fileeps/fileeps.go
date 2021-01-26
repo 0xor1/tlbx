@@ -116,7 +116,7 @@ var (
 		{
 			Description:  "get file content",
 			Path:         (&file.GetContent{}).Path(),
-			Timeout:      30000, // 5 mins
+			Timeout:      300000, // 5 mins
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
