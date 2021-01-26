@@ -1,6 +1,9 @@
 <template>
   <div class="root">
-    <div class="loading" v-if="loading">
+    <div v-if="notFound">
+      <notfound :type="'task'"></notfound>
+    </div>
+    <div class="loading" v-else-if="loading">
       loading...
     </div>
     <div v-else-if="showCreateOrUpdate">
@@ -134,9 +137,10 @@
 <script>
   import user from '../components/user'
   import taskCreateOrUpdate from '../components/taskCreateOrUpdate'
+  import notfound from '../components/notfound'
   export default {
     name: 'tasks',
-    components: {user, taskCreateOrUpdate},
+    components: {user, taskCreateOrUpdate, notfound},
     data: function() {
       return this.initState()
     },
@@ -164,6 +168,7 @@
     methods: {
       initState(){
         return {
+          notFound: false,
           showCreateOrUpdate: false,
           index: null,
           loading: true,
@@ -330,7 +335,7 @@
               this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)
             }).catch((err)=>{
               if (err.status == 404) {
-                this.$u.rtr.goto('/notfound')
+                this.notFound = true
               }
             })
             mapi.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{

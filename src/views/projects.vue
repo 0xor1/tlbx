@@ -1,6 +1,9 @@
 <template>
   <div class="root">
-    <div v-if="showCreateOrUpdate">
+    <div v-if="notFound">
+      <notfound :type="'host'"></notfound>
+    </div>
+    <div v-else-if="showCreateOrUpdate">
       <project-create-or-update 
         :project="update"
         @close="onCreateOrUpdateClose()">
@@ -75,9 +78,10 @@
 <script>
   import user from '../components/user'
   import projectCreateOrUpdate from '../components/projectCreateOrUpdate.vue'
+  import notfound from '../components/notfound.vue'
   export default {
     name: 'projects',
-    components: {user, projectCreateOrUpdate},
+    components: {user, projectCreateOrUpdate, notfound},
     data: function() {
       return this.initState()
     },
@@ -108,6 +112,7 @@
     methods: {
       initState (){
         return {
+          notFound: false,
           host: this.$u.rtr.host(),
           showCreateOrUpdate: false,
           update: null,
@@ -232,7 +237,7 @@
             this.user = user
           }).catch((err)=>{
             if (err.status == 404) {
-              this.$u.rtr.goto('/notfound')
+              this.notFound = true
             }
           })
           mapi.project.get({host: this.host}).then((res) => {
