@@ -78,6 +78,10 @@
         </table>
         <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
       </div>
+      <div>
+        <p v-if="children.length > 0">parallel: {{task.isParallel}}</p>
+        <p v-if="task.description.length > 0">description: {{task.description}}</p>
+      </div>
       <div v-for="(type, index) in ['time', 'cost']" :key="index">
         <div v-if="$root.show[type]" :class="['items', type+'s']">
           <div class="heading">{{type}} <span class="medium" v-if="type == 'cost'">{{$u.fmt.currencySymbol(project.currencyCode)}}</span> <span class="medium">{{$u.fmt[type](task[type+'Inc'])}} | {{$u.fmt[type](task[type+'SubInc'])}}</span></div>
