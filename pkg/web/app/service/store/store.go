@@ -2,6 +2,7 @@ package service
 
 import (
 	"io"
+	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/store"
@@ -54,6 +55,18 @@ func (c *client) Copy(srcBucket, dstBucket, key string) error {
 
 func (c *client) MustCopy(srcBucket, dstBucket, key string) {
 	PanicOn(c.Copy(srcBucket, dstBucket, key))
+}
+
+func (c *client) StreamUp(bucket, key, name, mimeType string, size int64, isPublic, isAttachment bool, timeout time.Duration, content io.ReadCloser) error {
+	var err error
+	c.do(func() {
+		err = c.store.StreamUp(bucket, key, name, mimeType, size, isPublic, isAttachment, timeout, content)
+	}, Strf("%s %s %s", "STREAM_UP", bucket, key))
+	return err
+}
+
+func (c *client) MustStreamUp(bucket, key, name, mimeType string, size int64, isPublic, isAttachment bool, timeout time.Duration, content io.ReadCloser) {
+	PanicOn(c.StreamUp(bucket, key, name, mimeType, size, isPublic, isAttachment, timeout, content))
 }
 
 func (c *client) Put(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error {

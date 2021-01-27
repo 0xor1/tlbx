@@ -3,6 +3,8 @@ package store
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
+	"net/http"
 	"strings"
 	"time"
 
@@ -23,6 +25,8 @@ type Client interface {
 	MustCreateBucket(bucket, acl string)
 	Copy(srcBucket, dstBucket, key string) error
 	MustCopy(srcBucket, dstBucket, key string)
+	StreamUp(bucket, key, name, mimeType string, size int64, isPublic, isAttachment bool, timeout time.Duration, content io.ReadCloser) error
+	MustStreamUp(bucket, key, name, mimeType string, size int64, isPublic, isAttachment bool, timeout time.Duration, content io.ReadCloser)
 	Put(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) error
 	MustPut(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker)
 	PresignedPutUrl(bucket, key string, name, mimeType string, size int64) (string, error)
@@ -81,6 +85,47 @@ func (c *client) Copy(srcBucket, dstBucket, key string) error {
 
 func (c *client) MustCopy(srcBucket, dstBucket, key string) {
 	PanicOn(c.Copy(srcBucket, dstBucket, key))
+}
+
+func (c *client) StreamUp(bucket, key, name, mimeType string, size int64, isPublic, isAttachment bool, timeout time.Duration, content io.ReadCloser) error {
+	defer content.Close()
+	putUrl, err := c.PresignedPutUrl(bucket, key, name, mimeType, size)
+	if err != nil {
+		return ToError(err)
+	}
+	req, err := http.NewRequest(http.MethodPut, putUrl, content)
+	if err != nil {
+		return ToError(err)
+	}
+	if isPublic {
+		req.Header.Add("X-Amz-Acl", "public-read")
+	} else {
+		req.Header.Add("X-Amz-Acl", "private")
+	}
+	req.Header.Add("Content-Length", Strf(`%d`, size))
+	req.Header.Add("Content-Type", mimeType)
+	req.Header.Add("Content-Disposition", Strf("attachment; filename=%s", name))
+	req.Header.Add("Host", req.Host)
+	req.ContentLength = size
+	resp, err := (&http.Client{Timeout: timeout}).Do(req)
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+	if err != err {
+		return ToError(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return ToError(err)
+	}
+	if resp.StatusCode != 200 {
+		return Err("resp.StatusCode: %d, resp.Body: %s", resp.StatusCode, string(body))
+	}
+	return nil
+}
+
+func (c *client) MustStreamUp(bucket, key, name, mimeType string, size int64, isPublic, isAttachment bool, timeout time.Duration, content io.ReadCloser) {
+	PanicOn(c.StreamUp(bucket, key, name, mimeType, size, isPublic, isAttachment, timeout, content))
 }
 
 func (c *client) putReq(bucket, key string, name, mimeType string, size int64, isPublic, isAttachment bool, content io.ReadSeeker) (*request.Request, *s3.PutObjectOutput) {
