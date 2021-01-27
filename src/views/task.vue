@@ -95,7 +95,8 @@
         <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
       </div>
       <div>
-        <p v-if="children.length > 0">parallel: {{task.isParallel}}</p>
+        <p v-if="children.length > 0 && task.isParallel">parallel</p>
+        <p v-if="children.length > 0 && !task.isParallel">not parallel</p>
         <p v-if="task.description.length > 0" v-html="$u.fmt.mdLinkify(task.description)"></p>
       </div>
       <div v-for="(type, index) in ['time', 'cost']" :key="index">
@@ -121,17 +122,17 @@
           <table>
             <tr class="header">
               <th class="note">note</th>
-              <th>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></th>
               <th v-if="$root.show.date">created</th>
               <th v-if="$root.show.user">user</th>
+              <th>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></th>
             </tr>
             <tr class="item" v-for="(i, index) in vitems[type].set" :key="index">
               <td v-if="vitems[type].updateIndex != index" class="note" v-html="$u.fmt.mdLinkify(i.note)"></td>
               <td v-else class="note"><input :class="{err: vitems[type].updateNote > 250}" v-model="vitems[type].updateNote" type="text" placeholder="note" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
-              <td v-if="vitems[type].updateIndex != index">{{$u.fmt[type](i.inc)}}</td>
-              <td v-else><input :class="{err: vitems[type].updateIncErr}" v-model="vitems[type].updateIncDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
               <td v-if="$root.show.date">{{$u.fmt.date(i.createdOn)}}</td>
               <td v-if="$root.show.user"><user :userId="i.createdBy"></user></td>
+              <td v-if="vitems[type].updateIndex != index">{{$u.fmt[type](i.inc)}}</td>
+              <td v-else><input :class="{err: vitems[type].updateIncErr}" v-model="vitems[type].updateIncDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
               <td v-if="canUpdateVitem(i) && vitems[type].updateIndex != index" class="action" @click.stop="showVitemUpdate(i, index)" title="update">
                 <img src="@/assets/edit.svg">
               </td>
@@ -145,6 +146,42 @@
           </table>
           <div v-if="vitems[type].more"><button @click.stop.prevent="loadMoreVitems(type)">load more</button></div>
         </div>
+      </div>
+      <div v-if="$root.show.file" class="items files">
+        <div class="heading">file <span class="medium">{{$u.fmt.bytes(task.fileSize)}} | {{$u.fmt.bytes(task.fileSubSize)}}</span></div>
+        <div v-if="$u.perm.canWrite(pMe)" class="create-form">
+          <div title="choose file">
+            <span>file</span><br>
+            <input type="file" :placeholder="file" @keydown.enter="submitFile()"/>
+          </div>
+          <div>
+            <button @click.stop="submitFile()">upload</button>
+          </div>
+        </div>
+        <table>
+          <tr class="header">
+            <th class="note">name</th>
+            <th v-if="$root.show.date">created</th>
+            <th v-if="$root.show.user">user</th>
+            <th>size</th>
+          </tr>
+          <tr class="item" v-for="(f, index) in files" :key="index">
+            <td class="note">{{f.name}}</td>
+            <td v-if="$root.show.date">{{$u.fmt.date(f.createdOn)}}</td>
+            <td v-if="$root.show.user"><user :userId="f.createdBy"></user></td>
+            <td>{{$u.fmt.bytes(f.size)}}</td>
+            <td class="action" @click.stop="downloadFile(f)" title="update">
+              <img src="@/assets/edit.svg">
+            </td>
+            <td v-if="canUpdateVitem(f)" class="action" @click.stop="toggleFileDeleteIndex(index)" title="delete safety">
+              <img src="@/assets/trash.svg">
+            </td>
+            <td v-if="fileDeleteIndex === index" class="action confirm-delete" @click.stop="trashFile(index)" title="delete">
+              <img src="@/assets/trash-red.svg">
+            </td>
+          </tr>
+        </table>
+        <div v-if="moreFiles"><button @click.stop.prevent="loadMoreFiles()">load more</button></div>
       </div>
     </div>
   </div>

@@ -115,6 +115,7 @@
             this.user = this.parentUserId
             if (!this.isCreate) {
               let t = this.updateTask
+              this.prevSibId = null
               this.name = t.name
               this.description = t.description
               this.user = t.user
