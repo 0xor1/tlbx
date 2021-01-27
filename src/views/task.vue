@@ -56,8 +56,11 @@
             <td v-if="canUpdate(task)" class="action" @click.stop="showUpdate(-1)" title="update">
               <img src="@/assets/edit.svg">
             </td>
-            <td v-if="canDelete(task)" class="action" @click.stop="trash(task, -1)" title="delete">
+            <td v-if="canDelete(task)" class="action" @click.stop="toggleDeleteIndex(-1)" title="delete safety">
               <img src="@/assets/trash.svg">
+            </td>
+            <td v-if="deleteIndex === -1" class="action confirm-delete" @click.stop="trash(task, -1)" title="delete">
+              <img src="@/assets/trash-red.svg">
             </td>
           </tr>
           <tr class="row" v-for="(t, index) in children" :key="index" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
@@ -74,8 +77,11 @@
             <td v-if="canUpdate(t)" class="action" @click.stop="showUpdate(index)" title="update">
               <img src="@/assets/edit.svg">
             </td>
-            <td v-if="canDelete(t)" class="action" @click.stop="trash(t, index)" title="delete">
+            <td v-if="canDelete(t)" class="action" @click.stop="toggleDeleteIndex(index)" title="delete safety">
               <img src="@/assets/trash.svg">
+            </td>
+            <td v-if="deleteIndex === index" class="action confirm-delete" @click.stop="trash(t, index)" title="delete">
+              <img src="@/assets/trash-red.svg">
             </td>
           </tr>
         </table>
@@ -107,7 +113,7 @@
           </div>
           <table>
             <tr class="header">
-              <th>note</th>
+              <th class="note">note</th>
               <th>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></th>
               <th v-if="$root.show.date">created</th>
               <th v-if="$root.show.user">user</th>
@@ -122,12 +128,15 @@
               <td v-if="canUpdateVitem(i) && vitems[type].updateIndex != index" class="action" @click.stop="showVitemUpdate(i, index)" title="update">
                 <img src="@/assets/edit.svg">
               </td>
-              <td v-if="canUpdateVitem(i) && vitems[type].updateIndex != index" class="action" @click.stop="trashVitem(i, index)" title="delete">
+              <td v-if="canUpdateVitem(i) && vitems[type].updateIndex != index" class="action" @click.stop="toggleVitemDeleteIndex(type, index)" title="delete safety">
                 <img src="@/assets/trash.svg">
+              </td>
+              <td v-if="vitems[type].deleteIndex === index" class="action confirm-delete" @click.stop="trashVitem(i, index)" title="delete">
+                <img src="@/assets/trash-red.svg">
               </td>
             </tr>
           </table>
-          <div v-if="vitems[type].more" class=""><button @click.stop.prevent="loadMoreVitems(type)">load more</button></div>
+          <div v-if="vitems[type].more"><button @click.stop.prevent="loadMoreVitems(type)">load more</button></div>
         </div>
       </div>
     </div>
@@ -186,8 +195,10 @@
           moreFiles: false,
           comments: [],
           moreComments: false,
+          deleteIndex: -2,
           vitems: {
             time: {
+              deleteIndex: -2,
               set: [],
               more: false,
               estDisplay: "",
@@ -203,6 +214,7 @@
               updateNote: ""
             },
             cost: {
+              deleteIndex: -2,
               set: [],
               more: false,
               estDisplay: "",
@@ -496,6 +508,20 @@
           this.init()
         }
       },
+      toggleDeleteIndex(index){
+        if (this.deleteIndex === index) {
+          this.deleteIndex = -2
+        } else {
+          this.deleteIndex = index
+        }
+      },
+      toggleVitemDeleteIndex(type, index){
+        if (this.vitems[type].deleteIndex === index) {
+          this.vitems[type].deleteIndex = -2
+        } else {
+          this.vitems[type].deleteIndex = index
+        }
+      },
       trash(t, index){
         if (t.id == this.$u.rtr.project()) {
           this.$api.project.delete([this.$u.rtr.project()]).then(()=>{
@@ -511,6 +537,7 @@
             if (index > -1) {
               this.children.splice(index, 1)
               this.task = t
+              this.deleteIndex = -2
             } else {
                 this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.id}`)
             }
@@ -693,6 +720,7 @@
         }).then((t)=>{
           this.task = t
           obj.set.splice(index, 1)
+          obj.deleteIndex = -2
           this.refreshProjectActivity(true)
         }).finally(()=>{
           obj.loading = false
@@ -773,6 +801,11 @@ div.root {
               min-width: 20pc;
             }
           }
+          &.confirm-delete {
+            img {
+              visibility: initial;
+            }
+          }
           img{
             background-color: transparent;
             visibility: hidden;
@@ -802,6 +835,9 @@ div.root {
       }
       .medium{
         font-size: 1pc;
+      }
+      th.note {
+        min-width: 21pc;
       }
       td.note{
         text-align: left;
