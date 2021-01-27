@@ -328,7 +328,15 @@
       ok(){
         if (this.validate()) {
           if (this.isCreate) {
-            this.$api.project.create(this.name, this.isPublic, this.currencyCode, this.hoursPerDay, this.daysPerWeek, this.startOn, this.endOn).then((p)=>{
+            this.$api.project.create({
+              name: this.name, 
+              isPublic: this.isPublic, 
+              currencyCode: this.currencyCode,
+              hoursPerDay: this.hoursPerDay,
+              daysPerWeek: this.daysPerWeek, 
+              startOn: this.startOn,
+              endOn: this.endOn
+            }).then((p)=>{
               this.$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)
             })
           } else {
