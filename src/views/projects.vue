@@ -37,8 +37,11 @@
               <td v-if="isMe" class="action" @click.stop="showUpdate(p)" title="update">
                 <img src="@/assets/edit.svg">
               </td>
-              <td v-if="isMe" class="action" @click.stop="trash(p, index)" title="delete">
+              <td v-if="isMe" class="action" @click.stop="toggleDeleteIndex(index)" title="delete safety">
                 <img src="@/assets/trash.svg">
+              </td>
+              <td v-if="isMe && deleteIndex === index" class="action confirm-delete" @click.stop="trash(p, index)" title="delete">
+                <img src="@/assets/trash-red.svg">
               </td>
             </tr>
           </table>
@@ -119,6 +122,7 @@
           me: null,
           user: null,
           loading: true,
+          deleteIndex: -2,
           commonSections: [
             {
               name: "name",
@@ -289,6 +293,13 @@
         this.showCreateOrUpdate = false
         this.update = null
       },
+      toggleDeleteIndex(index){
+        if (this.deleteIndex === index) {
+          this.deleteIndex = -2
+        } else {
+          this.deleteIndex = index
+        }
+      },
       trash(p, index){
         this.$api.project.delete([p.id]).then(()=>{
             this.ps.splice(index, 1)
@@ -334,11 +345,12 @@ table {
     td.action img {
       margin: 2px 2px 0px 2px;
       width: 18px;
+    }
+    td.action:not(.confirm-delete) img {
       visibility: hidden;
     }
     &:hover td.action img{
       visibility: visible;
-      fill: white;
     }
   }
 }
