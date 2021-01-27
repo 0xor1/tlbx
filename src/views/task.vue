@@ -120,7 +120,7 @@
             </tr>
             <tr class="item" v-for="(i, index) in vitems[type].set" :key="index">
               <td v-if="vitems[type].updateIndex != index" class="note" v-html="$u.fmt.md(i.note)"></td>
-              <td v-else><input :class="{err: vitems[type].updateNote > 250}" v-model="vitems[type].updateNote" type="text" placeholder="note" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
+              <td v-else class="note"><input :class="{err: vitems[type].updateNote > 250}" v-model="vitems[type].updateNote" type="text" placeholder="note" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
               <td v-if="vitems[type].updateIndex != index">{{$u.fmt[type](i.inc)}}</td>
               <td v-else><input :class="{err: vitems[type].updateIncErr}" v-model="vitems[type].updateIncDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
               <td v-if="$root.show.date">{{$u.fmt.date(i.createdOn)}}</td>
@@ -783,6 +783,12 @@ div.root {
       margin: 1pc 0 1pc 0;
       border-collapse: collapse;
       tr{
+        td.action:not(.confirm-delete) img {
+          visibility: hidden;
+        }
+        &:hover td.action img{
+          visibility: visible;
+        }
         &:hover td img{
           visibility: initial;
         }
@@ -808,7 +814,6 @@ div.root {
           }
           img{
             background-color: transparent;
-            visibility: hidden;
           }
         }
       }
@@ -841,6 +846,9 @@ div.root {
       }
       td.note{
         text-align: left;
+        input {
+          width: calc(100% - 0.8pc);
+        }
         > * {
           // for markdown <p> elements
           margin: 0;
