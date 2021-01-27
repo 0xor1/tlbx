@@ -65,7 +65,7 @@ export default {
             fmt: {
                 mdLinkify(txt){
                     // replace all instances of [foo](bar) with <a href="bar">foo</a> tag
-                    return txt.replace(/\[([^\]]+)\]\(([^)]+)\)/, '<a href="$2" target="_blank">$1</a>')
+                    return txt.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
                 },
                 md(txt) {
                     return dompurify.sanitize(marked(txt))
