@@ -2,7 +2,6 @@ package fileeps
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -87,24 +86,7 @@ var (
 					Size: uint64(args.Size),
 					Type: args.Type,
 				})
-				putUrl := srv.Store().MustPresignedPutUrl(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size))
-				req, err := http.NewRequest(http.MethodPut, putUrl, args.Content)
-				PanicOn(err)
-				req.Header.Add("X-Amz-Acl", "private")
-				req.Header.Add("Content-Length", Strf(`%d`, args.Size))
-				req.Header.Add("Content-Type", args.Type)
-				req.Header.Add("Content-Disposition", Strf("attachment; filename=%s", args.Name))
-				req.Header.Add("Host", req.Host)
-				req.ContentLength = args.Size
-				resp, err := http.DefaultClient.Do(req)
-				if resp != nil && resp.Body != nil {
-					defer resp.Body.Close()
-				}
-				PanicOn(err)
-				body, err := ioutil.ReadAll(resp.Body)
-				PanicOn(err)
-				PanicOn(resp.Body.Close())
-				PanicIf(resp.StatusCode != 200, "resp.StatusCode: %d, resp.Body: %s", resp.StatusCode, string(body))
+				srv.Store().MustStreamUp(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size), false, true, 5*time.Minute, args.Content)
 				res := &file.PutRes{
 					Task: taskeps.GetOne(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task),
 					File: f,
