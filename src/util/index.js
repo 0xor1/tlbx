@@ -63,6 +63,10 @@ export default {
                 canRead: (pMe) => pMe != null && pMe.isActive === true && pMe.role < 3
             },
             fmt: {
+                mdLinkify(txt){
+                    // replace all instances of [foo](bar) with <a href="bar">foo</a> tag
+                    return txt.replace(/\[([^\]]+)\]\(([^)]+)\)/, '<a href="$2" target="_blank">$1</a>')
+                },
                 md(txt) {
                     return dompurify.sanitize(marked(txt))
                 },
