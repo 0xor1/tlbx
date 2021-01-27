@@ -313,11 +313,15 @@ function newApi(isMDoApi) {
       }
     },
     project: {
-      create(name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn) {
-        return doReq('/project/create', {name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn})
+      create(args) {
+        // name, isPublic, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn
+        return doReq('/project/create', args)
       },
-      one(host, id) {
-        return this.get({host, ids: [id]}).then((res)=>{
+      one(args) {
+        // host, id
+        args.ids = [args.id]
+        delete args.id
+        return this.get(args).then((res)=>{
           if (res.set.length > 0) {
             return res.set[0]
           }
@@ -348,20 +352,25 @@ function newApi(isMDoApi) {
       delete(ids) {
         return doReq('/project/delete', ids)
       },
-      addUsers(host, project, users) {
-        return doReq('/project/addUsers', {host, project, users})
+      addUsers(args) {
+        // host, project, users
+        return doReq('/project/addUsers', args)
       },
-      getMe(host, project) {
-        return doReq('/project/getMe', {host, project})
+      getMe(args) {
+        // host, project
+        return doReq('/project/getMe', args)
       },
-      getUsers(host, project, ids, role, handlePrefix, after, limit) {
-        return doReq('/project/getUsers', {host, project, ids, role, handlePrefix, after, limit})
+      getUsers(args) {
+        // host, project, ids, role, handlePrefix, after, limit
+        return doReq('/project/getUsers', args)
       },
-      setUserRoles(host, project, users) {
-        return doReq('/project/setUserRoles', {host, project, users})
+      setUserRoles(args) {
+        // host, project, users [{id role}]
+        return doReq('/project/setUserRoles', args)
       },
-      removeUsers(host, project, users) {
-        return doReq('/project/removeUsers', {host, project, users})
+      removeUsers(args) {
+        // host, project, users [ids]
+        return doReq('/project/removeUsers', args)
       },
       getActivities(args) {
         // host, project, task, item, user, occuredAfter, occuredBefore, limit
@@ -369,24 +378,29 @@ function newApi(isMDoApi) {
       }
     },
     task: {
-      create(host, project, parent, prevSib, name, description, isParallel, user, timeEst, costEst) {
-        return doReq('/task/create', {host, project, parent, prevSib, name, description, isParallel, user, timeEst, costEst})
+      create(args) {
+        // host, project, parent, prevSib, name, description, isParallel, user, timeEst, costEst
+        return doReq('/task/create', args)
       },
       update(args) {
-        // {host, project, id, parent, prevSib, name, description, isParallel, user, timeEst, costEst}
+        // host, project, id, parent, prevSib, name, description, isParallel, user, timeEst, costEst
         return doReq('/task/update', args)
       },
-      delete(host, project, id) {
-        return doReq('/task/delete', {host, project, id})
+      delete(args) {
+        // host, project, id
+        return doReq('/task/delete', args)
       },
-      get(host, project, id) {
-        return doReq('/task/get', {host, project, id})
+      get(args) {
+        // host, project, id
+        return doReq('/task/get', args)
       },
-      getAncestors(host, project, id, limit) {
-        return doReq('/task/getAncestors', {host, project, id, limit})
+      getAncestors(args) {
+        // host, project, id, limit
+        return doReq('/task/getAncestors', args)
       },
-      getChildren(host, project, id, after, limit) {
-        return doReq('/task/getChildren', {host, project, id, after, limit})
+      getChildren(args) {
+        // host, project, id, after, limit
+        return doReq('/task/getChildren', args)
       }
     },
     vitem: {
@@ -421,28 +435,42 @@ function newApi(isMDoApi) {
           })
         })
       },
-      getContent(host, project, task, id, isDownload) {
-        return doReq('/file/getContent', {host, project, task, id, isDownload})
+      getContentUrl(args) {
+        // host, project, task, id
+        args.isDownload = false
+        return this.getContent(args).then((res)=>{
+          return window.URL.createObjectURL(res)
+        })
       },
-      get(host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit) {
-        return doReq('/file/get', {host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit})
+      getContent(args) {
+        // host, project, task, id, isDownload
+        return doReq('/file/getContent', args)
       },
-      delete(host, project, task, id) {
-        return doReq('/file/delete', {host, project, task, id})
+      get(args) {
+        // host, project, task, ids, createOnMin, createdOnMax, createdBy, after, asc, limit
+        return doReq('/file/get', args)
+      },
+      delete(args) {
+        // host, project, task, id
+        return doReq('/file/delete', args)
       }
     },
     comment: {
-      create(host, project, task, body) {
-        return doReq('/comment/create', {host, project, task, body})
+      create(args) {
+        // host, project, task, body
+        return doReq('/comment/create', args)
       },
-      update(host, project, task, id, body) {
-        return doReq('/comment/update', {host, project, task, id, body})
+      update(args) {
+        // host, project, task, id, body
+        return doReq('/comment/update', args)
       },
-      get(host, project, task, after, limit) {
-        return doReq('/comment/get', {host, project, task, after, limit})
+      get(args) {
+        // host, project, task, after, limit
+        return doReq('/comment/get', args)
       },
-      delete(host, project, task, id) {
-        return doReq('/comment/delete', {host, project, task, id})
+      delete(args) {
+        // host, project, task, id
+        return doReq('/comment/delete', args)
       }
     }
   }

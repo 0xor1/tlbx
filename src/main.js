@@ -54,10 +54,16 @@ let v = new Vue({
         if (this._ctx.currentProjectId != null) {
           this._ctx.loading = true
           let mapi = this.$api.newMDoApi()
-          mapi.project.one(this.$u.rtr.host(), this.$u.rtr.project()).then((p)=>{
+          mapi.project.one({
+            host: this.$u.rtr.host(), 
+            id: this.$u.rtr.project()
+          }).then((p)=>{
             this._ctx.project = p
           })
-          mapi.project.getMe(this.$u.rtr.host(), this.$u.rtr.project()).then((pMe)=>{
+          mapi.project.getMe({
+            host: this.$u.rtr.host(), 
+            project: this.$u.rtr.project()
+          }).then((pMe)=>{
             this._ctx.pMe = pMe
           })
           mapi.sendMDo().finally(()=>{

@@ -325,11 +325,20 @@
             this.pMe = ctx.pMe
             this.project = ctx.project
             let mapi = this.$api.newMDoApi()
-            mapi.task.getAncestors(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), 10).then((res)=>{
+            mapi.task.getAncestors({
+              host: this.$u.rtr.host(), 
+              project: this.$u.rtr.project(), 
+              id: this.$u.rtr.task(), 
+              limit: 10
+            }).then((res)=>{
               this.ancestors = res.set.reverse()
               this.moreAncestors = res.more
             })
-            mapi.task.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((t)=>{
+            mapi.task.get({
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project(),
+              id: this.$u.rtr.task()
+            }).then((t)=>{
               this.task = t
               this.vitems.time.estDisplay = this.$u.fmt.time(this.task.timeEst)
               this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)
@@ -338,7 +347,11 @@
                 this.notFound = true
               }
             })
-            mapi.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
+            mapi.task.getChildren({
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project(), 
+              id: this.$u.rtr.task()
+            }).then((res)=>{
               this.children = res.set
               this.moreChildren = res.more
             })
@@ -360,11 +373,19 @@
               this.vitems.cost.set = res.set
               this.vitems.cost.more = res.more
             })
-            mapi.file.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
+            mapi.file.get({
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project(), 
+              task: this.$u.rtr.task()
+            }).then((res)=>{
               this.file = res.set
               this.moreFiles = res.more
             })
-            mapi.comment.get(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task()).then((res)=>{
+            mapi.comment.get({
+              host: this.$u.rtr.host(), 
+              project: this.$u.rtr.project(), 
+              task: this.$u.rtr.task()
+            }).then((res)=>{
               this.comments = res.set
               this.moreComments = res.more
             })
@@ -381,7 +402,12 @@
           if (this.ancestors.length > 0 && this.ancestors[0].id != null) {
             taskId = this.ancestors[0].id
           }
-          this.$api.task.getAncestors(this.$u.rtr.host(), this.$u.rtr.project(), taskId, 10).then((res)=>{
+          this.$api.task.getAncestors({
+            host: this.$u.rtr.host(),
+            project: this.$u.rtr.project(),
+            id: taskId, 
+            limit: 10
+          }).then((res)=>{
             this.ancestors = res.set.reverse().concat(this.ancestors)
             this.moreAncestors = res.more
           }).finally(()=>{
@@ -392,7 +418,13 @@
       getMoreChildren(){
         if (!this.loadingMoreChildren) {
           this.loadingMoreChildren = true;
-          this.$api.task.getChildren(this.$u.rtr.host(), this.$u.rtr.project(), this.$u.rtr.task(), this.children[this.children.length - 1].id, 10).then((res)=>{
+          this.$api.task.getChildren({
+            host: this.$u.rtr.host(), 
+            project: this.$u.rtr.project(), 
+            id: this.$u.rtr.task(), 
+            after: this.children[this.children.length - 1].id, 
+            limit: 10
+          }).then((res)=>{
             this.children = this.children.concat(res.set)
             this.moreChildren = res.more
           }).finally(()=>{
@@ -471,7 +503,11 @@
             this.refreshProjectActivity(true)
           })
         } else {
-          this.$api.task.delete(this.$u.rtr.host(), this.$u.rtr.project(), t.id).then((t)=>{
+          this.$api.task.delete({
+            host: this.$u.rtr.host(),
+            project: this.$u.rtr.project(),
+            id: t.id
+          }).then((t)=>{
             if (index > -1) {
               this.children.splice(index, 1)
               this.task = t

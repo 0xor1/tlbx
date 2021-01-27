@@ -190,7 +190,18 @@
       ok(){
         if (this.validate()) {
           if (this.isCreate) {
-            this.$api.task.create(this.hostId, this.projectId, this.task.id, this.prevSibId, this.name, this.description, this.isParallel, this.user, this.timeEst, this.costEst).then((res)=>{
+            this.$api.task.create({
+              host: this.hostId,
+              project: this.projectId,
+              parent: this.task.id,
+              prevSib: this.prevSibId,
+              name: this.name,
+              description: this.description,
+              isParallel: this.isParallel,
+              user: this.user,
+              timeEst: this.timeEst,
+              costEst: this.costEst
+            }).then((res)=>{
               this.children.splice(this.index, 0, res.task)
               for(const [key, value] of Object.entries(res.parent)) {
                 this.task[key] = value
