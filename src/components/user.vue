@@ -9,7 +9,8 @@
   export default {
     name: 'user',
     props: {
-        userId: String
+        userId: String,
+        goToHome: Boolean
     },
     data() {
       return this.initState()
@@ -31,7 +32,7 @@
         })
       },
       goto() {
-        if (this.$u.rtr.project() != null && this.$u.rtr.name() != "projectUser") {
+        if (this.goToHome !== true && this.$u.rtr.project() != null && this.$u.rtr.name() != "projectUser") {
           this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/user/${this.userId}`)
           return
         }

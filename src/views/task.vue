@@ -21,13 +21,20 @@
     </div>
     <div v-else class="content" >
       <div class="breadcrumb">
+        <span>
+          <user :goToHome="true" :userId="$u.rtr.host()"></user>
+          :
+        </span>
         <span v-if="ancestors.length > 0 && ancestors[0].parent != null">
           <a title="load more ancestors" @click.stop.prevent="getMoreAncestors">..</a>
           /
         </span>
-        <span v-for="(a, index) in ancestors" :key="a.id">
+        <span v-for="(a) in ancestors" :key="a.id">
           <a :title="a.name" :href="'/#/host/'+$u.rtr.host()+'/project/'+$u.rtr.project()+'/task/'+a.id">{{$u.fmt.ellipsis(a.name, 20)}}</a> 
-          <span v-if="index != ancestors.length - 1"> / </span>     
+          /     
+        </span>
+        <span>
+          {{$u.fmt.ellipsis(task.name, 20)}}      
         </span>
       </div>
       <div class="summary">
