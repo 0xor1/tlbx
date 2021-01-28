@@ -48,7 +48,7 @@
           <button class="load-more" v-if="psMore" @click="loadMore()">load more</button>
         </div>
         <div v-if="others.length > 0" class="others">
-          <h1>Others Projects</h1>
+          <h1>others projects</h1>
           <table>
             <tr class="header">
               <th colspan="1" rowspan="2">
