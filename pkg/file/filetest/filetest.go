@@ -165,12 +165,13 @@ func Everything(t *testing.T) {
 	a.True(f1.ID.Equal(res.Set[0].ID))
 	a.True(res.More)
 
-	(&file.Delete{
+	t1p0Updated := (&file.Delete{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      f1.ID,
 	}).MustDo(ac)
+	a.True(t1p0Updated.ID.Equal(t1p0.ID))
 
 	pID = p.ID
 	tree = testutil.GrabFullTree(r, r.Ali().ID(), p.ID)

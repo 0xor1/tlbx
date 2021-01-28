@@ -126,11 +126,14 @@ func (_ *Delete) Path() string {
 	return "/file/delete"
 }
 
-func (a *Delete) Do(c *app.Client) error {
-	err := app.Call(c, a.Path(), a, nil)
-	return err
+func (a *Delete) Do(c *app.Client) (*task.Task, error) {
+	res := &task.Task{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
 }
 
-func (a *Delete) MustDo(c *app.Client) {
-	PanicOn(a.Do(c))
+func (a *Delete) MustDo(c *app.Client) *task.Task {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
 }

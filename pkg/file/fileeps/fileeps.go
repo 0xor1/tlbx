@@ -242,7 +242,7 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return nil
+				return taskeps.ExampleTask
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*file.Delete)
@@ -263,8 +263,9 @@ var (
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeFile, cnsts.ActionDeleted, &f.Name, nil)
+				t := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				tx.Commit()
-				return nil
+				return t
 			},
 		},
 	}
