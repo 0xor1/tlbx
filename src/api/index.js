@@ -433,11 +433,8 @@ function newApi(isMDoApi) {
         })
       },
       getContentUrl(args) {
-        // host, project, task, id
-        args.isDownload = false
-        return this.getContent(args).then((res)=>{
-          return window.URL.createObjectURL(res)
-        })
+        // host, project, task, id, isDownload
+        return `/api/file/getContent?args=${JSON.stringify(args)}`
       },
       getContent(args) {
         // host, project, task, id, isDownload

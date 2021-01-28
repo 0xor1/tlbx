@@ -844,13 +844,13 @@
         }
       },
       getFileDownloadUrl(f, isDownload){
-        return `/api/file/getContent?args=${JSON.stringify({
+        return this.$api.file.getContentUrl({
           host: this.$u.rtr.host(),
           project: this.$u.rtr.project(),
           task: this.$u.rtr.task(),
           id: f.id,
           isDownload
-        })}`
+        })
       },
       isImageType(f){
         return f.type.startsWith("image/")
