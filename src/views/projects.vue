@@ -63,7 +63,7 @@
                 {{c.name}}
               </th>
             </tr>
-            <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p) in others" :key="p.id">
+            <tr class="row" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p) in others" :key="p.id">
               <td class="host">
                 <user :userId="p.host"></user>
               </td><td :class="c.name" v-for="(c, index) in cols" :key="index">
