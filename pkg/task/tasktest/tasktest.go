@@ -312,18 +312,18 @@ func Everything(t *testing.T) {
 	a.NotNil(t1p0)
 
 	content1 := []byte("yolo")
-	put := &file.Put{
-		Args: &file.PutArgs{
+	createFile := &file.Create{
+		Args: &file.CreateArgs{
 			Host:    r.Ali().ID(),
 			Project: p.ID,
 			Task:    t1p0.ID,
 		},
 	}
-	put.Name = "yolo.test.txt"
-	put.Type = "text/plain"
-	put.Size = int64(len(content1))
-	put.Content = ioutil.NopCloser(bytes.NewBuffer(content1))
-	f := put.MustDo(ac).File
+	createFile.Name = "yolo.test.txt"
+	createFile.Type = "text/plain"
+	createFile.Size = int64(len(content1))
+	createFile.Content = ioutil.NopCloser(bytes.NewBuffer(content1))
+	f := createFile.MustDo(ac).File
 	a.NotNil(f)
 
 	t2p0 = (&task.Get{

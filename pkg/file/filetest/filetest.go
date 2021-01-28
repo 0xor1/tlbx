@@ -78,22 +78,22 @@ func Everything(t *testing.T) {
 	a.NotNil(t1p0)
 
 	content1 := []byte("1")
-	put := &file.Put{
-		Args: &file.PutArgs{
+	create := &file.Create{
+		Args: &file.CreateArgs{
 			Host:    r.Ali().ID(),
 			Project: p.ID,
 			Task:    t1p0.ID,
 		},
 	}
-	put.Name = "one"
-	put.Type = "text/plain"
-	put.Size = int64(len(content1))
-	put.Content = ioutil.NopCloser(bytes.NewBuffer(content1))
-	putRes := put.MustDo(ac)
-	a.True(putRes.Task.ID.Equal(t1p0.ID))
-	a.Equal(putRes.Task.FileN, uint64(1))
-	a.Equal(putRes.Task.FileSize, uint64(1))
-	f1 := putRes.File
+	create.Name = "one"
+	create.Type = "text/plain"
+	create.Size = int64(len(content1))
+	create.Content = ioutil.NopCloser(bytes.NewBuffer(content1))
+	createRes := create.MustDo(ac)
+	a.True(createRes.Task.ID.Equal(t1p0.ID))
+	a.Equal(createRes.Task.FileN, uint64(1))
+	a.Equal(createRes.Task.FileSize, uint64(1))
+	f1 := createRes.File
 	a.NotNil(f1)
 
 	f1Get := (&file.GetContent{
@@ -105,14 +105,14 @@ func Everything(t *testing.T) {
 	bs, err := ioutil.ReadAll(f1Get.Content)
 	a.Nil(err)
 	a.Equal(content1, bs)
-	a.Equal(put.Name, f1Get.Name)
-	a.Equal(put.Size, f1Get.Size)
-	a.Equal(put.Type, f1Get.Type)
+	a.Equal(create.Name, f1Get.Name)
+	a.Equal(create.Size, f1Get.Size)
+	a.Equal(create.Type, f1Get.Type)
 
 	content2 := []byte("2")
-	put.Content = ioutil.NopCloser(bytes.NewBuffer(content2))
-	put.Name = "two"
-	f2 := put.MustDo(ac).File
+	create.Content = ioutil.NopCloser(bytes.NewBuffer(content2))
+	create.Name = "two"
+	f2 := create.MustDo(ac).File
 	a.NotNil(f2)
 
 	res := (&file.Get{

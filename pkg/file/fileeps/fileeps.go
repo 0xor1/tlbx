@@ -25,13 +25,13 @@ var (
 	Eps = []*app.Endpoint{
 		{
 			Description:  "Put a file",
-			Path:         (&file.Put{}).Path(),
+			Path:         (&file.Create{}).Path(),
 			Timeout:      300000, // 5 mins
 			MaxBodyBytes: 5 * app.GB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
 				return &app.UpStream{
-					Args: &file.PutArgs{},
+					Args: &file.CreateArgs{},
 				}
 			},
 			GetExampleArgs: func() interface{} {
@@ -42,7 +42,7 @@ var (
 				return res
 			},
 			GetExampleResponse: func() interface{} {
-				return &file.PutRes{
+				return &file.CreateRes{
 					Task: taskeps.ExampleTask,
 					File: exampleFile,
 				}
@@ -51,7 +51,7 @@ var (
 				args := a.(*app.UpStream)
 				defer args.Content.Close()
 				me := me.Get(tlbx)
-				innerArgs := args.Args.(*file.PutArgs)
+				innerArgs := args.Args.(*file.CreateArgs)
 				app.BadReqIf(innerArgs.Host.IsZero() || innerArgs.Project.IsZero() || innerArgs.Task.IsZero(), "Content-Args header must be set")
 				app.ReturnIf(args.Size > maxFileSize, http.StatusBadRequest, "max file size is %d", maxFileSize)
 				args.Name = StrTrimWS(args.Name)
@@ -87,7 +87,7 @@ var (
 					Type: args.Type,
 				})
 				srv.Store().MustStreamUp(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size), false, true, 5*time.Minute, args.Content)
-				res := &file.PutRes{
+				res := &file.CreateRes{
 					Task: taskeps.GetOne(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task),
 					File: f,
 				}
