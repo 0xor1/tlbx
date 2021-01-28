@@ -119,7 +119,7 @@
               <button @click.stop="submit(type)">create</button>
             </div>
           </div>
-          <table>
+          <table v-if="vitems[type].set.length > 0">
             <tr class="header">
               <th class="note">note</th>
               <th v-if="$root.show.date">created</th>
@@ -150,28 +150,32 @@
       <div v-if="$root.show.file" class="items files">
         <div class="heading">file <span class="medium">{{$u.fmt.bytes(task.fileSize)}} | {{$u.fmt.bytes(task.fileSubSize)}}</span></div>
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
-          <div title="choose file">
-            <span>file</span><br>
-            <input type="file" :placeholder="file" @keydown.enter="submitFile()"/>
+          <div @click.stop="fileButtonClick" class="file-selector" title="choose file">
+            <input ref="fileInput" id="file" class="file" type="file" @change="fileSelectorChange"/>
+            <button><label ref="fileLabel" class="btn" for="file" @click.stop>Choose a file</label></button>
+            <span class="input-file">{{$u.fmt.ellipsis(selectedFileName, 21)}}</span>
           </div>
           <div>
             <button @click.stop="submitFile()">upload</button>
           </div>
         </div>
-        <table>
+        <table v-if="files.length > 0">
           <tr class="header">
-            <th class="note">name</th>
+            <th class="name">name</th>
             <th v-if="$root.show.date">created</th>
             <th v-if="$root.show.user">user</th>
             <th>size</th>
           </tr>
           <tr class="item" v-for="(f, index) in files" :key="index">
-            <td class="note">{{f.name}}</td>
+            <td class="note">
+              <a v-if="isImageType(f)" :href="getFileDownloadUrl(f, false)" target="_blank">{{$u.fmt.ellipsis(f.name, 35)}}</a>
+              <a v-else :href="getFileDownloadUrl(f, true)">{{$u.fmt.ellipsis(f.name, 35)}}</a>
+            </td>
             <td v-if="$root.show.date">{{$u.fmt.date(f.createdOn)}}</td>
             <td v-if="$root.show.user"><user :userId="f.createdBy"></user></td>
             <td>{{$u.fmt.bytes(f.size)}}</td>
-            <td class="action" @click.stop="downloadFile(f)" title="update">
-              <img src="@/assets/edit.svg">
+            <td class="action" title="download">
+              <a :href="getFileDownloadUrl(f, true)"><img src="@/assets/download.svg"></a>
             </td>
             <td v-if="canUpdateVitem(f)" class="action" @click.stop="toggleFileDeleteIndex(index)" title="delete safety">
               <img src="@/assets/trash.svg">
@@ -198,6 +202,12 @@
       return this.initState()
     },
     computed: {
+      selectedFileName(){
+        if (this.selectedFile != null) {
+          return this.selectedFile.name
+        }
+        return ""
+      },
       sections(){
         return this.commonSections.filter(i => i.show())
       },
@@ -240,6 +250,9 @@
           comments: [],
           moreComments: false,
           deleteIndex: -2,
+          selectedFile: null,
+          fileDeleteIndex: -2,
+          loadingFiles: false,
           vitems: {
             time: {
               deleteIndex: -2,
@@ -283,7 +296,7 @@
               cols: [
                 {
                   name: "name",
-                  get: (t)=> this.$u.fmt.ellipsis(t.name, 30)
+                  get: (t)=> this.$u.fmt.ellipsis(t.name, 35)
                 }
               ]
             },
@@ -434,7 +447,7 @@
               project: this.$u.rtr.project(), 
               task: this.$u.rtr.task()
             }).then((res)=>{
-              this.file = res.set
+              this.files = res.set
               this.moreFiles = res.more
             })
             mapi.comment.get({
@@ -789,6 +802,23 @@
           obj.loading = false
         })
       },
+      loadMoreFiles() {
+        if (this.loadingFiles) {
+          return
+        }
+        this.loadingFiles = true
+        this.$api.file.get({
+          host: this.$u.rtr.host(),
+          project: this.$u.rtr.project(),
+          task: this.$u.rtr.task(),
+          after: this.files[this.files.length - 1].id
+        }).then((res)=>{
+          this.files = this.files.concat(res.set)
+          this.moreFiles = res.more
+        }).finally(()=>{
+          this.loadingFiles = false
+        })
+      },
       descriptionTitle(t) {
         let res = t.name
         if (t.description != "") {
@@ -802,6 +832,74 @@
           this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)    
         }
         this.$emit("refreshProjectActivity", force)
+      },
+      fileButtonClick(){
+        this.$refs.fileLabel.click()
+      },
+      fileSelectorChange(event){
+        if (event == null) {
+          this.selectedFile = null
+        } else {
+          this.selectedFile = this.$refs.fileInput.files[0]
+        }
+      },
+      getFileDownloadUrl(f, isDownload){
+        return `/api/file/getContent?args=${JSON.stringify({
+          host: this.$u.rtr.host(),
+          project: this.$u.rtr.project(),
+          task: this.$u.rtr.task(),
+          id: f.id,
+          isDownload
+        })}`
+      },
+      isImageType(f){
+        return f.type.startsWith("image/")
+      },
+      toggleFileDeleteIndex(index) {
+        if (this.fileDeleteIndex === index) {
+          this.fileDeleteIndex = -2
+        } else {
+          this.fileDeleteIndex = index
+        }
+      },
+      trashFile(index) {
+        if (this.loadingFiles) {
+          return
+        }
+        let f = this.files[index]
+        this.loadingFiles = true
+        this.$api.file.delete({
+          host: this.$u.rtr.host(),
+          project: this.$u.rtr.project(),
+          task: this.$u.rtr.task(),
+          id: f.id
+        }).then((t)=>{
+          this.task = t
+          this.files.splice(index, 1)
+          this.fileDeleteIndex = -2
+          this.refreshProjectActivity(true)
+        }).finally(()=>{
+          this.loadingFiles = false
+        })
+      },
+      submitFile(){
+        if (this.selectedFile != null) {
+          this.$api.file.create({
+            host: this.$u.rtr.host(), 
+            project: this.$u.rtr.project(),
+            task: this.$u.rtr.task(),
+            name: this.selectedFile.name, 
+            type: this.selectedFile.type,
+            size: this.selectedFile.size,
+            content: this.selectedFile
+          }).then((res)=>{
+            this.task = res.task
+            this.files.splice(0, 0, res.file)
+            this.selectedFile = null
+            this.$refs.fileInput.value = null
+            this.refreshProjectActivity(true)
+          })
+        }
       }
     },
     mounted(){
@@ -869,13 +967,15 @@ div.root {
         > * {
           background-color: #333;
         }
-        font-size: 1.7pc;
         font-weight: bold;
       }
     }
     .items {
+      &.files{
+        margin-top: 0.3pc;
+      }
       > .heading {
-        font-size: 1.7pc;
+        font-size: 1.5pc;
         font-weight: bold;
         border-bottom: 1px solid #777;
       }
@@ -885,7 +985,7 @@ div.root {
       .medium{
         font-size: 1pc;
       }
-      th.note {
+      th.note, th.name {
         min-width: 21pc;
       }
       td.note{
@@ -902,10 +1002,34 @@ div.root {
         > div {
           display: inline-block;
           margin: 1pc 1pc 0 0;
+          &.file-selector {
+            cursor: pointer;
+            width: 20.6pc;
+            @include border();
+            border-radius: 0.1pc;
+            background: $inputColor;
+            label.btn {
+              width: 100%;
+              height: 100%;
+              background: transparent;
+            }
+            span {
+              margin-left: 0.3pc;
+              background: transparent;
+            }
+          }
           > input {
             width: 5pc;
-            &.note {
+            &.note, &.file {
               width: 20pc;
+            }
+            &.file {
+              width: 0.1px;
+              height: 0.1px;
+              opacity: 0;
+              overflow: hidden;
+              position: absolute;
+              z-index: -1;
             }
           }
         }

@@ -20,7 +20,8 @@ function newApi(isMDoApi) {
   let doReq = (path, args, headers) => {
     path = `/api${path}`
     if (!isMDoApi || (isMDoApi && mDoSending && !mDoSent)) {
-      headers = headers || {"X-Client": "tlbx-web-client"}
+      headers = headers || {}
+      headers["X-Client"] = "tlbx-web-client"
       return axios({
         method: 'put',
         url: path,
@@ -420,7 +421,7 @@ function newApi(isMDoApi) {
     file: {
       create(args) {
         // host, project, task, name, type, size, content
-        return doReq('/file/put', args.content, {
+        return doReq('/file/create', args.content, {
           "Content-Name": args.name,
           "Content-Length": args.size,
           "Content-Type": args.type,
