@@ -18,20 +18,21 @@ import (
 	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/0xor1/trees/pkg/epsutil"
+	"github.com/0xor1/trees/pkg/project/projecteps"
 	"github.com/0xor1/trees/pkg/task/taskeps"
 )
 
 var (
 	Eps = []*app.Endpoint{
 		{
-			Description:  "Put a file",
-			Path:         (&file.Put{}).Path(),
+			Description:  "Create a file",
+			Path:         (&file.Create{}).Path(),
 			Timeout:      300000, // 5 mins
-			MaxBodyBytes: 5 * app.GB,
+			MaxBodyBytes: maxFileSize,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
 				return &app.UpStream{
-					Args: &file.PutArgs{},
+					Args: &file.CreateArgs{},
 				}
 			},
 			GetExampleArgs: func() interface{} {
@@ -42,7 +43,7 @@ var (
 				return res
 			},
 			GetExampleResponse: func() interface{} {
-				return &file.PutRes{
+				return &file.CreateRes{
 					Task: taskeps.ExampleTask,
 					File: exampleFile,
 				}
@@ -51,12 +52,14 @@ var (
 				args := a.(*app.UpStream)
 				defer args.Content.Close()
 				me := me.Get(tlbx)
-				innerArgs := args.Args.(*file.PutArgs)
+				innerArgs := args.Args.(*file.CreateArgs)
 				app.BadReqIf(innerArgs.Host.IsZero() || innerArgs.Project.IsZero() || innerArgs.Task.IsZero(), "Content-Args header must be set")
 				app.ReturnIf(args.Size > maxFileSize, http.StatusBadRequest, "max file size is %d", maxFileSize)
 				args.Name = StrTrimWS(args.Name)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				epsutil.IMustHaveAccess(tlbx, innerArgs.Host, innerArgs.Project, cnsts.RoleWriter)
+				p := projecteps.GetOne(tlbx, innerArgs.Host, innerArgs.Project)
+				app.BadReqIf(p.FileLimit < p.FileSize+p.FileSubSize+uint64(args.Size), "project file limit exceeded, limit: %d, current usage: %d", p.FileLimit, p.FileSize+p.FileSubSize)
 				f := &file.File{
 					Task:      innerArgs.Task,
 					ID:        tlbx.NewID(),
@@ -67,6 +70,13 @@ var (
 					Name:      args.Name,
 				}
 				srv := service.Get(tlbx)
+				srv.Store().MustStreamUp(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size), false, true, 5*time.Minute, args.Content)
+				deleteFile := true
+				defer func() {
+					if deleteFile {
+						srv.Store().MustDelete(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID))
+					}
+				}()
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
 				// insert new file
@@ -86,21 +96,22 @@ var (
 					Size: uint64(args.Size),
 					Type: args.Type,
 				})
-				srv.Store().MustStreamUp(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size), false, true, 5*time.Minute, args.Content)
-				res := &file.PutRes{
+				res := &file.CreateRes{
 					Task: taskeps.GetOne(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task),
 					File: f,
 				}
 				tx.Commit()
+				deleteFile = false
 				return res
 			},
 		},
 		{
-			Description:  "get file content",
-			Path:         (&file.GetContent{}).Path(),
-			Timeout:      300000, // 5 mins
-			MaxBodyBytes: app.KB,
-			IsPrivate:    false,
+			Description:      "get file content",
+			Path:             (&file.GetContent{}).Path(),
+			Timeout:          300000, // 5 mins
+			SkipXClientCheck: true,
+			MaxBodyBytes:     app.KB,
+			IsPrivate:        false,
 			GetDefaultArgs: func() interface{} {
 				return &file.GetContent{}
 			},
@@ -242,12 +253,13 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return nil
+				return taskeps.ExampleTask
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*file.Delete)
 				me := me.Get(tlbx)
-				tx := service.Get(tlbx).Data().Begin()
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
@@ -263,8 +275,10 @@ var (
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeFile, cnsts.ActionDeleted, &f.Name, nil)
+				t := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
+				srv.Store().MustDelete(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
 				tx.Commit()
-				return nil
+				return t
 			},
 		},
 	}

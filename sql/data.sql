@@ -67,6 +67,7 @@ CREATE TABLE projects(
   startOn DATETIME(3) NULL,
   endOn DATETIME(3) NULL,
   isPublic BOOL NOT NULL,
+  fileLimit BIGINT UNSIGNED NOT NULL,
   PRIMARY KEY (host, id),
   UNIQUE INDEX(id),
   UNIQUE INDEX(host, isArchived, isPublic, name, createdOn, id),

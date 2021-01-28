@@ -49,61 +49,55 @@ func Everything(t *testing.T) {
 	a.NotNil(p1)
 
 	p1 = (&project.Get{
-		Host:       r.Ali().ID(),
-		IsArchived: false,
-		IsPublic:   ptr.Bool(false),
-		GetBase: project.GetBase{
-			NamePrefix:   ptr.String("My New"),
-			CreatedOnMin: &p1.CreatedOn,
-			CreatedOnMax: &p1.CreatedOn,
-			StartOnMin:   ptr.Time(app.ExampleTime()),
-			StartOnMax:   ptr.Time(app.ExampleTime()),
-			EndOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-			EndOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-			After:        nil,
-			Sort:         cnsts.SortEndOn,
-			Asc:          ptr.Bool(false),
-			Limit:        100,
-		},
+		Host:         r.Ali().ID(),
+		IsArchived:   false,
+		IsPublic:     ptr.Bool(false),
+		NamePrefix:   ptr.String("My New"),
+		CreatedOnMin: &p1.CreatedOn,
+		CreatedOnMax: &p1.CreatedOn,
+		StartOnMin:   ptr.Time(app.ExampleTime()),
+		StartOnMax:   ptr.Time(app.ExampleTime()),
+		EndOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		After:        nil,
+		Sort:         cnsts.SortEndOn,
+		Asc:          ptr.Bool(false),
+		Limit:        100,
 	}).MustDo(ac).Set[0]
 
 	// getwithout specifying host
 	p1 = (&project.Get{
-		Host:       r.Ali().ID(),
-		IsArchived: false,
-		IsPublic:   ptr.Bool(false),
-		GetBase: project.GetBase{
-			NamePrefix:   ptr.String("My New"),
-			CreatedOnMin: &p1.CreatedOn,
-			CreatedOnMax: &p1.CreatedOn,
-			StartOnMin:   ptr.Time(app.ExampleTime()),
-			StartOnMax:   ptr.Time(app.ExampleTime()),
-			EndOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-			EndOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-			After:        nil,
-			Sort:         cnsts.SortEndOn,
-			Asc:          ptr.Bool(false),
-			Limit:        100,
-		},
+		Host:         r.Ali().ID(),
+		IsArchived:   false,
+		IsPublic:     ptr.Bool(false),
+		NamePrefix:   ptr.String("My New"),
+		CreatedOnMin: &p1.CreatedOn,
+		CreatedOnMax: &p1.CreatedOn,
+		StartOnMin:   ptr.Time(app.ExampleTime()),
+		StartOnMax:   ptr.Time(app.ExampleTime()),
+		EndOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		After:        nil,
+		Sort:         cnsts.SortEndOn,
+		Asc:          ptr.Bool(false),
+		Limit:        100,
 	}).MustDo(ac).Set[0]
 
 	a.Zero(len((&project.Get{
-		Host:       p1.ID,
-		IsArchived: false,
-		IsPublic:   ptr.Bool(false),
-		GetBase: project.GetBase{
-			NamePrefix:   ptr.String("My New"),
-			CreatedOnMin: &p1.CreatedOn,
-			CreatedOnMax: &p1.CreatedOn,
-			StartOnMin:   ptr.Time(app.ExampleTime()),
-			StartOnMax:   ptr.Time(app.ExampleTime()),
-			EndOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-			EndOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
-			After:        ptr.ID(p1.ID),
-			Sort:         cnsts.SortEndOn,
-			Asc:          ptr.Bool(true),
-			Limit:        100,
-		},
+		Host:         p1.ID,
+		IsArchived:   false,
+		IsPublic:     ptr.Bool(false),
+		NamePrefix:   ptr.String("My New"),
+		CreatedOnMin: &p1.CreatedOn,
+		CreatedOnMax: &p1.CreatedOn,
+		StartOnMin:   ptr.Time(app.ExampleTime()),
+		StartOnMax:   ptr.Time(app.ExampleTime()),
+		EndOnMin:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		EndOnMax:     ptr.Time(app.ExampleTime().Add(24 * time.Hour)),
+		After:        ptr.ID(p1.ID),
+		Sort:         cnsts.SortEndOn,
+		Asc:          ptr.Bool(true),
+		Limit:        100,
 	}).MustDo(ac).Set))
 
 	name1 := "renamed project"
@@ -163,10 +157,8 @@ func Everything(t *testing.T) {
 	a.NotNil(p2)
 
 	a.True((&project.Get{
-		Host: r.Ali().ID(),
-		GetBase: project.GetBase{
-			Limit: 1,
-		},
+		Host:  r.Ali().ID(),
+		Limit: 1,
 	}).MustDo(ac).More)
 
 	// trigger OnSetSocials code
@@ -241,7 +233,7 @@ func Everything(t *testing.T) {
 		},
 	}).MustDo(ac)
 
-	others := (&project.GetOthers{}).MustDo(r.Dan().Client())
+	others := (&project.Get{Host: r.Dan().ID(), Others: true}).MustDo(r.Cat().Client())
 	a.Equal(1, len(others.Set))
 	a.True(p1.ID.Equal(others.Set[0].ID))
 	a.Equal(p1.Name, others.Set[0].Name)
