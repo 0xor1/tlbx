@@ -24,7 +24,7 @@ import (
 var (
 	Eps = []*app.Endpoint{
 		{
-			Description:  "Put a file",
+			Description:  "Create a file",
 			Path:         (&file.Create{}).Path(),
 			Timeout:      300000, // 5 mins
 			MaxBodyBytes: 5 * app.GB,
@@ -67,6 +67,13 @@ var (
 					Name:      args.Name,
 				}
 				srv := service.Get(tlbx)
+				srv.Store().MustStreamUp(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size), false, true, 5*time.Minute, args.Content)
+				deleteFile := true
+				defer func() {
+					if deleteFile {
+						srv.Store().MustDelete(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID))
+					}
+				}()
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
 				// insert new file
@@ -86,12 +93,12 @@ var (
 					Size: uint64(args.Size),
 					Type: args.Type,
 				})
-				srv.Store().MustStreamUp(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size), false, true, 5*time.Minute, args.Content)
 				res := &file.CreateRes{
 					Task: taskeps.GetOne(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task),
 					File: f,
 				}
 				tx.Commit()
+				deleteFile = false
 				return res
 			},
 		},
@@ -248,7 +255,8 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*file.Delete)
 				me := me.Get(tlbx)
-				tx := service.Get(tlbx).Data().Begin()
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
@@ -265,6 +273,7 @@ var (
 				// set activities to deleted
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeFile, cnsts.ActionDeleted, &f.Name, nil)
 				t := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
+				srv.Store().MustDelete(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
 				tx.Commit()
 				return t
 			},
