@@ -3,6 +3,7 @@ package projecteps
 import (
 	"bytes"
 	"net/http"
+	"strings"
 	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -116,54 +117,15 @@ var (
 			GetDefaultArgs: func() interface{} {
 				return &project.Get{
 					IsArchived: false,
-					GetBase: project.GetBase{
-						Sort:  cnsts.SortCreatedOn,
-						Asc:   ptr.Bool(true),
-						Limit: 100,
-					},
+					Sort:       cnsts.SortCreatedOn,
+					Asc:        ptr.Bool(true),
+					Limit:      100,
 				}
 			},
 			GetExampleArgs: func() interface{} {
 				return &project.Get{
-					IsArchived: false,
-					GetBase: project.GetBase{
-						NamePrefix:   ptr.String("My Proj"),
-						CreatedOnMin: ptr.Time(app.ExampleTime()),
-						CreatedOnMax: ptr.Time(app.ExampleTime()),
-						After:        ptr.ID(app.ExampleID()),
-						Sort:         cnsts.SortName,
-						Asc:          ptr.Bool(true),
-						Limit:        50,
-					},
-				}
-			},
-			GetExampleResponse: func() interface{} {
-				return &project.GetRes{
-					Set: []*project.Project{
-						exampleProject,
-					},
-					More: true,
-				}
-			},
-			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				return getSet(tlbx, a.(*project.Get), false)
-			},
-		},
-		{
-			Description:  "Get others projects that I am a member of",
-			Path:         (&project.GetOthers{}).Path(),
-			Timeout:      500,
-			MaxBodyBytes: app.KB,
-			IsPrivate:    false,
-			GetDefaultArgs: func() interface{} {
-				return &project.GetOthers{
-					Sort:  cnsts.SortCreatedOn,
-					Asc:   ptr.Bool(true),
-					Limit: 100,
-				}
-			},
-			GetExampleArgs: func() interface{} {
-				return &project.GetOthers{
+					IsArchived:   false,
+					Others:       true,
 					NamePrefix:   ptr.String("My Proj"),
 					CreatedOnMin: ptr.Time(app.ExampleTime()),
 					CreatedOnMax: ptr.Time(app.ExampleTime()),
@@ -182,9 +144,7 @@ var (
 				}
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				return getSet(tlbx, &project.Get{
-					GetBase: project.GetBase(*a.(*project.GetOthers)),
-				}, true)
+				return getSet(tlbx, a.(*project.Get))
 			},
 		},
 		{
@@ -248,7 +208,7 @@ var (
 						ids = append(ids, u.ID)
 					}
 				}
-				ps := getSet(tlbx, &project.Get{Host: me, GetBase: project.GetBase{IDs: ids}}, false).Set
+				ps := getSet(tlbx, &project.Get{Host: me, IDs: ids}).Set
 				for i, p := range ps {
 					a := args[i]
 					if a.CurrencyCode != nil {
@@ -758,7 +718,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	tx.Commit()
 }
 
-func getSet(tlbx app.Tlbx, args *project.Get, others bool) *project.GetRes {
+func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	app.BadReqIf(
 		args.CreatedOnMin != nil &&
@@ -793,7 +753,13 @@ func getSet(tlbx app.Tlbx, args *project.Get, others bool) *project.GetRes {
 	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, t.parent, t.firstChild, t.nextSib, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
 	queryArgs := make([]interface{}, 0, 14)
 	idsLen := len(args.IDs)
-	if !others {
+	if idsLen > 0 {
+		// if asking for a specific set of ids from a given host
+		// others needs to be false, or will always result in
+		// an empty result set
+		args.Others = false
+	}
+	if !args.Others {
 		query.WriteString(` p.host=?`)
 		queryArgs = append(queryArgs, args.Host)
 		if me.Exists(tlbx) {
@@ -802,14 +768,21 @@ func getSet(tlbx app.Tlbx, args *project.Get, others bool) *project.GetRes {
 				query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT u.project FROM users u WHERE u.host=? AND u.isActive=1 AND u.id=?))`)
 				queryArgs = append(queryArgs, args.Host, me)
 			}
-		} else {
-			query.WriteString(` AND p.isPublic=1`)
 		}
 	} else {
-		// asking for other peoples projects which I am a member of
+		// asking for other peoples projects which host is an active member of
 		query.WriteString(` p.id IN (SELECT u.project FROM users u WHERE u.host <> ? AND u.isActive=1 AND u.id=?)`)
-		me := me.Get(tlbx)
-		queryArgs = append(queryArgs, me, me)
+		queryArgs = append(queryArgs, args.Host, args.Host)
+		if me.Exists(tlbx) {
+			me := me.Get(tlbx)
+			if !me.Equal(args.Host) {
+				query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT u2.project FROM users u2 WHERE u2.host<>? AND u2.isActive=1 AND u2.id=?))`)
+				queryArgs = append(queryArgs, args.Host, me)
+			}
+		}
+	}
+	if !me.Exists(tlbx) {
+		query.WriteString(` AND p.isPublic=1`)
 	}
 	if idsLen > 0 {
 		query.WriteString(sql.InCondition(true, `p.id`, idsLen))
@@ -826,6 +799,8 @@ func getSet(tlbx app.Tlbx, args *project.Get, others bool) *project.GetRes {
 		}
 		if ptr.StringOr(args.NamePrefix, "") != "" {
 			query.WriteString(` AND p.name LIKE ?`)
+			*args.NamePrefix = strings.ReplaceAll(*args.NamePrefix, `\`, `\\`)
+			*args.NamePrefix = strings.ReplaceAll(*args.NamePrefix, `%`, `\%`)
 			queryArgs = append(queryArgs, Strf(`%s%%`, *args.NamePrefix))
 		}
 		if args.CreatedOnMin != nil {
