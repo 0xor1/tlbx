@@ -64,9 +64,9 @@
               </th>
             </tr>
             <tr class="project" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p) in others" :key="p.id">
-              <td >
+              <td class="host">
                 <user :userId="p.host"></user>
-              </td><td :class="c.class" v-for="(c, index) in cols" :key="index">
+              </td><td :class="c.name" v-for="(c, index) in cols" :key="index">
                 {{ c.get(p) }}
               </td>
             </tr>
@@ -330,6 +330,9 @@ table {
     &:not(.action){
       text-align: right;
       min-width: 100px;
+    }
+    &.host {
+      text-align: left;
     }
     &.name{
       text-align: left;
