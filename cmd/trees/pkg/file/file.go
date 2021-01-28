@@ -8,37 +8,37 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
-type PutRes struct {
+type CreateRes struct {
 	Task *task.Task `json:"task"`
 	File *File      `json:"file"`
 }
 
-type Put struct {
+type Create struct {
 	app.UpStream
-	Args *PutArgs
+	Args *CreateArgs
 }
 
-type PutArgs struct {
+type CreateArgs struct {
 	Host    ID `json:"host"`
 	Project ID `json:"project"`
 	Task    ID `json:"task"`
 }
 
-func (_ *Put) Path() string {
-	return "/file/put"
+func (_ *Create) Path() string {
+	return "/file/create"
 }
 
-func (a *Put) Do(c *app.Client) (*PutRes, error) {
-	res := &PutRes{}
+func (a *Create) Do(c *app.Client) (*CreateRes, error) {
+	res := &CreateRes{}
 	if a.Args == nil {
-		return nil, Err("PutArgs must be specified")
+		return nil, Err("CreateArgs must be specified")
 	}
 	a.UpStream.Args = a.Args
 	err := app.Call(c, a.Path(), &a.UpStream, &res)
 	return res, err
 }
 
-func (a *Put) MustDo(c *app.Client) *PutRes {
+func (a *Create) MustDo(c *app.Client) *CreateRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -126,11 +126,14 @@ func (_ *Delete) Path() string {
 	return "/file/delete"
 }
 
-func (a *Delete) Do(c *app.Client) error {
-	err := app.Call(c, a.Path(), a, nil)
-	return err
+func (a *Delete) Do(c *app.Client) (*task.Task, error) {
+	res := &task.Task{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
 }
 
-func (a *Delete) MustDo(c *app.Client) {
-	PanicOn(a.Do(c))
+func (a *Delete) MustDo(c *app.Client) *task.Task {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
 }

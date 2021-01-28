@@ -15,8 +15,9 @@ import (
 type Project struct {
 	task.Task
 	Base
-	Host       ID   `json:"host"`
-	IsArchived bool `json:"isArchived"`
+	Host       ID     `json:"host"`
+	IsArchived bool   `json:"isArchived"`
+	FileLimit  uint64 `json:"fileLimit"`
 }
 
 type Base struct {
@@ -60,7 +61,7 @@ type One struct {
 }
 
 func (a *One) Do(c *app.Client) (*Project, error) {
-	res, err := (&Get{Host: a.Host, GetBase: GetBase{IDs: IDs{a.ID}}}).Do(c)
+	res, err := (&Get{Host: a.Host, IDs: IDs{a.ID}}).Do(c)
 	if res != nil && len(res.Set) == 1 {
 		return res.Set[0], err
 	}
@@ -74,13 +75,11 @@ func (a *One) MustDo(c *app.Client) *Project {
 }
 
 type Get struct {
-	Host       ID    `json:"host,omitempty"`
-	IsArchived bool  `json:"isArchived"`
-	IsPublic   *bool `json:"isPublic,omitempty"`
-	GetBase
-}
-
-type GetBase struct {
+	Host ID `json:"host,omitempty"`
+	// get other users projects that host is a member of
+	Others       bool       `json:"others,omitempty"`
+	IsArchived   bool       `json:"isArchived"`
+	IsPublic     *bool      `json:"isPublic,omitempty"`
 	IDs          IDs        `json:"ids,omitempty"`
 	NamePrefix   *string    `json:"namePrefix,omitempty"`
 	CreatedOnMin *time.Time `json:"createdOnMin,omitempty"`
@@ -111,25 +110,6 @@ func (a *Get) Do(c *app.Client) (*GetRes, error) {
 }
 
 func (a *Get) MustDo(c *app.Client) *GetRes {
-	res, err := a.Do(c)
-	PanicOn(err)
-	return res
-}
-
-// get other users projects that I am a member of
-type GetOthers GetBase
-
-func (_ *GetOthers) Path() string {
-	return "/project/getOthers"
-}
-
-func (a *GetOthers) Do(c *app.Client) (*GetRes, error) {
-	res := &GetRes{}
-	err := app.Call(c, a.Path(), a, &res)
-	return res, err
-}
-
-func (a *GetOthers) MustDo(c *app.Client) *GetRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
