@@ -191,10 +191,10 @@ func Run(configs ...func(*Config)) {
 			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
 			return
 		}
-		// check all requests have a X-Client header
-		BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
 		// do mdo
 		if lPath == mdoPath {
+			// check all requests have a X-Client header
+			BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
 			if c.MDoMaxBodyBytes > 0 {
 				tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, c.MDoMaxBodyBytes)
 			}
@@ -238,6 +238,8 @@ func Run(configs ...func(*Config)) {
 		// endpoints
 		ep, exists := router[tlbx.req.URL.Path]
 		ReturnIf(!exists, http.StatusNotFound, "")
+		// check all requests have a X-Client header
+		BadReqIf(!ep.SkipXClientCheck && tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
 
 		if ep.MaxBodyBytes > 0 {
 			tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, ep.MaxBodyBytes)
@@ -589,6 +591,7 @@ type Endpoint struct {
 	Description        string
 	Path               string
 	Timeout            int64
+	SkipXClientCheck   bool
 	MaxBodyBytes       int64
 	IsPrivate          bool
 	GetDefaultArgs     func() interface{}
