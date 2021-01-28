@@ -4,15 +4,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
-	"github.com/0xor1/trees/pkg/cnsts"
 	"github.com/0xor1/trees/pkg/config"
-	"github.com/0xor1/trees/pkg/project"
 	"github.com/0xor1/trees/pkg/project/projecteps"
 	"github.com/stretchr/testify/assert"
 )
