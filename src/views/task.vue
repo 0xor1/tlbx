@@ -985,7 +985,7 @@ div.root {
         margin-top: 0.3pc;
       }
       > .heading {
-        margin-top: 1pc;
+        margin-top: 1.5pc;
         font-size: 1.5pc;
         font-weight: bold;
         border-bottom: 1px solid #777;
