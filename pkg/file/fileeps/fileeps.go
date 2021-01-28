@@ -18,6 +18,7 @@ import (
 	"github.com/0xor1/trees/pkg/cnsts"
 	"github.com/0xor1/trees/pkg/epsutil"
 	"github.com/0xor1/trees/pkg/file"
+	"github.com/0xor1/trees/pkg/project/projecteps"
 	"github.com/0xor1/trees/pkg/task/taskeps"
 )
 
@@ -27,7 +28,7 @@ var (
 			Description:  "Create a file",
 			Path:         (&file.Create{}).Path(),
 			Timeout:      300000, // 5 mins
-			MaxBodyBytes: 5 * app.GB,
+			MaxBodyBytes: maxFileSize,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
 				return &app.UpStream{
@@ -57,6 +58,8 @@ var (
 				args.Name = StrTrimWS(args.Name)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				epsutil.IMustHaveAccess(tlbx, innerArgs.Host, innerArgs.Project, cnsts.RoleWriter)
+				p := projecteps.GetOne(tlbx, innerArgs.Host, innerArgs.Project)
+				app.BadReqIf(p.FileLimit < p.FileSize+uint64(args.Size), "project file limit exceeded, limit: %d, current usage: %d", p.FileLimit, p.FileSize)
 				f := &file.File{
 					Task:      innerArgs.Task,
 					ID:        tlbx.NewID(),

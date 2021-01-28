@@ -15,8 +15,9 @@ import (
 type Project struct {
 	task.Task
 	Base
-	Host       ID   `json:"host"`
-	IsArchived bool `json:"isArchived"`
+	Host       ID     `json:"host"`
+	IsArchived bool   `json:"isArchived"`
+	FileLimit  uint64 `json:"fileLimit"`
 }
 
 type Base struct {

@@ -77,6 +77,11 @@ func Everything(t *testing.T) {
 	}).MustDo(ac).Task
 	a.NotNil(t1p0)
 
+	// currently no way of setting this through api as it requires a paywall
+	// which hasnt been implemented yet
+	_, err := r.Data().Primary().Exec(`UPDATE projects SET fileLimit=5000 WHERE id=?`, p.ID)
+	PanicOn(err)
+
 	content1 := []byte("1")
 	create := &file.Create{
 		Args: &file.CreateArgs{

@@ -99,7 +99,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, me, u.Handle, u.Alias, u.HasAvatar, true, cnsts.RoleAdmin)
 				PanicOn(err)
-				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isPublic) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.EndOn, p.IsPublic)
+				_, err = tx.Exec(`INSERT INTO projects (host, id, isArchived, name, createdOn, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isPublic, fileLimit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.IsArchived, p.Name, p.CreatedOn, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.EndOn, p.IsPublic, p.FileLimit)
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSib, user, name, description, isParallel, createdBy, createdOn, timeEst, timeInc, timeSubMin, timeSubEst, timeSubInc, costEst, costInc, costSubEst, costSubInc, fileN, fileSize, fileSubN, fileSubSize, childN, descN) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSib, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.TimeEst, p.TimeInc, p.TimeSubMin, p.TimeSubEst, p.TimeSubInc, p.CostEst, p.CostInc, p.CostSubEst, p.CostSubInc, p.FileN, p.FileSize, p.FileSubN, p.FileSubSize, p.ChildN, p.DescN)
 				PanicOn(err)
@@ -718,6 +718,14 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	tx.Commit()
 }
 
+func GetOne(tlbx app.Tlbx, host, id ID) *project.Project {
+	res := getSet(tlbx, &project.Get{Host: host, IDs: IDs{id}})
+	if res != nil && len(res.Set) == 1 {
+		return res.Set[0]
+	}
+	return nil
+}
+
 func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	app.BadReqIf(
@@ -750,7 +758,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	res := &project.GetRes{
 		Set: make([]*project.Project, 0, args.Limit),
 	}
-	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, t.parent, t.firstChild, t.nextSib, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
+	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, p.fileLimit, t.parent, t.firstChild, t.nextSib, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
 	queryArgs := make([]interface{}, 0, 14)
 	idsLen := len(args.IDs)
 	if idsLen > 0 {
@@ -849,7 +857,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 				break
 			}
 			p := &project.Project{}
-			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.EndOn, &p.IsPublic, &p.Parent, &p.FirstChild, &p.NextSib, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.TimeEst, &p.TimeInc, &p.TimeSubMin, &p.TimeSubEst, &p.TimeSubInc, &p.CostEst, &p.CostInc, &p.CostSubEst, &p.CostSubInc, &p.FileN, &p.FileSize, &p.FileSubN, &p.FileSubSize, &p.ChildN, &p.DescN, &p.IsParallel))
+			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.EndOn, &p.IsPublic, &p.FileLimit, &p.Parent, &p.FirstChild, &p.NextSib, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.TimeEst, &p.TimeInc, &p.TimeSubMin, &p.TimeSubEst, &p.TimeSubInc, &p.CostEst, &p.CostInc, &p.CostSubEst, &p.CostSubInc, &p.FileN, &p.FileSize, &p.FileSubN, &p.FileSubSize, &p.ChildN, &p.DescN, &p.IsParallel))
 			res.Set = append(res.Set, p)
 		}
 	}, query.String(), queryArgs...))
