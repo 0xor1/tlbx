@@ -17,7 +17,7 @@ function newApi(isMDoApi) {
   let mDoSending = false
   let mDoSent = false
   let awaitingMDoList = []
-  let doReq = (path, args, headers) => {
+  let doReq = (path, args, headers, progFn) => {
     path = `/api${path}`
     if (!isMDoApi || (isMDoApi && mDoSending && !mDoSent)) {
       headers = headers || {}
@@ -26,7 +26,8 @@ function newApi(isMDoApi) {
         method: 'put',
         url: path,
         headers: headers,
-        data: args
+        data: args,
+        onUploadProgress: progFn
       }).then((res) => {
         return res.data
       }).catch((err) => {
@@ -419,18 +420,18 @@ function newApi(isMDoApi) {
       }
     },
     file: {
-      create(args) {
+      create(args, progFn) {
         // host, project, task, name, type, size, content
         return doReq('/file/create', args.content, {
           "Content-Name": args.name,
-          "Content-Length": args.size,
+          //"Content-Length": args.size,
           "Content-Type": args.type,
           "Content-Args": JSON.stringify({
             host: args.host,
             project: args.project,
             task: args.task
           })
-        })
+        }, progFn)
       },
       getContentUrl(args) {
         // host, project, task, id, isDownload

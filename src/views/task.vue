@@ -101,7 +101,7 @@
       </div>
       <div v-for="(type, index) in ['time', 'cost']" :key="index">
         <div v-if="$root.show[type]" :class="['items', type+'s']">
-          <div class="heading">{{type}} <span class="medium" v-if="type == 'cost'">{{$u.fmt.currencySymbol(project.currencyCode)}}</span> <span class="medium">{{$u.fmt[type](task[type+'Inc'])}} | {{$u.fmt[type](task[type+'SubInc'])}}</span></div>
+          <div class="heading">{{type}} <span class="medium" v-if="type == 'cost'">{{$u.fmt.currencySymbol(project.currencyCode)}}</span> <span class="medium">{{$u.fmt[type](task[type+'Inc'])}}</span><span class="medium" v-if="children.length > 0"> | {{$u.fmt[type](task[type+'SubInc'])}}</span></div>
           <div v-if="$u.perm.canWrite(pMe)" class="create-form">
             <div title="note">
               <span>note <span :class="{err: vitems[type].note.length > 250, 'small': true}">({{250 - vitems[type].note.length}})</span></span><br>
@@ -148,12 +148,13 @@
         </div>
       </div>
       <div v-if="$root.show.file" class="items files">
-        <div class="heading">file <span class="medium">{{$u.fmt.bytes(task.fileSize)}} | {{$u.fmt.bytes(task.fileSubSize)}}</span></div>
+        <div class="heading">file <span class="medium">{{$u.fmt.bytes(task.fileSize)}}</span><span class="medium" v-if="children.length > 0"> | {{$u.fmt.bytes(task.fileSubSize)}}</span></div>
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div @click.stop="fileButtonClick" class="file-selector" title="choose file">
             <input ref="fileInput" id="file" class="file" type="file" @change="fileSelectorChange"/>
-            <button><label ref="fileLabel" class="btn" for="file" @click.stop>Choose a file</label></button>
-            <span class="input-file">{{$u.fmt.ellipsis(selectedFileName, 21)}}</span>
+            <label ref="fileLabel" class="small" for="file" @click.stop>avail space ({{$u.fmt.bytes(project.fileLimit - (project.fileSize + project.fileSubSize))}}) <span v-if="fileUploadProgress > -1">| uploading {{fileUploadProgress}}%</span></label><br>
+            <span v-if="selectedFile != null" class="input-file">{{$u.fmt.ellipsis(selectedFileName, 34)}}</span>
+            <span v-else class="input-file">select file</span>
           </div>
           <div>
             <button @click.stop="submitFile()">upload</button>
@@ -253,6 +254,7 @@
           selectedFile: null,
           fileDeleteIndex: -2,
           loadingFiles: false,
+          fileUploadProgress: -1,
           vitems: {
             time: {
               deleteIndex: -2,
@@ -877,13 +879,15 @@
           this.task = t
           this.files.splice(index, 1)
           this.fileDeleteIndex = -2
+          this.project.fileSubSize -= f.size
           this.refreshProjectActivity(true)
         }).finally(()=>{
           this.loadingFiles = false
         })
       },
       submitFile(){
-        if (this.selectedFile != null) {
+        if (this.selectedFile != null && !this.loadingFiles) {
+          this.loadingFiles = true
           this.$api.file.create({
             host: this.$u.rtr.host(), 
             project: this.$u.rtr.project(),
@@ -892,12 +896,18 @@
             type: this.selectedFile.type,
             size: this.selectedFile.size,
             content: this.selectedFile
+          }, (e)=>{
+            this.fileUploadProgress = Math.round( (e.loaded * 100) / e.total )
           }).then((res)=>{
             this.task = res.task
             this.files.splice(0, 0, res.file)
             this.selectedFile = null
             this.$refs.fileInput.value = null
+            this.project.fileSize += res.file.size
             this.refreshProjectActivity(true)
+          }).finally(()=>{
+            this.fileUploadProgress = -1
+            this.loadingFiles = false
           })
         }
       }
@@ -1003,19 +1013,15 @@ div.root {
           display: inline-block;
           margin: 1pc 1pc 0 0;
           &.file-selector {
-            cursor: pointer;
-            width: 20.6pc;
-            @include border();
-            border-radius: 0.1pc;
-            background: $inputColor;
-            label.btn {
-              width: 100%;
-              height: 100%;
-              background: transparent;
-            }
-            span {
-              margin-left: 0.3pc;
-              background: transparent;
+            .input-file {
+              cursor: pointer;
+              //height: 1.8pc;
+              @include border();
+              border-radius: 0.15pc;
+              width: 20.62pc;
+              background: $inputColor;
+              display: inline-block;
+              padding: 0.22pc;
             }
           }
           > input {
@@ -1024,8 +1030,10 @@ div.root {
               width: 20pc;
             }
             &.file {
-              width: 0.1px;
-              height: 0.1px;
+              padding: 0;
+              margin: 0;
+              width: 0;
+              height: 0;
               opacity: 0;
               overflow: hidden;
               position: absolute;
