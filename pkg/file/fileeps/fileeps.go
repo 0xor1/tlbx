@@ -59,7 +59,7 @@ var (
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				epsutil.IMustHaveAccess(tlbx, innerArgs.Host, innerArgs.Project, cnsts.RoleWriter)
 				p := projecteps.GetOne(tlbx, innerArgs.Host, innerArgs.Project)
-				app.BadReqIf(p.FileLimit < p.FileSize+uint64(args.Size), "project file limit exceeded, limit: %d, current usage: %d", p.FileLimit, p.FileSize)
+				app.BadReqIf(p.FileLimit < p.FileSize+p.FileSubSize+uint64(args.Size), "project file limit exceeded, limit: %d, current usage: %d", p.FileLimit, p.FileSize+p.FileSubSize)
 				f := &file.File{
 					Task:      innerArgs.Task,
 					ID:        tlbx.NewID(),
