@@ -332,12 +332,8 @@ function newApi(isMDoApi) {
         })
       },
       get(args) {
-        // host, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit
+        // host, others, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit
         return doReq('/project/get', args)
-      },
-      getOthers(args) {
-        // ids, namePrefix, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit
-        return doReq('/project/getOthers', args)
       },
       update(ps) {
         // [id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic]       

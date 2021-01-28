@@ -250,14 +250,13 @@
             }
             this.psMore = res.more
           })
-          if (this.isMe) {
-            mapi.project.getOthers().then((res) => {
-              for (let i = 0; i < res.set.length; i++) {
-                this.others.push(res.set[i]) 
-              }
-              this.othersMore = res.more
-            })
-          }
+          mapi.project.get({host: this.host, others: true}).then((res) => {
+            for (let i = 0; i < res.set.length; i++) {
+              this.others.push(res.set[i]) 
+            }
+            this.othersMore = res.more
+          })
+          
           mapi.sendMDo().finally(()=>{
             this.loading = false
           })
@@ -274,7 +273,7 @@
       },
       loadMoreOthers(){
         let after = this.others[this.others.length-1].id
-        this.$api.project.getOthers({host: this.host, after}).then((res) => {
+        this.$api.project.get({host: this.host, others: true, after}).then((res) => {
           for (let i = 0; i < res.set.length; i++) {
             this.others.push(res.set[i]) 
           }
