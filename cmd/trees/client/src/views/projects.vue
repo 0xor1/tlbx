@@ -329,7 +329,7 @@ table {
   td {
     &:not(.action){
       text-align: right;
-      min-width: 100px;
+      min-width: 5pc;
     }
     &.host {
       text-align: left;

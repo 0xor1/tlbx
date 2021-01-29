@@ -30,8 +30,8 @@ let v = new Vue({
           user: false,
           time: true,
           cost: true,
-          file: false,
-          task: false
+          file: true,
+          task: true
         },
         _ctx: this._ctx || {
           currentProjectId: null,

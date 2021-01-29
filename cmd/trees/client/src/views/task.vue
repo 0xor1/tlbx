@@ -51,7 +51,7 @@
           </tr>
           <tr class="row this-task">
             <td :title="descriptionTitle(task)" :class="c.name" v-for="(c, index) in cols" :key="index">
-              {{c.name == "user"? "" : c.get(task)}}
+              <span :title="task.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': task.isParallel}" v-if="c.name == 'name'">{{task.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(task)}}
               <user v-if="c.name=='user'" :userId="c.get(task)"></user>
             </td>
             <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(0)" title="insert first child">
@@ -72,7 +72,7 @@
           </tr>
           <tr class="row" v-for="(t, index) in children" :key="index" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
             <td :title="descriptionTitle(t)" v-bind:class="c.name" v-for="(c, index) in cols" :key="index">
-              {{c.name == "user"? "" : c.get(t)}}
+              <span :title="t.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': t.isParallel}" v-if="c.name == 'name'">{{t.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
             <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index+1)" title="insert below">
@@ -95,8 +95,6 @@
         <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
       </div>
       <div>
-        <p v-if="children.length > 0 && task.isParallel">parallel</p>
-        <p v-if="children.length > 0 && !task.isParallel">not parallel</p>
         <p v-if="task.description.length > 0" v-html="$u.fmt.mdLinkify(task.description)"></p>
       </div>
       <div v-for="(type, index) in ['time', 'cost']" :key="index">
@@ -581,8 +579,8 @@
           this.vitems[type].deleteIndex = index
         }
       },
-      trash(t, index){
-        if (t.id == this.$u.rtr.project()) {
+      trash(deleteT, index){
+        if (deleteT.id == this.$u.rtr.project()) {
           this.$api.project.delete([this.$u.rtr.project()]).then(()=>{
             this.$u.rtr.goHome()
             this.refreshProjectActivity(true)
@@ -591,12 +589,13 @@
           this.$api.task.delete({
             host: this.$u.rtr.host(),
             project: this.$u.rtr.project(),
-            id: t.id
+            id: deleteT.id
           }).then((t)=>{
             if (index > -1) {
               this.children.splice(index, 1)
               this.task = t
               this.deleteIndex = -2
+              this.project.fileSubSize - (deleteT.fileSize + deleteT.fileSubSize)
             } else {
                 this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.id}`)
             }
@@ -946,9 +945,19 @@ div.root {
         }
         th {
           text-align: center;
-          min-width: 8pc;
+          min-width: 5pc;
         }
         td {
+          height: 1pc;
+          .parallel-indicator {
+            font-size: 1.5pc;
+            padding: 0.2pc;
+            background: transparent;
+            color: orange;
+            &.parallel {
+              color: green;
+            }
+          }
           &.action {
             cursor: pointer;
           }
