@@ -144,6 +144,7 @@ var (
 				res.Size = int64(f.Size)
 				res.Type = f.Type
 				_, _, _, res.Content = srv.Store().MustGet(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
+				tlbx.Resp().Header().Set("Cache-Control", "private, max-age=31536000, immutable")
 				return res
 			},
 		},
