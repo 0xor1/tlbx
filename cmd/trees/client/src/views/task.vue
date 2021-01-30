@@ -25,11 +25,11 @@
           <user :goToHome="true" :userId="$u.rtr.host()"></user>
           :
         </span>
-        <span v-if="ancestors.length > 0 && ancestors[0].parent != null">
-          <a title="load more ancestors" @click.stop.prevent="getMoreAncestors">..</a>
+        <span v-if="ancestor.set.length > 0 && ancestor.set[0].parent != null">
+          <a title="load more ancestors" @click.stop.prevent="loadMoreAncestors">..</a>
           /
         </span>
-        <span v-for="(a) in ancestors" :key="a.id">
+        <span v-for="(a) in ancestor.set" :key="a.id">
           <a :title="a.name" :href="'/#/host/'+$u.rtr.host()+'/project/'+$u.rtr.project()+'/task/'+a.id">{{$u.fmt.ellipsis(a.name, 20)}}</a> 
           /     
         </span>
@@ -92,7 +92,7 @@
             </td>
           </tr>
         </table>
-        <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
+        <button v-if="moreChildren" @click="loadMoreChildren()">load more</button>
       </div>
       <div>
         <p v-if="task.description.length > 0" v-html="$u.fmt.mdLinkify(task.description)"></p>
@@ -237,9 +237,7 @@
           me: null,
           project: null,
           pMe: null,
-          ancestors: [],
-          moreAncestors: false,
-          loadingMoreAncestors: false,
+          ancestor: this.$u.newSet(),
           task: null,
           children: [],
           moreChildren: false,
@@ -400,8 +398,8 @@
               id: this.$u.rtr.task(), 
               limit: 10
             }).then((res)=>{
-              this.ancestors = res.set.reverse()
-              this.moreAncestors = res.more
+              res.set = res.set.reverse()
+              this.ancestor.reset(res)
             })
             mapi.task.get({
               host: this.$u.rtr.host(),
@@ -464,27 +462,25 @@
           })
         })
       },
-      getMoreAncestors(){
-        if (!this.loadingMoreAncestors) {
-          this.loadingMoreAncestors = true;
-          let taskId = this.$u.rtr.task()
-          if (this.ancestors.length > 0 && this.ancestors[0].id != null) {
-            taskId = this.ancestors[0].id
-          }
+      loadMoreAncestors(){
+        if (!this.ancestor.loading && 
+          this.ancestor.set.length > 0 &&
+          this.ancestor.set[0].id != null) {
+          this.ancestor.loading = true;
           this.$api.task.getAncestors({
             host: this.$u.rtr.host(),
             project: this.$u.rtr.project(),
-            id: taskId, 
+            id: this.ancestor.set[0].id, 
             limit: 10
           }).then((res)=>{
-            this.ancestors = res.set.reverse().concat(this.ancestors)
-            this.moreAncestors = res.more
+            res.set = res.set.reverse()
+            this.ancestor.prepend(res)
           }).finally(()=>{
-            this.loadingMoreAncestors = false
+            this.ancestor.loading = false
           })
         }
       },
-      getMoreChildren(){
+      loadMoreChildren(){
         if (!this.loadingMoreChildren) {
           this.loadingMoreChildren = true;
           this.$api.task.getChildren({

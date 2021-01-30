@@ -17,6 +17,42 @@ function nullOr(val){
     return val
 }
 
+function Set(){
+    this.reset({set: [], more: false})
+}
+
+Set.prototype.reset = function(res){
+    this.set = res.set
+    this.more = res.more
+    this.loading = false
+    this.updIdx = -1
+    this.dltIdx = -1
+    //for vitems
+    this.estStr = ""
+    this.estErr = false
+    this.incStr
+    this.incErr = false
+    this.note = ""
+    this.updIncStr = ""
+    this.updInErr = false
+    this.updNote = ""
+    // file
+    this.selected = null
+    // comment
+    this.body = ""
+    this.updBody = ""
+
+}
+
+Set.prototype.append = function(res){
+    this.set = this.set.concat(res.set)
+    this.more = res.more
+}
+Set.prototype.prepend = function(res) {
+    this.set = res.set.concat(this.set)
+    this.more = res.more
+}
+
 export default {
     install(vue){
         vue.prototype.$u = {
@@ -26,6 +62,9 @@ export default {
             cnsts: {
                 time: "time",
                 cost: "cost"
+            },
+            newSet(){
+                return new Set()
             },
             nullOr: nullOr,
             rtr: {
