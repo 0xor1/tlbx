@@ -3,7 +3,7 @@
     <div v-if="notFound">
       <notfound :type="'task'"></notfound>
     </div>
-    <div class="loading" v-else-if="loading">
+    <div v-else-if="loading" class="loading">
       loading...
     </div>
     <div v-else-if="showCreateOrUpdate">
@@ -11,9 +11,9 @@
         :isCreate="isCreate"
         :hostId="$u.rtr.host()" 
         :projectId="$u.rtr.project()"
-        :task="task"
+        :task="task.task"
         :children="children"
-        :parentUserId="task.user"
+        :parentUserId="task.task.user"
         :index="index"
         @close="onCreateOrUpdateClose"
         @refreshProjectActivity="refreshProjectActivity">
@@ -25,16 +25,16 @@
           <user :goToHome="true" :userId="$u.rtr.host()"></user>
           :
         </span>
-        <span v-if="ancestors.length > 0 && ancestors[0].parent != null">
-          <a title="load more ancestors" @click.stop.prevent="getMoreAncestors">..</a>
+        <span v-if="task.ancestor.set.length > 0 && task.ancestor.set[0].parent != null">
+          <a title="load more ancestors" href="" @click.stop.prevent="task.ancestor.loadMore">..</a>
           /
         </span>
-        <span v-for="(a) in ancestors" :key="a.id">
+        <span v-for="(a) in task.ancestor.set" :key="a.id">
           <a :title="a.name" :href="'/#/host/'+$u.rtr.host()+'/project/'+$u.rtr.project()+'/task/'+a.id">{{$u.fmt.ellipsis(a.name, 20)}}</a> 
           /     
         </span>
         <span>
-          {{$u.fmt.ellipsis(task.name, 20)}}      
+          {{$u.fmt.ellipsis(task.task.name, 20)}}      
         </span>
       </div>
       <div class="summary">
@@ -51,8 +51,8 @@
           </tr>
           <tr class="row this-task">
             <td :title="descriptionTitle(task)" :class="c.name" v-for="(c, index) in cols" :key="index">
-              <span :title="task.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': task.isParallel}" v-if="c.name == 'name'">{{task.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(task)}}
-              <user v-if="c.name=='user'" :userId="c.get(task)"></user>
+              <span :title="task.task.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': task.isParallel}" v-if="c.name == 'name'">{{task.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(task.task)}}
+              <user v-if="c.name=='user'" :userId="c.get(task.task)"></user>
             </td>
             <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(0)" title="insert first child">
               <img src="@/assets/insert-below.svg">
@@ -95,7 +95,7 @@
         <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
       </div>
       <div>
-        <p v-if="task.description.length > 0" v-html="$u.fmt.mdLinkify(task.description)"></p>
+        <p v-if="task.task.description.length > 0" v-html="$u.fmt.mdLinkify(task.task.description)"></p>
       </div>
       <div v-for="(type, index) in ['time', 'cost']" :key="index">
         <div v-if="$root.show[type]" :class="['items', type+'s']">
@@ -146,7 +146,7 @@
         </div>
       </div>
       <div v-if="$root.show.file" class="items files">
-        <div class="heading">file <span class="medium">{{$u.fmt.bytes(task.fileSize)}}</span><span class="medium" v-if="children.length > 0"> | {{$u.fmt.bytes(task.fileSubSize)}}</span></div>
+        <div class="heading">file <span class="medium">{{$u.fmt.bytes(task.task.fileSize)}}</span><span class="medium" v-if="children.length > 0"> | {{$u.fmt.bytes(task.task.fileSubSize)}}</span></div>
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div @click.stop="fileButtonClick" class="file-selector" title="choose file">
             <input ref="fileInput" id="file" class="file" type="file" @change="fileSelectorChange"/>
@@ -195,7 +195,7 @@
   import taskCreateOrUpdate from '../components/taskCreateOrUpdate'
   import notfound from '../components/notfound'
   export default {
-    name: 'tasks',
+    name: 'task',
     components: {user, taskCreateOrUpdate, notfound},
     data: function() {
       return this.initState()
@@ -231,16 +231,45 @@
       initState(){
         return {
           notFound: false,
-          showCreateOrUpdate: false,
-          index: null,
           loading: true,
+          showCreateOrUpdate: false,
+          task: {
+            ancestor: {
+              set: [],
+              more: false,
+              loading: false,
+              loadMore: ()=>{
+                let obj = this.task.ancestor
+                if (obj.loading) {
+                  return
+                }
+                obj.loading = true
+                this.$api.task.getAncestors({
+                  host: this.$u.rtr.host(),
+                  project: this.$u.rtr.project(),
+                  id: obj.set[0].id, 
+                  limit: 1
+                }).then((res)=>{
+                  obj.set = res.set.reverse().concat(obj.set)
+                  obj.more = res.more
+                }).finally(()=>{
+                  obj.loading = false
+                })
+              }
+            },
+            task: null,
+            child: {
+              set: [],
+              more: false,
+              loading: false,
+              updIdx: -1,
+              dltIdx: -1  
+            }
+          },
+          index: null,
           me: null,
           project: null,
           pMe: null,
-          ancestors: [],
-          moreAncestors: false,
-          loadingMoreAncestors: false,
-          task: null,
           children: [],
           moreChildren: false,
           loadingMoreChildren: false,
@@ -398,19 +427,19 @@
               host: this.$u.rtr.host(), 
               project: this.$u.rtr.project(), 
               id: this.$u.rtr.task(), 
-              limit: 10
+              limit: 1
             }).then((res)=>{
-              this.ancestors = res.set.reverse()
-              this.moreAncestors = res.more
+              this.task.ancestor.set = res.set.reverse()
+              this.task.ancestor.more = res.more
             })
             mapi.task.get({
               host: this.$u.rtr.host(),
               project: this.$u.rtr.project(),
               id: this.$u.rtr.task()
             }).then((t)=>{
-              this.task = t
-              this.vitems.time.estDisplay = this.$u.fmt.time(this.task.timeEst)
-              this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)
+              this.task.task = t
+              this.vitems.time.estDisplay = this.$u.fmt.time(this.task.task.timeEst)
+              this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.task.costEst)
             }).catch((err)=>{
               if (err.status == 404) {
                 this.notFound = true
@@ -463,26 +492,6 @@
             })
           })
         })
-      },
-      getMoreAncestors(){
-        if (!this.loadingMoreAncestors) {
-          this.loadingMoreAncestors = true;
-          let taskId = this.$u.rtr.task()
-          if (this.ancestors.length > 0 && this.ancestors[0].id != null) {
-            taskId = this.ancestors[0].id
-          }
-          this.$api.task.getAncestors({
-            host: this.$u.rtr.host(),
-            project: this.$u.rtr.project(),
-            id: taskId, 
-            limit: 10
-          }).then((res)=>{
-            this.ancestors = res.set.reverse().concat(this.ancestors)
-            this.moreAncestors = res.more
-          }).finally(()=>{
-            this.loadingMoreAncestors = false
-          })
-        }
       },
       getMoreChildren(){
         if (!this.loadingMoreChildren) {
@@ -551,7 +560,7 @@
         this.showCreateOrUpdate = true
         this.isCreate = false
         if (index == -1) {
-          this.update = this.task
+          this.update = this.task.task
         } else {
           this.update = this.children[index]
         }
@@ -593,7 +602,7 @@
           }).then((t)=>{
             if (index > -1) {
               this.children.splice(index, 1)
-              this.task = t
+              this.task.task = t
               this.deleteIndex = -2
               this.project.fileSubSize - (deleteT.fileSize + deleteT.fileSubSize)
             } else {
@@ -646,7 +655,7 @@
           let est = this.$u.parse[type](obj.estDisplay)
           let inc = this.$u.parse[type](obj.incDisplay)
           if ((inc == null || inc == 0) &&
-            (est != null && est != this.task[type+'Est'])) {
+            (est != null && est != this.task.task[type+'Est'])) {
             // only changing est value
             let args = {
               host: this.$u.rtr.host(),
@@ -656,7 +665,7 @@
             args[type+'Est'] = {v:est}
             obj.loading = true
             this.$api.task.update(args).then((res)=>{
-              this.task = res.task
+              this.task.task = res.task
               this.refreshProjectActivity(true)
             }).finally(()=>{
               obj.loading = false
@@ -670,12 +679,12 @@
               inc: inc,
               note: obj.note
             }
-            if (est != null && est != this.task[type+'Est']) {
+            if (est != null && est != this.task.task[type+'Est']) {
               args.est = est
             }
             obj.loading = true
             this.$api.vitem.create(args).then((res)=>{
-              this.task = res.task
+              this.task.task = res.task
               obj.inc = 0
               obj.incDisplay = ""
               obj.note = ""
@@ -729,7 +738,7 @@
             }
             obj.loading = true
             this.$api.vitem.update(args).then((res)=>{
-              this.task = res.task
+              this.task.task = res.task
               obj.set[obj.updateIndex] = res.item
               this.cancelUpdate(type)
               this.refreshProjectActivity(true)
@@ -776,7 +785,7 @@
           type: i.type,
           id: i.id
         }).then((t)=>{
-          this.task = t
+          this.task.task = t
           obj.set.splice(index, 1)
           obj.deleteIndex = -2
           this.refreshProjectActivity(true)
@@ -828,9 +837,9 @@
         return res
       },
       refreshProjectActivity(force){
-        if (this.task != null) {
-          this.vitems.time.estDisplay = this.$u.fmt.time(this.task.timeEst)
-          this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.costEst)    
+        if (this.task.task != null) {
+          this.vitems.time.estDisplay = this.$u.fmt.time(this.task.task.timeEst)
+          this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.task.costEst)    
         }
         this.$emit("refreshProjectActivity", force)
       },
@@ -875,7 +884,7 @@
           task: this.$u.rtr.task(),
           id: f.id
         }).then((t)=>{
-          this.task = t
+          this.task.task = t
           this.files.splice(index, 1)
           this.fileDeleteIndex = -2
           this.project.fileSubSize -= f.size
