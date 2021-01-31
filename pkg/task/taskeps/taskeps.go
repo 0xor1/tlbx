@@ -103,6 +103,7 @@ var (
 				if args.PrevSib != nil {
 					prevSib = GetOne(tx, args.Host, args.Project, *args.PrevSib)
 					app.ReturnIf(prevSib == nil, http.StatusNotFound, "prevSib not found")
+					app.BadReqIf(!prevSib.Parent.Equal(args.Parent), "prevSib and parent args mismatch")
 					t.NextSib = prevSib.NextSib
 					prevSib.NextSib = &t.ID
 					// point prev sib at new task
