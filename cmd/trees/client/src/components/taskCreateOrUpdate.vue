@@ -4,7 +4,7 @@
       loading...
     </div>
     <div v-else>
-      <h1>task {{isCreate? 'create': 'update'}}</h1>
+      <h1>task {{isCrt? 'create': 'update'}}</h1>
       <span>
         <input ref="name" v-model="name" placeholder="name" @keyup="validate" @keydown.enter="ok">
         <label> name</label>
@@ -15,7 +15,7 @@
         <label> description</label>
       </span>
       <span v-if="descriptionErr.length > 0" class="err">{{descriptionErr}}</span>
-      <span v-if="!isCreate && $u.rtr.project() != updateTask.id">
+      <span v-if="!isCrt && $u.rtr.project() != updateTask.id">
         <input v-model="user" placeholder="user id" @blur="validate" @keydown.enter="ok"> 
         <label> user id</label>
       </span>
@@ -31,7 +31,7 @@
         <input :class="{err: costEstErr}" v-model="costEstDisplay" type="text" placeholder="0.00" @blur="validate(true)" @keyup="validate" @keydown.enter="ok">
         <label> {{$u.fmt.currencySymbol(this.project.currencyCode)}} cost estimate</label>
       </span>
-      <span v-if="!isCreate && updateTask.id != project.id">
+      <span v-if="!isCrt && updateTask.id != project.id">
         <button @click.stop.prevent="showMove=!showMove">move</button>
       </span>
       <div v-if="showMove">
@@ -44,7 +44,7 @@
           <label> previous sibling id</label>
         </span>
       </div>
-      <button @click="ok">{{isCreate? 'create': 'update'}}</button>
+      <button @click="ok">{{isCrt? 'create': 'update'}}</button>
       <button @click.stop.prevent="close()">close</button>
       <span v-if="err.length > 0" class="err">{{err}}</span>
     </div>
@@ -55,27 +55,24 @@
   export default {
     name: 'taskCreateOrUpdate',
     props: {
-      isCreate: Boolean,
       hostId: String,
       projectId: String,
-      parentUserId: String,
-      task: Object,
-      children: Array,
-      index: Number
+      set: Array,
+      crtIdx: Number,
+      updIdx: Number
     },
     computed: {
+      isCrt(){
+        return this.crtIdx > -1
+      },
       updateTask(){
-        if (this.index == -1) {
-          return this.task
-        } else {
-          return this.children[this.index]
-        }
+        return this.set[this.updIdx]
       },
       currentPrevSibId(){
-        if (this.index < 1) {
+        if (this.crtIdx <= 1) {
           return null
         } else {
-          return this.children[this.index - 1].id
+          return this.set[this.crtIdx - 1].id
         }
       }
     },
@@ -111,9 +108,8 @@
         }
         this.$root.ctx().then((ctx)=>{
             this.project = ctx.project
-            this.prevSibId = this.currentPrevSibId
             this.user = this.parentUserId
-            if (!this.isCreate) {
+            if (!this.isCrt) {
               let t = this.updateTask
               this.prevSibId = null
               this.name = t.name
@@ -123,7 +119,9 @@
               this.parentId = t.parent
               this.timeEst = t.timeEst
               this.costEst = t.costEst
-            } 
+            } else {
+              this.prevSibId = this.currentPrevSibId
+            }
             this.timeEstDisplay = this.$u.fmt.time(this.timeEst)
             this.costEstDisplay = this.$u.fmt.cost(this.costEst) 
             this.loading = false
@@ -190,11 +188,11 @@
       },
       ok(){
         if (this.validate()) {
-          if (this.isCreate) {
+          if (this.isCrt) {
             this.$api.task.create({
               host: this.hostId,
               project: this.projectId,
-              parent: this.task.id,
+              parent: this.set[0].id,
               prevSib: this.prevSibId,
               name: this.name,
               description: this.description,
@@ -203,9 +201,9 @@
               timeEst: this.timeEst,
               costEst: this.costEst
             }).then((res)=>{
-              this.children.splice(this.index, 0, res.task)
+              this.set.splice(this.crtIdx, 0, res.task)
               for(const [key, value] of Object.entries(res.parent)) {
-                this.task[key] = value
+                this.set[0][key] = value
               }
               this.close()
               this.$emit("refreshProjectActivity", true)
@@ -250,19 +248,13 @@
             }
             if (isUpdate) {
               this.$api.task.update(args).then((res)=>{
-                if (this.index == -1) {
-                  for(const [key, value] of Object.entries(res.task)) {
-                    this.task[key] = value
-                  }
-                } else {
-                  this.children[this.index] = res.task
-                  if (res.oldParent != null) {
-                    for(const [key, value] of Object.entries(res.oldParent)) {
-                      this.task[key] = value
-                    }
+                  this.set[this.updIdx] = res.task
+                if (res.oldParent != null) {
+                  for(const [key, value] of Object.entries(res.oldParent)) {
+                    this.set[0][key] = value
                   }
                 }
-                this.close(this.showMove)
+                this.close(res.newParent != null)
                 this.$emit("refreshProjectActivity", true)
               })
             } else {

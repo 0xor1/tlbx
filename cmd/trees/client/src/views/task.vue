@@ -6,16 +6,14 @@
     <div v-else-if="loading" class="loading">
       loading...
     </div>
-    <div v-else-if="showCreateOrUpdate">
+    <div v-else-if="task.updIdx > -1 || task.crtIdx > -1">
       <task-create-or-update 
-        :isCreate="isCreate"
         :hostId="$u.rtr.host()" 
         :projectId="$u.rtr.project()"
-        :task="task.task"
-        :children="children"
-        :parentUserId="task.task.user"
-        :index="index"
-        @close="onCreateOrUpdateClose"
+        :set="task.set"
+        :updIdx="task.updIdx"
+        :crtIdx="task.crtIdx"
+        @close="task.onCrtOrUpdClose"
         @refreshProjectActivity="refreshProjectActivity">
       </task-create-or-update>
     </div>
@@ -34,72 +32,53 @@
           /     
         </span>
         <span>
-          {{$u.fmt.ellipsis(task.task.name, 20)}}      
+          {{$u.fmt.ellipsis(t0.name, 20)}}      
         </span>
       </div>
       <div class="summary">
         <table>
           <tr class="header">
-            <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name" v-for="(s, index) in sections" :key="index">
+            <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name" v-for="(s, idx) in taskSections" :key="idx">
               {{s.name()}}
             </th>
           </tr>
           <tr class="header">
-            <th :class="c.name" v-for="(c, index) in colHeaders" :key="index">
+            <th :class="c.name" v-for="(c, idx) in colHeaders" :key="idx">
               {{c.name}}
             </th>
           </tr>
-          <tr class="row this-task">
-            <td :title="descriptionTitle(task)" :class="c.name" v-for="(c, index) in cols" :key="index">
-              <span :title="task.task.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': task.isParallel}" v-if="c.name == 'name'">{{task.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(task.task)}}
-              <user v-if="c.name=='user'" :userId="c.get(task.task)"></user>
-            </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(0)" title="insert first child">
-              <img src="@/assets/insert-below.svg">
-            </td>
-            <td v-if="this.children.length > 0" class="action">
-              
-            </td>
-            <td v-if="canUpdate(task)" class="action" @click.stop="showUpdate(-1)" title="update">
-              <img src="@/assets/edit.svg">
-            </td>
-            <td v-if="canDelete(task)" class="action" @click.stop="toggleDeleteIndex(-1)" title="delete safety">
-              <img src="@/assets/trash.svg">
-            </td>
-            <td v-if="deleteIndex === -1" class="action confirm-delete" @click.stop="trash(task, -1)" title="delete">
-              <img src="@/assets/trash-red.svg">
-            </td>
-          </tr>
-          <tr class="row" v-for="(t, index) in children" :key="index" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
-            <td :title="descriptionTitle(t)" v-bind:class="c.name" v-for="(c, index) in cols" :key="index">
+          <tr class="row" v-for="(t, idx) in task.set" :key="idx" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
+            <td :title="task.title(t)" v-bind:class="c.name" v-for="(c, idx) in cols" :key="idx">
               <span :title="t.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': t.isParallel}" v-if="c.name == 'name'">{{t.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index+1)" title="insert below">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="task.showCrt(idx+1)" title="insert below">
               <img src="@/assets/insert-below.svg">
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="showCreate(index)" title="insert above">
+            <td v-if="idx === 0 && task.set > 1" class="action">
+            </td>
+            <td v-else-if="idx > 0 && $u.perm.canWrite(pMe)" class="action" @click.stop="task.showCrt(idx)" title="insert above">
               <img src="@/assets/insert-above.svg">
             </td>
-            <td v-if="canUpdate(t)" class="action" @click.stop="showUpdate(index)" title="update">
+            <td v-if="task.canUpd(t)" class="action" @click.stop="task.showUpd(idx)" title="update">
               <img src="@/assets/edit.svg">
             </td>
-            <td v-if="canDelete(t)" class="action" @click.stop="toggleDeleteIndex(index)" title="delete safety">
+            <td v-if="task.canDlt(t)" class="action" @click.stop="task.tglDltIdx(idx)" title="delete safety">
               <img src="@/assets/trash.svg">
             </td>
-            <td v-if="deleteIndex === index" class="action confirm-delete" @click.stop="trash(t, index)" title="delete">
+            <td v-if="task.dltIdx === idx" class="action confirm-delete" @click.stop="task.dlt(idx)" title="delete">
               <img src="@/assets/trash-red.svg">
             </td>
           </tr>
         </table>
-        <button v-if="moreChildren" @click="getMoreChildren()">load more</button>
+        <button v-if="task.more" @click="task.loadMore">load more</button>
       </div>
       <div>
-        <p v-if="task.task.description.length > 0" v-html="$u.fmt.mdLinkify(task.task.description)"></p>
+        <p v-if="t0.description.length > 0" v-html="$u.fmt.mdLinkify(t0.description)"></p>
       </div>
-      <div v-for="(type, index) in ['time', 'cost']" :key="index">
+      <div v-for="(type, idx) in ['time', 'cost']" :key="idx">
         <div v-if="$root.show[type]" :class="['items', type+'s']">
-          <div class="heading">{{type}} <span class="medium" v-if="type == 'cost'">{{$u.fmt.currencySymbol(project.currencyCode)}}</span> <span class="medium">{{$u.fmt[type](task[type+'Inc'])}}</span><span class="medium" v-if="children.length > 0"> | {{$u.fmt[type](task[type+'SubInc'])}}</span></div>
+          <div class="heading">{{type}} <span class="medium" v-if="type == 'cost'">{{$u.fmt.currencySymbol(project.currencyCode)}}</span> <span class="medium">{{$u.fmt[type](t0[type+'Inc'])}}</span><span class="medium" v-if="task.set.length > 0"> | {{$u.fmt[type](t0[type+'SubInc'])}}</span></div>
           <div v-if="$u.perm.canWrite(pMe)" class="create-form">
             <div title="note">
               <span>note <span :class="{err: vitems[type].note.length > 250, 'small': true}">({{250 - vitems[type].note.length}})</span></span><br>
@@ -124,20 +103,20 @@
               <th v-if="$root.show.user">user</th>
               <th>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></th>
             </tr>
-            <tr class="item" v-for="(i, index) in vitems[type].set" :key="index">
-              <td v-if="vitems[type].updateIndex != index" class="note" v-html="$u.fmt.mdLinkify(i.note)"></td>
+            <tr class="item" v-for="(i, idx) in vitems[type].set" :key="idx">
+              <td v-if="vitems[type].updateIdx != idx" class="note" v-html="$u.fmt.mdLinkify(i.note)"></td>
               <td v-else class="note"><input :class="{err: vitems[type].updateNote > 250}" v-model="vitems[type].updateNote" type="text" placeholder="note" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
               <td v-if="$root.show.date">{{$u.fmt.date(i.createdOn)}}</td>
               <td v-if="$root.show.user"><user :userId="i.createdBy"></user></td>
-              <td v-if="vitems[type].updateIndex != index">{{$u.fmt[type](i.inc)}}</td>
+              <td v-if="vitems[type].updateIdx != idx">{{$u.fmt[type](i.inc)}}</td>
               <td v-else><input :class="{err: vitems[type].updateIncErr}" v-model="vitems[type].updateIncDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
-              <td v-if="canUpdateVitem(i) && vitems[type].updateIndex != index" class="action" @click.stop="showVitemUpdate(i, index)" title="update">
+              <td v-if="canUpdateVitem(i) && vitems[type].updateIdx != idx" class="action" @click.stop="showVitemUpdate(i, idx)" title="update">
                 <img src="@/assets/edit.svg">
               </td>
-              <td v-if="canUpdateVitem(i) && vitems[type].updateIndex != index" class="action" @click.stop="toggleVitemDeleteIndex(type, index)" title="delete safety">
+              <td v-if="canUpdateVitem(i) && vitems[type].updateIdx != idx" class="action" @click.stop="toggleVitemDeleteIdx(type, idx)" title="delete safety">
                 <img src="@/assets/trash.svg">
               </td>
-              <td v-if="vitems[type].deleteIndex === index" class="action confirm-delete" @click.stop="trashVitem(i, index)" title="delete">
+              <td v-if="vitems[type].deleteIdx === idx" class="action confirm-delete" @click.stop="trashVitem(i, idx)" title="delete">
                 <img src="@/assets/trash-red.svg">
               </td>
             </tr>
@@ -146,7 +125,7 @@
         </div>
       </div>
       <div v-if="$root.show.file" class="items files">
-        <div class="heading">file <span class="medium">{{$u.fmt.bytes(task.task.fileSize)}}</span><span class="medium" v-if="children.length > 0"> | {{$u.fmt.bytes(task.task.fileSubSize)}}</span></div>
+        <div class="heading">file <span class="medium">{{$u.fmt.bytes(t0.fileSize)}}</span><span class="medium" v-if="task.set.length > 0"> | {{$u.fmt.bytes(t0.fileSubSize)}}</span></div>
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div @click.stop="fileButtonClick" class="file-selector" title="choose file">
             <input ref="fileInput" id="file" class="file" type="file" @change="fileSelectorChange"/>
@@ -165,7 +144,7 @@
             <th v-if="$root.show.user">user</th>
             <th>size</th>
           </tr>
-          <tr class="item" v-for="(f, index) in files" :key="index">
+          <tr class="item" v-for="(f, idx) in files" :key="idx">
             <td class="note">
               <a v-if="isImageType(f)" :href="getFileDownloadUrl(f, false)" target="_blank">{{$u.fmt.ellipsis(f.name, 35)}}</a>
               <a v-else :href="getFileDownloadUrl(f, true)">{{$u.fmt.ellipsis(f.name, 35)}}</a>
@@ -176,10 +155,10 @@
             <td class="action" title="download">
               <a :href="getFileDownloadUrl(f, true)"><img src="@/assets/download.svg"></a>
             </td>
-            <td v-if="canUpdateVitem(f)" class="action" @click.stop="toggleFileDeleteIndex(index)" title="delete safety">
+            <td v-if="canUpdateVitem(f)" class="action" @click.stop="toggleFileDeleteIdx(idx)" title="delete safety">
               <img src="@/assets/trash.svg">
             </td>
-            <td v-if="fileDeleteIndex === index" class="action confirm-delete" @click.stop="trashFile(index)" title="delete">
+            <td v-if="fileDeleteIdx === idx" class="action confirm-delete" @click.stop="trashFile(idx)" title="delete">
               <img src="@/assets/trash-red.svg">
             </td>
           </tr>
@@ -201,18 +180,21 @@
       return this.initState()
     },
     computed: {
+      t0(){
+        return this.task.set[0]
+      },
       selectedFileName(){
         if (this.selectedFile != null) {
           return this.selectedFile.name
         }
         return ""
       },
-      sections(){
-        return this.commonSections.filter(i => i.show())
+      taskSections(){
+        return this.task.sections.filter(i => i.show())
       },
       colHeaders(){
         let res = []
-        this.sections.forEach((section)=>{
+        this.taskSections.forEach((section)=>{
           if (section.cols.length > 1) {
             res = res.concat(section.cols)
           }
@@ -221,7 +203,7 @@
       },
       cols(){
         let res = []
-        this.sections.forEach((section)=>{
+        this.taskSections.forEach((section)=>{
           res = res.concat(section.cols)
         })
         return res
@@ -232,7 +214,6 @@
         return {
           notFound: false,
           loading: true,
-          showCreateOrUpdate: false,
           task: {
             ancestor: {
               set: [],
@@ -257,34 +238,228 @@
                 })
               }
             },
-            task: null,
-            child: {
-              set: [],
-              more: false,
-              loading: false,
-              updIdx: -1,
-              dltIdx: -1  
-            }
+            set: [],
+            more: false,
+            loading: false,
+            crtIdx: -1,
+            updIdx: -1,
+            dltIdx: -1,
+            loadMore: ()=>{
+              let obj = this.task.child
+              if (obj.loading) {
+                return
+              }
+              obj.loading = true;
+              this.$api.task.getChildren({
+                host: this.$u.rtr.host(), 
+                project: this.$u.rtr.project(), 
+                id: this.$u.rtr.task(), 
+                after: obj.set[obj.set.length - 1].id
+              }).then((res)=>{
+                obj.set = obj.set.concat(res.set)
+                obj.more = res.more
+              }).finally(()=>{
+                obj.loading = false
+              })
+            },
+            canUpd: (t)=>{
+              if (this.pMe == null) {
+                return false
+              }
+              if (this.$u.rtr.host() == this.pMe.id || 
+                (t.parent != null && this.$u.perm.canWrite(this.pMe))) {
+                // if I'm the host I can edit anything,
+                // or if I'm an admin or writer I can edit any none root node
+                return true
+              }
+              return false
+            },
+            canDlt: (t)=>{
+              if (t.descN > 100) {
+                // can't delete a task that would 
+                // result in deleting more than 100 
+                // sub tasks in one go.
+                return false
+              }
+              if (this.pMe == null) {
+                return false
+              }
+              if (this.$u.rtr.host() == this.pMe.id || 
+                (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
+                // if I'm the host I can delete anything,
+                // or if I'm an admin I can delete any none root node
+                return true
+              }
+              if (this.$u.perm.canWrite(this.pMe) && 
+                t.createdBy == this.pMe.id &&
+                (Date.now() - (new Date(t.createdOn))) < 3600000 &&
+                t.descN == 0) {
+                // writers may only delete their own tasks within an hour of creating them
+                // and if the have no children tasks.
+                return true
+              }
+              return false
+            },
+            tglDltIdx: (idx)=>{
+              if (this.task.dltIdx === idx) {
+                this.task.dltIdx = -1
+              } else {
+                this.task.dltIdx = idx
+              }
+            },
+            dlt:(idx)=>{
+              let dltT = this.task.set[idx] 
+              if (dltT.id == this.$u.rtr.project()) {
+                this.$api.project.delete([this.$u.rtr.project()]).then(()=>{
+                  this.$u.rtr.goHome()
+                  this.refreshProjectActivity(true)
+                })
+              } else {
+                this.$api.task.delete({
+                  host: this.$u.rtr.host(),
+                  project: this.$u.rtr.project(),
+                  id: dltT.id
+                }).then((t)=>{
+                  if (idx > 0) {
+                    this.task.set.splice(idx, 1)
+                    this.task.set[0] = t
+                    this.task.dltIdx = -1
+                    this.project.fileSubSize - (dltT.fileSize + dltT.fileSubSize)
+                  } else {
+                      this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.id}`)
+                  }
+                  this.refreshProjectActivity(true)
+                })
+              }
+            },
+            showCrt: (idx)=>{
+              this.task.crtIdx = idx
+              console.log(idx, this.task.crtIdx)
+            },
+            showUpd: (idx)=>{
+              this.task.updIdx = idx
+            },
+            onCrtOrUpdClose: (fullRefresh)=>{
+              this.task.crtIdx = -1
+              this.task.updIdx = -1
+              if (fullRefresh) {
+                this.init()
+              }
+            },
+            title: (t)=>{
+              let res = t.name
+              if (t.description != "") {
+                res += " - " + t.description
+              }
+              return res
+            },
+            sections: [
+              {
+                name: () => "name",
+                show: () => true,
+                cols: [
+                  {
+                    name: "name",
+                    get: (t)=> this.$u.fmt.ellipsis(t.name, 35)
+                  }
+                ]
+              },
+              {
+                name: () => "created",
+                show: () => this.$root.show.date,
+                cols: [
+                  {
+                    name: "created",
+                    get: (t)=> this.$u.fmt.date(t.createdOn)
+                  }
+                ]
+              },
+              {
+                name: () => "user",
+                show: () => this.$root.show.user,
+                cols: [
+                  {
+                    name: "user",
+                    get: (t)=> t.user
+                  }
+                ]
+              },
+              {
+                name: () => "time",
+                show: () => this.$root.show.time,
+                cols: [
+                  { 
+                    name: "min",
+                    get: (t)=> this.$u.fmt.time(t.timeEst + t.timeSubMin, this.project.hoursPerDay, this.project.daysPerWeek)                  
+                  },
+                  {
+                    name: "est",
+                    get: (t)=> this.$u.fmt.time(t.timeEst + t.timeSubEst, this.project.hoursPerDay, this.project.daysPerWeek)
+                  },
+                  {
+                    name: "inc",
+                    get: (t)=> this.$u.fmt.time(t.timeInc + t.timeSubInc, this.project.hoursPerDay, this.project.daysPerWeek)
+                  }
+                ]
+              },
+              {
+                name: () => `cost ${this.$u.fmt.currencySymbol(this.project.currencyCode)}`,
+                show: () => this.$root.show.cost,
+                cols: [
+                  {
+                    name: "est",
+                    get: (t)=> this.$u.fmt.cost(t.costEst + t.costSubEst, true)
+                  },
+                  {
+                    name: "inc",
+                    get: (t)=> this.$u.fmt.cost(t.costInc + t.costSubInc, true)
+                  }
+                ]
+              },
+              {
+                name: () => "file",
+                show: () => this.$root.show.file,
+                cols: [
+                  {
+                    name: "n",
+                    get: (t)=> t.fileN + t.fileSubN
+                  },
+                  {
+                    name: "size",
+                    get: (t)=> this.$u.fmt.bytes(t.fileSize + t.fileSubSize)
+                  }
+                ]
+              },
+              {
+                name: () => "task",
+                show: () => this.$root.show.task,
+                cols: [
+                  {
+                    name: "childn",
+                    get: (p)=> p.childN
+                  },
+                  {
+                    name: "descn",
+                    get: (p)=> p.descN
+                  }
+                ]
+              }
+            ]
           },
-          index: null,
           me: null,
-          project: null,
           pMe: null,
-          children: [],
-          moreChildren: false,
-          loadingMoreChildren: false,
+          project: null,
           files: [],
           moreFiles: false,
           comments: [],
           moreComments: false,
-          deleteIndex: -2,
           selectedFile: null,
-          fileDeleteIndex: -2,
+          fileDeleteIdx: -2,
           loadingFiles: false,
           fileUploadProgress: -1,
           vitems: {
             time: {
-              deleteIndex: -2,
+              deleteIdx: -2,
               set: [],
               more: false,
               estDisplay: "",
@@ -294,13 +469,13 @@
               note: "",
               placeholder: "0h 0m",
               loading: false,
-              updateIndex: -1,
+              updateIdx: -1,
               updateIncDisplay: "",
               updateIncErr: false,
               updateNote: ""
             },
             cost: {
-              deleteIndex: -2,
+              deleteIdx: -2,
               set: [],
               more: false,
               estDisplay: "",
@@ -310,7 +485,7 @@
               note: "",
               placeholder: "0.00",
               loading: false,
-              updateIndex: -1,
+              updateIdx: -1,
               updateIncDisplay: "",
               updateIncErr: false,
               updateNote: ""
@@ -318,98 +493,6 @@
           },
           commentDisplay: "",
           commentErr: "",
-          commonSections: [
-            {
-              name: () => "name",
-              show: () => true,
-              cols: [
-                {
-                  name: "name",
-                  get: (t)=> this.$u.fmt.ellipsis(t.name, 35)
-                }
-              ]
-            },
-            {
-              name: () => "created",
-              show: () => this.$root.show.date,
-              cols: [
-                {
-                  name: "created",
-                  get: (t)=> this.$u.fmt.date(t.createdOn)
-                }
-              ]
-            },
-            {
-              name: () => "user",
-              show: () => this.$root.show.user,
-              cols: [
-                {
-                  name: "user",
-                  get: (t)=> t.user
-                }
-              ]
-            },
-            {
-              name: () => "time",
-              show: () => this.$root.show.time,
-              cols: [
-                { 
-                  name: "min",
-                  get: (t)=> this.$u.fmt.time(t.timeEst + t.timeSubMin, this.project.hoursPerDay, this.project.daysPerWeek)                  
-                },
-                {
-                  name: "est",
-                  get: (t)=> this.$u.fmt.time(t.timeEst + t.timeSubEst, this.project.hoursPerDay, this.project.daysPerWeek)
-                },
-                {
-                  name: "inc",
-                  get: (t)=> this.$u.fmt.time(t.timeInc + t.timeSubInc, this.project.hoursPerDay, this.project.daysPerWeek)
-                }
-              ]
-            },
-            {
-              name: () => `cost ${this.$u.fmt.currencySymbol(this.project.currencyCode)}`,
-              show: () => this.$root.show.cost,
-              cols: [
-                {
-                  name: "est",
-                  get: (t)=> this.$u.fmt.cost(t.costEst + t.costSubEst, true)
-                },
-                {
-                  name: "inc",
-                  get: (t)=> this.$u.fmt.cost(t.costInc + t.costSubInc, true)
-                }
-              ]
-            },
-            {
-              name: () => "file",
-              show: () => this.$root.show.file,
-              cols: [
-                {
-                  name: "n",
-                  get: (t)=> t.fileN + t.fileSubN
-                },
-                {
-                  name: "size",
-                  get: (t)=> this.$u.fmt.bytes(t.fileSize + t.fileSubSize)
-                }
-              ]
-            },
-            {
-              name: () => "task",
-              show: () => this.$root.show.task,
-              cols: [
-                {
-                  name: "childn",
-                  get: (p)=> p.childN
-                },
-                {
-                  name: "descn",
-                  get: (p)=> p.descN
-                }
-              ]
-            }
-          ]
         }
       },
       init(){
@@ -437,9 +520,9 @@
               project: this.$u.rtr.project(),
               id: this.$u.rtr.task()
             }).then((t)=>{
-              this.task.task = t
-              this.vitems.time.estDisplay = this.$u.fmt.time(this.task.task.timeEst)
-              this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.task.costEst)
+              this.task.set = [t].concat(this.task.set)
+              this.vitems.time.estDisplay = this.$u.fmt.time(this.t0.timeEst)
+              this.vitems.cost.estDisplay = this.$u.fmt.cost(this.t0.costEst)
             }).catch((err)=>{
               if (err.status == 404) {
                 this.notFound = true
@@ -450,8 +533,8 @@
               project: this.$u.rtr.project(), 
               id: this.$u.rtr.task()
             }).then((res)=>{
-              this.children = res.set
-              this.moreChildren = res.more
+              this.task.set = this.task.set.concat(res.set)
+              this.task.more = res.more
             })
             mapi.vitem.get({
               host: this.$u.rtr.host(),
@@ -493,123 +576,11 @@
           })
         })
       },
-      getMoreChildren(){
-        if (!this.loadingMoreChildren) {
-          this.loadingMoreChildren = true;
-          this.$api.task.getChildren({
-            host: this.$u.rtr.host(), 
-            project: this.$u.rtr.project(), 
-            id: this.$u.rtr.task(), 
-            after: this.children[this.children.length - 1].id, 
-            limit: 10
-          }).then((res)=>{
-            this.children = this.children.concat(res.set)
-            this.moreChildren = res.more
-          }).finally(()=>{
-            this.loadingMoreChildren = false
-          })
-        }
-      },
-      canUpdate(t){
-        if (this.pMe == null) {
-          return false
-        }
-        if (this.$u.rtr.host() == this.pMe.id || 
-          (t.parent != null && this.$u.perm.canWrite(this.pMe))) {
-          // if I'm the host I can edit anything,
-          // or if I'm an admin or writer I can edit any none root node
-          return true
-        }
-        return false
-      },
-      canDelete(t){
-        if (t.descN > 100) {
-          // can't delete a task that would 
-          // result in deleting more than 100 
-          // sub tasks in one go.
-          return false
-        }
-        if (this.pMe == null) {
-          return false
-        }
-        if (this.$u.rtr.host() == this.pMe.id || 
-          (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
-          // if I'm the host I can delete anything,
-          // or if I'm an admin I can delete any none root node
-          return true
-        }
-        if (this.$u.perm.canWrite(this.pMe) && 
-          t.createdBy == this.pMe.id &&
-          (Date.now() - (new Date(t.createdOn))) < 3600000 &&
-          t.descN == 0) {
-          // writers may only delete their own tasks within an hour of creating them
-          // and if the have no children tasks.
-          if ((t.parent == null && this.$u.rtr.host() == this.pMe.id) || 
-            (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
-            return true
-          }
-        }
-        return false
-      },
-      showCreate(index) {
-        this.showCreateOrUpdate = true
-        this.isCreate = true
-        this.index = index
-      },
-      showUpdate(index) {
-        this.showCreateOrUpdate = true
-        this.isCreate = false
-        if (index == -1) {
-          this.update = this.task.task
+      toggleVitemDeleteIdx(type, idx){
+        if (this.vitems[type].deleteIdx === idx) {
+          this.vitems[type].deleteIdx = -2
         } else {
-          this.update = this.children[index]
-        }
-        this.parentId = this.update.parent
-        this.index = index
-      },
-      onCreateOrUpdateClose(fullRefresh) {
-        this.showCreateOrUpdate = false
-        this.index = null
-        if (fullRefresh) {
-          this.init()
-        }
-      },
-      toggleDeleteIndex(index){
-        if (this.deleteIndex === index) {
-          this.deleteIndex = -2
-        } else {
-          this.deleteIndex = index
-        }
-      },
-      toggleVitemDeleteIndex(type, index){
-        if (this.vitems[type].deleteIndex === index) {
-          this.vitems[type].deleteIndex = -2
-        } else {
-          this.vitems[type].deleteIndex = index
-        }
-      },
-      trash(deleteT, index){
-        if (deleteT.id == this.$u.rtr.project()) {
-          this.$api.project.delete([this.$u.rtr.project()]).then(()=>{
-            this.$u.rtr.goHome()
-            this.refreshProjectActivity(true)
-          })
-        } else {
-          this.$api.task.delete({
-            host: this.$u.rtr.host(),
-            project: this.$u.rtr.project(),
-            id: deleteT.id
-          }).then((t)=>{
-            if (index > -1) {
-              this.children.splice(index, 1)
-              this.task.task = t
-              this.deleteIndex = -2
-              this.project.fileSubSize - (deleteT.fileSize + deleteT.fileSubSize)
-            } else {
-                this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.id}`)
-            }
-            this.refreshProjectActivity(true)
-          })
+          this.vitems[type].deleteIdx = idx
         }
       },
       validate(type, isBlur){
@@ -655,7 +626,7 @@
           let est = this.$u.parse[type](obj.estDisplay)
           let inc = this.$u.parse[type](obj.incDisplay)
           if ((inc == null || inc == 0) &&
-            (est != null && est != this.task.task[type+'Est'])) {
+            (est != null && est != this.t0[type+'Est'])) {
             // only changing est value
             let args = {
               host: this.$u.rtr.host(),
@@ -665,7 +636,7 @@
             args[type+'Est'] = {v:est}
             obj.loading = true
             this.$api.task.update(args).then((res)=>{
-              this.task.task = res.task
+              this.task.set[0] = res.task
               this.refreshProjectActivity(true)
             }).finally(()=>{
               obj.loading = false
@@ -679,12 +650,12 @@
               inc: inc,
               note: obj.note
             }
-            if (est != null && est != this.task.task[type+'Est']) {
+            if (est != null && est != this.t0[type+'Est']) {
               args.est = est
             }
             obj.loading = true
             this.$api.vitem.create(args).then((res)=>{
-              this.task.task = res.task
+              this.task.set[0] = res.task
               obj.inc = 0
               obj.incDisplay = ""
               obj.note = ""
@@ -719,7 +690,7 @@
       submitUpdate(type){
         if (this.validateUpdate(type)) {
           let obj = this.vitems[type]
-          let curItem = obj.set[obj.updateIndex]
+          let curItem = obj.set[obj.updateIdx]
           if (obj.loading) {
             return
           }
@@ -738,8 +709,8 @@
             }
             obj.loading = true
             this.$api.vitem.update(args).then((res)=>{
-              this.task.task = res.task
-              obj.set[obj.updateIndex] = res.item
+              this.task.set[0] = res.task
+              obj.set[obj.updateIdx] = res.item
               this.cancelUpdate(type)
               this.refreshProjectActivity(true)
             }).finally(()=>{
@@ -752,7 +723,7 @@
       },
       cancelUpdate(type){
         let obj = this.vitems[type]
-        obj.updateIndex = -1
+        obj.updateIdx = -1
         obj.updateIncDisplay = ""
         obj.updateIncErr = false
         obj.updateNote = ""
@@ -766,13 +737,13 @@
           i.createdBy == this.pMe.id &&
           (Date.now() - (new Date(i.createdOn))) < 3600000 )
       },
-      showVitemUpdate(i, index) {
-        this.vitems[i.type].updateIndex = index
+      showVitemUpdate(i, idx) {
+        this.vitems[i.type].updateIdx = idx
         this.vitems[i.type].updateIncDisplay = this.$u.fmt[i.type](i.inc)
         this.vitems[i.type].updateIncErr = false
         this.vitems[i.type].updateNote = i.note
       },
-      trashVitem(i, index) {
+      trashVitem(i, idx) {
         let obj = this.vitems[i.type]
         if (obj.loading) {
           return
@@ -785,9 +756,9 @@
           type: i.type,
           id: i.id
         }).then((t)=>{
-          this.task.task = t
-          obj.set.splice(index, 1)
-          obj.deleteIndex = -2
+          this.task.set[0] = t
+          obj.set.splice(idx, 1)
+          obj.deleteIdx = -2
           this.refreshProjectActivity(true)
         }).finally(()=>{
           obj.loading = false
@@ -829,17 +800,10 @@
           this.loadingFiles = false
         })
       },
-      descriptionTitle(t) {
-        let res = t.name
-        if (t.description != "") {
-          res += " - " + t.description
-        }
-        return res
-      },
       refreshProjectActivity(force){
-        if (this.task.task != null) {
-          this.vitems.time.estDisplay = this.$u.fmt.time(this.task.task.timeEst)
-          this.vitems.cost.estDisplay = this.$u.fmt.cost(this.task.task.costEst)    
+        if (this.t0 != null) {
+          this.vitems.time.estDisplay = this.$u.fmt.time(this.t0.timeEst)
+          this.vitems.cost.estDisplay = this.$u.fmt.cost(this.t0.costEst)    
         }
         this.$emit("refreshProjectActivity", force)
       },
@@ -865,18 +829,18 @@
       isImageType(f){
         return f.type.startsWith("image/")
       },
-      toggleFileDeleteIndex(index) {
-        if (this.fileDeleteIndex === index) {
-          this.fileDeleteIndex = -2
+      toggleFileDeleteIdx(idx) {
+        if (this.fileDeleteIdx === idx) {
+          this.fileDeleteIdx = -2
         } else {
-          this.fileDeleteIndex = index
+          this.fileDeleteIdx = idx
         }
       },
-      trashFile(index) {
+      trashFile(idx) {
         if (this.loadingFiles) {
           return
         }
-        let f = this.files[index]
+        let f = this.files[idx]
         this.loadingFiles = true
         this.$api.file.delete({
           host: this.$u.rtr.host(),
@@ -884,9 +848,9 @@
           task: this.$u.rtr.task(),
           id: f.id
         }).then((t)=>{
-          this.task.task = t
-          this.files.splice(index, 1)
-          this.fileDeleteIndex = -2
+          this.task.set[0] = t
+          this.files.splice(idx, 1)
+          this.fileDeleteIdx = -2
           this.project.fileSubSize -= f.size
           this.refreshProjectActivity(true)
         }).finally(()=>{
@@ -986,16 +950,16 @@ div.root {
             background-color: transparent;
           }
         }
-      }
-      tr.this-task {
-        cursor: default;
-        .action{
-          cursor: pointer;
+        &.row:nth-child(3){
+          cursor: default;
+          .action{
+            cursor: pointer;
+          }
+          > * {
+            background-color: #333;
+          }
+          font-weight: bold;
         }
-        > * {
-          background-color: #333;
-        }
-        font-weight: bold;
       }
     }
     .items {
@@ -1056,7 +1020,7 @@ div.root {
               opacity: 0;
               overflow: hidden;
               position: absolute;
-              z-index: -1;
+              z-idx: -1;
             }
           }
         }
