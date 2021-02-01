@@ -433,8 +433,8 @@
               project: this.$u.rtr.project(), 
               task: this.$u.rtr.task()
             }).then((res)=>{
-              this.comments = res.set
-              this.moreComments = res.more
+              this.comment.set = res.set
+              this.comment.more = res.more
             })
             mapi.sendMDo().finally(()=>{
               this.loading = false
