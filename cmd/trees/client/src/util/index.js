@@ -177,7 +177,7 @@ export default {
                     return res
                 },
                 currencySymbol(code){
-                    let symbol = ""
+                    let symbol = code
                     if (code != null) {
                         // only support symbols for the major currencies
                         switch(code) {
