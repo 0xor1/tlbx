@@ -55,7 +55,7 @@
             <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="taskShowCrt(idx+1)" title="insert below">
               <img src="@/assets/insert-below.svg">
             </td>
-            <td v-if="idx === 0 && task.set.length > 1" class="action">
+            <td v-if="idx === 0 && task.set.length > 1 && $u.perm.canWrite(pMe)" class="action">
             </td>
             <td v-else-if="idx > 0 && $u.perm.canWrite(pMe)" class="action" @click.stop="taskShowCrt(idx)" title="insert above">
               <img src="@/assets/insert-above.svg">
@@ -81,47 +81,47 @@
           <div class="heading">{{type}} <span class="medium" v-if="type == 'cost'">{{$u.fmt.currencySymbol(project.currencyCode)}}</span> <span class="medium">{{$u.fmt[type](t0[type+'Inc'])}}</span><span class="medium" v-if="task.set.length > 0"> | {{$u.fmt[type](t0[type+'SubInc'])}}</span></div>
           <div v-if="$u.perm.canWrite(pMe)" class="create-form">
             <div title="note">
-              <span>note <span :class="{err: vitems[type].note.length > 250, 'small': true}">({{250 - vitems[type].note.length}})</span></span><br>
-              <input :class="{err: vitems[type].note.length > 250, note: true}" v-model="vitems[type].note" type="text" placeholder="note" @blur="validate(type)" @keyup="validate(type)" @keydown.enter="submit(type)"/>
+              <span>note <span :class="{err: vitem[type].note.length > 250, 'small': true}">({{250 - vitem[type].note.length}})</span></span><br>
+              <input :class="{err: vitem[type].note.length > 250, note: true}" v-model="vitem[type].note" type="text" placeholder="note" @blur="vitemValidate(type)" @keyup="vitemValidate(type)" @keydown.enter="submit(type)"/>
             </div>
             <div title="incurred">
               <span>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></span><br>
-              <input :class="{err: vitems[type].incErr}" v-model="vitems[type].incDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validate(type, true)" @keyup="validate(type)" @keydown.enter="submit(type)"/>
+              <input :class="{err: vitem[type].incErr}" v-model="vitem[type].incStr" type="text" :placeholder="vitem[type].placeholder" @blur="vitemValidate(type, true)" @keyup="vitemValidate(type)" @keydown.enter="submit(type)"/>
             </div>
             <div title="remaining estimate">
               <span>est <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></span><br>
-              <input :class="{err: vitems[type].estErr}" v-model="vitems[type].estDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validate(type, true)" @keyup="validate(type)" @keydown.enter="submit(type)"/>
+              <input :class="{err: vitem[type].estErr}" v-model="vitem[type].estStr" type="text" :placeholder="vitem[type].placeholder" @blur="vitemValidate(type, true)" @keyup="vitemValidate(type)" @keydown.enter="submit(type)"/>
             </div>
             <div>
               <button @click.stop="submit(type)">create</button>
             </div>
           </div>
-          <table v-if="vitems[type].set.length > 0">
+          <table v-if="vitem[type].set.length > 0">
             <tr class="header">
               <th class="note">note</th>
               <th v-if="$root.show.date">created</th>
               <th v-if="$root.show.user">user</th>
               <th>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></th>
             </tr>
-            <tr class="item" v-for="(i, idx) in vitems[type].set" :key="idx">
-              <td v-if="vitems[type].updateIdx != idx" class="note" v-html="$u.fmt.mdLinkify(i.note)"></td>
-              <td v-else class="note"><input :class="{err: vitems[type].updateNote > 250}" v-model="vitems[type].updateNote" type="text" placeholder="note" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
+            <tr class="item" v-for="(i, idx) in vitem[type].set" :key="idx">
+              <td v-if="vitem[type].updIdx != idx" class="note" v-html="$u.fmt.mdLinkify(i.note)"></td>
+              <td v-else class="note"><input :class="{err: vitem[type].updNote > 250}" v-model="vitem[type].updNote" type="text" placeholder="note" @blur="vitemValidateUpd(type, true)" @keyup="vitemValidateUpd(type)" @keydown.enter="vitemSubmitUpd(type)" @keydown.escape="vitemCancelUpd(type)"/></td>
               <td v-if="$root.show.date">{{$u.fmt.date(i.createdOn)}}</td>
               <td v-if="$root.show.user"><user :userId="i.createdBy"></user></td>
-              <td v-if="vitems[type].updateIdx != idx">{{$u.fmt[type](i.inc)}}</td>
-              <td v-else><input :class="{err: vitems[type].updateIncErr}" v-model="vitems[type].updateIncDisplay" type="text" :placeholder="vitems[type].placeholder" @blur="validateUpdate(type, true)" @keyup="validateUpdate(type)" @keydown.enter="submitUpdate(type)" @keydown.escape="cancelUpdate(type)"/></td>
-              <td v-if="canUpdateVitem(i) && vitems[type].updateIdx != idx" class="action" @click.stop="showVitemUpdate(i, idx)" title="update">
+              <td v-if="vitem[type].updIdx != idx">{{$u.fmt[type](i.inc)}}</td>
+              <td v-else><input :class="{err: vitem[type].updIncErr}" v-model="vitem[type].updIncStr" type="text" :placeholder="vitem[type].placeholder" @blur="vitemValidateUpd(type, true)" @keyup="vitemValidateUpd(type)" @keydown.enter="vitemSubmitUpd(type)" @keydown.escape="vitemCancelUpd(type)"/></td>
+              <td v-if="vitemCanUpd(i) && vitem[type].updIdx != idx" class="action" @click.stop="vitemShowUpd(i, idx)" title="update">
                 <img src="@/assets/edit.svg">
               </td>
-              <td v-if="canUpdateVitem(i) && vitems[type].updateIdx != idx" class="action" @click.stop="toggleVitemDeleteIdx(type, idx)" title="delete safety">
+              <td v-if="vitemCanUpd(i) && vitem[type].updIdx != idx" class="action" @click.stop="vitemTglDltIdx(type, idx)" title="delete safety">
                 <img src="@/assets/trash.svg">
               </td>
-              <td v-if="vitems[type].deleteIdx === idx" class="action confirm-delete" @click.stop="trashVitem(i, idx)" title="delete">
+              <td v-if="vitem[type].dltIdx === idx" class="action confirm-delete" @click.stop="vitemDlt(i, idx)" title="delete">
                 <img src="@/assets/trash-red.svg">
               </td>
             </tr>
           </table>
-          <div v-if="vitems[type].more"><button @click.stop.prevent="loadMoreVitems(type)">load more</button></div>
+          <div v-if="vitem[type].more"><button @click.stop.prevent="vitemLoadMore(type)">load more</button></div>
         </div>
       </div>
       <div v-if="$root.show.file" class="items files">
@@ -155,10 +155,10 @@
             <td class="action" title="download">
               <a :href="getFileDownloadUrl(f, true)"><img src="@/assets/download.svg"></a>
             </td>
-            <td v-if="canUpdateVitem(f)" class="action" @click.stop="toggleFileDeleteIdx(idx)" title="delete safety">
+            <td v-if="vitemCanUpd(f)" class="action" @click.stop="toggleFileDltIdx(idx)" title="delete safety">
               <img src="@/assets/trash.svg">
             </td>
-            <td v-if="fileDeleteIdx === idx" class="action confirm-delete" @click.stop="trashFile(idx)" title="delete">
+            <td v-if="fileDltIdx === idx" class="action confirm-delete" @click.stop="trashFile(idx)" title="delete">
               <img src="@/assets/trash-red.svg">
             </td>
           </tr>
@@ -211,6 +211,24 @@
     },
     methods: {
       initState(){
+        let vitemFn = function(ph){
+          return {
+              dltIdx: -1,
+              set: [],
+              more: false,
+              loading: false,
+              estStr: "",
+              estErr: false,
+              incStr: "",
+              incErr: false,
+              note: "",
+              placeholder: ph,
+              updIdx: -1,
+              updIncStr: "",
+              updIncErr: false,
+              updNote: ""
+            }
+        }
         return {
           notFound: false,
           loading: true,
@@ -322,48 +340,18 @@
               }
             ]
           },
+          vitem: {
+            time: vitemFn("0h 0m"),
+            cost: vitemFn("0.00")
+          },
           files: [],
           moreFiles: false,
           comments: [],
           moreComments: false,
           selectedFile: null,
-          fileDeleteIdx: -2,
+          fileDltIdx: -1,
           loadingFiles: false,
           fileUploadProgress: -1,
-          vitems: {
-            time: {
-              deleteIdx: -2,
-              set: [],
-              more: false,
-              estDisplay: "",
-              estErr: false,
-              incDisplay: "",
-              incErr: false,
-              note: "",
-              placeholder: "0h 0m",
-              loading: false,
-              updateIdx: -1,
-              updateIncDisplay: "",
-              updateIncErr: false,
-              updateNote: ""
-            },
-            cost: {
-              deleteIdx: -2,
-              set: [],
-              more: false,
-              estDisplay: "",
-              estErr: false,
-              incDisplay: "",
-              incErr: false,
-              note: "",
-              placeholder: "0.00",
-              loading: false,
-              updateIdx: -1,
-              updateIncDisplay: "",
-              updateIncErr: false,
-              updateNote: ""
-            }
-          },
           commentDisplay: "",
           commentErr: "",
         }
@@ -394,8 +382,8 @@
               id: this.$u.rtr.task()
             }).then((t)=>{
               this.task.set = [t].concat(this.task.set)
-              this.vitems.time.estDisplay = this.$u.fmt.time(this.t0.timeEst)
-              this.vitems.cost.estDisplay = this.$u.fmt.cost(this.t0.costEst)
+              this.vitem.time.estStr = this.$u.fmt.time(this.t0.timeEst)
+              this.vitem.cost.estStr = this.$u.fmt.cost(this.t0.costEst)
             }).catch((err)=>{
               if (err.status == 404) {
                 this.notFound = true
@@ -415,8 +403,8 @@
               task: this.$u.rtr.task(), 
               type: this.$u.cnsts.time
             }).then((res)=>{
-              this.vitems.time.set = res.set
-              this.vitems.time.more = res.more
+              this.vitem.time.set = res.set
+              this.vitem.time.more = res.more
             })
             mapi.vitem.get({
               host: this.$u.rtr.host(),
@@ -424,8 +412,8 @@
               task: this.$u.rtr.task(), 
               type: this.$u.cnsts.cost
             }).then((res)=>{
-              this.vitems.cost.set = res.set
-              this.vitems.cost.more = res.more
+              this.vitem.cost.set = res.set
+              this.vitem.cost.more = res.more
             })
             mapi.file.get({
               host: this.$u.rtr.host(),
@@ -557,7 +545,6 @@
       },
       taskShowCrt(idx){
         this.task.crtIdx = idx
-        console.log(idx, this.task.crtIdx)
       },
       taskShowUpd(idx){
         this.task.updIdx = idx
@@ -576,38 +563,38 @@
         }
         return res
       },
-      toggleVitemDeleteIdx(type, idx){
-        if (this.vitems[type].deleteIdx === idx) {
-          this.vitems[type].deleteIdx = -2
+      vitemTglDltIdx(type, idx){
+        if (this.vitem[type].dltIdx === idx) {
+          this.vitem[type].dltIdx = -1
         } else {
-          this.vitems[type].deleteIdx = idx
+          this.vitem[type].dltIdx = idx
         }
       },
-      validate(type, isBlur){
+      vitemValidate(type, isBlur){
         let isOK = true
-        let obj = this.vitems[type]
-        if (obj.estDisplay != null && obj.estDisplay.length > 0) {
-          let parsed = this.$u.parse[type](obj.estDisplay)
+        let obj = this.vitem[type]
+        if (obj.estStr != null && obj.estStr.length > 0) {
+          let parsed = this.$u.parse[type](obj.estStr)
           if (parsed == null) {
             obj.estErr = true
             isOK = false
           } else {
             if (isBlur === true) {
-              obj.estDisplay = this.$u.fmt[type](parsed)
+              obj.estStr = this.$u.fmt[type](parsed)
             }
             obj.estErr = false
           }
         } else {
           obj.estErr = false
         }
-        if (obj.incDisplay != null && obj.incDisplay.length > 0) {
-          let parsed = this.$u.parse[type](obj.incDisplay)
+        if (obj.incStr != null && obj.incStr.length > 0) {
+          let parsed = this.$u.parse[type](obj.incStr)
           if (parsed == null) {
             obj.incErr = true
             isOK = false
           } else {
             if (isBlur === true) {
-              obj.incDisplay = this.$u.fmt[type](parsed)
+              obj.incStr = this.$u.fmt[type](parsed)
             }
             obj.incErr = false
           }
@@ -618,13 +605,13 @@
         return isOK
       },
       submit(type){
-        if (this.validate(type)) {
-          let obj = this.vitems[type]
+        if (this.vitemValidate(type)) {
+          let obj = this.vitem[type]
           if (obj.loading) {
             return
           }
-          let est = this.$u.parse[type](obj.estDisplay)
-          let inc = this.$u.parse[type](obj.incDisplay)
+          let est = this.$u.parse[type](obj.estStr)
+          let inc = this.$u.parse[type](obj.incStr)
           if ((inc == null || inc == 0) &&
             (est != null && est != this.t0[type+'Est'])) {
             // only changing est value
@@ -657,7 +644,7 @@
             this.$api.vitem.create(args).then((res)=>{
               this.task.set[0] = res.task
               obj.inc = 0
-              obj.incDisplay = ""
+              obj.incStr = ""
               obj.note = ""
               obj.set.splice(0, 0, res.item)
               this.refreshProjectActivity(true)
@@ -667,36 +654,36 @@
           }
         }
       },
-      validateUpdate(type, isBlur){
+      vitemValidateUpd(type, isBlur){
         let isOK = true
-        let obj = this.vitems[type]
-        if (obj.updateIncDisplay != null && obj.updateIncDisplay.length > 0) {
-          let parsed = this.$u.parse[type](obj.updateIncDisplay)
+        let obj = this.vitem[type]
+        if (obj.updIncStr != null && obj.updIncStr.length > 0) {
+          let parsed = this.$u.parse[type](obj.updIncStr)
           if (parsed == null) {
-            obj.updateIncErr = true
+            obj.updIncErr = true
             isOK = false
           } else {
             if (isBlur === true) {
-              obj.updateIncDisplay = this.$u.fmt[type](parsed)
+              obj.updIncStr = this.$u.fmt[type](parsed)
             }
-            obj.updateIncErr = false
+            obj.updIncErr = false
           }
         }else {
-          obj.updateIncErr = false
+          obj.updIncErr = false
         }
-        obj.updateNote = obj.updateNote.substring(0, 250)
+        obj.updNote = obj.updNote.substring(0, 250)
         return isOK
       },
-      submitUpdate(type){
-        if (this.validateUpdate(type)) {
-          let obj = this.vitems[type]
-          let curItem = obj.set[obj.updateIdx]
+      vitemSubmitUpd(type){
+        if (this.vitemValidateUpd(type)) {
+          let obj = this.vitem[type]
+          let curItem = obj.set[obj.updIdx]
           if (obj.loading) {
             return
           }
-          let inc = this.$u.parse[type](obj.updateIncDisplay)
+          let inc = this.$u.parse[type](obj.updIncStr)
           if (inc != null && inc != 0 && 
-            (obj.updateNote != curItem.note ||
+            (obj.updNote != curItem.note ||
             inc != curItem.inc)) {
             let args = {
               host: this.$u.rtr.host(),
@@ -705,30 +692,30 @@
               type: type,
               id: curItem.id,
               inc: {v:inc},
-              note: {v:obj.updateNote}
+              note: {v:obj.updNote}
             }
             obj.loading = true
             this.$api.vitem.update(args).then((res)=>{
               this.task.set[0] = res.task
-              obj.set[obj.updateIdx] = res.item
-              this.cancelUpdate(type)
+              obj.set[obj.updIdx] = res.item
+              this.vitemCancelUpd(type)
               this.refreshProjectActivity(true)
             }).finally(()=>{
               obj.loading = false
             })
           } else {
-            this.cancelUpdate(type)
+            this.vitemCancelUpd(type)
           }
         }
       },
-      cancelUpdate(type){
-        let obj = this.vitems[type]
-        obj.updateIdx = -1
-        obj.updateIncDisplay = ""
-        obj.updateIncErr = false
-        obj.updateNote = ""
+      vitemCancelUpd(type){
+        let obj = this.vitem[type]
+        obj.updIdx = -1
+        obj.updIncStr = ""
+        obj.updIncErr = false
+        obj.updNote = ""
       },
-      canUpdateVitem(i){
+      vitemCanUpd(i){
         if (this.pMe == null) {
           return false
         }
@@ -737,14 +724,14 @@
           i.createdBy == this.pMe.id &&
           (Date.now() - (new Date(i.createdOn))) < 3600000 )
       },
-      showVitemUpdate(i, idx) {
-        this.vitems[i.type].updateIdx = idx
-        this.vitems[i.type].updateIncDisplay = this.$u.fmt[i.type](i.inc)
-        this.vitems[i.type].updateIncErr = false
-        this.vitems[i.type].updateNote = i.note
+      vitemShowUpd(i, idx) {
+        this.vitem[i.type].updIdx = idx
+        this.vitem[i.type].updIncStr = this.$u.fmt[i.type](i.inc)
+        this.vitem[i.type].updIncErr = false
+        this.vitem[i.type].updNote = i.note
       },
-      trashVitem(i, idx) {
-        let obj = this.vitems[i.type]
+      vitemDlt(i, idx) {
+        let obj = this.vitem[i.type]
         if (obj.loading) {
           return
         }
@@ -758,14 +745,14 @@
         }).then((t)=>{
           this.task.set[0] = t
           obj.set.splice(idx, 1)
-          obj.deleteIdx = -2
+          obj.dltIdx = -1
           this.refreshProjectActivity(true)
         }).finally(()=>{
           obj.loading = false
         })
       },
-      loadMoreVitems(type) {
-        let obj = this.vitems[type]
+      vitemLoadMore(type) {
+        let obj = this.vitem[type]
         if (obj.loading) {
           return
         }
@@ -802,8 +789,8 @@
       },
       refreshProjectActivity(force){
         if (this.t0 != null) {
-          this.vitems.time.estDisplay = this.$u.fmt.time(this.t0.timeEst)
-          this.vitems.cost.estDisplay = this.$u.fmt.cost(this.t0.costEst)    
+          this.vitem.time.estStr = this.$u.fmt.time(this.task.set[0].timeEst)
+          this.vitem.cost.estStr = this.$u.fmt.cost(this.task.set[0].costEst)
         }
         this.$emit("refreshProjectActivity", force)
       },
@@ -829,11 +816,11 @@
       isImageType(f){
         return f.type.startsWith("image/")
       },
-      toggleFileDeleteIdx(idx) {
-        if (this.fileDeleteIdx === idx) {
-          this.fileDeleteIdx = -2
+      toggleFileDltIdx(idx) {
+        if (this.fileDltIdx === idx) {
+          this.fileDltIdx = -1
         } else {
-          this.fileDeleteIdx = idx
+          this.fileDltIdx = idx
         }
       },
       trashFile(idx) {
@@ -850,7 +837,7 @@
         }).then((t)=>{
           this.task.set[0] = t
           this.files.splice(idx, 1)
-          this.fileDeleteIdx = -2
+          this.fileDltIdx = -1
           this.project.fileSubSize -= f.size
           this.refreshProjectActivity(true)
         }).finally(()=>{
