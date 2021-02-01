@@ -849,7 +849,7 @@
           }, (e)=>{
             this.fileUploadProgress = Math.round( (e.loaded * 100) / e.total )
           }).then((res)=>{
-            this.task = res.task
+            this.$u.copyProps(res.task, this.task.set[0])
             this.files.splice(0, 0, res.file)
             this.selectedFile = null
             this.$refs.fileInput.value = null
