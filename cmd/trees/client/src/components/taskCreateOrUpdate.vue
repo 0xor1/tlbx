@@ -248,8 +248,8 @@
             }
             if (isUpdate) {
               this.$api.task.update(args).then((res)=>{
-                  this.set[this.updIdx] = res.task
-                if (res.oldParent != null) {
+                this.set[this.updIdx] = res.task
+                if (res.oldParent != null && this.updIdx > 0) {
                   for(const [key, value] of Object.entries(res.oldParent)) {
                     this.set[0][key] = value
                   }
