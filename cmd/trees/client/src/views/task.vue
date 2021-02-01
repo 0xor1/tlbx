@@ -82,18 +82,18 @@
           <div v-if="$u.perm.canWrite(pMe)" class="create-form">
             <div title="note">
               <span>note <span :class="{err: vitem[type].note.length > 250, 'small': true}">({{250 - vitem[type].note.length}})</span></span><br>
-              <input :class="{err: vitem[type].note.length > 250, note: true}" v-model="vitem[type].note" type="text" placeholder="note" @blur="vitemValidate(type)" @keyup="vitemValidate(type)" @keydown.enter="submit(type)"/>
+              <input :class="{err: vitem[type].note.length > 250, note: true}" v-model="vitem[type].note" type="text" placeholder="note" @blur="vitemValidate(type)" @keyup="vitemValidate(type)" @keydown.enter="vitemSubmit(type)"/>
             </div>
             <div title="incurred">
               <span>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></span><br>
-              <input :class="{err: vitem[type].incErr}" v-model="vitem[type].incStr" type="text" :placeholder="vitem[type].placeholder" @blur="vitemValidate(type, true)" @keyup="vitemValidate(type)" @keydown.enter="submit(type)"/>
+              <input :class="{err: vitem[type].incErr}" v-model="vitem[type].incStr" type="text" :placeholder="vitem[type].placeholder" @blur="vitemValidate(type, true)" @keyup="vitemValidate(type)" @keydown.enter="vitemSubmit(type)"/>
             </div>
             <div title="remaining estimate">
               <span>est <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></span><br>
-              <input :class="{err: vitem[type].estErr}" v-model="vitem[type].estStr" type="text" :placeholder="vitem[type].placeholder" @blur="vitemValidate(type, true)" @keyup="vitemValidate(type)" @keydown.enter="submit(type)"/>
+              <input :class="{err: vitem[type].estErr}" v-model="vitem[type].estStr" type="text" :placeholder="vitem[type].placeholder" @blur="vitemValidate(type, true)" @keyup="vitemValidate(type)" @keydown.enter="vitemSubmit(type)"/>
             </div>
             <div>
-              <button @click.stop="submit(type)">create</button>
+              <button @click.stop="vitemSubmit(type)">create</button>
             </div>
           </div>
           <table v-if="vitem[type].set.length > 0">
@@ -134,7 +134,7 @@
             <span v-else class="input-file">select file</span>
           </div>
           <div>
-            <button @click.stop="submitFile()">upload</button>
+            <button @click.stop="fileSubmit()">upload</button>
           </div>
         </div>
         <table v-if="files.length > 0">
@@ -146,24 +146,24 @@
           </tr>
           <tr class="item" v-for="(f, idx) in files" :key="idx">
             <td class="note">
-              <a v-if="isImageType(f)" :href="getFileDownloadUrl(f, false)" target="_blank">{{$u.fmt.ellipsis(f.name, 35)}}</a>
-              <a v-else :href="getFileDownloadUrl(f, true)">{{$u.fmt.ellipsis(f.name, 35)}}</a>
+              <a v-if="fileIsImageType(f)" :href="fileGetDownloadUrl(f, false)" target="_blank">{{$u.fmt.ellipsis(f.name, 35)}}</a>
+              <a v-else :href="fileGetDownloadUrl(f, true)">{{$u.fmt.ellipsis(f.name, 35)}}</a>
             </td>
             <td v-if="$root.show.date">{{$u.fmt.date(f.createdOn)}}</td>
             <td v-if="$root.show.user"><user :userId="f.createdBy"></user></td>
             <td>{{$u.fmt.bytes(f.size)}}</td>
             <td class="action" title="download">
-              <a :href="getFileDownloadUrl(f, true)"><img src="@/assets/download.svg"></a>
+              <a :href="fileGetDownloadUrl(f, true)"><img src="@/assets/download.svg"></a>
             </td>
-            <td v-if="vitemCanUpd(f)" class="action" @click.stop="toggleFileDltIdx(idx)" title="delete safety">
+            <td v-if="vitemCanUpd(f)" class="action" @click.stop="fileTglDltIdx(idx)" title="delete safety">
               <img src="@/assets/trash.svg">
             </td>
-            <td v-if="fileDltIdx === idx" class="action confirm-delete" @click.stop="trashFile(idx)" title="delete">
+            <td v-if="fileDltIdx === idx" class="action confirm-delete" @click.stop="fileDlt(idx)" title="delete">
               <img src="@/assets/trash-red.svg">
             </td>
           </tr>
         </table>
-        <div v-if="moreFiles"><button @click.stop.prevent="loadMoreFiles()">load more</button></div>
+        <div v-if="moreFiles"><button @click.stop.prevent="fileLoadMore()">load more</button></div>
       </div>
     </div>
   </div>
@@ -357,9 +357,7 @@
         }
       },
       init(){
-        for(const [key, value] of Object.entries(this.initState())) {
-          this[key] = value
-        }
+        this.$u.copyProps(this.initState(), this)
         this.$api.user.me().then((me)=>{
           this.me = me
         }).finally(()=>{
@@ -533,7 +531,7 @@
           }).then((t)=>{
             if (idx > 0) {
               this.task.set.splice(idx, 1)
-              this.task.set[0] = t
+              this.$u.copyProps(t, this.task[0])
               this.task.dltIdx = -1
               this.project.fileSubSize - (dltT.fileSize + dltT.fileSubSize)
             } else {
@@ -604,7 +602,7 @@
         obj.note = obj.note.substring(0, 250)
         return isOK
       },
-      submit(type){
+      vitemSubmit(type){
         if (this.vitemValidate(type)) {
           let obj = this.vitem[type]
           if (obj.loading) {
@@ -623,7 +621,7 @@
             args[type+'Est'] = {v:est}
             obj.loading = true
             this.$api.task.update(args).then((res)=>{
-              this.task.set[0] = res.task
+              this.$u.copyProps(res.task, this.task.set[0])
               this.refreshProjectActivity(true)
             }).finally(()=>{
               obj.loading = false
@@ -642,7 +640,7 @@
             }
             obj.loading = true
             this.$api.vitem.create(args).then((res)=>{
-              this.task.set[0] = res.task
+              this.$u.copyProps(res.task, this.task.set[0])
               obj.inc = 0
               obj.incStr = ""
               obj.note = ""
@@ -696,7 +694,7 @@
             }
             obj.loading = true
             this.$api.vitem.update(args).then((res)=>{
-              this.task.set[0] = res.task
+              this.$u.copyProps(res.task, this.task.set[0])
               obj.set[obj.updIdx] = res.item
               this.vitemCancelUpd(type)
               this.refreshProjectActivity(true)
@@ -743,7 +741,7 @@
           type: i.type,
           id: i.id
         }).then((t)=>{
-          this.task.set[0] = t
+          this.$u.copyProps(t, this.task.set[0])
           obj.set.splice(idx, 1)
           obj.dltIdx = -1
           this.refreshProjectActivity(true)
@@ -770,7 +768,7 @@
           obj.loading = false
         })
       },
-      loadMoreFiles() {
+      fileLoadMore() {
         if (this.loadingFiles) {
           return
         }
@@ -787,13 +785,6 @@
           this.loadingFiles = false
         })
       },
-      refreshProjectActivity(force){
-        if (this.t0 != null) {
-          this.vitem.time.estStr = this.$u.fmt.time(this.task.set[0].timeEst)
-          this.vitem.cost.estStr = this.$u.fmt.cost(this.task.set[0].costEst)
-        }
-        this.$emit("refreshProjectActivity", force)
-      },
       fileButtonClick(){
         this.$refs.fileLabel.click()
       },
@@ -804,7 +795,7 @@
           this.selectedFile = this.$refs.fileInput.files[0]
         }
       },
-      getFileDownloadUrl(f, isDownload){
+      fileGetDownloadUrl(f, isDownload){
         return this.$api.file.getContentUrl({
           host: this.$u.rtr.host(),
           project: this.$u.rtr.project(),
@@ -813,17 +804,17 @@
           isDownload
         })
       },
-      isImageType(f){
+      fileIsImageType(f){
         return f.type.startsWith("image/")
       },
-      toggleFileDltIdx(idx) {
+      fileTglDltIdx(idx) {
         if (this.fileDltIdx === idx) {
           this.fileDltIdx = -1
         } else {
           this.fileDltIdx = idx
         }
       },
-      trashFile(idx) {
+      fileDlt(idx) {
         if (this.loadingFiles) {
           return
         }
@@ -835,7 +826,7 @@
           task: this.$u.rtr.task(),
           id: f.id
         }).then((t)=>{
-          this.task.set[0] = t
+          this.$u.copyProps(t, this.task.set[0])
           this.files.splice(idx, 1)
           this.fileDltIdx = -1
           this.project.fileSubSize -= f.size
@@ -844,7 +835,7 @@
           this.loadingFiles = false
         })
       },
-      submitFile(){
+      fileSubmit(){
         if (this.selectedFile != null && !this.loadingFiles) {
           this.loadingFiles = true
           this.$api.file.create({
@@ -869,6 +860,13 @@
             this.loadingFiles = false
           })
         }
+      },
+      refreshProjectActivity(force){
+        if (this.t0 != null) {
+          this.vitem.time.estStr = this.$u.fmt.time(this.t0.timeEst)
+          this.vitem.cost.estStr = this.$u.fmt.cost(this.t0.costEst)
+        }
+        this.$emit("refreshProjectActivity", force)
       }
     },
     mounted(){

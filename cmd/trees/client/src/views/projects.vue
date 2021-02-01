@@ -230,9 +230,7 @@
         }
       },
       init() {
-        for(const [key, value] of Object.entries(this.initState())) {
-          this[key] = value
-        }
+        this.$u.copyProps(this.initState(), this)
         this.$api.user.me().then((me)=>{
           this.me = me
         }).finally(()=>{

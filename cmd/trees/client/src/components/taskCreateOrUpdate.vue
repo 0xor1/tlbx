@@ -103,9 +103,7 @@
         }
       },
       init(){
-        for(const [key, value] of Object.entries(this.initState())) {
-          this[key] = value
-        }
+        this.$u.copyProps(this.initState(), this)
         this.$root.ctx().then((ctx)=>{
             this.project = ctx.project
             this.user = this.parentUserId
@@ -202,9 +200,7 @@
               costEst: this.costEst
             }).then((res)=>{
               this.set.splice(this.crtIdx, 0, res.task)
-              for(const [key, value] of Object.entries(res.parent)) {
-                this.set[0][key] = value
-              }
+              this.$u.copyProps(res.parent, this.set[0])
               this.close()
               this.$emit("refreshProjectActivity", true)
             })
@@ -250,9 +246,7 @@
               this.$api.task.update(args).then((res)=>{
                 this.set[this.updIdx] = res.task
                 if (res.oldParent != null && this.updIdx > 0) {
-                  for(const [key, value] of Object.entries(res.oldParent)) {
-                    this.set[0][key] = value
-                  }
+                  this.$u.copyProps(res.oldParent, this.set[0])
                 }
                 this.close(res.newParent != null)
                 this.$emit("refreshProjectActivity", true)

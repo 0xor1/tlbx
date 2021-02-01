@@ -43,9 +43,7 @@ let v = new Vue({
       return res
     },
     init(){
-      for(const [key, value] of Object.entries(this.initState())) {
-        this[key] = value
-      }
+      this.$u.copyProps(this.initState(), this)
       this.$u._main_init_utils(this)
       if (this._ctx.currentProjectId !== this.$u.rtr.project()) {
         this._ctx.currentProjectId = this.$u.rtr.project()

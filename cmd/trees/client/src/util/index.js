@@ -27,6 +27,11 @@ export default {
                 time: "time",
                 cost: "cost"
             },
+            copyProps(src, dst) {
+                for(const [key, value] of Object.entries(src)) {
+                    dst[key] = value
+                }
+            },
             nullOr: nullOr,
             rtr: {
                 goHome (){

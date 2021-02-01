@@ -95,9 +95,7 @@
         }
       },
       init(){
-        for(const [key, value] of Object.entries(this.initState())) {
-          this[key] = value
-        }
+        this.$u.copyProps(this.initState(), this)
         if (window.innerWidth <= 480) {
           this.showMenu = false
           this.showProjectActivity = false

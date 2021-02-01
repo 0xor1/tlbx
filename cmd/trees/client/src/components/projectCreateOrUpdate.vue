@@ -258,9 +258,7 @@
         }
       },
       init(){
-        for(const [key, value] of Object.entries(this.initState())) {
-          this[key] = value
-        }
+        this.$u.copyProps(this.initState(), this)
         if (!this.isCreate) {
           this.$api.user.me().then((me)=>{
             if (me.id !== this.$u.rtr.host()) {
@@ -350,9 +348,7 @@
               startOn: {v: this.startOn},
               endOn: {v: this.endOn}
             }).then((p)=>{
-              for(const [key, value] of Object.entries(p)) {
-                this.project[key] = value
-              }
+              this.$u.copyProps(p, this.project)
               this.close()
             })
           }
