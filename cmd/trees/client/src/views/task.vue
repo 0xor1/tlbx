@@ -129,22 +129,22 @@
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div @click.stop="fileButtonClick" class="file-selector" title="choose file">
             <input ref="fileInput" id="file" class="file" type="file" @change="fileSelectorChange"/>
-            <label ref="fileLabel" class="small" for="file" @click.stop>avail space ({{$u.fmt.bytes(project.fileLimit - (project.fileSize + project.fileSubSize))}}) <span v-if="fileUploadProgress > -1">| uploading {{fileUploadProgress}}%</span></label><br>
-            <span v-if="selectedFile != null" class="input-file">{{$u.fmt.ellipsis(fileSelectedName, 34)}}</span>
+            <label ref="fileLabel" :class="{small: true, err: file.err}" for="file" @click.stop>avail space ({{$u.fmt.bytes(project.fileLimit - (project.fileSize + project.fileSubSize))}}) <span v-if="file.progress > -1">| uploading {{file.progress}}%</span></label><br>
+            <span v-if="file.selected != null" :class="{'input-file': true, err: file.err}">{{$u.fmt.ellipsis(fileSelectedName, 34)}}</span>
             <span v-else class="input-file">select file</span>
           </div>
           <div>
             <button @click.stop="fileSubmit()">upload</button>
           </div>
         </div>
-        <table v-if="files.length > 0">
+        <table v-if="file.set.length > 0">
           <tr class="header">
             <th class="name">name</th>
             <th v-if="$root.show.date">created</th>
             <th v-if="$root.show.user">user</th>
             <th>size</th>
           </tr>
-          <tr class="item" v-for="(f, idx) in files" :key="idx">
+          <tr class="item" v-for="(f, idx) in file.set" :key="idx">
             <td class="note">
               <a v-if="fileIsImageType(f)" :href="fileGetDownloadUrl(f, false)" target="_blank">{{$u.fmt.ellipsis(f.name, 35)}}</a>
               <a v-else :href="fileGetDownloadUrl(f, true)">{{$u.fmt.ellipsis(f.name, 35)}}</a>
@@ -158,12 +158,12 @@
             <td v-if="vitemCanUpd(f)" class="action" @click.stop="fileTglDltIdx(idx)" title="delete safety">
               <img src="@/assets/trash.svg">
             </td>
-            <td v-if="fileDltIdx === idx" class="action confirm-delete" @click.stop="fileDlt(idx)" title="delete">
+            <td v-if="file.dltIdx === idx" class="action confirm-delete" @click.stop="fileDlt(idx)" title="delete">
               <img src="@/assets/trash-red.svg">
             </td>
           </tr>
         </table>
-        <div v-if="moreFiles"><button @click.stop.prevent="fileLoadMore()">load more</button></div>
+        <div v-if="file.more"><button @click.stop.prevent="fileLoadMore()">load more</button></div>
       </div>
     </div>
   </div>
@@ -203,8 +203,8 @@
         return res
       },
       fileSelectedName(){
-        if (this.selectedFile != null) {
-          return this.selectedFile.name
+        if (this.file.selected != null) {
+          return this.file.selected.name
         }
         return ""
       },
@@ -344,14 +344,17 @@
             time: vitemFn("0h 0m"),
             cost: vitemFn("0.00")
           },
-          files: [],
-          moreFiles: false,
+          file: {
+            set: [],
+            more: false,
+            loading: false,
+            dltIdx: -1,
+            selected: null,
+            progress: -1,
+            err: false
+          },
           comments: [],
           moreComments: false,
-          selectedFile: null,
-          fileDltIdx: -1,
-          loadingFiles: false,
-          fileUploadProgress: -1,
           commentDisplay: "",
           commentErr: "",
         }
@@ -418,8 +421,8 @@
               project: this.$u.rtr.project(), 
               task: this.$u.rtr.task()
             }).then((res)=>{
-              this.files = res.set
-              this.moreFiles = res.more
+              this.file.set = res.set
+              this.file.more = res.more
             })
             mapi.comment.get({
               host: this.$u.rtr.host(), 
@@ -769,20 +772,20 @@
         })
       },
       fileLoadMore() {
-        if (this.loadingFiles) {
+        if (this.file.loading) {
           return
         }
-        this.loadingFiles = true
+        this.file.loading = true
         this.$api.file.get({
           host: this.$u.rtr.host(),
           project: this.$u.rtr.project(),
           task: this.$u.rtr.task(),
-          after: this.files[this.files.length - 1].id
+          after: this.file.set[this.file.set.length - 1].id
         }).then((res)=>{
-          this.files = this.files.concat(res.set)
-          this.moreFiles = res.more
+          this.file.set = this.file.set.concat(res.set)
+          this.file.more = res.more
         }).finally(()=>{
-          this.loadingFiles = false
+          this.file.loading = false
         })
       },
       fileButtonClick(){
@@ -790,9 +793,15 @@
       },
       fileSelectorChange(event){
         if (event == null) {
-          this.selectedFile = null
+          this.file.selected = null
+          this.file.err = false
         } else {
-          this.selectedFile = this.$refs.fileInput.files[0]
+          this.file.selected = this.$refs.fileInput.files[0]
+          if (this.file.selected != null) {
+            this.file.err = this.file.selected != null && this.file.selected.size > (this.project.fileLimit - (this.project.fileSize + this.project.fileSubSize))
+          } else {
+            this.file.err = false
+          }
         }
       },
       fileGetDownloadUrl(f, isDownload){
@@ -808,18 +817,18 @@
         return f.type.startsWith("image/")
       },
       fileTglDltIdx(idx) {
-        if (this.fileDltIdx === idx) {
-          this.fileDltIdx = -1
+        if (this.file.dltIdx === idx) {
+          this.file.dltIdx = -1
         } else {
-          this.fileDltIdx = idx
+          this.file.dltIdx = idx
         }
       },
       fileDlt(idx) {
-        if (this.loadingFiles) {
+        if (this.file.loading) {
           return
         }
-        let f = this.files[idx]
-        this.loadingFiles = true
+        let f = this.file.set[idx]
+        this.file.loading = true
         this.$api.file.delete({
           host: this.$u.rtr.host(),
           project: this.$u.rtr.project(),
@@ -827,37 +836,37 @@
           id: f.id
         }).then((t)=>{
           this.$u.copyProps(t, this.task.set[0])
-          this.files.splice(idx, 1)
-          this.fileDltIdx = -1
+          this.file.set.splice(idx, 1)
+          this.file.dltIdx = -1
           this.project.fileSubSize -= f.size
           this.refreshProjectActivity(true)
         }).finally(()=>{
-          this.loadingFiles = false
+          this.file.loading = false
         })
       },
       fileSubmit(){
-        if (this.selectedFile != null && !this.loadingFiles) {
-          this.loadingFiles = true
+        if (this.file.selected != null && !this.file.loading && !this.file.err) {
+          this.file.loading = true
           this.$api.file.create({
             host: this.$u.rtr.host(), 
             project: this.$u.rtr.project(),
             task: this.$u.rtr.task(),
-            name: this.selectedFile.name, 
-            type: this.selectedFile.type,
-            size: this.selectedFile.size,
-            content: this.selectedFile
+            name: this.file.selected.name, 
+            type: this.file.selected.type,
+            size: this.file.selected.size,
+            content: this.file.selected
           }, (e)=>{
-            this.fileUploadProgress = Math.round( (e.loaded * 100) / e.total )
+            this.file.progress = Math.round( (e.loaded * 100) / e.total )
           }).then((res)=>{
             this.$u.copyProps(res.task, this.task.set[0])
-            this.files.splice(0, 0, res.file)
-            this.selectedFile = null
+            this.file.set.splice(0, 0, res.file)
+            this.file.selected = null
             this.$refs.fileInput.value = null
             this.project.fileSize += res.file.size
             this.refreshProjectActivity(true)
           }).finally(()=>{
-            this.fileUploadProgress = -1
-            this.loadingFiles = false
+            this.file.progress = -1
+            this.file.loading = false
           })
         }
       },
