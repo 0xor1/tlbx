@@ -68,7 +68,7 @@ export default {
                     return txt.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
                 },
                 md(txt) {
-                    return dompurify.sanitize(marked(txt))
+                    return `<div class="markdown">${dompurify.sanitize(marked(txt))}</div>`
                 },
                 ellipsis(txt, len) {
                     if (len == null || len < 3) {

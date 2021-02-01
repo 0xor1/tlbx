@@ -13,7 +13,7 @@
         :set="task.set"
         :updIdx="task.updIdx"
         :crtIdx="task.crtIdx"
-        @close="task.onCrtOrUpdClose"
+        @close="taskOnCrtOrUpdClose"
         @refreshProjectActivity="refreshProjectActivity">
       </task-create-or-update>
     </div>
@@ -24,7 +24,7 @@
           :
         </span>
         <span v-if="task.ancestor.set.length > 0 && task.ancestor.set[0].parent != null">
-          <a title="load more ancestors" href="" @click.stop.prevent="task.ancestor.loadMore">..</a>
+          <a title="load more ancestors" href="" @click.stop.prevent="taskAncestorLoadMore">..</a>
           /
         </span>
         <span v-for="(a) in task.ancestor.set" :key="a.id">
@@ -43,38 +43,38 @@
             </th>
           </tr>
           <tr class="header">
-            <th :class="c.name" v-for="(c, idx) in colHeaders" :key="idx">
+            <th :class="c.name" v-for="(c, idx) in taskSectionHeaders" :key="idx">
               {{c.name}}
             </th>
           </tr>
           <tr class="row" v-for="(t, idx) in task.set" :key="idx" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
-            <td :title="task.title(t)" v-bind:class="c.name" v-for="(c, idx) in cols" :key="idx">
+            <td :title="taskTitle(t)" v-bind:class="c.name" v-for="(c, idx) in taskCols" :key="idx">
               <span :title="t.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': t.isParallel}" v-if="c.name == 'name'">{{t.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="task.showCrt(idx+1)" title="insert below">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="taskShowCrt(idx+1)" title="insert below">
               <img src="@/assets/insert-below.svg">
             </td>
-            <td v-if="idx === 0 && task.set > 1" class="action">
+            <td v-if="idx === 0 && task.set.length > 1" class="action">
             </td>
-            <td v-else-if="idx > 0 && $u.perm.canWrite(pMe)" class="action" @click.stop="task.showCrt(idx)" title="insert above">
+            <td v-else-if="idx > 0 && $u.perm.canWrite(pMe)" class="action" @click.stop="taskShowCrt(idx)" title="insert above">
               <img src="@/assets/insert-above.svg">
             </td>
-            <td v-if="task.canUpd(t)" class="action" @click.stop="task.showUpd(idx)" title="update">
+            <td v-if="taskCanUpd(t)" class="action" @click.stop="taskShowUpd(idx)" title="update">
               <img src="@/assets/edit.svg">
             </td>
-            <td v-if="task.canDlt(t)" class="action" @click.stop="task.tglDltIdx(idx)" title="delete safety">
+            <td v-if="taskCanDlt(t)" class="action" @click.stop="taskTglDltIdx(idx)" title="delete safety">
               <img src="@/assets/trash.svg">
             </td>
-            <td v-if="task.dltIdx === idx" class="action confirm-delete" @click.stop="task.dlt(idx)" title="delete">
+            <td v-if="task.dltIdx === idx" class="action confirm-delete" @click.stop="taskDlt(idx)" title="delete">
               <img src="@/assets/trash-red.svg">
             </td>
           </tr>
         </table>
-        <button v-if="task.more" @click="task.loadMore">load more</button>
+        <button v-if="task.more" @click="taskLoadMore">load more</button>
       </div>
       <div>
-        <p v-if="t0.description.length > 0" v-html="$u.fmt.mdLinkify(t0.description)"></p>
+        <p v-if="t0.description.length > 0" v-html="$u.fmt.md(t0.description)"></p>
       </div>
       <div v-for="(type, idx) in ['time', 'cost']" :key="idx">
         <div v-if="$root.show[type]" :class="['items', type+'s']">
@@ -130,7 +130,7 @@
           <div @click.stop="fileButtonClick" class="file-selector" title="choose file">
             <input ref="fileInput" id="file" class="file" type="file" @change="fileSelectorChange"/>
             <label ref="fileLabel" class="small" for="file" @click.stop>avail space ({{$u.fmt.bytes(project.fileLimit - (project.fileSize + project.fileSubSize))}}) <span v-if="fileUploadProgress > -1">| uploading {{fileUploadProgress}}%</span></label><br>
-            <span v-if="selectedFile != null" class="input-file">{{$u.fmt.ellipsis(selectedFileName, 34)}}</span>
+            <span v-if="selectedFile != null" class="input-file">{{$u.fmt.ellipsis(fileSelectedName, 34)}}</span>
             <span v-else class="input-file">select file</span>
           </div>
           <div>
@@ -183,16 +183,10 @@
       t0(){
         return this.task.set[0]
       },
-      selectedFileName(){
-        if (this.selectedFile != null) {
-          return this.selectedFile.name
-        }
-        return ""
-      },
       taskSections(){
         return this.task.sections.filter(i => i.show())
       },
-      colHeaders(){
+      taskSectionHeaders(){
         let res = []
         this.taskSections.forEach((section)=>{
           if (section.cols.length > 1) {
@@ -201,42 +195,33 @@
         })
         return res
       },
-      cols(){
+      taskCols(){
         let res = []
         this.taskSections.forEach((section)=>{
           res = res.concat(section.cols)
         })
         return res
-      }
+      },
+      fileSelectedName(){
+        if (this.selectedFile != null) {
+          return this.selectedFile.name
+        }
+        return ""
+      },
     },
     methods: {
       initState(){
         return {
           notFound: false,
           loading: true,
+          me: null,
+          pMe: null,
+          project: null,
           task: {
             ancestor: {
               set: [],
               more: false,
               loading: false,
-              loadMore: ()=>{
-                let obj = this.task.ancestor
-                if (obj.loading) {
-                  return
-                }
-                obj.loading = true
-                this.$api.task.getAncestors({
-                  host: this.$u.rtr.host(),
-                  project: this.$u.rtr.project(),
-                  id: obj.set[0].id, 
-                  limit: 1
-                }).then((res)=>{
-                  obj.set = res.set.reverse().concat(obj.set)
-                  obj.more = res.more
-                }).finally(()=>{
-                  obj.loading = false
-                })
-              }
             },
             set: [],
             more: false,
@@ -244,115 +229,6 @@
             crtIdx: -1,
             updIdx: -1,
             dltIdx: -1,
-            loadMore: ()=>{
-              let obj = this.task.child
-              if (obj.loading) {
-                return
-              }
-              obj.loading = true;
-              this.$api.task.getChildren({
-                host: this.$u.rtr.host(), 
-                project: this.$u.rtr.project(), 
-                id: this.$u.rtr.task(), 
-                after: obj.set[obj.set.length - 1].id
-              }).then((res)=>{
-                obj.set = obj.set.concat(res.set)
-                obj.more = res.more
-              }).finally(()=>{
-                obj.loading = false
-              })
-            },
-            canUpd: (t)=>{
-              if (this.pMe == null) {
-                return false
-              }
-              if (this.$u.rtr.host() == this.pMe.id || 
-                (t.parent != null && this.$u.perm.canWrite(this.pMe))) {
-                // if I'm the host I can edit anything,
-                // or if I'm an admin or writer I can edit any none root node
-                return true
-              }
-              return false
-            },
-            canDlt: (t)=>{
-              if (t.descN > 100) {
-                // can't delete a task that would 
-                // result in deleting more than 100 
-                // sub tasks in one go.
-                return false
-              }
-              if (this.pMe == null) {
-                return false
-              }
-              if (this.$u.rtr.host() == this.pMe.id || 
-                (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
-                // if I'm the host I can delete anything,
-                // or if I'm an admin I can delete any none root node
-                return true
-              }
-              if (this.$u.perm.canWrite(this.pMe) && 
-                t.createdBy == this.pMe.id &&
-                (Date.now() - (new Date(t.createdOn))) < 3600000 &&
-                t.descN == 0) {
-                // writers may only delete their own tasks within an hour of creating them
-                // and if the have no children tasks.
-                return true
-              }
-              return false
-            },
-            tglDltIdx: (idx)=>{
-              if (this.task.dltIdx === idx) {
-                this.task.dltIdx = -1
-              } else {
-                this.task.dltIdx = idx
-              }
-            },
-            dlt:(idx)=>{
-              let dltT = this.task.set[idx] 
-              if (dltT.id == this.$u.rtr.project()) {
-                this.$api.project.delete([this.$u.rtr.project()]).then(()=>{
-                  this.$u.rtr.goHome()
-                  this.refreshProjectActivity(true)
-                })
-              } else {
-                this.$api.task.delete({
-                  host: this.$u.rtr.host(),
-                  project: this.$u.rtr.project(),
-                  id: dltT.id
-                }).then((t)=>{
-                  if (idx > 0) {
-                    this.task.set.splice(idx, 1)
-                    this.task.set[0] = t
-                    this.task.dltIdx = -1
-                    this.project.fileSubSize - (dltT.fileSize + dltT.fileSubSize)
-                  } else {
-                      this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.id}`)
-                  }
-                  this.refreshProjectActivity(true)
-                })
-              }
-            },
-            showCrt: (idx)=>{
-              this.task.crtIdx = idx
-              console.log(idx, this.task.crtIdx)
-            },
-            showUpd: (idx)=>{
-              this.task.updIdx = idx
-            },
-            onCrtOrUpdClose: (fullRefresh)=>{
-              this.task.crtIdx = -1
-              this.task.updIdx = -1
-              if (fullRefresh) {
-                this.init()
-              }
-            },
-            title: (t)=>{
-              let res = t.name
-              if (t.description != "") {
-                res += " - " + t.description
-              }
-              return res
-            },
             sections: [
               {
                 name: () => "name",
@@ -436,19 +312,16 @@
                 cols: [
                   {
                     name: "childn",
-                    get: (p)=> p.childN
+                    get: (t)=> t.childN
                   },
                   {
                     name: "descn",
-                    get: (p)=> p.descN
+                    get: (t)=> t.descN
                   }
                 ]
               }
             ]
           },
-          me: null,
-          pMe: null,
-          project: null,
           files: [],
           moreFiles: false,
           comments: [],
@@ -510,7 +383,7 @@
               host: this.$u.rtr.host(), 
               project: this.$u.rtr.project(), 
               id: this.$u.rtr.task(), 
-              limit: 1
+              limit: 10
             }).then((res)=>{
               this.task.ancestor.set = res.set.reverse()
               this.task.ancestor.more = res.more
@@ -575,6 +448,133 @@
             })
           })
         })
+      },
+      taskAncestorLoadMore(){
+        let obj = this.task.ancestor
+        if (obj.loading) {
+          return
+        }
+        obj.loading = true
+        this.$api.task.getAncestors({
+          host: this.$u.rtr.host(),
+          project: this.$u.rtr.project(),
+          id: obj.set[0].id, 
+          limit: 10
+        }).then((res)=>{
+          obj.set = res.set.reverse().concat(obj.set)
+          obj.more = res.more
+        }).finally(()=>{
+          obj.loading = false
+        })
+      },
+      taskLoadMore(){
+        let obj = this.task
+        if (obj.loading) {
+          return
+        }
+        obj.loading = true;
+        this.$api.task.getChildren({
+          host: this.$u.rtr.host(), 
+          project: this.$u.rtr.project(), 
+          id: this.$u.rtr.task(), 
+          after: obj.set[obj.set.length - 1].id
+        }).then((res)=>{
+          obj.set = obj.set.concat(res.set)
+          obj.more = res.more
+        }).finally(()=>{
+          obj.loading = false
+        })
+      },
+      taskCanUpd(t){
+        if (this.pMe == null) {
+          return false
+        }
+        if (this.$u.rtr.host() == this.pMe.id || 
+          (t.parent != null && this.$u.perm.canWrite(this.pMe))) {
+          // if I'm the host I can edit anything,
+          // or if I'm an admin or writer I can edit any none root node
+          return true
+        }
+        return false
+      },
+      taskCanDlt(t){
+        if (t.descN > 100) {
+          // can't delete a task that would 
+          // result in deleting more than 100 
+          // sub tasks in one go.
+          return false
+        }
+        if (this.pMe == null) {
+          return false
+        }
+        if (this.$u.rtr.host() == this.pMe.id || 
+          (t.parent != null && this.$u.perm.canAdmin(this.pMe))) {
+          // if I'm the host I can delete anything,
+          // or if I'm an admin I can delete any none root node
+          return true
+        }
+        if (this.$u.perm.canWrite(this.pMe) && 
+          t.createdBy == this.pMe.id &&
+          (Date.now() - (new Date(t.createdOn))) < 3600000 &&
+          t.descN == 0) {
+          // writers may only delete their own tasks within an hour of creating them
+          // and if the have no children tasks.
+          return true
+        }
+        return false
+      },
+      taskTglDltIdx(idx){
+        if (this.task.dltIdx === idx) {
+          this.task.dltIdx = -1
+        } else {
+          this.task.dltIdx = idx
+        }
+      },
+      taskDlt(idx){
+        let dltT = this.task.set[idx] 
+        if (dltT.id == this.$u.rtr.project()) {
+          this.$api.project.delete([dltT.id]).then(()=>{
+            this.$u.rtr.goHome()
+            this.refreshProjectActivity(true)
+          })
+        } else {
+          this.$api.task.delete({
+            host: this.$u.rtr.host(),
+            project: this.$u.rtr.project(),
+            id: dltT.id
+          }).then((t)=>{
+            if (idx > 0) {
+              this.task.set.splice(idx, 1)
+              this.task.set[0] = t
+              this.task.dltIdx = -1
+              this.project.fileSubSize - (dltT.fileSize + dltT.fileSubSize)
+            } else {
+                this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${t.id}`)
+            }
+            this.refreshProjectActivity(true)
+          })
+        }
+      },
+      taskShowCrt(idx){
+        this.task.crtIdx = idx
+        console.log(idx, this.task.crtIdx)
+      },
+      taskShowUpd(idx){
+        this.task.updIdx = idx
+      },
+      taskOnCrtOrUpdClose(fullRefresh){
+        this.task.crtIdx = -1
+        this.task.updIdx = -1
+        if (fullRefresh) {
+          this.init()
+        }
+      },
+      taskTitle(t){
+        let res = t.name
+        if (t.description != "") {
+          res += " - " + t.description
+        }
+        return res
       },
       toggleVitemDeleteIdx(type, idx){
         if (this.vitems[type].deleteIdx === idx) {

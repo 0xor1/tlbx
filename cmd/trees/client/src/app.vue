@@ -414,6 +414,12 @@
   .err{
     color: #c33;
   }
+  div.markdown {
+    img{
+      max-height: 20pc;
+      max-width: 20pc;
+    }
+  }
 }
 // what follows is essentially a prelude
 // for the entire app
