@@ -353,10 +353,14 @@
             progress: -1,
             err: false
           },
-          comments: [],
-          moreComments: false,
-          commentDisplay: "",
-          commentErr: "",
+          comment: {
+            set: [],
+            more: false,
+            loading: false,
+            dltIdx: -1,
+            bodyStr: "",
+            bdyErr: false,
+          }
         }
       },
       init(){
