@@ -124,7 +124,7 @@
           <div v-if="vitem[type].more"><button @click.stop.prevent="vitemLoadMore(type)">load more</button></div>
         </div>
       </div>
-      <div v-if="$root.show.file" class="items files">
+      <div v-if="$root.show.file && project.fileLimit > 0" class="items files">
         <div class="heading">file <span class="medium">{{$u.fmt.bytes(t0.fileSize)}}</span><span class="medium" v-if="task.set.length > 0"> | {{$u.fmt.bytes(t0.fileSubSize)}}</span></div>
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div @click.stop="fileButtonClick" class="file-selector" title="choose file">
@@ -312,7 +312,7 @@
               },
               {
                 name: () => "file",
-                show: () => this.$root.show.file,
+                show: () => this.$root.show.file && this.project.fileLimit > 0,
                 cols: [
                   {
                     name: "n",
@@ -390,7 +390,7 @@
               this.vitem.time.estStr = this.$u.fmt.time(this.t0.timeEst)
               this.vitem.cost.estStr = this.$u.fmt.cost(this.t0.costEst)
             }).catch((err)=>{
-              if (err.status == 404) {
+              if (err.status == 404 || err.status == 403) {
                 this.notFound = true
               }
             })

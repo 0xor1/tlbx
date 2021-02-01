@@ -13,7 +13,7 @@
               show
             </div>
             <div class="fields" v-if="showFields">
-              <div v-for="(f, index) in fields" :key="index" @click.stop.prevent="$root.show[f] = !$root.show[f]">
+              <div v-for="(f, index) in availFields" :key="index" @click.stop.prevent="$root.show[f] = !$root.show[f]">
                 <span>{{f}}<input @click.stop type="checkbox" v-model="$root.show[f]"></span>
               </div>
             </div>
@@ -62,6 +62,13 @@
   export default {
     name: 'app',
     components: {user},
+    computed: {
+      availFields(){
+        return this.fields.filter((f)=>{
+          return f != "file" || this.project == null || this.project.fileLimit > 0
+        })
+      }
+    },
     data() {
       return this.initState()
     },
@@ -70,6 +77,7 @@
         return {
           loading: true,
           currentProjectId: this.currentProjectId || null,
+          project: null,
           showMenu: this.showMenu || false,
           showProjectActivity: this.showProjectActivity || false,
           showProjectActivityToggle: this.$u.rtr.project() != null,
@@ -102,8 +110,11 @@
         }
         this.$api.user.me().then((me)=>{
           this.me = me
-        }).finally(()=>{
-          this.loading = false
+          this.$root.ctx().then((ctx)=>{
+            this.project = ctx.project
+          }).finally(()=>{
+            this.loading = false
+          })
         })
         if (this.currentProjectId !== this.$u.rtr.project()) {
           this.currentProjectId = this.$u.rtr.project()
