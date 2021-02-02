@@ -1,7 +1,8 @@
 <template>
   <div class="root">
     <p v-if="loading">Loading...</p>
-    <a v-else @click.stop.prevent="goto" href="">{{ user.handle }}</a>
+    <a v-else-if="user != null" @click.stop.prevent="goto" href="">{{ user.handle }}</a>
+    <span v-else>--</span>
   </div>
 </template>
 
@@ -24,6 +25,10 @@
       },
       init() {
         this.$u.copyProps(this.initState(), this)
+        if (this.userId == null || this.userId === "") {
+          this.loading = false
+          return
+        }
         this.$api.user.one(this.userId).then((user)=>{
             this.loading = false
             this.user = user
