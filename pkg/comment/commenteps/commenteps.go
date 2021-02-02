@@ -3,12 +3,10 @@ package commenteps
 import (
 	"bytes"
 	"net/http"
-	"time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/comment"
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
@@ -81,7 +79,7 @@ var (
 					Project: app.ExampleID(),
 					Task:    app.ExampleID(),
 					ID:      app.ExampleID(),
-					Body:    &field.String{V: "woo comment changed"},
+					Body:    "woo comment changed",
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -90,20 +88,16 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*comment.Update)
 				me := me.Get(tlbx)
-				if args.Body == nil {
-					// nothing to update
-					return nil
-				}
-				args.Body.V = StrTrimWS(args.Body.V)
-				validate.Str("body", args.Body.V, tlbx, bodyMinLen, bodyMaxLen)
+				args.Body = StrTrimWS(args.Body)
+				validate.Str("body", args.Body, tlbx, bodyMinLen, bodyMaxLen)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
 				c := getOne(tx, args.Host, args.Project, args.Task, args.ID)
 				app.ReturnIf(c == nil, http.StatusNotFound, "comment entry not found")
-				app.ReturnIf(role == cnsts.RoleWriter && (!c.CreatedBy.Equal(me) || c.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only edit your own comment entries within an hour of creating it")
-				c.Body = args.Body.V
+				app.ReturnIf(role == cnsts.RoleWriter && !c.CreatedBy.Equal(me), http.StatusForbidden, "you may only update your own comment")
+				c.Body = args.Body
 				_, err := tx.Exec(`UPDATE comments SET body=? WHERE host=? AND project=? AND task=? AND id=?`, c.Body, args.Host, args.Project, c.Task, c.ID)
 				PanicOn(err)
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeComment, cnsts.ActionUpdated, nil, args.Body)
@@ -139,9 +133,9 @@ var (
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
 				epsutil.MustLockProject(tx, args.Host, args.Project)
-				t := getOne(tx, args.Host, args.Project, args.Task, args.ID)
-				app.ReturnIf(t == nil, http.StatusNotFound, "")
-				app.ReturnIf(role == cnsts.RoleWriter && (!t.CreatedBy.Equal(me) || t.CreatedOn.Before(Now().Add(-1*time.Hour))), http.StatusForbidden, "you may only delete your own comment entries within an hour of creating it")
+				c := getOne(tx, args.Host, args.Project, args.Task, args.ID)
+				app.ReturnIf(c == nil, http.StatusNotFound, "")
+				app.ReturnIf(role == cnsts.RoleWriter && !c.CreatedBy.Equal(me), http.StatusForbidden, "you may only delete your own comment")
 				// delete comment
 				_, err := tx.Exec(`DELETE FROM comments WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
 				PanicOn(err)

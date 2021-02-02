@@ -8,7 +8,6 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/trees/pkg/comment/commenteps"
@@ -88,7 +87,7 @@ func Everything(t *testing.T) {
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      e1.ID,
-		Body:    &field.String{V: "polo"},
+		Body:    "polo",
 	}).MustDo(ac)
 	a.NotNil(e1)
 
@@ -97,18 +96,19 @@ func Everything(t *testing.T) {
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      e1.ID,
-		Body:    &field.String{V: "polo"},
+		Body:    "polo",
 	}).MustDo(ac)
 	a.NotNil(e1)
 
 	// nil
-	eNil := (&comment.Update{
+	cNil, eNotNil := (&comment.Update{
 		Host:    r.Ali().ID(),
 		Project: p.ID,
 		Task:    t1p0.ID,
 		ID:      e1.ID,
-	}).MustDo(ac)
-	a.Nil(eNil)
+	}).Do(ac)
+	a.Nil(cNil)
+	a.NotNil(eNotNil)
 
 	es := (&comment.Get{
 		Host:    r.Ali().ID(),
