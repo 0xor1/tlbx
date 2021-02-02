@@ -4,7 +4,6 @@ import (
 	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
@@ -40,11 +39,11 @@ func (a *Create) MustDo(c *app.Client) *Comment {
 }
 
 type Update struct {
-	Host    ID            `json:"host"`
-	Project ID            `json:"project"`
-	Task    ID            `json:"task"`
-	ID      ID            `json:"id"`
-	Body    *field.String `json:"body,omitempty"`
+	Host    ID     `json:"host"`
+	Project ID     `json:"project"`
+	Task    ID     `json:"task"`
+	ID      ID     `json:"id"`
+	Body    string `json:"body"`
 }
 
 func (_ *Update) Path() string {

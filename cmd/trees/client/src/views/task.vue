@@ -110,7 +110,7 @@
               <td v-if="$root.show.user"><user :userId="i.createdBy"></user></td>
               <td v-if="vitem[type].updIdx != idx">{{$u.fmt[type](i.inc)}}</td>
               <td v-else><input :class="{err: vitem[type].updIncErr}" v-model="vitem[type].updIncStr" type="text" :placeholder="vitem[type].placeholder" @blur="vitemValidateUpd(type, true)" @keyup="vitemValidateUpd(type)" @keydown.enter="vitemSubmitUpd(type)" @keydown.escape="vitemCancelUpd(type)"/></td>
-              <td v-if="vitemCanUpd(i) && vitem[type].updIdx != idx" class="action" @click.stop="vitemShowUpd(i, idx)" title="update">
+              <td v-if="vitemCanUpd(i) && vitem[type].updIdx != idx" class="action" @click.stop="vitemTglUpdIdx(i, idx)" title="update">
                 <img src="@/assets/edit.svg">
               </td>
               <td v-if="vitemCanUpd(i) && vitem[type].updIdx != idx" class="action" @click.stop="vitemTglDltIdx(type, idx)" title="delete safety">
@@ -171,9 +171,9 @@
           <div class="body" title="body">
             <span :class="{err: comment.bodyStr.length > 1000, 'small': true}">avail chars ({{10000 - comment.bodyStr.length}})</span><br>
             <div class="flex col">
-              <textarea v-if="!comment.preview" rows="3" cols="40" :class="{err: comment.bodyStr.length > 10000}" v-model="comment.bodyStr" placeholder="comment"></textarea>
+              <textarea v-if="!comment.preview" rows="4" cols="40" :class="{err: comment.bodyStr.length > 10000}" v-model="comment.bodyStr" placeholder="comment"></textarea>
               <div v-else class="preview" v-html="$u.fmt.md(comment.bodyStr)"></div>
-              <div class="flex">
+              <div class="flex comment-btns">
                 <button @click.stop="commentTglPreview()">{{comment.preview? 'edit': 'preview'}}</button>
                 <button @click.stop="commentSubmit()">create</button>
               </div>
@@ -181,7 +181,17 @@
           </div>
         </div>
         <div class="comment-set" v-if="comment.set.length > 0">
-          <div class="comment" v-for="(c, idx) in comment.set" :key="idx" v-html="$u.fmt.md(c.body)">
+          <div class="comment" v-for="(c, idx) in comment.set" :key="idx">
+            <div class="comment-meta small">
+              {{$u.fmt.datetime(c.createdOn)}} - <user :userId="c.createdBy"></user>
+              <span v-if="pMe != null && pMe.id === c.createdBy" class=actions>
+                <img src="@/assets/edit.svg" title="update" @click.stop.prevent="commentTglUpdIdx(idx)">
+                <img src="@/assets/trash.svg" title="delete safety" @click.stop.prevent="commentTglDltIdx(idx)">
+                <img v-if="comment.dltIdx === idx" title="delete" src="@/assets/trash-red.svg" @click.stop.prevent="commentDlt(idx)">
+              </span>
+            </div>
+            <textarea v-if="comment.updIdx === idx" rows="4" cols="40" @keydown.esc="commentCancelUpd" @keydown.enter="commentSubmitUpd" :class="{err: comment.bodyStr.length > 10000}" v-model="comment.updBodyStr" placeholder="comment"></textarea>
+            <div v-else class="comment-body" v-html="$u.fmt.md(c.body)"></div>
           </div>
         </div>
         <div v-if="comment.more"><button @click.stop.prevent="commentLoadMore()">load more</button></div>
@@ -378,6 +388,7 @@
             set: [],
             more: false,
             loading: false,
+            updIdx: -1,
             dltIdx: -1,
             bodyStr: "",
             preview: false
@@ -750,7 +761,7 @@
           i.createdBy == this.pMe.id &&
           (Date.now() - (new Date(i.createdOn))) < 3600000 )
       },
-      vitemShowUpd(i, idx) {
+      vitemTglUpdIdx(i, idx) {
         this.vitem[i.type].updIdx = idx
         this.vitem[i.type].updIncStr = this.$u.fmt[i.type](i.inc)
         this.vitem[i.type].updIncErr = false
@@ -895,6 +906,17 @@
           })
         }
       },
+      commentTglUpdIdx(idx) {
+        this.comment.updIdx = idx
+        this.comment.updBodyStr = this.comment.set[idx].body
+      },
+      commentTglDltIdx(idx){
+        if (this.comment.dltIdx === idx) {
+          this.comment.dltIdx = -1
+        } else {
+          this.comment.dltIdx = idx
+        }
+      },
       commentSubmit(){
         this.comment.bodyStr = this.comment.bodyStr.trim()
         if(this.comment.bodyStr.length > 0 && 
@@ -908,6 +930,47 @@
             body: this.comment.bodyStr
           }).then((c)=>{
             this.comment.set = [c].concat(this.comment.set)
+            this.comment.bodyStr = ""
+            this.comment.preview = false
+          }).finally(()=>{
+            this.comment.loading = false
+          })
+        }
+      },
+      commentCancelUpd(){
+        this.comment.updBodyStr = ""
+        this.comment.updIdx = -1
+      },
+      commentSubmitUpd(){
+        if(!this.comment.loading) {
+          this.comment.loading = true
+          this.$api.comment.update({
+            host: this.$u.rtr.host(),
+            project: this.$u.rtr.project(),
+            task: this.$u.rtr.task(),
+            id: this.comment.set[this.comment.updIdx].id,
+            body: {v:this.comment.updBodyStr}
+          }).then((c)=>{
+            this.comment.set[this.comment.updIdx] = c
+            this.comment.dltIdx = -1
+            this.comment.updIdx = -1
+          }).finally(()=>{
+            this.comment.loading = false
+          })
+        }
+      },
+      commentDlt(idx){
+        if(!this.comment.loading) {
+          this.comment.loading = true
+          this.$api.comment.delete({
+            host: this.$u.rtr.host(),
+            project: this.$u.rtr.project(),
+            task: this.$u.rtr.task(),
+            id: this.comment.set[idx].id
+          }).then(()=>{
+            this.comment.set.splice(idx, 1)
+            this.comment.dltIdx = -1
+            this.comment.updIdx = -1
           }).finally(()=>{
             this.comment.loading = false
           })
@@ -1010,6 +1073,39 @@ div.root {
       }
     }
     .items {
+      .comment-btns{
+        margin-bottom: 1pc;
+      }
+      .comment-set{
+        .comment {
+          &:hover {
+            .comment-meta .actions img {
+              visibility: initial;
+            }
+          }
+          .comment-meta{
+            padding-top: 0.5pc;
+            .actions {
+              img{
+                cursor: pointer;
+                margin-left: 0.5pc;
+                width: 1pc;
+                height: 1pc;
+                visibility: hidden;
+              }
+            }
+          }
+          .comment-body{
+            @include border('bottom');
+            >:first-child{
+              &>:first-child{
+                margin-top: 0.3pc;
+              }
+              margin-top: 0.3pc;
+            }
+          }
+        }
+      }
       &.files{
         margin-top: 0.3pc;
       }

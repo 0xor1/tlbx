@@ -428,6 +428,15 @@
       max-height: 20pc;
       max-width: 20pc;
     }
+    pre {
+        @include border();
+        padding: 0.5pc;
+        border-radius: 0.5pc;
+        background: $inputActiveColor;
+        code{
+          background: transparent;
+        }
+    }
   }
 }
 // what follows is essentially a prelude
