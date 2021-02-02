@@ -1,6 +1,6 @@
 <template>
   <div class="root">
-    <p v-if="loading">Loading...</p>
+    <span v-if="loading">loading...</span>
     <a v-else-if="user != null" @click.stop.prevent="goto" href="">{{ user.handle }}</a>
     <span v-else>--</span>
   </div>
@@ -52,7 +52,7 @@
 div.root {
   display: inline-block;
   background-color: transparent;
-  p, a {
+  span, a {
     background-color: transparent;
   }
 }
