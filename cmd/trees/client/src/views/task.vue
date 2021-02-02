@@ -1084,11 +1084,15 @@ div.root {
       .comment-set{
         .comment {
           &:hover {
-            .comment-meta .actions img {
-              visibility: initial;
+            .comment-meta {
+              .actions img {
+                visibility: initial;
+              }
             }
           }
           .comment-meta{
+            font-style: italic;
+            color: $inputHoverColor;
             padding-top: 0.5pc;
             .actions {
               img{
