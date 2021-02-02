@@ -949,7 +949,7 @@
             project: this.$u.rtr.project(),
             task: this.$u.rtr.task(),
             id: this.comment.set[this.comment.updIdx].id,
-            body: {v:this.comment.updBodyStr}
+            body: this.comment.updBodyStr
           }).then((c)=>{
             this.comment.set[this.comment.updIdx] = c
             this.comment.dltIdx = -1
