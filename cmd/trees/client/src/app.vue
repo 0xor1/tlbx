@@ -84,7 +84,7 @@
           showFields: this.showFields || false,
           projectActivity: this.projectActivity || [],
           moreProjectActivity: this.moreProjectActivity || false,
-          projectActivityExcludeDeleted: this.projectActivityExcludeDeleted || false,
+          projectActivityExcludeDeleted: this.projectActivityExcludeDeleted === false? false: true,
           loadingProjectActivity: false,
           projectActivityLastGotOn: null,
           projectActivityCurrentPollDelayMs: 60000,
@@ -455,7 +455,7 @@ button {
         background-color: $inputActiveColor;
     }
 }
-input, button {
+textarea, input, button {
     background-color: $inputColor;
     outline: none;
     border: 1px solid $color;

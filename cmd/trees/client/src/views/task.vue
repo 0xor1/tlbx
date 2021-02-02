@@ -134,7 +134,7 @@
             <span v-else class="input-file">select file</span>
           </div>
           <div>
-            <button @click.stop="fileSubmit()">upload</button>
+            <button @click.stop="fileSubmit()">create</button>
           </div>
         </div>
         <table v-if="file.set.length > 0">
@@ -164,6 +164,27 @@
           </tr>
         </table>
         <div v-if="file.more"><button @click.stop.prevent="fileLoadMore()">load more</button></div>
+      </div>
+      <div class="items comments">
+        <div class="heading">comment</div>
+        <div v-if="$u.perm.canWrite(pMe)" class="create-form">
+          <div class="body" title="body">
+            <span :class="{err: comment.bodyStr.length > 1000, 'small': true}">avail chars ({{10000 - comment.bodyStr.length}})</span><br>
+            <div class="flex col">
+              <textarea v-if="!comment.preview" rows="3" cols="40" :class="{err: comment.bodyStr.length > 10000}" v-model="comment.bodyStr" placeholder="comment"></textarea>
+              <div v-else class="preview" v-html="$u.fmt.md(comment.bodyStr)"></div>
+              <div class="flex">
+                <button @click.stop="commentTglPreview()">{{comment.preview? 'edit': 'preview'}}</button>
+                <button @click.stop="commentSubmit()">create</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="comment-set" v-if="comment.set.length > 0">
+          <div class="comment" v-for="(c, idx) in comment.set" :key="idx" v-html="$u.fmt.md(c.body)">
+          </div>
+        </div>
+        <div v-if="comment.more"><button @click.stop.prevent="commentLoadMore()">load more</button></div>
       </div>
     </div>
   </div>
@@ -359,7 +380,7 @@
             loading: false,
             dltIdx: -1,
             bodyStr: "",
-            bdyErr: false,
+            preview: false
           }
         }
       },
@@ -874,6 +895,34 @@
           })
         }
       },
+      commentSubmit(){
+        this.comment.bodyStr = this.comment.bodyStr.trim()
+        if(this.comment.bodyStr.length > 0 && 
+          this.comment.bodyStr.length <= 10000 && 
+          !this.comment.loading) {
+          this.comment.loading = true
+          this.$api.comment.create({
+            host: this.$u.rtr.host(),
+            project: this.$u.rtr.project(),
+            task: this.$u.rtr.task(),
+            body: this.comment.bodyStr
+          }).then((c)=>{
+            this.comment.set = [c].concat(this.comment.set)
+          }).finally(()=>{
+            this.comment.loading = false
+          })
+        }
+      },
+      commentTglPreview(){
+        if (this.comment.preview) {
+          this.comment.preview = false
+          return
+        }
+        this.comment.bodyStr = this.comment.bodyStr.trim()
+        if (this.comment.bodyStr.length > 0) {
+          this.comment.preview = true
+        }
+      },
       refreshProjectActivity(force){
         if (this.t0 != null) {
           this.vitem.time.estStr = this.$u.fmt.time(this.t0.timeEst)
@@ -990,7 +1039,24 @@ div.root {
         }
       }
       > .create-form {
+        .flex{
+          display: flex;
+          &.col{
+            flex-direction: column;
+          }
+          button {
+            margin-top: 1pc;
+            margin-right: 1pc;
+          }
+        }
+        .preview {
+          display: block;
+        }
         > div {
+          &.body {
+            display: block;
+            width: 100%;
+          }
           display: inline-block;
           margin: 1pc 1pc 0 0;
           &.file-selector {
@@ -1008,7 +1074,7 @@ div.root {
           > input {
             width: 5pc;
             &.note, &.file {
-              width: 20pc;
+              width: 20.3pc;
             }
             &.file {
               padding: 0;
@@ -1018,7 +1084,6 @@ div.root {
               opacity: 0;
               overflow: hidden;
               position: absolute;
-              z-idx: -1;
             }
           }
         }
@@ -1026,7 +1091,7 @@ div.root {
       .btn {
         cursor: pointer;
       }
-      img {
+      .action > img {
         height: 1pc;
         width: 1pc;
       }

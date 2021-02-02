@@ -300,6 +300,7 @@
       trash(p, index){
         this.$api.project.delete([p.id]).then(()=>{
             this.ps.splice(index, 1)
+            this.deleteIndex = -2
         })
       }
     },
