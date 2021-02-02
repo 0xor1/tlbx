@@ -52,7 +52,7 @@
               <span :title="t.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': t.isParallel}" v-if="c.name == 'name'">{{t.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
-            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="taskShowCrt(idx+1)" title="insert below">
+            <td v-if="$u.perm.canWrite(pMe)" class="action" @click.stop="taskShowCrt(idx+1)" :title="idx === 0? 'insert first child': 'insert below'">
               <img src="@/assets/insert-below.svg">
             </td>
             <td v-if="idx === 0 && task.set.length > 1 && $u.perm.canWrite(pMe)" class="action">
@@ -169,15 +169,9 @@
         <div class="heading">comment</div>
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div class="body" title="body">
-            <span :class="{err: comment.bodyStr.length > 1000, 'small': true}">avail chars ({{10000 - comment.bodyStr.length}})</span><br>
-            <div class="flex col">
-              <textarea v-if="!comment.preview" rows="4" cols="40" :class="{err: comment.bodyStr.length > 10000}" v-model="comment.bodyStr" placeholder="comment"></textarea>
-              <div v-else class="preview" v-html="$u.fmt.md(comment.bodyStr)"></div>
-              <div class="flex comment-btns">
-                <button @click.stop="commentTglPreview()">{{comment.preview? 'edit': 'preview'}}</button>
-                <button @click.stop="commentSubmit()">create</button>
-              </div>
-            </div>
+            <span :class="{err: comment.bodyStr.length > 1000, 'small': true}">avail chars ({{10000 - comment.bodyStr.length}}) <a @click.stop.prevent="commentTglPreview" href="">{{comment.preview? 'edit': 'preview'}}</a></span><br>
+            <textarea v-if="!comment.preview" rows="4" cols="40" :class="{err: comment.bodyStr.length > 10000}" @keydown.enter="commentEnter" v-model="comment.bodyStr" placeholder="comment"></textarea>
+            <div v-else class="preview" v-html="$u.fmt.md(comment.bodyStr)"></div>
           </div>
         </div>
         <div class="comment-set" v-if="comment.set.length > 0">
@@ -917,6 +911,12 @@
           this.comment.dltIdx = idx
         }
       },
+      commentEnter(e){
+        if (!e.shiftKey) {
+          e.preventDefault()
+          this.commentSubmit()
+        }
+      },
       commentSubmit(){
         this.comment.bodyStr = this.comment.bodyStr.trim()
         if(this.comment.bodyStr.length > 0 && 
@@ -941,22 +941,25 @@
         this.comment.updBodyStr = ""
         this.comment.updIdx = -1
       },
-      commentSubmitUpd(){
-        if(!this.comment.loading) {
-          this.comment.loading = true
-          this.$api.comment.update({
-            host: this.$u.rtr.host(),
-            project: this.$u.rtr.project(),
-            task: this.$u.rtr.task(),
-            id: this.comment.set[this.comment.updIdx].id,
-            body: this.comment.updBodyStr
-          }).then((c)=>{
-            this.comment.set[this.comment.updIdx] = c
-            this.comment.dltIdx = -1
-            this.comment.updIdx = -1
-          }).finally(()=>{
-            this.comment.loading = false
-          })
+      commentSubmitUpd(e){
+        if (!e.shiftKey) {
+          e.preventDefault()
+          if(!this.comment.loading) {
+            this.comment.loading = true
+            this.$api.comment.update({
+              host: this.$u.rtr.host(),
+              project: this.$u.rtr.project(),
+              task: this.$u.rtr.task(),
+              id: this.comment.set[this.comment.updIdx].id,
+              body: this.comment.updBodyStr
+            }).then((c)=>{
+              this.comment.set[this.comment.updIdx] = c
+              this.comment.dltIdx = -1
+              this.comment.updIdx = -1
+            }).finally(()=>{
+              this.comment.loading = false
+            })
+          }
         }
       },
       commentDlt(idx){
@@ -1073,8 +1076,10 @@ div.root {
       }
     }
     .items {
-      .comment-btns{
-        margin-bottom: 1pc;
+      &.comments {
+        textarea{
+          width: calc(100% - 0.8pc);
+        }
       }
       .comment-set{
         .comment {
