@@ -1,12 +1,15 @@
 package config
 
 import (
+	"context"
 	"encoding/base64"
 	"time"
 
+	firebase "firebase.google.com/go"
 	"github.com/0xor1/tlbx/pkg/config"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/email"
+	"github.com/0xor1/tlbx/pkg/fcm"
 	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/log"
@@ -17,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"google.golang.org/api/option"
 )
 
 type Config struct {
@@ -36,6 +40,7 @@ type Config struct {
 	Log   log.Log
 	Email email.Client
 	Store store.Client
+	FCM   fcm.Client
 	Cache iredis.Pool
 	User  isql.ReplicaSet
 	Pwd   isql.ReplicaSet
@@ -80,6 +85,7 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("sql.maxIdleConns", 50)
 	c.SetDefault("sql.maxOpenConns", 100)
 	c.SetDefault("rateLimit.perMinute", 300)
+	c.SetDefault("fcm.serviceAccountKeyFile", "")
 
 	return c
 }
@@ -119,6 +125,17 @@ func GetProcessed(c *config.Config) *Config {
 					DisableSSL:       ptr.Bool(true),
 					S3ForcePathStyle: ptr.Bool(true),
 				})))
+
+	if c.GetString("fcm.serviceAccountKeyFile") != "" {
+		opt := option.WithCredentialsFile(c.GetString("fcm.serviceAccountKeyFile"))
+		app, err := firebase.NewApp(context.Background(), nil, opt)
+		PanicOn(err)
+		client, err := app.Messaging(context.Background())
+		PanicOn(err)
+		res.FCM = fcm.NewClient(client)
+	} else {
+		res.FCM = fcm.NewNoopClient(res.Log)
+	}
 
 	res.StaticDir = c.GetString("staticDir")
 	res.ContentSecurityPolicies = c.GetStringSlice("contentSecurityPolicies")

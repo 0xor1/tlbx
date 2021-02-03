@@ -8,6 +8,7 @@ import (
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/email"
+	"github.com/0xor1/tlbx/pkg/fcm"
 	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/log"
@@ -95,6 +96,7 @@ type rig struct {
 	data        isql.ReplicaSet
 	email       email.Client
 	store       store.Client
+	fcm         fcm.Client
 	useAuth     bool
 }
 
@@ -146,6 +148,10 @@ func (r *rig) Store() store.Client {
 	return r.store
 }
 
+func (r *rig) FCM() fcm.Client {
+	return r.fcm
+}
+
 func (r *rig) NewClient() *app.Client {
 	return app.NewClient(baseHref, r)
 }
@@ -172,6 +178,7 @@ func NewRig(
 		cache:   config.Cache,
 		email:   config.Email,
 		store:   config.Store,
+		fcm:     config.FCM,
 		user:    config.User,
 		pwd:     config.Pwd,
 		data:    config.Data,
@@ -202,7 +209,7 @@ func NewRig(
 				config.Session.EncrKey32s,
 				config.Session.Secure),
 			ratelimit.MeMware(r.cache, 1000000),
-			service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store),
+			service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store, r.fcm),
 		}
 		c.Endpoints = eps
 		c.Serve = func(h http.HandlerFunc) {
