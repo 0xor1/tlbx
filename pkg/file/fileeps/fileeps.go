@@ -88,11 +88,9 @@ var (
 				// propogate aggregate sizes upwards
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task)
 				epsutil.LogActivity(tlbx, tx, innerArgs.Host, innerArgs.Project, &innerArgs.Task, f.ID, cnsts.TypeFile, cnsts.ActionCreated, &f.Name, struct {
-					Name string `json:"name"`
 					Size uint64 `json:"size"`
 					Type string `json:"type"`
 				}{
-					Name: args.Name,
 					Size: uint64(args.Size),
 					Type: args.Type,
 				})

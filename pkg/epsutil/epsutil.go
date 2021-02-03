@@ -121,7 +121,9 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project ID, task *ID, item ID, 
 	var ei *string
 	if extraInfo != nil {
 		eiStr := string(json.MustMarshal(extraInfo))
+		PanicIf(StrLen(eiStr) > 10000, "extraInfo string is too long")
 		ei = &eiStr
+
 	}
 	itemHasBeenDeleted := action == cnsts.ActionDeleted
 	var nameQry string
