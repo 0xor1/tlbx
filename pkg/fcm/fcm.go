@@ -65,7 +65,7 @@ type noopClient struct {
 }
 
 func (c *noopClient) Send(ctx context.Context, m *messaging.MulticastMessage) (*messaging.BatchResponse, error) {
-	c.log.Warning("noop fcm client called for %d msgs", len(m.Tokens))
+	c.log.Warning("noop fcm client called for %d tokens", len(m.Tokens))
 	return &messaging.BatchResponse{}, nil
 }
 
