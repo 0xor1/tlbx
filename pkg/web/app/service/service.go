@@ -31,6 +31,7 @@ type Layer interface {
 	Data() sql.Client
 	Email() email.Client
 	Store() store.Client
+	FCM() fcm.Client
 }
 
 func Mware(pool iredis.Pool, user, pwd, data isql.ReplicaSet, email email.Client, store store.Client, fcm fcm.Client) func(app.Tlbx) {
@@ -80,4 +81,8 @@ func (l *layer) Email() email.Client {
 
 func (l *layer) Store() store.Client {
 	return storemw.Get(l.tlbx, storeName)
+}
+
+func (l *layer) FCM() fcm.Client {
+	return fcmmw.Get(l.tlbx, fcmName)
 }
