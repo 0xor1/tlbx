@@ -6,6 +6,15 @@ import (
 	"unicode/utf8"
 )
 
+func StrEllipsis(s string, max uint) string {
+	runes := []rune(s)
+	if len(runes) > int(max) {
+		runes = runes[:max]
+		s = string(runes) + "..."
+	}
+	return s
+}
+
 func StrLower(s string) string {
 	return strings.ToLower(s)
 }
