@@ -334,3 +334,21 @@ type Activity struct {
 	ItemName           *string      `json:"itemName,omitempty"`
 	ExtraInfo          *json.Json   `json:"extraInfo,omitempty"`
 }
+
+type RegisterForFCM struct {
+	Host    ID     `json:"host"`
+	Project ID     `json:"project"`
+	Token   string `json:"token"`
+}
+
+func (_ *RegisterForFCM) Path() string {
+	return "/project/registerForFCM"
+}
+
+func (a *RegisterForFCM) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *RegisterForFCM) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
