@@ -27,7 +27,7 @@ func main() {
 				config.Session.EncrKey32s,
 				config.Session.Secure),
 			ratelimit.MeMware(config.Cache, config.RateLimit.PerMinute),
-			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store),
+			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store, config.FCM),
 		}
 		c.Log = config.Log
 		c.Endpoints = app.JoinEps(
