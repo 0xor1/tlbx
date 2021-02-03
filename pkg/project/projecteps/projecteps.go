@@ -649,6 +649,33 @@ var (
 				return res
 			},
 		},
+		{
+			Description:  "register for fcm",
+			Path:         (&project.RegisterForFCM{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.RegisterForFCM{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.RegisterForFCM{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					Token:   "abc:123",
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*project.RegisterForFCM)
+				app.BadReqIf(!me.Exists(tlbx), "fcm only available to authed sessions")
+				_, err := service.Get(tlbx).Data().Exec(`INSERT INTO fcms (host, project, token) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token)`, args.Host, args.Project, args.Token)
+				PanicOn(err)
+				return nil
+			},
+		},
 	}
 
 	nameMinLen     = 1
