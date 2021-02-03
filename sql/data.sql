@@ -163,6 +163,15 @@ CREATE TABLE comments(
   UNIQUE INDEX(host, project, createdOn, createdBy, task)
 );
 
+DROP TABLE IF EXISTS fcms;
+CREATE TABLE fcms(
+  host BINARY(16) NOT NULL,
+  project BINARY(16) NOT NULL,
+  token VARCHAR(255) NOT NULL,
+  PRIMARY KEY(host, project, token),
+  UNIQUE INDEX(token)
+);
+
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 #********************************MAGIC PROCEDURE WARNING*********************************#
 # THIS PROCEDURE MUST ONLY BE CALLED INTERNALLY BY 

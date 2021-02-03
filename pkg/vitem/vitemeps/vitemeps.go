@@ -94,7 +94,7 @@ var (
 				PanicOn(err)
 				// propogate aggregate values upwards
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, i.ID, cnsts.TypeVitem, cnsts.ActionCreated, nil, args)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, i.ID, cnsts.TypeVitem, cnsts.ActionCreated, nil, args)
 				tx.Commit()
 				return vitem.VitemRes{
 					Task: tsk,
@@ -184,7 +184,7 @@ var (
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionUpdated, nil, args)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionUpdated, nil, args)
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				tx.Commit()
 				return &vitem.VitemRes{
@@ -232,7 +232,7 @@ var (
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, &args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionDeleted, nil, args.Type)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionDeleted, nil, args.Type)
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				tx.Commit()
 				return tsk

@@ -1,8 +1,11 @@
 package epsutil
 
 import (
+	"context"
 	"net/http"
+	"time"
 
+	"firebase.google.com/go/messaging"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/isql"
@@ -116,11 +119,12 @@ func StorePrefix(host ID, projectAndOrTask ...ID) string {
 	return prefix
 }
 
-func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project ID, task *ID, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}) {
+func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}) {
 	me := me.Get(tlbx)
 	var ei *string
+	var eiStr string
 	if extraInfo != nil {
-		eiStr := string(json.MustMarshal(extraInfo))
+		eiStr = string(json.MustMarshal(extraInfo))
 		PanicIf(StrLen(eiStr) > 10000, "extraInfo string is too long")
 		ei = &eiStr
 
@@ -129,17 +133,12 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project ID, task *ID, item ID, 
 	var nameQry string
 	qryArgs := make([]interface{}, 0, 14)
 	qryArgs = append(qryArgs, host, project, task, NowMilli(), me, item, itemType, itemHasBeenDeleted, action)
-	if task != nil {
-		if task.Equal(item) {
-			nameQry = `?`
-			qryArgs = append(qryArgs, itemName, nil, ei)
-		} else {
-			nameQry = `(SELECT name FROM tasks WHERE host=? AND project=? AND id=?)`
-			qryArgs = append(qryArgs, host, project, task, itemName, ei)
-		}
-	} else {
+	if task.Equal(item) {
 		nameQry = `?`
-		qryArgs = append(qryArgs, nil, itemName, ei)
+		qryArgs = append(qryArgs, itemName, nil, ei)
+	} else {
+		nameQry = `(SELECT name FROM tasks WHERE host=? AND project=? AND id=?)`
+		qryArgs = append(qryArgs, host, project, task, itemName, ei)
 	}
 	_, err := tx.Exec(Strf(`INSERT INTO activities(host, project, task, occurredOn, user, item, itemType, itemHasBeenDeleted, action, taskName, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, %s, ?, ?)`, nameQry), qryArgs...)
 	PanicOn(err)
@@ -152,6 +151,7 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project ID, task *ID, item ID, 
 		_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND %s=?`, t), host, project, item)
 		PanicOn(err)
 	}
+	fcmSend(tlbx, host, project, task, item, itemType, action, eiStr)
 }
 
 func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, isTask bool) {
@@ -164,4 +164,32 @@ func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, i
 	}
 	_, err := tx.Exec(qry, newItemName, host, project, item)
 	PanicOn(err)
+}
+
+func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, extraInfoStr string) {
+	srv := service.Get(tlbx)
+	Go(func() {
+		tokens := make([]string, 0, 10)
+		srv.Data().Query(func(rows isql.Rows) {
+			for rows.Next() {
+				token := ""
+				PanicOn(rows.Scan(&token))
+				tokens = append(tokens, token)
+			}
+		}, `SELECT token FROM fcms WHERE host=? AND project=?`, host, project)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		srv.FCM().MustSend(ctx, &messaging.MulticastMessage{
+			Tokens: tokens,
+			Data: map[string]string{
+				"host":      host.String(),
+				"project":   project.String(),
+				"task":      task.String(),
+				"item":      item.String(),
+				"type":      string(itemType),
+				"action":    string(action),
+				"extraInfo": extraInfoStr,
+			},
+		})
+	}, tlbx.Log().ErrorOn)
 }
