@@ -169,7 +169,11 @@
         <div class="heading">comment</div>
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div class="body" title="body">
-            <span :class="{err: comment.bodyStr.length > 1000, 'small': true}">avail chars ({{10000 - comment.bodyStr.length}}) <a @click.stop.prevent="commentTglPreview" href="">{{comment.preview? 'edit': 'preview'}}</a></span><br>
+            <span :class="{err: comment.bodyStr.length > 1000, 'small': true}">
+              avail chars ({{10000 - comment.bodyStr.length}}) 
+              <a @click.stop.prevent="commentTglPreview" href="">{{comment.preview? 'edit': 'preview'}}</a>
+              | <a @click.stop.prevent="commentSubmit" href="">create</a>
+            </span><br>
             <textarea v-if="!comment.preview" rows="4" cols="40" :class="{err: comment.bodyStr.length > 10000}" @keydown.enter="commentEnter" v-model="comment.bodyStr" placeholder="comment"></textarea>
             <div v-else class="preview" v-html="$u.fmt.md(comment.bodyStr)"></div>
           </div>
