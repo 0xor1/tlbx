@@ -151,7 +151,7 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 		_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND %s=?`, t), host, project, item)
 		PanicOn(err)
 	}
-	fcmSend(tlbx, host, project, task, item, me, itemType, action, eiStr)
+	fcmSend(tlbx, tx, host, project, task, item, me, itemType, action, eiStr)
 }
 
 func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, isTask bool) {
@@ -166,24 +166,24 @@ func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, i
 	PanicOn(err)
 }
 
-func fcmSend(tlbx app.Tlbx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, extraInfoStr string) {
-	srv := service.Get(tlbx)
+func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, extraInfoStr string) {
+	tokens := make([]string, 0, 50)
+	tx.Query(func(rows isql.Rows) {
+		for rows.Next() {
+			token := ""
+			PanicOn(rows.Scan(&token))
+			tokens = append(tokens, token)
+		}
+	}, `SELECT token FROM fcms WHERE host=? AND project=?`, host, project)
+	if len(tokens) == 0 {
+		return
+	}
+	fcm := service.Get(tlbx).FCM()
 	tlbx.Log().Info("firing async call to fcm service")
 	Go(func() {
-		tokens := make([]string, 0, 50)
-		srv.Data().Query(func(rows isql.Rows) {
-			for rows.Next() {
-				token := ""
-				PanicOn(rows.Scan(&token))
-				tokens = append(tokens, token)
-			}
-		}, `SELECT token FROM fcms WHERE host=? AND project=?`, host, project)
-		if len(tokens) == 0 {
-			return
-		}
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		res := srv.FCM().MustSend(ctx, &messaging.MulticastMessage{
+		res := fcm.MustSend(ctx, &messaging.MulticastMessage{
 			Tokens: tokens,
 			Data: map[string]string{
 				"host":      host.String(),
