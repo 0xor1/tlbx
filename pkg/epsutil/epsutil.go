@@ -181,9 +181,9 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, a
 		if len(tokens) == 0 {
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		srv.FCM().MustSend(ctx, &messaging.MulticastMessage{
+		res := srv.FCM().MustSend(ctx, &messaging.MulticastMessage{
 			Tokens: tokens,
 			Data: map[string]string{
 				"host":      host.String(),
@@ -195,5 +195,6 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, a
 				"extraInfo": extraInfoStr,
 			},
 		})
+		tlbx.Log().Info("FCM res: %#v", res)
 	}, tlbx.Log().ErrorOn)
 }

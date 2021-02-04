@@ -681,6 +681,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.RegisterForFCM)
+				app.BadReqIf(args.Token == "", "empty string is not a valid fcm token")
 				me := me.Get(tlbx)
 				epsutil.MustHaveAccess(tlbx, args.Host, args.ID, &me, cnsts.RoleReader)
 				tx := service.Get(tlbx).Data().Begin()
