@@ -35,6 +35,7 @@ func (c *client) Send(ctx context.Context, m *messaging.MulticastMessage) (*mess
 			m.Tokens = allTs
 			allTs = nil
 		}
+		Println(m.Tokens, m.Data, m)
 		curRes, err := c.fcm.SendMulticast(ctx, m)
 		if curRes != nil {
 			res.FailureCount += curRes.FailureCount
