@@ -319,6 +319,8 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(Strf(`DELETE FROM comments WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
+				_, err = tx.Exec(Strf(`DELETE FROM fcms WHERE host=? %s`, inProject), queryArgs...)
+				PanicOn(err)
 				for _, p := range args {
 					srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me, p))
 				}
@@ -743,6 +745,8 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	_, err = tx.Exec(`DELETE FROM files WHERE host=?`, me)
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM comments WHERE host=?`, me)
+	PanicOn(err)
+	_, err = tx.Exec(`DELETE FROM fcms WHERE host=?`, me)
 	PanicOn(err)
 	_, err = tx.Exec(`UPDATE users set isActive=0 WHERE id=?`, me)
 	PanicOn(err)
