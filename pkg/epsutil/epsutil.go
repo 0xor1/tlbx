@@ -195,6 +195,5 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, a
 				"extraInfo": extraInfoStr,
 			},
 		})
-		PanicOn("YOLO")
 	}, tlbx.Log().ErrorOn)
 }
