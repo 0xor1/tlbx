@@ -168,9 +168,8 @@ func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, i
 
 func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, extraInfoStr string) {
 	srv := service.Get(tlbx)
-	tlbx.Log().Info("YOLO 1")
+	tlbx.Log().Info("firing async call to fcm service")
 	Go(func() {
-		tlbx.Log().Info("YOLO 2")
 		tokens := make([]string, 0, 10)
 		srv.Data().Query(func(rows isql.Rows) {
 			for rows.Next() {
@@ -182,7 +181,6 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, a
 		if len(tokens) == 0 {
 			return
 		}
-		tlbx.Log().Info("YOLO 3")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		srv.FCM().MustSend(ctx, &messaging.MulticastMessage{
@@ -197,5 +195,6 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, a
 				"extraInfo": extraInfoStr,
 			},
 		})
+		PanicOn("YOLO")
 	}, tlbx.Log().ErrorOn)
 }
