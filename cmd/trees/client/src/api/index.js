@@ -20,8 +20,6 @@ Notification.requestPermission().then((permission) => {
       } else {
         console.log("fcm error getting token")
       }
-    }).catch((err)=>{
-      console.log("fcm error getting token: ", err)
     })
   } else {
     console.log("fcm notifications permission not given")
@@ -406,7 +404,7 @@ function newApi(isMDoApi) {
         // host, id
         return fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
           if (token) {
-            console.log("fcm token: ", token)
+            args.token = token
             return doReq('/project/registerForFCM', args).then(()=>{
               return fcm
             })
