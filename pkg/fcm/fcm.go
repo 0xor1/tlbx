@@ -27,6 +27,7 @@ func (c *client) Send(ctx context.Context, m *messaging.MulticastMessage) (*mess
 	allTs := m.Tokens
 	res := &messaging.BatchResponse{}
 	// can't send more than 500 at a time so send batches if over that limit
+	Println("yolo1", m.Tokens, m.Data, m)
 	for len(allTs) > 0 {
 		if len(allTs) > 500 {
 			m.Tokens = allTs[:500]
@@ -35,7 +36,7 @@ func (c *client) Send(ctx context.Context, m *messaging.MulticastMessage) (*mess
 			m.Tokens = allTs
 			allTs = nil
 		}
-		Println(m.Tokens, m.Data, m)
+		Println("yolo2", m.Tokens, m.Data, m)
 		curRes, err := c.fcm.SendMulticast(ctx, m)
 		if curRes != nil {
 			res.FailureCount += curRes.FailureCount
