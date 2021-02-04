@@ -199,9 +199,9 @@ func Everything(t *testing.T) {
 	a.Zero(len((&project.Get{Host: r.Ali().ID()}).MustDo(ac).Set))
 
 	regErr := (&project.RegisterForFCM{
-		Host:    r.Ali().ID(),
-		Project: app.ExampleID(),
-		Token:   "abc:123",
+		Host:  r.Ali().ID(),
+		ID:    app.ExampleID(),
+		Token: "abc:123",
 	}).Do(ac)
 	a.NotNil(regErr)
 
@@ -216,9 +216,9 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 
 	(&project.RegisterForFCM{
-		Host:    r.Ali().ID(),
-		Project: p1.ID,
-		Token:   "abc:123",
+		Host:  r.Ali().ID(),
+		ID:    p1.ID,
+		Token: "abc:123",
 	}).MustDo(ac)
 
 	// test empty request

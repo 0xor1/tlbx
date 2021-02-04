@@ -671,9 +671,9 @@ var (
 			},
 			GetExampleArgs: func() interface{} {
 				return &project.RegisterForFCM{
-					Host:    app.ExampleID(),
-					Project: app.ExampleID(),
-					Token:   "abc:123",
+					Host:  app.ExampleID(),
+					ID:    app.ExampleID(),
+					Token: "abc:123",
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -682,11 +682,11 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.RegisterForFCM)
 				me := me.Get(tlbx)
-				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, &me, cnsts.RoleReader)
+				epsutil.MustHaveAccess(tlbx, args.Host, args.ID, &me, cnsts.RoleReader)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
-				epsutil.TaskMustExist(tx, args.Host, args.Project, args.Project)
-				_, err := tx.Exec(`INSERT INTO fcms (host, project, token, user, registeredOn) VALUES (?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), user=VALUES(user), registeredOn=VALUES(registeredOn)`, args.Host, args.Project, args.Token, me)
+				epsutil.TaskMustExist(tx, args.Host, args.ID, args.ID)
+				_, err := tx.Exec(`INSERT INTO fcms (host, project, token, user, registeredOn) VALUES (?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), user=VALUES(user), registeredOn=VALUES(registeredOn)`, args.Host, args.ID, args.Token, me)
 				PanicOn(err)
 				tx.Commit()
 				return nil
