@@ -337,7 +337,7 @@ type Activity struct {
 
 type RegisterForFCM struct {
 	Host  ID     `json:"host"`
-	ID    ID     `json:"ID"`
+	ID    ID     `json:"id"`
 	Token string `json:"token"`
 }
 
