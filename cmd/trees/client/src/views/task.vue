@@ -400,9 +400,7 @@
         }).finally(()=>{
           this.$root.ctx().then((ctx)=>{
             if (this.me != null) {
-              this.$u.fcm.client.onMessage((msg)=>{
-                console.log(msg)
-              })
+              this.$u.fcm.client.onMessage(this.fcmHandler)
             }
             this.pMe = ctx.pMe
             this.project = ctx.project
@@ -476,6 +474,27 @@
             })
           })
         })
+      },
+      fcmHandler(msg){
+        console.log(msg)
+        if (msg != null && msg.data != null) {
+          let d = msg.data
+          // data has:
+          // id props: host, project, task, item
+          // string props: type, action
+          //json string prop: extraInfo 
+          if (d.project !== this.$u.rtr.project()) {
+            // if its a msg for a different project just ignore it
+            return
+          }
+          if (d.task === this.$u.rtr.task()) {
+            if (d.type === "comment") {
+              if (d.action === "created" && d.item !== this.comment.set[0].id) {
+                // just load comment
+              }
+            }
+          }
+        }
       },
       taskAncestorLoadMore(){
         let obj = this.task.ancestor
