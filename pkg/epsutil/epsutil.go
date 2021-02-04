@@ -151,7 +151,7 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 		_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND %s=?`, t), host, project, item)
 		PanicOn(err)
 	}
-	fcmSend(tlbx, host, project, task, item, itemType, action, eiStr)
+	fcmSend(tlbx, host, project, task, item, me, itemType, action, eiStr)
 }
 
 func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, isTask bool) {
@@ -166,7 +166,7 @@ func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, i
 	PanicOn(err)
 }
 
-func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, extraInfoStr string) {
+func fcmSend(tlbx app.Tlbx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, extraInfoStr string) {
 	srv := service.Get(tlbx)
 	tlbx.Log().Info("firing async call to fcm service")
 	Go(func() {
@@ -190,6 +190,7 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, a
 				"project":   project.String(),
 				"task":      task.String(),
 				"item":      item.String(),
+				"user":      user.String(),
 				"type":      string(itemType),
 				"action":    string(action),
 				"extraInfo": extraInfoStr,
