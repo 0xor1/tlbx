@@ -170,7 +170,7 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, a
 	srv := service.Get(tlbx)
 	tlbx.Log().Info("firing async call to fcm service")
 	Go(func() {
-		tokens := make([]string, 0, 10)
+		tokens := make([]string, 0, 50)
 		srv.Data().Query(func(rows isql.Rows) {
 			for rows.Next() {
 				token := ""
