@@ -6,7 +6,6 @@ import toasted from 'vue-toasted'
 import api from '@/api'
 import util from '@/util'
 
-
 Vue.use({install: v => v.prototype.$api = api})
 Vue.use(util)
 Vue.use(dayjs, {lang: 'en'})

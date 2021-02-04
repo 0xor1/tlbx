@@ -336,9 +336,9 @@ type Activity struct {
 }
 
 type RegisterForFCM struct {
-	Host    ID     `json:"host"`
-	Project ID     `json:"project"`
-	Token   string `json:"token"`
+	Host  ID     `json:"host"`
+	ID    ID     `json:"ID"`
+	Token string `json:"token"`
 }
 
 func (_ *RegisterForFCM) Path() string {

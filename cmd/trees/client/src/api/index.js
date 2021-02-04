@@ -1,4 +1,21 @@
 import axios from 'axios'
+import firebase from "firebase/app";
+import "firebase/messaging";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAg43CfgwC2HLC9x582IMq2UwM6NQ3FRCc",
+  authDomain: "trees-82a30.firebaseapp.com",
+  projectId: "trees-82a30",
+  storageBucket: "trees-82a30.appspot.com",
+  messagingSenderId: "69294578877",
+  appId: "1:69294578877:web:1edb203c55b78f43956bd4",
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+const fcm = firebase.messaging()
+const fcmVapidKey = "BIrxz8PBCCRX2XekUa2zAKdYnKLhj9uHKhuSW5gc0WXWSCeh4Kx3c3GjHselJg0ARUgNJvcZLkd6roGfErpodRM"
 
 let notAuthed = false
 let memCache = {}
@@ -373,6 +390,37 @@ function newApi(isMDoApi) {
       getActivities(args) {
         // host, project, task, item, user, occuredAfter, occuredBefore, limit
         return doReq('/project/getActivities', args)
+      },
+      registerForFCM(args){
+        // host, id, handler
+        let errVal = null
+        let done = false
+        let completer = null
+        completer = (resolve, reject) => {
+          if (errVal != null) {
+            reject(errVal)
+          }
+          if (!done) {
+            setTimeout(completer, 100, resolve, reject)
+            return
+          }
+          resolve()
+        }
+        fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
+          if (token) {
+            args.token = token
+            doReq('/project/registerForFCM', args).then(()=>{
+              done = true
+            }).catch((err)=>{
+              errVal = err
+            })
+          } else {
+            errVal = "No registration token available. Request permission to generate one."
+          }
+        }).catch((err)=>{
+          errVal = err
+        })
+        return new Promise(completer)
       }
     },
     task: {
