@@ -196,6 +196,6 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item, user ID, itemType cnsts.T
 				"extraInfo": extraInfoStr,
 			},
 		})
-		tlbx.Log().Info("FCM res: %#v", res)
+		tlbx.Log().Info("FCM success: %d, fail: %d", res.SuccessCount, res.FailureCount)
 	}, tlbx.Log().ErrorOn)
 }
