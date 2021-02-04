@@ -64,20 +64,23 @@ let v = new Vue({
             this._ctx.pMe = pMe
           })
           mapi.sendMDo().finally(()=>{
-            this._ctx.loading = false
-            if (this._ctx.pMe != null && this._ctx.project != null) {
-              this.$u.fcmGetToken().then((token)=>{
-                if (token) {
+            if (this._ctx.pMe != null && 
+              this._ctx.project != null) {  
+              this.$u.fcm.getToken(false).then((obj)=>{
+                if (obj.token) {
                   this.$api.project.registerForFCM({
                     host: this.$u.rtr.host(), 
                     id: this.$u.rtr.project(),
-                    token: token
+                    token: obj.token
                   })
                 } else {
                   throw "No registration token available. Request permission to generate one."
                 }
+              }).finally(()=>{
+                this._ctx.loading = false
               })
-              
+            } else {
+              this._ctx.loading = false
             }
           })
         }

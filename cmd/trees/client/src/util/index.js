@@ -3,26 +3,14 @@ import dompurify from 'dompurify'
 import firebase from "firebase/app";
 import "firebase/messaging";
 
-// Initialize Firebase
 firebase.initializeApp({
-  apiKey: "AIzaSyAg43CfgwC2HLC9x582IMq2UwM6NQ3FRCc",
-  projectId: "trees-82a30",
-  messagingSenderId: "69294578877",
-  appId: "1:69294578877:web:1edb203c55b78f43956bd4",
+    apiKey: "AIzaSyAg43CfgwC2HLC9x582IMq2UwM6NQ3FRCc",
+    projectId: "trees-82a30",
+    messagingSenderId: "69294578877",
+    appId: "1:69294578877:web:1edb203c55b78f43956bd4",
 });
 const fcmVapidKey = "BIrxz8PBCCRX2XekUa2zAKdYnKLhj9uHKhuSW5gc0WXWSCeh4Kx3c3GjHselJg0ARUgNJvcZLkd6roGfErpodRM"
-const fcm = firebase.messaging()
-Notification.requestPermission().then((permission) => {
-  if (permission === 'granted') {
-    return fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
-      if (!token) {
-        console.log("fcm error getting token")
-      }
-    })
-  } else {
-    console.log("fcm notifications permission not given")
-  }
-})     
+let fcm = firebase.messaging()
 
 let kb = 1000
 let mb = kb * kb
@@ -56,9 +44,29 @@ export default {
                     dst[key] = value
                 }
             },
-            fcm: fcm,
-            fcmGetToken(){
-                return fcm.getToken({vapidKey: fcmVapidKey})
+            fcm: {
+                client: fcm,
+                getToken(askForPerm) {
+                    if (askForPerm === true || Notification.permission === "granted") {
+                        return Notification.requestPermission().then((permission) => {
+                            if (permission === 'granted') {
+                                return fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
+                                    if (token) {
+                                        return {token, fcm}
+                                    } else {
+                                        throw "fcm token error"
+                                    }
+                                })
+                            } else {
+                                throw "fcm notifications permission not given"
+                            }
+                        })
+                    } else {
+                        return new Promise((res, rej)=>{
+                            rej("fcm notifications permission not given")
+                        })
+                    }
+                }
             },
             nullOr: nullOr,
             rtr: {

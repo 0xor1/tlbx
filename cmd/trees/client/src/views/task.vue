@@ -399,6 +399,11 @@
           this.me = me
         }).finally(()=>{
           this.$root.ctx().then((ctx)=>{
+            if (this.me != null) {
+              this.$u.fcm.client.onMessage((msg)=>{
+                console.log(msg)
+              })
+            }
             this.pMe = ctx.pMe
             this.project = ctx.project
             let mapi = this.$api.newMDoApi()
