@@ -2,20 +2,31 @@ import axios from 'axios'
 import firebase from "firebase/app";
 import "firebase/messaging";
 
-const firebaseConfig = {
+// Initialize Firebase
+firebase.initializeApp({
   apiKey: "AIzaSyAg43CfgwC2HLC9x582IMq2UwM6NQ3FRCc",
-  authDomain: "trees-82a30.firebaseapp.com",
   projectId: "trees-82a30",
-  storageBucket: "trees-82a30.appspot.com",
   messagingSenderId: "69294578877",
   appId: "1:69294578877:web:1edb203c55b78f43956bd4",
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-const fcm = firebase.messaging()
+});
 const fcmVapidKey = "BIrxz8PBCCRX2XekUa2zAKdYnKLhj9uHKhuSW5gc0WXWSCeh4Kx3c3GjHselJg0ARUgNJvcZLkd6roGfErpodRM"
+const fcm = firebase.messaging()
+Notification.requestPermission().then((permission) => {
+  if (permission === 'granted') {
+    console.log('fcm notifications permission granted.')
+    return fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
+      if (token) {
+        console.log("fcm token: ", token)
+      } else {
+        console.log("fcm error getting token")
+      }
+    }).catch((err)=>{
+      console.log("fcm error getting token: ", err)
+    })
+  } else {
+    console.log("fcm notifications permission not given")
+  }
+})     
 
 let notAuthed = false
 let memCache = {}
@@ -392,35 +403,17 @@ function newApi(isMDoApi) {
         return doReq('/project/getActivities', args)
       },
       registerForFCM(args){
-        // host, id, handler
-        let errVal = null
-        let done = false
-        let completer = null
-        completer = (resolve, reject) => {
-          if (errVal != null) {
-            reject(errVal)
-          }
-          if (!done) {
-            setTimeout(completer, 100, resolve, reject)
-            return
-          }
-          resolve()
-        }
-        fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
+        // host, id
+        return fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
           if (token) {
-            args.token = token
-            doReq('/project/registerForFCM', args).then(()=>{
-              done = true
-            }).catch((err)=>{
-              errVal = err
+            console.log("fcm token: ", token)
+            return doReq('/project/registerForFCM', args).then(()=>{
+              return fcm
             })
           } else {
-            errVal = "No registration token available. Request permission to generate one."
+            throw NewError(0, "No registration token available. Request permission to generate one.")
           }
-        }).catch((err)=>{
-          errVal = err
         })
-        return new Promise(completer)
       }
     },
     task: {

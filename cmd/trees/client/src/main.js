@@ -65,6 +65,20 @@ let v = new Vue({
           })
           mapi.sendMDo().finally(()=>{
             this._ctx.loading = false
+            if (this._ctx.pMe != null && this._ctx.project != null) {
+              console.log("registering for fcm")
+              this.$api.project.registerForFCM({
+                host: this.$u.rtr.host(), 
+                id: this.$u.rtr.project(),
+              }).then((fcm)=>{
+                fcm.onMessage((msg)=>{
+                  console.log(msg)
+                })
+                console.log(fcm)
+              }).catch((err)=>{
+                console.log(err)
+              })
+            }
           })
         }
       }
