@@ -37,7 +37,7 @@ let v = new Vue({
           loading: false,
           pMe: null,
           project: null
-        }
+        },
       }
       return res
     },
@@ -66,17 +66,18 @@ let v = new Vue({
           mapi.sendMDo().finally(()=>{
             this._ctx.loading = false
             if (this._ctx.pMe != null && this._ctx.project != null) {
-              this.$api.project.registerForFCM({
-                host: this.$u.rtr.host(), 
-                id: this.$u.rtr.project(),
-              }).then((fcm)=>{
-                fcm.onMessage((msg)=>{
-                  console.log(msg)
-                })
-                
-              }).catch((err)=>{
-                console.log(err)
+              this.$u.fcmGetToken().then((token)=>{
+                if (token) {
+                  this.$api.project.registerForFCM({
+                    host: this.$u.rtr.host(), 
+                    id: this.$u.rtr.project(),
+                    token: token
+                  })
+                } else {
+                  throw "No registration token available. Request permission to generate one."
+                }
               })
+              
             }
           })
         }
