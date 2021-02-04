@@ -168,6 +168,7 @@ CREATE TABLE fcms(
   host BINARY(16) NOT NULL,
   project BINARY(16) NOT NULL,
   token VARCHAR(255) NOT NULL,
+  registeredOn DATETIME(3) NOT NULL,
   PRIMARY KEY(host, project, token),
   UNIQUE INDEX(token)
 );

@@ -177,6 +177,9 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, a
 				tokens = append(tokens, token)
 			}
 		}, `SELECT token FROM fcms WHERE host=? AND project=?`, host, project)
+		if len(tokens) == 0 {
+			return
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		srv.FCM().MustSend(ctx, &messaging.MulticastMessage{
@@ -191,5 +194,5 @@ func fcmSend(tlbx app.Tlbx, host, project, task, item ID, itemType cnsts.Type, a
 				"extraInfo": extraInfoStr,
 			},
 		})
-	}, tlbx.Log().ErrorOn)
+	}, tlbx.Log().FatalOn)
 }

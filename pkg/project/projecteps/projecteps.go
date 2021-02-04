@@ -670,9 +670,14 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.RegisterForFCM)
-				app.BadReqIf(!me.Exists(tlbx), "fcm only available to authed sessions")
-				_, err := service.Get(tlbx).Data().Exec(`INSERT INTO fcms (host, project, token) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token)`, args.Host, args.Project, args.Token)
+				me := me.Get(tlbx)
+				epsutil.MustHaveAccess(tlbx, args.Host, args.Project, &me, cnsts.RoleReader)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				epsutil.TaskMustExist(tx, args.Host, args.Project, args.Project)
+				_, err := tx.Exec(`INSERT INTO fcms (host, project, token, registeredOn) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), registeredOn=VALUES(registeredOn)`, args.Host, args.Project, args.Token)
 				PanicOn(err)
+				tx.Commit()
 				return nil
 			},
 		},
