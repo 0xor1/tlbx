@@ -539,7 +539,14 @@ var (
 				if len(args.Users) == 0 {
 					return nil
 				}
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				me := me.Get(tlbx)
+				if !(len(args.Users) == 1 &&
+					me.Equal(args.Users[0]) &&
+					!me.Equal(args.Host)) {
+					// here the user is requesting to remove themselves
+					// from someone elses project which they can always do
+					epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+				}
 				queryArgs := make([]interface{}, 0, len(args.Users)+2)
 				queryArgs = append(queryArgs, args.Host, args.Project)
 				tx := service.Get(tlbx).Data().Begin()
@@ -549,6 +556,8 @@ var (
 					queryArgs = append(queryArgs, u)
 				}
 				_, err := tx.Exec(Strf(`UPDATE users SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
+				PanicOn(err)
+				_, err = tx.Exec(Strf(`DELETE FROM fcms WHERE host=? AND project=? %s`, sql.InCondition(true, `user`, len(args.Users))), queryArgs...)
 				PanicOn(err)
 				for _, u := range args.Users {
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil)
@@ -677,7 +686,7 @@ var (
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				epsutil.TaskMustExist(tx, args.Host, args.Project, args.Project)
-				_, err := tx.Exec(`INSERT INTO fcms (host, project, token, registeredOn) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), registeredOn=VALUES(registeredOn)`, args.Host, args.Project, args.Token)
+				_, err := tx.Exec(`INSERT INTO fcms (host, project, token, user, registeredOn) VALUES (?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), user=VALUES(user), registeredOn=VALUES(registeredOn)`, args.Host, args.Project, args.Token, me)
 				PanicOn(err)
 				tx.Commit()
 				return nil

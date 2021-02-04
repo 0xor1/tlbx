@@ -337,14 +337,27 @@ func Everything(t *testing.T) {
 		Host:    r.Ali().ID(),
 		Project: p1.ID,
 	}).MustDo(r.Dan().Client())
-	a.True(me.ID.Equal(r.Dan().ID()))
 
 	(&project.RemoveUsers{
 		Host:    r.Ali().ID(),
 		Project: p1.ID,
 		Users:   IDs{r.Bob().ID()},
 	}).MustDo(r.Dan().Client())
-	a.True(me.ID.Equal(r.Dan().ID()))
+
+	// cat is currently a reader
+	// so should only be able to remove themselves
+	err = (&project.RemoveUsers{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		Users:   IDs{r.Cat().ID(), r.Dan().ID()},
+	}).Do(r.Cat().Client())
+	a.Contains(err.Error(), "Forbidden")
+
+	(&project.RemoveUsers{
+		Host:    r.Ali().ID(),
+		Project: p1.ID,
+		Users:   IDs{r.Cat().ID()},
+	}).MustDo(r.Cat().Client())
 
 	me, err = (&project.GetMe{
 		Host:    r.Ali().ID(),
@@ -375,7 +388,7 @@ func Everything(t *testing.T) {
 		Host:    r.Ali().ID(),
 		Project: p1.ID,
 	}).MustDo(ac)
-	a.Len(as.Set, 8)
+	a.Len(as.Set, 9)
 	a.False(as.More)
 	item1OccuredOn := as.Set[0].OccurredOn
 	item2OccuredOn := as.Set[1].OccurredOn
