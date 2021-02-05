@@ -345,13 +345,13 @@ func (_ *RegisterForFCM) Path() string {
 	return "/project/registerForFCM"
 }
 
-func (a *RegisterForFCM) Do(c *app.Client) (string, error) {
-	res := ""
+func (a *RegisterForFCM) Do(c *app.Client) (*ID, error) {
+	res := &ID{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *RegisterForFCM) MustDo(c *app.Client) string {
+func (a *RegisterForFCM) MustDo(c *app.Client) *ID {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
