@@ -10,6 +10,7 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/json"
+	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
@@ -168,34 +169,62 @@ func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, i
 
 func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, extraInfoStr string) {
 	tokens := make([]string, 0, 50)
+	client := GetFCMClient(tlbx)
+	var query string
+	queryArgs := make([]interface{}, 0, 3)
+	queryArgs = append(queryArgs, host, project)
+	if client == nil {
+		query = `SELECT token FROM fcms WHERE host=? AND project=?`
+	} else {
+		query = `SELECT token FROM fcms WHERE host=? AND project=? AND client<>?`
+		queryArgs = append(queryArgs, client)
+	}
 	tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
 			token := ""
 			PanicOn(rows.Scan(&token))
 			tokens = append(tokens, token)
 		}
-	}, `SELECT token FROM fcms WHERE host=? AND project=?`, host, project)
+	}, query, queryArgs...)
 	if len(tokens) == 0 {
 		return
 	}
+	row := tx.QueryRow(`SELECT handle FROM users WHERE host=? AND project=? AND id=?`, host, project, user)
+	handle := ""
+	PanicOn(row.Scan(&handle))
 	fcm := service.Get(tlbx).FCM()
 	tlbx.Log().Info("firing async call to fcm service")
 	Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
+		d := map[string]string{
+			"client":     "",
+			"host":       host.String(),
+			"project":    project.String(),
+			"task":       task.String(),
+			"item":       item.String(),
+			"user":       user.String(),
+			"userHandle": handle,
+			"type":       string(itemType),
+			"action":     string(action),
+			"extraInfo":  extraInfoStr,
+		}
+		if client != nil {
+			d["client"] = client.String()
+		}
 		res := fcm.MustSend(ctx, &messaging.MulticastMessage{
 			Tokens: tokens,
-			Data: map[string]string{
-				"host":      host.String(),
-				"project":   project.String(),
-				"task":      task.String(),
-				"item":      item.String(),
-				"user":      user.String(),
-				"type":      string(itemType),
-				"action":    string(action),
-				"extraInfo": extraInfoStr,
-			},
+			Data:   d,
 		})
 		tlbx.Log().Info("FCM success: %d, fail: %d", res.SuccessCount, res.FailureCount)
 	}, tlbx.Log().ErrorOn)
+}
+
+func GetFCMClient(tlbx app.Tlbx) *ID {
+	clientStr := tlbx.Req().Header.Get("X-Fcm-Client")
+	var client *ID
+	if clientStr != "" {
+		client = ptr.ID(MustParseID(clientStr))
+	}
+	return client
 }

@@ -681,14 +681,11 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.RegisterForFCM)
-				clientStr := tlbx.Req().Header.Get("X-Fcm-Client")
-				var client ID
-				if clientStr == "" {
-					client = tlbx.NewID()
-				} else {
-					client = MustParseID(clientStr)
-				}
 				app.BadReqIf(args.Token == "", "empty string is not a valid fcm token")
+				client := epsutil.GetFCMClient(tlbx)
+				if client == nil {
+					client = ptr.ID(tlbx.NewID())
+				}
 				me := me.Get(tlbx)
 				epsutil.MustHaveAccess(tlbx, args.Host, args.ID, &me, cnsts.RoleReader)
 				tx := service.Get(tlbx).Data().Begin()
@@ -802,14 +799,6 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me))
 	tx.Commit()
-}
-
-func GetOne(tlbx app.Tlbx, host, id ID) *project.Project {
-	res := getSet(tlbx, &project.Get{Host: host, IDs: IDs{id}})
-	if res != nil && len(res.Set) == 1 {
-		return res.Set[0]
-	}
-	return nil
 }
 
 func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
