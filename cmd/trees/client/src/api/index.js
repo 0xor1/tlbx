@@ -429,7 +429,7 @@ function newApi(isMDoApi) {
         // host, id, token
         return doReq('/project/registerForFCM', args).then((clientId)=>{
           fcmClientId = clientId
-          return clientId
+          return null
         })
       },
       unregisterFromFCM(args){
