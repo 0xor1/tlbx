@@ -801,6 +801,14 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	tx.Commit()
 }
 
+func GetOne(tlbx app.Tlbx, host, id ID) *project.Project {
+	res := getSet(tlbx, &project.Get{Host: host, IDs: IDs{id}})
+	if res != nil && len(res.Set) == 1 {
+		return res.Set[0]
+	}
+	return nil
+}
+
 func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	app.BadReqIf(
