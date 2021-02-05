@@ -224,9 +224,9 @@ func Everything(t *testing.T) {
 	a.NotNil(fcmClientID)
 
 	(&project.UnregisterFromFCM{
-		Host:   r.Ali().ID(),
-		ID:     p1.ID,
-		Client: *fcmClientID,
+		Host:  r.Ali().ID(),
+		ID:    p1.ID,
+		Token: "abc:123",
 	}).MustDo(ac)
 
 	// test empty request

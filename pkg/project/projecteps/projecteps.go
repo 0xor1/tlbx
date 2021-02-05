@@ -319,7 +319,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(Strf(`DELETE FROM comments WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Strf(`DELETE FROM fcms WHERE host=? %s`, inProject), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM fcmTokens WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
 				for _, p := range args {
 					srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me, p))
@@ -557,7 +557,7 @@ var (
 				}
 				_, err := tx.Exec(Strf(`UPDATE users SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Strf(`DELETE FROM fcms WHERE host=? AND project=? %s`, sql.InCondition(true, `user`, len(args.Users))), queryArgs...)
+				_, err = tx.Exec(Strf(`DELETE FROM fcmTokens WHERE host=? AND project=? %s`, sql.InCondition(true, `user`, len(args.Users))), queryArgs...)
 				PanicOn(err)
 				for _, u := range args.Users {
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil)
@@ -691,7 +691,7 @@ var (
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				epsutil.TaskMustExist(tx, args.Host, args.ID, args.ID)
-				_, err := tx.Exec(`INSERT INTO fcms (host, project, token, user, client, registeredOn) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), user=VALUES(user), client=VALUES(client), registeredOn=VALUES(registeredOn)`, args.Host, args.ID, args.Token, me, client)
+				_, err := tx.Exec(`INSERT INTO fcmTokens (host, project, token, user, registeredOn) VALUES (?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), user=VALUES(user), registeredOn=VALUES(registeredOn)`, args.Host, args.ID, args.Token, me)
 				PanicOn(err)
 				tx.Commit()
 				return client
@@ -704,16 +704,13 @@ var (
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &project.UnregisterFromFCM{
-					Host: app.ExampleID(),
-					ID:   app.ExampleID(),
-				}
+				return &project.UnregisterFromFCM{}
 			},
 			GetExampleArgs: func() interface{} {
 				return &project.UnregisterFromFCM{
-					Host:   app.ExampleID(),
-					ID:     app.ExampleID(),
-					Client: app.ExampleID(),
+					Host:  app.ExampleID(),
+					ID:    app.ExampleID(),
+					Token: "abc:123",
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -724,7 +721,7 @@ var (
 				me := me.Get(tlbx)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
-				_, err := tx.Exec(`DELETE FROM fcms WHERE host=? AND project=? AND user=? AND client=?`, args.Host, args.ID, me, args.Client)
+				_, err := tx.Exec(`DELETE FROM fcmTokens WHERE host=? AND project=? AND user=? AND token=?`, args.Host, args.ID, me, args.Token)
 				PanicOn(err)
 				tx.Commit()
 				return nil
@@ -793,7 +790,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM comments WHERE host=?`, me)
 	PanicOn(err)
-	_, err = tx.Exec(`DELETE FROM fcms WHERE host=?`, me)
+	_, err = tx.Exec(`DELETE FROM fcmTokens WHERE host=? OR user=?`, me, me)
 	PanicOn(err)
 	_, err = tx.Exec(`UPDATE users set isActive=0 WHERE id=?`, me)
 	PanicOn(err)

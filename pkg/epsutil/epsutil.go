@@ -170,22 +170,13 @@ func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, i
 func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfoStr string) {
 	tokens := make([]string, 0, 50)
 	client := GetFCMClient(tlbx)
-	var query string
-	queryArgs := make([]interface{}, 0, 3)
-	queryArgs = append(queryArgs, host, project)
-	if client == nil {
-		query = `SELECT token FROM fcms WHERE host=? AND project=?`
-	} else {
-		query = `SELECT token FROM fcms WHERE host=? AND project=? AND client<>?`
-		queryArgs = append(queryArgs, client)
-	}
 	tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
 			token := ""
 			PanicOn(rows.Scan(&token))
 			tokens = append(tokens, token)
 		}
-	}, query, queryArgs...)
+	}, `SELECT DISTINCT token FROM fcmTokens WHERE host=? AND project=?`, host, project)
 	if len(tokens) == 0 {
 		return
 	}
