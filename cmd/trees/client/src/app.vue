@@ -34,7 +34,7 @@
         <!-- project activity stream -->
         <div v-if="showProjectActivityToggle && showProjectActivity" v-bind:class="{'show':showProjectActivity}" class="project-activity slide-out">
           <div class="exclude-deleted" @click.stop="toggleProjectActivityExcludeDeleted"><input id="hide-deleted" :checked="projectActivityExcludeDeleted" type="checkbox"><label for=""> hide deleted</label></div>
-          <div v-if="me != null" class="enable-realtime" @click.stop="enableRealtime"><input id="enable-realtime" v-model="realtimeEnabled" type="checkbox"><label for=""> realtime</label></div>
+          <div v-if="me != null" class="enable-realtime" @click.stop.prevent="toggleRealtime"><input id="enable-realtime" :checked="realtimeEnabled" type="checkbox"><label for=""> realtime</label></div>
           <div v-if="loadingProjectActivity">loading...</div>
           <div class="entries">
             <div :class="{entry: true, deleted: a.itemHasBeenDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
@@ -126,24 +126,32 @@
           this.refreshProjectActivity()
         }
       },
-      enableRealtime(e){
-        e.preventDefault()
-        if (this.realtimeEnabled) {
+      toggleRealtime(){
+        if (this.togglingRealtimeEnabled) {
           return
         }
-        this.$api.fcm.getToken(true).then((obj)=>{
-          if (obj.token) {
+        this.togglingRealtimeEnabled = true
+        if (this.realtimeEnabled) {
+          this.$api.project.unregisterFromFCM({
+            host: this.$u.rtr.host(), 
+            id: this.$u.rtr.project()
+          }).then(()=>{
+            this.realtimeEnabled = false
+          }).finally(()=>{
+            this.togglingRealtimeEnabled = false
+          })
+        } else {
+          this.$api.fcm.init(true).then(()=>{
             this.$api.project.registerForFCM({
               host: this.$u.rtr.host(), 
-              id: this.$u.rtr.project(),
-              token: obj.token
+              id: this.$u.rtr.project()
             }).then(()=>{
               this.realtimeEnabled = true
-            })
-          } else {
-            throw "No registration token available. Request permission to generate one."
-          }
-        })
+            }).finally(()=>{
+            this.togglingRealtimeEnabled = false
+          })
+          })
+        }
       },
       loginout() {
         if (this.me != null) {

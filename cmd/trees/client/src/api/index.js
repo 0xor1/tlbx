@@ -11,6 +11,7 @@ firebase.initializeApp({
 const fcmVapidKey = "BIrxz8PBCCRX2XekUa2zAKdYnKLhj9uHKhuSW5gc0WXWSCeh4Kx3c3GjHselJg0ARUgNJvcZLkd6roGfErpodRM"
 let fcm = firebase.messaging()
 let fcmClientId = null
+let fcmToken = null
 
 let notAuthed = false
 let memCache = {}
@@ -144,13 +145,13 @@ function newApi(isMDoApi) {
       return new Promise(mDoCompleterFunc)
     },
     fcm: {
-      getToken(askForPerm) {
+      init(askForPerm) {
         if (askForPerm === true || Notification.permission === "granted") {
             return Notification.requestPermission().then((permission) => {
                 if (permission === 'granted') {
                     return fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
                         if (token) {
-                            return {token, fcm}
+                            fcmToken = token
                         } else {
                             throw "fcm token error"
                         }
@@ -426,14 +427,16 @@ function newApi(isMDoApi) {
         return doReq('/project/getActivities', args)
       },
       registerForFCM(args){
-        // host, id, token
+        // host, id
+        args.token = fcmToken
         return doReq('/project/registerForFCM', args).then((clientId)=>{
           fcmClientId = clientId
           return null
         })
       },
       unregisterFromFCM(args){
-        // host, id, token
+        // host, id
+        args.token = fcmToken
         return doReq('/project/unregisterFromFCM', args).then(()=>{
           fcmClientId = null
           return null
