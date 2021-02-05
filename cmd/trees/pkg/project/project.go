@@ -357,8 +357,10 @@ func (a *RegisterForFCM) MustDo(c *app.Client) string {
 	return res
 }
 
-// uses X-FCM-Client header id
+// uses X-FCM-Client header id also
 type UnregisterFromFCM struct {
+	Host ID `json:"host"`
+	ID   ID `json:"id"`
 }
 
 func (_ *UnregisterFromFCM) Path() string {
