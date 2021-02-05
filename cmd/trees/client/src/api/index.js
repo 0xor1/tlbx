@@ -165,11 +165,18 @@ function newApi(isMDoApi) {
             })
         }
       },
-      getClient(){
-        return fcm
-      },
-      getClientId(){
-        return fcmClientId
+      onMessage(fn){
+        fcm.onMessage((msg)=>{
+          console.log(msg)
+          if (msg != null && msg.data != null) {
+            let d = msg.data
+            if (fcmClientId === d.client) {
+              console.log("fcm event from action on this client")
+              return 
+            }
+            fn(d)
+          }
+        })
       }
     },
     user: {
