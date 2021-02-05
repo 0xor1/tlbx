@@ -345,10 +345,30 @@ func (_ *RegisterForFCM) Path() string {
 	return "/project/registerForFCM"
 }
 
-func (a *RegisterForFCM) Do(c *app.Client) error {
+func (a *RegisterForFCM) Do(c *app.Client) (string, error) {
+	res := ""
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *RegisterForFCM) MustDo(c *app.Client) string {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+// uses X-FCM-Client header id
+type UnregisterFromFCM struct {
+}
+
+func (_ *UnregisterFromFCM) Path() string {
+	return "/project/unregisterFromFCM"
+}
+
+func (a *UnregisterFromFCM) Do(c *app.Client) error {
 	return app.Call(c, a.Path(), a, nil)
 }
 
-func (a *RegisterForFCM) MustDo(c *app.Client) {
+func (a *UnregisterFromFCM) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
