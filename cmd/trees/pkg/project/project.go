@@ -335,11 +335,13 @@ type Activity struct {
 	ExtraInfo          *json.Json   `json:"extraInfo,omitempty"`
 }
 
-type RegisterForFCM struct {
+type FCM struct {
 	Host  ID     `json:"host"`
 	ID    ID     `json:"id"`
 	Token string `json:"token"`
 }
+
+type RegisterForFCM FCM
 
 func (_ *RegisterForFCM) Path() string {
 	return "/project/registerForFCM"
@@ -357,12 +359,7 @@ func (a *RegisterForFCM) MustDo(c *app.Client) *ID {
 	return res
 }
 
-// uses X-FCM-Client header id also
-type UnregisterFromFCM struct {
-	Host   ID `json:"host"`
-	ID     ID `json:"id"`
-	Client ID `json:"client"`
-}
+type UnregisterFromFCM FCM
 
 func (_ *UnregisterFromFCM) Path() string {
 	return "/project/unregisterFromFCM"
