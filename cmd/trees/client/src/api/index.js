@@ -1,4 +1,16 @@
 import axios from 'axios'
+import firebase from "firebase/app";
+import "firebase/messaging";
+
+firebase.initializeApp({
+    apiKey: "AIzaSyAg43CfgwC2HLC9x582IMq2UwM6NQ3FRCc",
+    projectId: "trees-82a30",
+    messagingSenderId: "69294578877",
+    appId: "1:69294578877:web:1edb203c55b78f43956bd4",
+});
+const fcmVapidKey = "BIrxz8PBCCRX2XekUa2zAKdYnKLhj9uHKhuSW5gc0WXWSCeh4Kx3c3GjHselJg0ARUgNJvcZLkd6roGfErpodRM"
+let fcm = firebase.messaging()
+let fcmClientId = null
 
 let notAuthed = false
 let memCache = {}
@@ -22,6 +34,9 @@ function newApi(isMDoApi) {
     if (!isMDoApi || (isMDoApi && mDoSending && !mDoSent)) {
       headers = headers || {}
       headers["X-Client"] = "tlbx-web-client"
+      if (fcmClientId != null) {
+        headers["X-Fcm-Client"] = fcmClientId
+      }
       return axios({
         method: 'put',
         url: path,
@@ -127,6 +142,35 @@ function newApi(isMDoApi) {
         })
       })
       return new Promise(mDoCompleterFunc)
+    },
+    fcm: {
+      getToken(askForPerm) {
+        if (askForPerm === true || Notification.permission === "granted") {
+            return Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    return fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
+                        if (token) {
+                            return {token, fcm}
+                        } else {
+                            throw "fcm token error"
+                        }
+                    })
+                } else {
+                    throw "fcm notifications permission not given"
+                }
+            })
+        } else {
+            return new Promise((res, rej)=>{
+                rej("fcm notifications permission not given")
+            })
+        }
+      },
+      getClient(){
+        return fcm
+      },
+      getClientId(){
+        return fcmClientId
+      }
     },
     user: {
       register(alias, handle, email, pwd, confirmPwd) {
@@ -376,7 +420,17 @@ function newApi(isMDoApi) {
       },
       registerForFCM(args){
         // host, id, token
-        return doReq('/project/registerForFCM', args)
+        return doReq('/project/registerForFCM', args).then((clientId)=>{
+          fcmClientId = clientId
+          return clientId
+        })
+      },
+      unregisterFromFCM(args){
+        // host, id, token
+        return doReq('/project/unregisterFromFCM', args).then(()=>{
+          fcmClientId = null
+          return null
+        })
       }
     },
     task: {

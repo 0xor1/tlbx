@@ -400,7 +400,7 @@
         }).finally(()=>{
           this.$root.ctx().then((ctx)=>{
             if (this.me != null) {
-              this.$u.fcm.client.onMessage(this.fcmHandler)
+              this.$api.fcm.getClient().onMessage(this.fcmHandler)
             }
             this.pMe = ctx.pMe
             this.project = ctx.project
@@ -479,6 +479,10 @@
         console.log(msg)
         if (msg != null && msg.data != null) {
           let d = msg.data
+          if (this.$api.fcm.getClientId() === d.client) {
+            console.log("event from actions on this client")
+            return 
+          }
           // data has:
           // id props: host, project, task, item
           // string props: type, action
@@ -489,7 +493,7 @@
           }
           if (d.task === this.$u.rtr.task()) {
             if (d.type === "comment") {
-              if (d.action === "created" && d.item !== this.comment.set[0].id) {
+              if (d.action === "created" && this.comment.set.length > 0 && d.item === this.comment.set[0].id) {
                 // just load comment
               }
             }

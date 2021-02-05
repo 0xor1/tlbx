@@ -131,7 +131,7 @@
         if (this.realtimeEnabled) {
           return
         }
-        this.$u.fcm.getToken(true).then((obj)=>{
+        this.$api.fcm.getToken(true).then((obj)=>{
           if (obj.token) {
             this.$api.project.registerForFCM({
               host: this.$u.rtr.host(), 
