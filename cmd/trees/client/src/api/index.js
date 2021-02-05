@@ -171,7 +171,7 @@ function newApi(isMDoApi) {
           if (msg != null && msg.data != null) {
             let d = msg.data
             if (fcmClientId === d.client) {
-              console.log("fcm event from action on this client")
+              console.log("fcm came from action on this client")
               return 
             }
             fn(d)
