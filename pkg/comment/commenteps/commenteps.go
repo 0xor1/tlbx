@@ -59,8 +59,7 @@ var (
 				// insert new comment
 				_, err := tx.Exec(`INSERT INTO comments (host, project, task, id, createdBy, createdOn, body) VALUES (?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, c.ID, c.CreatedBy, c.CreatedOn, c.Body)
 				PanicOn(err)
-				args.Body = StrEllipsis(args.Body, 50)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, c.ID, cnsts.TypeComment, cnsts.ActionCreated, nil, args)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, c.ID, cnsts.TypeComment, cnsts.ActionCreated, nil, StrEllipsis(args.Body, 50))
 				tx.Commit()
 				return c
 			},
@@ -141,7 +140,7 @@ var (
 				_, err := tx.Exec(`DELETE FROM comments WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
 				PanicOn(err)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeComment, cnsts.ActionDeleted, nil, nil)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeComment, cnsts.ActionDeleted, nil, StrEllipsis(c.Body, 50))
 				tx.Commit()
 				return nil
 			},

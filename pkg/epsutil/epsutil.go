@@ -152,7 +152,7 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 		_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND %s=?`, t), host, project, item)
 		PanicOn(err)
 	}
-	fcmSend(tlbx, tx, host, project, task, item, me, itemType, action, eiStr)
+	fcmSend(tlbx, tx, host, project, task, item, me, itemType, action, itemName, eiStr)
 }
 
 func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, isTask bool) {
@@ -167,7 +167,7 @@ func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, i
 	PanicOn(err)
 }
 
-func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, extraInfoStr string) {
+func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfoStr string) {
 	tokens := make([]string, 0, 50)
 	client := GetFCMClient(tlbx)
 	var query string
@@ -211,6 +211,9 @@ func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemT
 		}
 		if client != nil {
 			d["client"] = client.String()
+		}
+		if itemName != nil {
+			d["itemName"] = *itemName
 		}
 		res := fcm.MustSend(ctx, &messaging.MulticastMessage{
 			Tokens: tokens,

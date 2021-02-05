@@ -94,7 +94,15 @@ var (
 				PanicOn(err)
 				// propogate aggregate values upwards
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, i.ID, cnsts.TypeVitem, cnsts.ActionCreated, nil, args)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, i.ID, cnsts.TypeVitem, cnsts.ActionCreated, nil, struct {
+					Type vitem.Type `json:"type"`
+					Note string     `json:"string"`
+					Inc  uint64     `json:"inc"`
+				}{
+					Type: args.Type,
+					Note: StrEllipsis(args.Note, 50),
+					Inc:  args.Inc,
+				})
 				tx.Commit()
 				return vitem.VitemRes{
 					Task: tsk,
@@ -184,7 +192,15 @@ var (
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionUpdated, nil, args)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionUpdated, nil, struct {
+					Type vitem.Type `json:"type"`
+					Note string     `json:"string"`
+					Inc  uint64     `json:"inc"`
+				}{
+					Type: t.Type,
+					Note: StrEllipsis(t.Note, 50),
+					Inc:  t.Inc,
+				})
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				tx.Commit()
 				return &vitem.VitemRes{
@@ -232,7 +248,15 @@ var (
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionDeleted, nil, args.Type)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionDeleted, nil, struct {
+					Type vitem.Type `json:"type"`
+					Note string     `json:"string"`
+					Inc  uint64     `json:"inc"`
+				}{
+					Type: v.Type,
+					Note: StrEllipsis(v.Note, 50),
+					Inc:  v.Inc,
+				})
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				tx.Commit()
 				return tsk
