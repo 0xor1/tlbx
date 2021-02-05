@@ -355,7 +355,25 @@ var (
 				}
 				if simpleUpdateRequired || treeUpdateRequired {
 					update(t, oldParent, oldPrevSib, newParent, newPrevSib)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.ID, args.ID, cnsts.TypeTask, cnsts.ActionUpdated, &t.Name, args)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.ID, args.ID, cnsts.TypeTask, cnsts.ActionUpdated, &t.Name, struct {
+						Parent      *field.ID     `json:"parent,omitempty"`
+						PrevSib     *field.IDPtr  `json:"prevSib,omitempty"`
+						Name        *field.String `json:"name,omitempty"`
+						Description *field.String `json:"description,omitempty"`
+						IsParallel  *field.Bool   `json:"isParallel,omitempty"`
+						User        *field.IDPtr  `json:"user,omitempty"`
+						TimeEst     *field.UInt64 `json:"timeEst,omitempty"`
+						CostEst     *field.UInt64 `json:"costEst,omitempty"`
+					}{
+						Parent:      args.Parent,
+						PrevSib:     args.PrevSib,
+						Name:        args.Name,
+						Description: args.Description,
+						IsParallel:  args.IsParallel,
+						User:        args.User,
+						TimeEst:     args.TimeEst,
+						CostEst:     args.CostEst,
+					})
 				}
 				if treeUpdateRequired {
 					if oldParent != nil {
