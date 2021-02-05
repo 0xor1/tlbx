@@ -677,17 +677,57 @@ var (
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				return nil
+				return app.ExampleID()
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.RegisterForFCM)
+				clientStr := tlbx.Req().Header.Get("X-Fcm-Client")
+				var client ID
+				if clientStr == "" {
+					client = tlbx.NewID()
+				} else {
+					client = MustParseID(clientStr)
+				}
 				app.BadReqIf(args.Token == "", "empty string is not a valid fcm token")
 				me := me.Get(tlbx)
 				epsutil.MustHaveAccess(tlbx, args.Host, args.ID, &me, cnsts.RoleReader)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				epsutil.TaskMustExist(tx, args.Host, args.ID, args.ID)
-				_, err := tx.Exec(`INSERT INTO fcms (host, project, token, user, registeredOn) VALUES (?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), user=VALUES(user), registeredOn=VALUES(registeredOn)`, args.Host, args.ID, args.Token, me)
+				_, err := tx.Exec(`INSERT INTO fcms (host, project, token, user, client, registeredOn) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), user=VALUES(user), client=VALUES(client), registeredOn=VALUES(registeredOn)`, args.Host, args.ID, args.Token, me, client)
+				PanicOn(err)
+				tx.Commit()
+				return client
+			},
+		},
+		{
+			Description:  "unregister from fcm",
+			Path:         (&project.UnregisterFromFCM{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.UnregisterFromFCM{
+					Host: app.ExampleID(),
+					ID:   app.ExampleID(),
+				}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.UnregisterFromFCM{
+					Host:   app.ExampleID(),
+					ID:     app.ExampleID(),
+					Client: app.ExampleID(),
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*project.UnregisterFromFCM)
+				me := me.Get(tlbx)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				_, err := tx.Exec(`DELETE FROM fcms WHERE host=? AND project=? AND user=? AND client=?`, args.Host, args.ID, me, args.Client)
 				PanicOn(err)
 				tx.Commit()
 				return nil

@@ -198,11 +198,12 @@ func Everything(t *testing.T) {
 	(&project.Delete{p1.ID, p2.ID}).MustDo(ac)
 	a.Zero(len((&project.Get{Host: r.Ali().ID()}).MustDo(ac).Set))
 
-	regErr := (&project.RegisterForFCM{
+	fcmClientID, regErr := (&project.RegisterForFCM{
 		Host:  r.Ali().ID(),
 		ID:    app.ExampleID(),
 		Token: "abc:123",
 	}).Do(ac)
+	a.Nil(fcmClientID)
 	a.NotNil(regErr)
 
 	p1 = (&project.Create{
@@ -215,10 +216,17 @@ func Everything(t *testing.T) {
 		Name:         "My New Project",
 	}).MustDo(ac)
 
-	(&project.RegisterForFCM{
+	fcmClientID = (&project.RegisterForFCM{
 		Host:  r.Ali().ID(),
 		ID:    p1.ID,
 		Token: "abc:123",
+	}).MustDo(ac)
+	a.NotNil(fcmClientID)
+
+	(&project.UnregisterFromFCM{
+		Host:   r.Ali().ID(),
+		ID:     p1.ID,
+		Client: *fcmClientID,
 	}).MustDo(ac)
 
 	// test empty request
