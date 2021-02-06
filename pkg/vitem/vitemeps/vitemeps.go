@@ -82,7 +82,7 @@ var (
 					Type:      args.Type,
 					ID:        tlbx.NewID(),
 					CreatedBy: me,
-					CreatedOn: NowMilli(),
+					CreatedOn: tlbx.Start(),
 					Inc:       args.Inc,
 					Note:      args.Note,
 				}

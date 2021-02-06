@@ -67,7 +67,7 @@ var (
 					Name:        args.Name,
 					Description: args.Description,
 					CreatedBy:   me,
-					CreatedOn:   NowMilli(),
+					CreatedOn:   tlbx.Start(),
 					TimeEst:     args.TimeEst,
 					TimeInc:     0,
 					TimeSubMin:  0,

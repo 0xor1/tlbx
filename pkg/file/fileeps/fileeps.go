@@ -64,7 +64,7 @@ var (
 					Task:      innerArgs.Task,
 					ID:        tlbx.NewID(),
 					CreatedBy: me,
-					CreatedOn: NowMilli(),
+					CreatedOn: tlbx.Start(),
 					Size:      uint64(args.Size),
 					Type:      args.Type,
 					Name:      args.Name,

@@ -53,7 +53,7 @@ var (
 					Task:      args.Task,
 					ID:        tlbx.NewID(),
 					CreatedBy: me,
-					CreatedOn: NowMilli(),
+					CreatedOn: tlbx.Start(),
 					Body:      args.Body,
 				}
 				// insert new comment

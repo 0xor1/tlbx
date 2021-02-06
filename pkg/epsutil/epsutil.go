@@ -135,7 +135,8 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 	itemDeleted := action == cnsts.ActionDeleted
 	var nameQry string
 	qryArgs := make([]interface{}, 0, 14)
-	qryArgs = append(qryArgs, host, project, task, NowMilli(), me, item, itemType, taskDeleted, itemDeleted, action)
+	occurredOn := tlbx.Start()
+	qryArgs = append(qryArgs, host, project, task, occurredOn, me, item, itemType, taskDeleted, itemDeleted, action)
 	if itemType == cnsts.TypeTask {
 		nameQry = `?`
 		qryArgs = append(qryArgs, itemName, nil, ei)
@@ -154,7 +155,7 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 		}
 		PanicOn(err)
 	}
-	fcmSend(tlbx, tx, host, project, task, item, me, itemType, action, itemName, eiStr)
+	fcmSend(tlbx, tx, host, project, task, item, me, itemType, action, occurredOn, itemName, eiStr)
 }
 
 func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, isTask bool) {
@@ -169,7 +170,7 @@ func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, i
 	PanicOn(err)
 }
 
-func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfoStr string) {
+func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, occurredOn time.Time, itemName *string, extraInfoStr string) {
 	tokens := make([]string, 0, 50)
 	client := GetFCMClient(tlbx)
 	tx.Query(func(rows isql.Rows) {
@@ -199,6 +200,7 @@ func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemT
 			"user":       user.String(),
 			"userHandle": handle,
 			"type":       string(itemType),
+			"occurredOn": occurredOn.Format(time.RFC3339),
 			"action":     string(action),
 			"extraInfo":  extraInfoStr,
 		}

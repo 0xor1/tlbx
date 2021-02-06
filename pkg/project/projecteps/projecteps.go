@@ -73,7 +73,7 @@ var (
 						Name:       args.Name,
 						User:       ptr.ID(me),
 						CreatedBy:  me,
-						CreatedOn:  NowMilli(),
+						CreatedOn:  tlbx.Start(),
 						IsParallel: false,
 					},
 					Base: project.Base{
