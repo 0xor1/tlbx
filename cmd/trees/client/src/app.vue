@@ -34,8 +34,7 @@
         <!-- project activity stream -->
         <div v-if="showProjectActivityToggle && showProjectActivity" v-bind:class="{'show':showProjectActivity}" class="project-activity slide-out">
           <div class="exclude-deleted" @click.stop="toggleProjectActivityExcludeDeleted"><input id="hide-deleted" :checked="projectActivityExcludeDeleted" type="checkbox"><label for=""> hide deleted</label></div>
-          <div v-if="me != null" class="enable-realtime" @click.stop.prevent="toggleRealtime"><input id="enable-realtime" :checked="realtimeEnabled" type="checkbox"><label for=""> realtime</label></div>
-          
+          <div v-if="me != null" class="enable-realtime" @click.stop.prevent="toggleRealtime"><input id="enable-realtime" :checked="realtimeEnabled" type="checkbox"><label for=""> realtime</label></div>        
           <div class="entries">
             <div :class="{entry: true, 'task-deleted': a.taskDeleted, deleted: a.itemDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
               <user :userId="a.user"></user> 

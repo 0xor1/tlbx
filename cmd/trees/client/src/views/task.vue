@@ -955,6 +955,7 @@
             this.comment.set = [c].concat(this.comment.set)
             this.comment.bodyStr = ""
             this.comment.preview = false
+            this.refreshProjectActivity(true)
           }).finally(()=>{
             this.comment.loading = false
           })
