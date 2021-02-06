@@ -121,6 +121,7 @@ func StorePrefix(host ID, projectAndOrTask ...ID) string {
 }
 
 func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}) {
+	PanicIf(itemType == cnsts.TypeTask && !task.Equal(item), "item type is task but item and task ids are different")
 	me := me.Get(tlbx)
 	var ei *string
 	var eiStr string
@@ -130,26 +131,27 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 		ei = &eiStr
 
 	}
-	itemHasBeenDeleted := action == cnsts.ActionDeleted
+	taskDeleted := itemType == cnsts.TypeTask && action == cnsts.ActionDeleted
+	itemDeleted := action == cnsts.ActionDeleted
 	var nameQry string
 	qryArgs := make([]interface{}, 0, 14)
-	qryArgs = append(qryArgs, host, project, task, NowMilli(), me, item, itemType, itemHasBeenDeleted, action)
-	if task.Equal(item) {
+	qryArgs = append(qryArgs, host, project, task, NowMilli(), me, item, itemType, taskDeleted, itemDeleted, action)
+	if itemType == cnsts.TypeTask {
 		nameQry = `?`
 		qryArgs = append(qryArgs, itemName, nil, ei)
 	} else {
 		nameQry = `(SELECT name FROM tasks WHERE host=? AND project=? AND id=?)`
 		qryArgs = append(qryArgs, host, project, task, itemName, ei)
 	}
-	_, err := tx.Exec(Strf(`INSERT INTO activities(host, project, task, occurredOn, user, item, itemType, itemHasBeenDeleted, action, taskName, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, %s, ?, ?)`, nameQry), qryArgs...)
+	_, err := tx.Exec(Strf(`INSERT INTO activities(host, project, task, occurredOn, user, item, itemType, taskDeleted, itemDeleted, action, taskName, itemName, extraInfo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, %s, ?, ?)`, nameQry), qryArgs...)
 	PanicOn(err)
-	if itemHasBeenDeleted {
-		t := "item"
+	if itemDeleted {
+		// if this is deleting an item we need to update all prev activities on this item to have itemDeleted
 		if itemType == cnsts.TypeTask {
-			t = "task"
+			_, err = tx.Exec(`UPDATE activities SET taskDeleted=1, itemDeleted=1 WHERE host=? AND project=? AND task=?`, host, project, item)
+		} else {
+			_, err = tx.Exec(`UPDATE activities SET itemDeleted=1 WHERE host=? AND project=? AND item=?`, host, project, item)
 		}
-		// if this is deleting an item we need to update all prev activities on this item to have itemHasBeenDeleted
-		_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? AND %s=?`, t), host, project, item)
 		PanicOn(err)
 	}
 	fcmSend(tlbx, tx, host, project, task, item, me, itemType, action, itemName, eiStr)

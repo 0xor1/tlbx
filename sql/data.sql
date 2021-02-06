@@ -34,17 +34,18 @@ CREATE TABLE activities(
   user BINARY(16) NOT NULL,
   item BINARY(16) NOT NULL,
   itemType VARCHAR(50) NOT NULL,
-  itemHasBeenDeleted BOOL NOT NULL,
+  taskDeleted BOOL NOT NULL,
+  itemDeleted BOOL NOT NULL,
   action VARCHAR(50) NOT NULL,
   taskName VARCHAR(250) NULL,
   itemName VARCHAR(250) NULL,
   extraInfo VARCHAR(10000) NULL,
   PRIMARY KEY (host, project, occurredOn, item, user),
-  UNIQUE INDEX (host, project, itemHasBeenDeleted, occurredOn, item, user),
+  UNIQUE INDEX (host, project, itemDeleted, occurredOn, item, user),
   UNIQUE INDEX (host, project, item, occurredOn, user),
   UNIQUE INDEX (host, project, task, item, occurredOn, user),
   UNIQUE INDEX (host, project, user, occurredOn, item),
-  UNIQUE INDEX (host, project, user, itemHasBeenDeleted, occurredOn, item)
+  UNIQUE INDEX (host, project, user, itemDeleted, occurredOn, item)
 );
 
 DROP TABLE IF EXISTS projectLocks;

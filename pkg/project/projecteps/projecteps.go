@@ -595,15 +595,16 @@ var (
 				return &project.GetActivitiesRes{
 					Set: []*project.Activity{
 						{
-							Task:               ptr.ID(app.ExampleID()),
-							OccurredOn:         app.ExampleTime(),
-							User:               app.ExampleID(),
-							Item:               app.ExampleID(),
-							ItemType:           cnsts.TypeTask,
-							ItemHasBeenDeleted: false,
-							Action:             cnsts.ActionUpdated,
-							ItemName:           ptr.String("my task"),
-							ExtraInfo:          json.MustFromString(`{"isParallel":true}`),
+							Task:        ptr.ID(app.ExampleID()),
+							OccurredOn:  app.ExampleTime(),
+							User:        app.ExampleID(),
+							Item:        app.ExampleID(),
+							ItemType:    cnsts.TypeTask,
+							TaskDeleted: true,
+							ItemDeleted: false,
+							Action:      cnsts.ActionUpdated,
+							ItemName:    ptr.String("my task"),
+							ExtraInfo:   json.MustFromString(`{"isParallel":true}`),
 						},
 					},
 				}
@@ -613,11 +614,11 @@ var (
 				args.Limit = sql.Limit100(args.Limit)
 				app.BadReqIf(args.OccuredAfter != nil && args.OccuredBefore != nil, "only one of occurredBefore or occurredAfter may be used")
 				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
-				query := bytes.NewBufferString(`SELECT occurredOn, user, task, item, itemType, itemHasBeenDeleted, action, taskName, itemName, extraInfo FROM activities WHERE host=? AND project=?`)
+				query := bytes.NewBufferString(`SELECT occurredOn, user, task, item, itemType, taskDeleted, itemDeleted, action, taskName, itemName, extraInfo FROM activities WHERE host=? AND project=?`)
 				queryArgs := make([]interface{}, 0, 7)
 				queryArgs = append(queryArgs, args.Host, args.Project)
 				if args.ExcludeDeletedItems {
-					query.WriteString(` AND itemHasBeenDeleted=0`)
+					query.WriteString(` AND itemDeleted=0`)
 				}
 				if args.Item != nil {
 					query.WriteString(` AND item=?`)
@@ -650,7 +651,7 @@ var (
 						}
 						pa := &project.Activity{}
 						var extraInfo *string
-						PanicOn(rows.Scan(&pa.OccurredOn, &pa.User, &pa.Task, &pa.Item, &pa.ItemType, &pa.ItemHasBeenDeleted, &pa.Action, &pa.TaskName, &pa.ItemName, &extraInfo))
+						PanicOn(rows.Scan(&pa.OccurredOn, &pa.User, &pa.Task, &pa.Item, &pa.ItemType, &pa.TaskDeleted, &pa.ItemDeleted, &pa.Action, &pa.TaskName, &pa.ItemName, &extraInfo))
 						if extraInfo != nil {
 							pa.ExtraInfo = json.MustFromString(*extraInfo)
 						}

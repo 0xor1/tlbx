@@ -484,8 +484,8 @@ var (
 					_, err = tx.Exec(Strf(`DELETE FROM comments WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
 
-					// set all relevant activity logs as itemHasBeenDeleted=1
-					_, err = tx.Exec(Strf(`UPDATE activities SET itemHasBeenDeleted=1 WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
+					// set all relevant activity logs as taskDeleted =1, itemDeleted=1
+					_, err = tx.Exec(Strf(`UPDATE activities SET taskDeleted=1, itemDeleted=1 WHERE host=? AND project=? %s`, sql_in_tasks), queryArgs...)
 					PanicOn(err)
 
 					for _, t := range tasksWithFiles {
