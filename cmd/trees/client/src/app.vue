@@ -37,7 +37,7 @@
           <div v-if="me != null" class="enable-realtime" @click.stop.prevent="toggleRealtime"><input id="enable-realtime" :checked="realtimeEnabled" type="checkbox"><label for=""> realtime</label></div>
           <div v-if="loadingProjectActivity">loading...</div>
           <div class="entries">
-            <div :class="{entry: true, deleted: a.itemHasBeenDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
+            <div :class="{entry: true, deleted: a.itemDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
               <user :userId="a.user"></user> 
               <span v-if="a.itemType == `task`">
                 {{a.action}} {{a.itemType}} {{a.taskName}}
@@ -166,7 +166,7 @@
         this.goto(`/host/${this.me.id}/projects`)
       },
       gotoActivityTask(a){
-        if (!a.itemHasBeenDeleted) {
+        if (!a.taskDeleted) {
           this.$u.rtr.goto(`/host/${this.$u.rtr.host()}/project/${this.$u.rtr.project()}/task/${a.task}`)
           if (window.innerWidth <= 480) {
             this.showProjectActivity = false

@@ -323,16 +323,17 @@ type GetActivitiesRes struct {
 }
 
 type Activity struct {
-	Task               *ID          `json:"task,omitempty"`
-	OccurredOn         time.Time    `json:"occurredOn"`
-	User               ID           `json:"user"`
-	Item               ID           `json:"item"`
-	ItemType           cnsts.Type   `json:"itemType"`
-	ItemHasBeenDeleted bool         `json:"itemHasBeenDeleted"`
-	Action             cnsts.Action `json:"action"`
-	TaskName           *string      `json:"taskName,omitempty"`
-	ItemName           *string      `json:"itemName,omitempty"`
-	ExtraInfo          *json.Json   `json:"extraInfo,omitempty"`
+	Task        *ID          `json:"task,omitempty"`
+	OccurredOn  time.Time    `json:"occurredOn"`
+	User        ID           `json:"user"`
+	Item        ID           `json:"item"`
+	ItemType    cnsts.Type   `json:"itemType"`
+	TaskDeleted bool         `json:"taskDeleted"`
+	ItemDeleted bool         `json:"itemDeleted"`
+	Action      cnsts.Action `json:"action"`
+	TaskName    *string      `json:"taskName,omitempty"`
+	ItemName    *string      `json:"itemName,omitempty"`
+	ExtraInfo   *json.Json   `json:"extraInfo,omitempty"`
 }
 
 type FCM struct {
