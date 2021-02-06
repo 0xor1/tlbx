@@ -120,7 +120,7 @@ func Run(configs ...func(*Config)) {
 		tlbx := &tlbx{
 			resp:           &responseWrapper{w: w},
 			req:            r,
-			start:          NowUnixMilli(),
+			start:          NowMilli(),
 			idGenPool:      idGenPool,
 			isSubMDo:       isSubMDo(r),
 			log:            c.Log,
@@ -129,6 +129,7 @@ func Run(configs ...func(*Config)) {
 			storeMtx:       &sync.RWMutex{},
 			store:          map[interface{}]interface{}{},
 		}
+		tlbx.startMilli = tlbx.start.UnixNano() / 1000000
 		// close body
 		if tlbx.req != nil && tlbx.req.Body != nil {
 			defer tlbx.req.Body.Close()
@@ -138,7 +139,7 @@ func Run(configs ...func(*Config)) {
 			tlbx.actionStatsMtx.Lock()
 			defer tlbx.actionStatsMtx.Unlock()
 			tlbx.log.Stats(&reqStats{
-				Milli:   NowUnixMilli() - tlbx.start,
+				Milli:   NowUnixMilli() - tlbx.startMilli,
 				Status:  tlbx.resp.status,
 				Method:  tlbx.req.Method,
 				Path:    tlbx.req.URL.Path,
@@ -425,7 +426,8 @@ func (r *responseWrapper) WriteHeader(status int) {
 type Tlbx interface {
 	Req() *http.Request
 	Resp() http.ResponseWriter
-	Start() int64
+	Start() time.Time
+	StartMilli() int64
 	Ctx() context.Context
 	NewID() ID
 	Log() log.Log
@@ -438,7 +440,8 @@ type Tlbx interface {
 type tlbx struct {
 	resp           *responseWrapper
 	req            *http.Request
-	start          int64
+	start          time.Time
+	startMilli     int64
 	idGenPool      IDGenPool
 	idGen          IDGen
 	isSubMDo       bool
@@ -457,8 +460,12 @@ func (t *tlbx) Resp() http.ResponseWriter {
 	return t.resp
 }
 
-func (t *tlbx) Start() int64 {
+func (t *tlbx) Start() time.Time {
 	return t.start
+}
+
+func (t *tlbx) StartMilli() int64 {
+	return t.startMilli
 }
 
 func (t *tlbx) Ctx() context.Context {
