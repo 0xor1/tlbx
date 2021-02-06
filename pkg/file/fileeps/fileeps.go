@@ -93,7 +93,7 @@ var (
 				}{
 					Size: uint64(args.Size),
 					Type: args.Type,
-				})
+				}, nil)
 				res := &file.CreateRes{
 					Task: taskeps.GetOne(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task),
 					File: f,
@@ -273,7 +273,7 @@ var (
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeFile, cnsts.ActionDeleted, &f.Name, nil)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeFile, cnsts.ActionDeleted, &f.Name, nil, nil)
 				t := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				srv.Store().MustDelete(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
 				tx.Commit()

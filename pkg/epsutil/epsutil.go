@@ -120,7 +120,7 @@ func StorePrefix(host ID, projectAndOrTask ...ID) string {
 	return prefix
 }
 
-func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}) {
+func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}, fcmExtraInfo interface{}) {
 	PanicIf(itemType == cnsts.TypeTask && !task.Equal(item), "item type is task but item and task ids are different")
 	me := me.Get(tlbx)
 	var ei *string
@@ -154,6 +154,10 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 			_, err = tx.Exec(`UPDATE activities SET itemDeleted=1 WHERE host=? AND project=? AND item=?`, host, project, item)
 		}
 		PanicOn(err)
+	}
+	if fcmExtraInfo != nil {
+		// if fcmExtraInfo is passed use that instead of activity log extraInfo
+		eiStr = string(json.MustMarshal(fcmExtraInfo))
 	}
 	fcmSend(tlbx, tx, host, project, task, item, me, itemType, action, occurredOn, itemName, eiStr)
 }

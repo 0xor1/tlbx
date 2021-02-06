@@ -22,6 +22,13 @@ import (
 	"github.com/0xor1/trees/pkg/task/taskeps"
 )
 
+type extraInfo struct {
+	Type vitem.Type `json:"type"`
+	Note string     `json:"string"`
+	Est  *uint64    `json:"est,omitempty"`
+	Inc  uint64     `json:"inc"`
+}
+
 var (
 	Eps = []*app.Endpoint{
 		{
@@ -94,13 +101,15 @@ var (
 				PanicOn(err)
 				// propogate aggregate values upwards
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, i.ID, cnsts.TypeVitem, cnsts.ActionCreated, nil, struct {
-					Type vitem.Type `json:"type"`
-					Note string     `json:"string"`
-					Inc  uint64     `json:"inc"`
-				}{
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, i.ID, cnsts.TypeVitem, cnsts.ActionCreated, nil, &extraInfo{
 					Type: args.Type,
 					Note: StrEllipsis(args.Note, 50),
+					Est:  args.Est,
+					Inc:  args.Inc,
+				}, &extraInfo{
+					Type: args.Type,
+					Note: args.Note,
+					Est:  args.Est,
 					Inc:  args.Inc,
 				})
 				tx.Commit()
@@ -192,13 +201,13 @@ var (
 					PanicOn(err)
 					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionUpdated, nil, struct {
-					Type vitem.Type `json:"type"`
-					Note string     `json:"string"`
-					Inc  uint64     `json:"inc"`
-				}{
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionUpdated, nil, &extraInfo{
 					Type: t.Type,
 					Note: StrEllipsis(t.Note, 50),
+					Inc:  t.Inc,
+				}, &extraInfo{
+					Type: t.Type,
+					Note: t.Note,
 					Inc:  t.Inc,
 				})
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
@@ -248,13 +257,13 @@ var (
 				PanicOn(err)
 				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionDeleted, nil, struct {
-					Type vitem.Type `json:"type"`
-					Note string     `json:"string"`
-					Inc  uint64     `json:"inc"`
-				}{
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionDeleted, nil, &extraInfo{
 					Type: v.Type,
 					Note: StrEllipsis(v.Note, 50),
+					Inc:  v.Inc,
+				}, &extraInfo{
+					Type: v.Type,
+					Note: v.Note,
 					Inc:  v.Inc,
 				})
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
