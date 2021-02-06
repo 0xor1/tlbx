@@ -475,22 +475,6 @@
           })
         })
       },
-      fcmHandler(d){
-        // at this point d is the message data object
-        // and we know the action didnt originate from this
-        // client, so we can process it accordingly
-        if (d.project !== this.$u.rtr.project()) {
-          // if its a msg for a different project just ignore it
-          return
-        }
-        if (d.task === this.$u.rtr.task()) {
-          if (d.type === "comment") {
-            if (d.action === "created" && this.comment.set.length > 0 && d.item === this.comment.set[0].id) {
-              // just load comment
-            }
-          }
-        }
-      },
       taskAncestorLoadMore(){
         let obj = this.task.ancestor
         if (obj.loading) {
@@ -1013,13 +997,67 @@
           this.comment.preview = true
         }
       },
+      commentLoadOne(id){
+        if (this.comment.loading) {
+          return
+        }
+        this.comment.loading = true
+        return this.$api.comment.get({
+          host: this.$u.rtr.host(), 
+          project: this.$u.rtr.project(), 
+          task: this.$u.rtr.task(),
+          ids: [id]
+        }).then((cs)=>{
+          return cs.set[0]
+        }).finally(()=>{
+          this.comment.loading = false
+        })
+      },
       refreshProjectActivity(force){
         if (this.t0 != null) {
           this.vitem.time.estStr = this.$u.fmt.time(this.t0.timeEst)
           this.vitem.cost.estStr = this.$u.fmt.cost(this.t0.costEst)
         }
         this.$emit("refreshProjectActivity", force)
-      }
+      },
+      fcmHandler(d){
+        // at this point d is the message data object
+        // and we know the action didnt originate from this
+        // client, so we can process it accordingly
+        if (d.project !== this.$u.rtr.project()) {
+          // if its a msg for a different project just ignore it
+          return
+        }
+        if (d.task === this.$u.rtr.task()) {
+          if (d.type === "comment") {
+            if (d.action === "created") {
+              if (d.extraInfo != null && !d.extraInfo.endsWith("...")) {
+                this.comment.set = [{
+                  task: d.task,
+                  id: d.item,
+                  createdOn: d.occurredOn,
+                  createdBy: d.user,
+                  body: d.extraInfo
+                }].concat(this.comment.set)
+              } else {
+                // here we dont have the full comment body so have to ask for it
+                this.commentLoadOne(d.item).then((c)=>{
+                  if (c) {
+                    this.comment.set = [{
+                      task: d.task,
+                      id: d.item,
+                      createdOn: d.occurredOn,
+                      createdBy: d.user,
+                      body: d.extraInfo
+                    }].concat(this.comment.set)
+                  }
+                })
+              }
+              this.refreshProjectActivity(true)
+            }
+          }
+        }
+      },
     },
     mounted(){
       this.init()

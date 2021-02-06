@@ -168,14 +168,19 @@ function newApi(isMDoApi) {
       },
       onMessage(fn){
         fcm.onMessage((msg)=>{
-          console.log(msg)
           if (msg != null && msg.data != null) {
             let d = msg.data
+            if (d.extraInfo != null) {
+              d.extraInfo = JSON.parse(d.extraInfo)
+            }
+            console.log(d)
             if (fcmClientId === d.client) {
               console.log("fcm came from action on this client")
               return 
             }
             fn(d)
+          } else {
+            console.log("unexpected fcm msg format received", msg)
           }
         })
       }

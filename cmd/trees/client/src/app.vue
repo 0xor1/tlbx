@@ -154,9 +154,21 @@
       },
       loginout() {
         if (this.me != null) {
-          this.$api.user.logout().then(()=>{
-            this.goto('/login')
-          })
+          if (this.$u.rtr.project() != null) {
+            let mapi = this.$api.newMDoApi()
+            mapi.project.unregisterFromFCM({
+              host: this.$u.rtr.host(),
+              id: this.$u.rtr.project()
+            })
+            mapi.user.logout().then(()=>{
+              this.goto('/login')
+            })
+            mapi.sendMDo()
+          } else {
+            this.$api.user.logout().then(()=>{
+              this.goto('/login')
+            })
+          }
         } else {
           this.goto('/login')
         }
@@ -366,6 +378,7 @@
       @include border($dir: right);
     }
     > .opts{
+      margin-top: 2.6pc;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
