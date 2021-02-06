@@ -12,4 +12,5 @@ const fcm = firebase.messaging();
 
 fcm.onBackgroundMessage(function(payload) {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  //self.registration.showNotification("YOLO", {silent: true});
 });

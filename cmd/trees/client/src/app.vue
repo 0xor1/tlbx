@@ -35,9 +35,9 @@
         <div v-if="showProjectActivityToggle && showProjectActivity" v-bind:class="{'show':showProjectActivity}" class="project-activity slide-out">
           <div class="exclude-deleted" @click.stop="toggleProjectActivityExcludeDeleted"><input id="hide-deleted" :checked="projectActivityExcludeDeleted" type="checkbox"><label for=""> hide deleted</label></div>
           <div v-if="me != null" class="enable-realtime" @click.stop.prevent="toggleRealtime"><input id="enable-realtime" :checked="realtimeEnabled" type="checkbox"><label for=""> realtime</label></div>
-          <div v-if="loadingProjectActivity">loading...</div>
+          
           <div class="entries">
-            <div :class="{entry: true, deleted: a.itemDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
+            <div :class="{entry: true, 'task-deleted': a.taskDeleted, deleted: a.itemDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
               <user :userId="a.user"></user> 
               <span v-if="a.itemType == `task`">
                 {{a.action}} {{a.itemType}} {{a.taskName}}
@@ -356,7 +356,6 @@
       }
     }
     > div {
-      margin-top: 2.6pc;
       &.exclude-deleted, &.enable-realtime {
         margin-top: 0;
       }
@@ -432,15 +431,17 @@
       > .entry{
         overflow-wrap: anywhere;
         padding: 0.6pc;
-        &:not(.deleted) {
+        &:not(.task-deleted) {
           cursor: pointer;
           &:hover {
             background-color: $inputActiveColor;
           }
         }
         &.deleted{
-          cursor: default;
           background-color: #400;
+          &:hover:not(.task-deleted) {
+            background-color: #600;
+          }
         }
         * {
           background-color: transparent;
