@@ -47,7 +47,7 @@
               {{c.name}}
             </th>
           </tr>
-          <tr class="row" v-for="(t, idx) in task.set" :key="idx" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
+          <tr class="row" v-for="(t, idx) in task.set" :key="t.id" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
             <td :title="taskTitle(t)" v-bind:class="c.name" v-for="(c, idx) in taskCols" :key="idx">
               <span :title="t.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': t.isParallel}" v-if="c.name == 'name'">{{t.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
@@ -103,7 +103,7 @@
               <th v-if="$root.show.user">user</th>
               <th>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></th>
             </tr>
-            <tr class="item" v-for="(i, idx) in vitem[type].set" :key="idx">
+            <tr class="item" v-for="(i, idx) in vitem[type].set" :key="i.id">
               <td v-if="vitem[type].updIdx != idx" class="note" v-html="$u.fmt.mdLinkify(i.note)"></td>
               <td v-else class="note"><input :class="{err: vitem[type].updNote > 250}" v-model="vitem[type].updNote" type="text" placeholder="note" @blur="vitemValidateUpd(type, true)" @keyup="vitemValidateUpd(type)" @keydown.enter="vitemSubmitUpd(type)" @keydown.escape="vitemCancelUpd(type)"/></td>
               <td v-if="$root.show.date">{{$u.fmt.date(i.createdOn)}}</td>
@@ -144,7 +144,7 @@
             <th v-if="$root.show.user">user</th>
             <th>size</th>
           </tr>
-          <tr class="item" v-for="(f, idx) in file.set" :key="idx">
+          <tr class="item" v-for="(f, idx) in file.set" :key="f.id">
             <td class="note">
               <a v-if="fileIsImageType(f)" :href="fileGetDownloadUrl(f, false)" target="_blank">{{$u.fmt.ellipsis(f.name, 35)}}</a>
               <a v-else :href="fileGetDownloadUrl(f, true)">{{$u.fmt.ellipsis(f.name, 35)}}</a>
@@ -179,7 +179,7 @@
           </div>
         </div>
         <div class="comment-set" v-if="comment.set.length > 0">
-          <div class="comment" v-for="(c, idx) in comment.set" :key="idx">
+          <div class="comment" v-for="(c, idx) in comment.set" :key="c.id">
             <div class="comment-meta small">
               {{$u.fmt.datetime(c.createdOn)}} - <user :userId="c.createdBy"></user>
               <span v-if="pMe != null && pMe.id === c.createdBy" class=actions>
