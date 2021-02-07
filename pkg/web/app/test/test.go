@@ -18,6 +18,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/config"
 	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
@@ -168,8 +169,8 @@ func NewRig(
 	useUsers bool,
 	onActivate func(app.Tlbx, *user.User),
 	onDelete func(app.Tlbx, ID),
-	enableSocials bool,
 	onSetSocials func(app.Tlbx, *user.User) error,
+	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
 	buckets ...string,
 ) Rig {
 	r := &rig{
@@ -199,8 +200,8 @@ func NewRig(
 				config.ConfirmChangeEmailFmtLink,
 				onActivate,
 				onDelete,
-				enableSocials,
-				onSetSocials)...)
+				onSetSocials,
+				validateFcmTopic)...)
 	}
 	go app.Run(func(c *app.Config) {
 		c.TlbxSetup = app.TlbxMwares{

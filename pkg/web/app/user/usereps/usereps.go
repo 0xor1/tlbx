@@ -24,6 +24,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
+	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/disintegration/imaging"
@@ -35,15 +36,20 @@ const (
 	AvatarPrefix = ""
 )
 
+var NopOnSetSocials = func(_ app.Tlbx, _ *user.User) error {
+	return nil
+}
+
 func New(
 	fromEmail,
 	activateFmtLink,
 	confirmChangeEmailFmtLink string,
 	onActivate func(app.Tlbx, *user.User),
 	onDelete func(app.Tlbx, ID),
-	enableSocials bool,
 	onSetSocials func(app.Tlbx, *user.User) error,
+	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
 ) []*app.Endpoint {
+	enableSocials := onSetSocials != nil
 	eps := []*app.Endpoint{
 		{
 			Description:  "register a new account (requires email link)",
@@ -106,7 +112,7 @@ func New(
 				defer usrtx.Rollback()
 				pwdtx := srv.Pwd().Begin()
 				defer pwdtx.Rollback()
-				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, Now(), activateCode)
+				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, false, Now(), activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
@@ -713,6 +719,147 @@ func New(
 				},
 			})
 	}
+	if validateFcmTopic != nil {
+		eps = append(eps,
+			&app.Endpoint{
+				Description:  "set fcm enabled",
+				Path:         (&user.SetFCMEnabled{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: app.KB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return &user.SetFCMEnabled{
+						Val: true,
+					}
+				},
+				GetExampleArgs: func() interface{} {
+					return &user.SetFCMEnabled{
+						Val: true,
+					}
+				},
+				GetExampleResponse: func() interface{} {
+					return nil
+				},
+				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+					args := a.(*user.SetFCMEnabled)
+					me := me.Get(tlbx)
+					tx := service.Get(tlbx).User().Begin()
+					defer tx.Rollback()
+					u := getUser(tx, nil, &me)
+					if *u.FcmEnabled == args.Val {
+						// not changing anything
+						return nil
+					}
+					u.FcmEnabled = &args.Val
+					updateUser(tx, u)
+					tokens := make([]string, 0, 5)
+					tx.Query(func(rows isql.Rows) {
+						for rows.Next() {
+							token := ""
+							PanicOn(rows.Scan(&token))
+							tokens = append(tokens, token)
+						}
+					}, `SELECT DISTINCT token FROM fcmTokens WHERE user=?`, me)
+					tx.Commit()
+					if len(tokens) == 0 {
+						// no tokens to notify
+						return nil
+					}
+					valStr := "true"
+					if !args.Val {
+						valStr = "false"
+					}
+					service.Get(tlbx).FCM().AsyncSend(tokens, map[string]string{
+						"fcmEnabled": valStr,
+					}, 0)
+					return nil
+				},
+			},
+			&app.Endpoint{
+				Description:  "register for fcm",
+				Path:         (&user.RegisterForFCM{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: app.KB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return &user.RegisterForFCM{}
+				},
+				GetExampleArgs: func() interface{} {
+					return &user.RegisterForFCM{
+						Topic:  IDs{app.ExampleID()},
+						Client: ptr.ID(app.ExampleID()),
+						Token:  "abc:123",
+					}
+				},
+				GetExampleResponse: func() interface{} {
+					return app.ExampleID()
+				},
+				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+					args := a.(*user.RegisterForFCM)
+					app.BadReqIf(len(args.Topic) == 0 || len(args.Topic) > 5, "topic must contain 1 to 5 ids")
+					app.BadReqIf(args.Token == "", "empty string is not a valid fcm token")
+					client := args.Client
+					if client == nil {
+						client = ptr.ID(tlbx.NewID())
+					}
+					me := me.Get(tlbx)
+					tx := service.Get(tlbx).User().Begin()
+					defer tx.Rollback()
+					u := getUser(tx, nil, &me)
+					app.BadReqIf(u.FcmEnabled == nil || !*u.FcmEnabled, "fcm not enabled for user, please enable first then register for topics")
+					// this query is used to get a users 5th token createdOn value if they have one
+					row := tx.QueryRow(`SELECT createdOn FROM fcmTokens WHERE user=? ORDER BY createdOn DESC LIMIT 4, 1`, me)
+					fifthYoungestTokenCreatedOn := time.Time{}
+					sqlh.PanicIfIsntNoRows(row.Scan(&fifthYoungestTokenCreatedOn))
+					if !fifthYoungestTokenCreatedOn.IsZero() {
+						// this user has 5 topics they're subscribed too already so delete the older ones
+						// to make room for this new one
+						_, err := tx.Exec(`DELETE FROM fcmTokens WHERE user=? AND createdOn<=?`, me, fifthYoungestTokenCreatedOn)
+						PanicOn(err)
+					}
+					appTx, err := validateFcmTopic(tlbx, args.Topic)
+					if appTx != nil {
+						defer appTx.Rollback()
+					}
+					PanicOn(err)
+					_, err = tx.Exec(`INSERT INTO fcmTokens (topic, token, user, client, createdOn) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE topic=VALUES(topic), token=VALUES(token), user=VALUES(user), client=VALUES(client), createdOn=VALUES(createdOn)`, args.Topic.StrJoin("_"), args.Token, me, client, tlbx.Start())
+					PanicOn(err)
+					tx.Commit()
+					if appTx != nil {
+						appTx.Commit()
+					}
+					return client
+				},
+			},
+			&app.Endpoint{
+				Description:  "unregister from fcm",
+				Path:         (&user.UnregisterFromFCM{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: app.KB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return &user.UnregisterFromFCM{}
+				},
+				GetExampleArgs: func() interface{} {
+					return &user.UnregisterFromFCM{
+						Client: app.ExampleID(),
+					}
+				},
+				GetExampleResponse: func() interface{} {
+					return nil
+				},
+				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+					args := a.(*user.UnregisterFromFCM)
+					me := me.Get(tlbx)
+					tx := service.Get(tlbx).User().Begin()
+					defer tx.Rollback()
+					_, err := tx.Exec(`DELETE FROM fcmTokens WHERE user=? AND client=?`, me, args.Client)
+					PanicOn(err)
+					tx.Commit()
+					return nil
+				},
+			})
+	}
 	return eps
 }
 
@@ -764,7 +911,7 @@ type fullUser struct {
 
 func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 	PanicIf(email == nil && id == nil, "one of email or id must not be nil")
-	query := `SELECT id, email, handle, alias, hasAvatar, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn FROM users WHERE `
+	query := `SELECT id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn FROM users WHERE `
 	var arg interface{}
 	if email != nil {
 		query += `email=?`
@@ -775,7 +922,7 @@ func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 	}
 	row := tx.QueryRow(query, arg)
 	res := &fullUser{}
-	err := row.Scan(&res.ID, &res.Email, &res.Handle, &res.Alias, &res.HasAvatar, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
+	err := row.Scan(&res.ID, &res.Email, &res.Handle, &res.Alias, &res.HasAvatar, &res.FcmEnabled, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
 	if err == isql.ErrNoRows {
 		return nil
 	}
@@ -784,7 +931,7 @@ func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 }
 
 func updateUser(tx sql.Tx, user *fullUser) {
-	_, err := tx.Exec(`UPDATE users SET email=?, handle=?, alias=?, hasAvatar=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.Handle, user.Alias, user.HasAvatar, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
+	_, err := tx.Exec(`UPDATE users SET email=?, handle=?, alias=?, hasAvatar=?, fcmEnabled=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.Handle, user.Alias, user.HasAvatar, user.FcmEnabled, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
 	PanicOn(err)
 }
 

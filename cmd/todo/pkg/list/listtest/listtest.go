@@ -12,6 +12,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
+	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,7 +24,7 @@ func Everything(t *testing.T) {
 		true,
 		nil,
 		listeps.OnDelete,
-		true,
+		usereps.NopOnSetSocials,
 		nil)
 	defer r.CleanUp()
 

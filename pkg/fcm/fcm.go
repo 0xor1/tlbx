@@ -54,22 +54,22 @@ func (c *client) MustSend(ctx context.Context, m *messaging.MulticastMessage) *m
 	return res
 }
 
-func NewNoopClient(l log.Log) Client {
-	return &noopClient{
+func NewNopClient(l log.Log) Client {
+	return &nopClient{
 		log: l,
 	}
 }
 
-type noopClient struct {
+type nopClient struct {
 	log log.Log
 }
 
-func (c *noopClient) Send(ctx context.Context, m *messaging.MulticastMessage) (*messaging.BatchResponse, error) {
-	c.log.Warning("noop fcm client called for %d tokens", len(m.Tokens))
+func (c *nopClient) Send(ctx context.Context, m *messaging.MulticastMessage) (*messaging.BatchResponse, error) {
+	c.log.Warning("nop fcm client called for %d tokens", len(m.Tokens))
 	return &messaging.BatchResponse{}, nil
 }
 
-func (c *noopClient) MustSend(ctx context.Context, m *messaging.MulticastMessage) *messaging.BatchResponse {
+func (c *nopClient) MustSend(ctx context.Context, m *messaging.MulticastMessage) *messaging.BatchResponse {
 	res, err := c.Send(ctx, m)
 	PanicOn(err)
 	return res

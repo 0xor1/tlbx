@@ -304,8 +304,63 @@ func (a *GetAvatar) MustDo(c *app.Client) *app.DownStream {
 }
 
 type User struct {
-	ID        ID      `json:"id"`
-	Handle    *string `json:"handle,omitempty"`
-	Alias     *string `json:"alias,omitempty"`
-	HasAvatar *bool   `json:"hasAvatar,omitempty"`
+	ID         ID      `json:"id"`
+	Handle     *string `json:"handle,omitempty"`
+	Alias      *string `json:"alias,omitempty"`
+	HasAvatar  *bool   `json:"hasAvatar,omitempty"`
+	FcmEnabled *bool   `json:"fcmEnabled,omitempty"`
+}
+
+type SetFCMEnabled struct {
+	Val bool `json:"val"`
+}
+
+func (_ *SetFCMEnabled) Path() string {
+	return "/user/setFCMEnabled"
+}
+
+func (a *SetFCMEnabled) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *SetFCMEnabled) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
+
+type RegisterForFCM struct {
+	Topic  IDs    `json:"topic"`
+	Client *ID    `json:"client"`
+	Token  string `json:"token"`
+}
+
+func (_ *RegisterForFCM) Path() string {
+	return "/project/registerForFCM"
+}
+
+func (a *RegisterForFCM) Do(c *app.Client) (*ID, error) {
+	res := &ID{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *RegisterForFCM) MustDo(c *app.Client) *ID {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type UnregisterFromFCM struct {
+	Client ID `json:"client"`
+}
+
+func (_ *UnregisterFromFCM) Path() string {
+	return "/user/unregisterFromFCM"
+}
+
+func (a *UnregisterFromFCM) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *UnregisterFromFCM) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
 }

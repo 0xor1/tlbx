@@ -11,8 +11,11 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
+	"github.com/0xor1/tlbx/pkg/web/app/service"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
+	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,8 +26,11 @@ func Everything(t *testing.T) {
 		true,
 		func(tlbx app.Tlbx, user *user.User) {},
 		func(tlbx app.Tlbx, id ID) {},
-		true,
-		func(tlbx app.Tlbx, user *user.User) error { return nil })
+		usereps.NopOnSetSocials,
+		func(t app.Tlbx, i IDs) (sql.Tx, error) {
+			tx := service.Get(t).Pwd().Begin()
+			return tx, nil
+		})
 	defer r.CleanUp()
 
 	a := assert.New(t)
@@ -228,4 +234,76 @@ func Everything(t *testing.T) {
 	}).Do(c)
 	a.Equal(400, err.(*app.ErrMsg).Status)
 	a.True(regexp.MustCompile(`must wait [1-9][0-9]{2} seconds before reseting pwd again`).MatchString(err.(*app.ErrMsg).Msg))
+
+	// test fcm eps
+	ac := r.Ali().Client()
+	fcmToken := "123:abc"
+	(&user.SetFCMEnabled{
+		Val: false,
+	}).MustDo(ac)
+
+	(&user.SetFCMEnabled{
+		Val: true,
+	}).MustDo(ac)
+
+	client1 := (&user.RegisterForFCM{
+		Topic: IDs{app.ExampleID()},
+		Token: fcmToken,
+	}).MustDo(ac)
+	a.NotNil(client1)
+
+	idGen := NewIDGen()
+	// using client1 so this should overwrite existing fcmTokens row.
+	client2 := (&user.RegisterForFCM{
+		Topic:  IDs{idGen.MustNew(), idGen.MustNew()},
+		Client: client1,
+		Token:  fcmToken,
+	}).MustDo(ac)
+	a.True(client1.Equal(*client2))
+
+	client2 = (&user.RegisterForFCM{
+		Topic: IDs{idGen.MustNew(), idGen.MustNew()},
+		Token: fcmToken,
+	}).MustDo(ac)
+	a.False(client1.Equal(*client2))
+
+	client2 = (&user.RegisterForFCM{
+		Topic: IDs{idGen.MustNew(), idGen.MustNew()},
+		Token: fcmToken,
+	}).MustDo(ac)
+	a.False(client1.Equal(*client2))
+
+	client2 = (&user.RegisterForFCM{
+		Topic: IDs{idGen.MustNew(), idGen.MustNew()},
+		Token: fcmToken,
+	}).MustDo(ac)
+	a.False(client1.Equal(*client2))
+
+	//registered to 5 topics now which is max allowed
+	client2 = (&user.RegisterForFCM{
+		Topic: IDs{idGen.MustNew(), idGen.MustNew()},
+		Token: fcmToken,
+	}).MustDo(ac)
+	a.False(client1.Equal(*client2))
+
+	// this 6th topic should cause the oldest to be bumped out
+	// leaving this as the newest of the allowed 5
+	client2 = (&user.RegisterForFCM{
+		Topic: IDs{idGen.MustNew(), idGen.MustNew()},
+		Token: fcmToken,
+	}).MustDo(ac)
+	a.False(client1.Equal(*client2))
+
+	// toggle off and back on to test sending fcmEnabled:true/false data push
+	(&user.SetFCMEnabled{
+		Val: false,
+	}).MustDo(ac)
+
+	(&user.SetFCMEnabled{
+		Val: true,
+	}).MustDo(ac)
+
+	(&user.UnregisterFromFCM{
+		Client: app.ExampleID(),
+	}).MustDo(ac)
 }

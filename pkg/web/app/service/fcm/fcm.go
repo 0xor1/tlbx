@@ -2,6 +2,7 @@ package fcm
 
 import (
 	"context"
+	"time"
 
 	"firebase.google.com/go/messaging"
 	. "github.com/0xor1/tlbx/pkg/core"
@@ -11,6 +12,11 @@ import (
 
 type tlbxKey struct {
 	name string
+}
+
+type Client interface {
+	fcm.Client
+	AsyncSend(tokens []string, data map[string]string, timeout time.Duration)
 }
 
 func Mware(name string, fcm fcm.Client) func(app.Tlbx) {
@@ -23,8 +29,8 @@ func Mware(name string, fcm fcm.Client) func(app.Tlbx) {
 	}
 }
 
-func Get(tlbx app.Tlbx, name string) fcm.Client {
-	return tlbx.Get(tlbxKey{name}).(fcm.Client)
+func Get(tlbx app.Tlbx, name string) Client {
+	return tlbx.Get(tlbxKey{name}).(Client)
 }
 
 type client struct {
@@ -58,4 +64,32 @@ func (c *client) do(do func(), action string) {
 		Name:   c.name,
 		Action: action,
 	})
+}
+
+var clientHeaderName = "X-Fcm-Client"
+
+func (c *client) AsyncSend(tokens []string, data map[string]string, timeout time.Duration) {
+	if len(tokens) == 0 {
+		return
+	}
+	if timeout <= 0 {
+		timeout = 3 * time.Second
+	}
+	log := c.tlbx.Log()
+	_, clientExists := data[clientHeaderName]
+	PanicIf(clientExists, clientHeaderName+" is a reserved fcm push property for internal api use")
+	client := c.tlbx.Req().Header.Get(clientHeaderName)
+	if client != "" {
+		data[clientHeaderName] = client
+	}
+	Go(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		log.Info("doing async call to fcm service with %d tokens", len(tokens))
+		res := c.MustSend(ctx, &messaging.MulticastMessage{
+			Tokens: tokens,
+			Data:   data,
+		})
+		log.Info("FCM success: %d, fail: %d", res.SuccessCount, res.FailureCount)
+	}, log.ErrorOn)
 }

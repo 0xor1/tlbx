@@ -38,7 +38,7 @@ func main() {
 						config.ConfirmChangeEmailFmtLink,
 						nil,
 						listeps.OnDelete,
-						true,
+						usereps.NopOnSetSocials,
 						nil)...),
 				listeps.Eps...),
 			itemeps.Eps...)

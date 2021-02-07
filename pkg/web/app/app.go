@@ -163,7 +163,7 @@ func Run(configs ...func(*Config)) {
 		tlbx.resp.Header().Set("X-Version", c.Version)
 		// check method
 		method := tlbx.req.Method
-		BadReqIf(method != http.MethodGet && method != http.MethodPut, "only GET and PUT methods are accepted")
+		BadReqIf(method != http.MethodGet && method != http.MethodPut && method != http.MethodPost, "only GET, PUT and POST methods are accepted")
 		lPath := StrLower(tlbx.req.URL.Path)
 		// tlbx mwares
 		for _, setup := range c.TlbxSetup {

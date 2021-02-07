@@ -15,6 +15,10 @@ func StrEllipsis(s string, max uint) string {
 	return s
 }
 
+func StrJoin(strs []string, sep string) string {
+	return strings.Join(strs, sep)
+}
+
 func StrLower(s string) string {
 	return strings.ToLower(s)
 }

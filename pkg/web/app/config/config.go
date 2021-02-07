@@ -134,7 +134,7 @@ func GetProcessed(c *config.Config) *Config {
 		PanicOn(err)
 		res.FCM = fcm.NewClient(client)
 	} else {
-		res.FCM = fcm.NewNoopClient(res.Log)
+		res.FCM = fcm.NewNopClient(res.Log)
 	}
 
 	res.StaticDir = c.GetString("staticDir")

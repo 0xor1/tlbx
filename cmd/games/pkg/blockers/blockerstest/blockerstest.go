@@ -22,7 +22,7 @@ func Everything(t *testing.T) {
 		append(game.Eps, blockerseps.Eps...),
 		false,
 		nil, nil,
-		false,
+		nil,
 		nil)
 	defer r.CleanUp()
 

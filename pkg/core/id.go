@@ -197,6 +197,14 @@ func (ids IDs) ToIs() []interface{} {
 	return res
 }
 
+func (ids IDs) StrJoin(sep string) string {
+	strs := make([]string, 0, len(ids))
+	for _, id := range ids {
+		strs = append(strs, id.String())
+	}
+	return StrJoin(strs, sep)
+}
+
 var zeroIDErr = Err("zero id detected")
 
 func PanicIfZeroID(id ID) {
