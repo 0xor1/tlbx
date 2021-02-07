@@ -182,7 +182,7 @@
           <div class="comment" v-for="(c, idx) in comment.set" :key="c.id">
             <div class="comment-meta small">
               {{$u.fmt.datetime(c.createdOn)}} - <user :userId="c.createdBy"></user>
-              <span v-if="pMe != null && pMe.id === c.createdBy" class=actions>
+              <span v-if="pMe != null && (pMe.id === c.createdBy || $u.perm.canAdmin(pMe))" class=actions>
                 <img src="@/assets/edit.svg" title="update" @click.stop.prevent="commentTglUpdIdx(idx)">
                 <img src="@/assets/trash.svg" title="delete safety" @click.stop.prevent="commentTglDltIdx(idx)">
                 <img v-if="comment.dltIdx === idx" title="delete" src="@/assets/trash-red.svg" @click.stop.prevent="commentDlt(idx)">
