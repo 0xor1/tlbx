@@ -50,6 +50,7 @@ func New(
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
 ) []*app.Endpoint {
 	enableSocials := onSetSocials != nil
+	enableFCM := validateFcmTopic != nil
 	eps := []*app.Endpoint{
 		{
 			Description:  "register a new account (requires email link)",
@@ -108,11 +109,15 @@ func New(
 				if enableSocials {
 					hasAvatar = ptr.Bool(false)
 				}
+				var fcmEnabled *bool
+				if enableFCM {
+					fcmEnabled = ptr.Bool(false)
+				}
 				usrtx := srv.User().Begin()
 				defer usrtx.Rollback()
 				pwdtx := srv.Pwd().Begin()
 				defer pwdtx.Rollback()
-				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, false, Now(), activateCode)
+				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, fcmEnabled, Now(), activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
@@ -420,6 +425,9 @@ func New(
 					ex.Alias = ptr.String("Joe Bloggs")
 					ex.HasAvatar = ptr.Bool(true)
 				}
+				if enableFCM {
+					ex.FcmEnabled = ptr.Bool(true)
+				}
 				return ex
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
@@ -489,6 +497,9 @@ func New(
 					ex.Alias = ptr.String("Joe Bloggs")
 					ex.HasAvatar = ptr.Bool(true)
 				}
+				if enableFCM {
+					ex.FcmEnabled = ptr.Bool(true)
+				}
 				return ex
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
@@ -521,12 +532,17 @@ func New(
 					}
 				},
 				GetExampleResponse: func() interface{} {
+					var fcmEnabled *bool
+					if enableFCM {
+						fcmEnabled = ptr.Bool(true)
+					}
 					ex := []user.User{
 						{
-							ID:        app.ExampleID(),
-							Handle:    ptr.String("bloe_joggs"),
-							Alias:     ptr.String("Joe Bloggs"),
-							HasAvatar: ptr.Bool(true),
+							ID:         app.ExampleID(),
+							Handle:     ptr.String("bloe_joggs"),
+							Alias:      ptr.String("Joe Bloggs"),
+							HasAvatar:  ptr.Bool(true),
+							FcmEnabled: fcmEnabled,
 						},
 					}
 					return ex
@@ -538,7 +554,7 @@ func New(
 					}
 					validate.MaxIDs(tlbx, "users", args.Users, 1000)
 					srv := service.Get(tlbx)
-					query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar FROM users WHERE id IN(?`)
+					query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar, fcmEnabled FROM users WHERE id IN(?`)
 					queryArgs := make([]interface{}, 0, len(args.Users))
 					queryArgs = append(queryArgs, args.Users[0])
 					for _, id := range args.Users[1:] {
@@ -550,7 +566,7 @@ func New(
 					PanicOn(srv.User().Query(func(rows isql.Rows) {
 						for rows.Next() {
 							u := &user.User{}
-							PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
+							PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar, &u.FcmEnabled))
 							res = append(res, u)
 						}
 					}, query.String(), queryArgs...))
