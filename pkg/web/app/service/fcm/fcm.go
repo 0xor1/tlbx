@@ -86,7 +86,7 @@ func (c *client) AsyncSend(fcmDB sqlh.ClientCore, topic IDs, data map[string]str
 			PanicOn(rows.Scan(&token))
 			tokens = append(tokens, token)
 		}
-	}, `SELECT DISTINCT token FROM fcmTokens WHERE topic=?`, topic.StrJoin("_"))
+	}, `SELECT DISTINCT f.token FROM fcmTokens f JOIN users u ON f.user=u.id WHERE topic=? AND u.fcmEnabled=1`, topic.StrJoin("_"))
 	c.RawAsyncSend(tokens, data, timeout)
 }
 
