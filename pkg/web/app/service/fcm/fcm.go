@@ -7,7 +7,9 @@ import (
 	"firebase.google.com/go/messaging"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/fcm"
+	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	sqlh "github.com/0xor1/tlbx/pkg/web/app/service/sql"
 )
 
 type tlbxKey struct {
@@ -16,7 +18,8 @@ type tlbxKey struct {
 
 type Client interface {
 	fcm.Client
-	AsyncSend(tokens []string, data map[string]string, timeout time.Duration)
+	AsyncSend(fcmDB sqlh.ClientCore, topic IDs, data map[string]string, timeout time.Duration)
+	RawAsyncSend(tokens []string, data map[string]string, timeout time.Duration)
 }
 
 func Mware(name string, fcm fcm.Client) func(app.Tlbx) {
@@ -68,20 +71,34 @@ func (c *client) do(do func(), action string) {
 
 var clientHeaderName = "X-Fcm-Client"
 
-func (c *client) AsyncSend(tokens []string, data map[string]string, timeout time.Duration) {
-	if len(tokens) == 0 {
-		return
-	}
-	if timeout <= 0 {
-		timeout = 3 * time.Second
-	}
-	log := c.tlbx.Log()
+func (c *client) AsyncSend(fcmDB sqlh.ClientCore, topic IDs, data map[string]string, timeout time.Duration) {
+	app.BadReqIf(len(topic) == 0 || len(topic) > 5, "topic must be 1-5 ids long")
 	_, clientExists := data[clientHeaderName]
 	PanicIf(clientExists, clientHeaderName+" is a reserved fcm push property for internal api use")
 	client := c.tlbx.Req().Header.Get(clientHeaderName)
 	if client != "" {
 		data[clientHeaderName] = client
 	}
+	tokens := make([]string, 0, 20)
+	fcmDB.Query(func(rows isql.Rows) {
+		for rows.Next() {
+			token := ""
+			PanicOn(rows.Scan(&token))
+			tokens = append(tokens, token)
+		}
+	}, `SELECT DISTINCT token FROM fcmTokens WHERE topic=?`, topic.StrJoin("_"))
+	c.RawAsyncSend(tokens, data, timeout)
+}
+
+// this should only be used by AsyncSend and in usereps
+func (c *client) RawAsyncSend(tokens []string, data map[string]string, timeout time.Duration) {
+	if len(tokens) == 0 {
+		return
+	}
+	if timeout <= 0 {
+		timeout = 2 * time.Second
+	}
+	log := c.tlbx.Log()
 	Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()

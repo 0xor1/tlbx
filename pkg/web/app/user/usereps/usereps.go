@@ -388,16 +388,24 @@ func New(
 				args := a.(*user.Delete)
 				srv := service.Get(tlbx)
 				m := me.Get(tlbx)
-				me.Del(tlbx)
 				pwd := getPwd(srv, m)
 				app.BadReqIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), "incorrect pwd")
+				tx := srv.User().Begin()
+				defer tx.Rollback()
+				pwdTx := srv.Pwd().Begin()
+				defer pwdTx.Rollback()
+				_, err := tx.Exec(`DELETE FROM users WHERE id=?`, m)
+				PanicOn(err)
+				_, err = tx.Exec(`DELETE FROM fcmTokens WHERE user=?`, m)
+				PanicOn(err)
+				_, err = pwdTx.Exec(`DELETE FROM pwds WHERE id=?`, m)
+				PanicOn(err)
 				if onDelete != nil {
 					onDelete(tlbx, m)
 				}
-				_, err := srv.User().Exec(`DELETE FROM users WHERE id=?`, m)
-				PanicOn(err)
-				_, err = srv.Pwd().Exec(`DELETE FROM pwds WHERE id=?`, m)
-				PanicOn(err)
+				me.Del(tlbx)
+				tx.Commit()
+				pwdTx.Commit()
 				return nil
 			},
 		},
@@ -785,7 +793,7 @@ func New(
 					if !args.Val {
 						valStr = "false"
 					}
-					service.Get(tlbx).FCM().AsyncSend(tokens, map[string]string{
+					service.Get(tlbx).FCM().RawAsyncSend(tokens, map[string]string{
 						"fcmEnabled": valStr,
 					}, 0)
 					return nil
