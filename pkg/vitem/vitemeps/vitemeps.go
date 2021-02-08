@@ -69,9 +69,9 @@ var (
 				}
 				args.Note = StrTrimWS(args.Note)
 				validate.Str("note", args.Note, tlbx, 0, noteMaxLen)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleWriter)
 				epsutil.MustLockProject(tx, args.Host, args.Project)
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				app.ReturnIf(tsk == nil, http.StatusNotFound, "task not found")
@@ -307,7 +307,9 @@ var (
 						args.CreatedOnMax != nil &&
 						args.CreatedOnMin.After(*args.CreatedOnMax),
 					"createdOnMin must be before createdOnMax")
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)
 				res := &vitem.GetRes{
 					Set:  make([]*vitem.Vitem, 0, args.Limit),
@@ -345,7 +347,7 @@ var (
 					}
 					qry.WriteString(sqlh.OrderLimit100(`createdOn`, *args.Asc, args.Limit))
 				}
-				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
@@ -357,6 +359,7 @@ var (
 						res.Set = append(res.Set, t)
 					}
 				}, qry.String(), qryArgs...))
+				tx.Commit()
 				return res
 			},
 		},

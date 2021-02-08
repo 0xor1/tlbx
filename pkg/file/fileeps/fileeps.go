@@ -57,7 +57,10 @@ var (
 				app.ReturnIf(args.Size > maxFileSize, http.StatusBadRequest, "max file size is %d", maxFileSize)
 				args.Name = StrTrimWS(args.Name)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
-				epsutil.IMustHaveAccess(tlbx, innerArgs.Host, innerArgs.Project, cnsts.RoleWriter)
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, innerArgs.Host, innerArgs.Project, cnsts.RoleWriter)
 				p := projecteps.GetOne(tlbx, innerArgs.Host, innerArgs.Project)
 				app.BadReqIf(p.FileLimit < p.FileSize+p.FileSubSize+uint64(args.Size), "project file limit exceeded, limit: %d, current usage: %d", p.FileLimit, p.FileSize+p.FileSubSize)
 				f := &file.File{
@@ -69,7 +72,6 @@ var (
 					Type:      args.Type,
 					Name:      args.Name,
 				}
-				srv := service.Get(tlbx)
 				srv.Store().MustStreamUp(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size), false, true, 5*time.Minute, args.Content)
 				deleteFile := true
 				defer func() {
@@ -77,8 +79,6 @@ var (
 						srv.Store().MustDelete(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID))
 					}
 				}()
-				tx := srv.Data().Begin()
-				defer tx.Rollback()
 				// insert new file
 				_, err := tx.Exec(`INSERT INTO files (host, project, task, id, name, createdBy, createdOn, size, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID, f.Name, f.CreatedBy, f.CreatedOn, f.Size, f.Type)
 				PanicOn(err)
@@ -127,10 +127,10 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*file.GetContent)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				f := getOne(tx, args.Host, args.Project, args.Task, args.ID)
 				tx.Commit()
 				app.ReturnIf(f == nil, http.StatusNotFound, "file not found")
@@ -181,7 +181,9 @@ var (
 						args.CreatedOnMax != nil &&
 						args.CreatedOnMin.After(*args.CreatedOnMax),
 					"createdOnMin must be before createdOnMax")
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)
 				res := &file.GetRes{
 					Set:  make([]*file.File, 0, args.Limit),
@@ -219,7 +221,7 @@ var (
 					}
 					qry.WriteString(sqlh.OrderLimit100(`createdOn`, *args.Asc, args.Limit))
 				}
-				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
@@ -231,6 +233,7 @@ var (
 						res.Set = append(res.Set, t)
 					}
 				}, qry.String(), qryArgs...))
+				tx.Commit()
 				return res
 			},
 		},

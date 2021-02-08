@@ -1,16 +1,13 @@
 package epsutil
 
 import (
-	"context"
 	"net/http"
 	"time"
 
-	"firebase.google.com/go/messaging"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/json"
-	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
@@ -60,15 +57,15 @@ func MustGetRole(tlbx app.Tlbx, tx sql.Tx, host, project ID, user ID) cnsts.Role
 	return role
 }
 
-func MustHaveAccess(tlbx app.Tlbx, host, project ID, user *ID, role cnsts.Role) {
+func MustHaveAccess(tlbx app.Tlbx, tx sql.Tx, host, project ID, user *ID, role cnsts.Role) {
 	userExist := user != nil
 	if userExist && user.Equal(host) {
+		TaskMustExist(tx, host, project, project)
 		return
 	}
 
-	srv := service.Get(tlbx)
 	if !userExist || role == cnsts.RoleReader {
-		row := srv.Data().QueryRow(`SELECT isPublic FROM projects WHERE host=? AND id=?`, host, project)
+		row := tx.QueryRow(`SELECT isPublic FROM projects WHERE host=? AND id=?`, host, project)
 		isPublic := false
 		sqlh.PanicIfIsntNoRows(row.Scan(&isPublic))
 		if isPublic {
@@ -78,20 +75,20 @@ func MustHaveAccess(tlbx app.Tlbx, host, project ID, user *ID, role cnsts.Role) 
 		app.ReturnIf(!userExist, http.StatusForbidden, "")
 	}
 
-	row := srv.Data().QueryRow(`SELECT 1 FROM users WHERE host=? AND project=? AND id=? AND role<=? AND isActive=1`, host, project, *user, role)
+	row := tx.QueryRow(`SELECT 1 FROM users WHERE host=? AND project=? AND id=? AND role<=? AND isActive=1`, host, project, *user, role)
 	hasAccess := false
 	sqlh.PanicIfIsntNoRows(row.Scan(&hasAccess))
 	app.ReturnIf(!hasAccess, http.StatusForbidden, "")
 }
 
-func IMustHaveAccess(tlbx app.Tlbx, host, project ID, role cnsts.Role) {
+func IMustHaveAccess(tlbx app.Tlbx, tx sql.Tx, host, project ID, role cnsts.Role) {
 	iExist := me.Exists(tlbx)
 	var mePtr *ID
 	if iExist {
 		meID := me.Get(tlbx)
 		mePtr = &meID
 	}
-	MustHaveAccess(tlbx, host, project, mePtr, role)
+	MustHaveAccess(tlbx, tx, host, project, mePtr, role)
 }
 
 func MustLockProject(tx sql.Tx, host, id ID) {
@@ -155,11 +152,33 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 		}
 		PanicOn(err)
 	}
+	// ***************************************
+	// start sendind fcm notifications section
+	// ***************************************
 	if fcmExtraInfo != nil {
 		// if fcmExtraInfo is passed use that instead of activity log extraInfo
 		eiStr = string(json.MustMarshal(fcmExtraInfo))
 	}
-	fcmSend(tlbx, tx, host, project, task, item, me, itemType, action, occurredOn, itemName, eiStr)
+	row := tx.QueryRow(`SELECT handle FROM users WHERE host=? AND project=? AND id=?`, host, project, me)
+	handle := ""
+	PanicOn(row.Scan(&handle))
+	d := map[string]string{
+		"host":       host.String(),
+		"project":    project.String(),
+		"task":       task.String(),
+		"item":       item.String(),
+		"user":       me.String(),
+		"userHandle": handle,
+		"type":       string(itemType),
+		"occurredOn": occurredOn.Format(time.RFC3339),
+		"action":     string(action),
+		"extraInfo":  eiStr,
+	}
+	if itemName != nil {
+		d["itemName"] = *itemName
+	}
+	srv := service.Get(tlbx)
+	srv.FCM().AsyncSend(srv.User(), IDs{host, project}, map[string]string{}, 0)
 }
 
 func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, isTask bool) {
@@ -172,61 +191,4 @@ func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, i
 	}
 	_, err := tx.Exec(qry, newItemName, host, project, item)
 	PanicOn(err)
-}
-
-func fcmSend(tlbx app.Tlbx, tx sql.Tx, host, project, task, item, user ID, itemType cnsts.Type, action cnsts.Action, occurredOn time.Time, itemName *string, extraInfoStr string) {
-	tokens := make([]string, 0, 50)
-	client := GetFCMClient(tlbx)
-	tx.Query(func(rows isql.Rows) {
-		for rows.Next() {
-			token := ""
-			PanicOn(rows.Scan(&token))
-			tokens = append(tokens, token)
-		}
-	}, `SELECT DISTINCT token FROM fcmTokens WHERE host=? AND project=?`, host, project)
-	if len(tokens) == 0 {
-		return
-	}
-	row := tx.QueryRow(`SELECT handle FROM users WHERE host=? AND project=? AND id=?`, host, project, user)
-	handle := ""
-	PanicOn(row.Scan(&handle))
-	fcm := service.Get(tlbx).FCM()
-	tlbx.Log().Info("firing async call to fcm service")
-	Go(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		d := map[string]string{
-			"client":     "",
-			"host":       host.String(),
-			"project":    project.String(),
-			"task":       task.String(),
-			"item":       item.String(),
-			"user":       user.String(),
-			"userHandle": handle,
-			"type":       string(itemType),
-			"occurredOn": occurredOn.Format(time.RFC3339),
-			"action":     string(action),
-			"extraInfo":  extraInfoStr,
-		}
-		if client != nil {
-			d["client"] = client.String()
-		}
-		if itemName != nil {
-			d["itemName"] = *itemName
-		}
-		res := fcm.MustSend(ctx, &messaging.MulticastMessage{
-			Tokens: tokens,
-			Data:   d,
-		})
-		tlbx.Log().Info("FCM success: %d, fail: %d", res.SuccessCount, res.FailureCount)
-	}, tlbx.Log().ErrorOn)
-}
-
-func GetFCMClient(tlbx app.Tlbx) *ID {
-	clientStr := tlbx.Req().Header.Get("X-Fcm-Client")
-	var client *ID
-	if clientStr != "" {
-		client = ptr.ID(MustParseID(clientStr))
-	}
-	return client
 }

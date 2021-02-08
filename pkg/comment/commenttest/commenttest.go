@@ -35,8 +35,8 @@ func Everything(t *testing.T) {
 		true,
 		nil,
 		projecteps.OnDelete,
-		true,
 		projecteps.OnSetSocials,
+		projecteps.ValidateFCMTopic,
 		cnsts.FileBucket)
 	defer r.CleanUp()
 

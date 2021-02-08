@@ -25,8 +25,8 @@ func Everything(t *testing.T) {
 		true,
 		nil,
 		projecteps.OnDelete,
-		true,
 		projecteps.OnSetSocials,
+		projecteps.ValidateFCMTopic,
 		cnsts.FileBucket)
 	defer r.CleanUp()
 
@@ -198,9 +198,12 @@ func Everything(t *testing.T) {
 	(&project.Delete{p1.ID, p2.ID}).MustDo(ac)
 	a.Zero(len((&project.Get{Host: r.Ali().ID()}).MustDo(ac).Set))
 
-	fcmClientID, regErr := (&project.RegisterForFCM{
-		Host:  r.Ali().ID(),
-		ID:    app.ExampleID(),
+	(&user.SetFCMEnabled{
+		Val: true,
+	}).MustDo(ac)
+
+	fcmClientID, regErr := (&user.RegisterForFCM{
+		Topic: IDs{r.Ali().ID(), app.ExampleID()},
 		Token: "abc:123",
 	}).Do(ac)
 	a.Nil(fcmClientID)
@@ -216,17 +219,14 @@ func Everything(t *testing.T) {
 		Name:         "My New Project",
 	}).MustDo(ac)
 
-	fcmClientID = (&project.RegisterForFCM{
-		Host:  r.Ali().ID(),
-		ID:    p1.ID,
+	fcmClientID = (&user.RegisterForFCM{
+		Topic: IDs{r.Ali().ID(), p1.ID},
 		Token: "abc:123",
 	}).MustDo(ac)
 	a.NotNil(fcmClientID)
 
-	(&project.UnregisterFromFCM{
-		Host:  r.Ali().ID(),
-		ID:    p1.ID,
-		Token: "abc:123",
+	(&user.UnregisterFromFCM{
+		Client: *fcmClientID,
 	}).MustDo(ac)
 
 	// test empty request

@@ -16,6 +16,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
+	sqlh "github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
@@ -319,8 +320,6 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(Strf(`DELETE FROM comments WHERE host=? %s`, inProject), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Strf(`DELETE FROM fcmTokens WHERE host=? %s`, inProject), queryArgs...)
-				PanicOn(err)
 				for _, p := range args {
 					srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me, p))
 				}
@@ -358,8 +357,10 @@ var (
 					return nil
 				}
 				app.BadReqIf(lenUsers > 100, "can not add more than 100 users to a project at a time")
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
 				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleAdmin)
 
 				// need two sets for id IN (?, ...) and ORDER BY FIELD (id, ?, ...)
 				ids := make([]interface{}, 0, 2*lenUsers)
@@ -383,8 +384,6 @@ var (
 
 				app.BadReqIf(len(users) != lenUsers, "users specified: %d, users found: %d", lenUsers, len(users))
 
-				tx := srv.Data().Begin()
-				defer tx.Rollback()
 				for i, u := range users {
 					app.BadReqIf(u.ID.Equal(args.Host), "can not add host to project")
 					u.Role = args.Users[i].Role
@@ -496,10 +495,10 @@ var (
 					return nil
 				}
 				app.BadReqIf(lenUsers > 100, "can not set more than 100 user roles in a project at a time")
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleAdmin)
 				for _, u := range args.Users {
 					app.ReturnIf(u.ID.Equal(args.Host), http.StatusForbidden, "can not set hosts role")
 					res, err := tx.Exec(`UPDATE users SET role=? WHERE host=? AND project=? AND id=?`, u.Role, args.Host, args.Project, u.ID)
@@ -540,24 +539,25 @@ var (
 					return nil
 				}
 				me := me.Get(tlbx)
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
 				if !(len(args.Users) == 1 &&
 					me.Equal(args.Users[0]) &&
 					!me.Equal(args.Host)) {
 					// here the user is requesting to remove themselves
 					// from someone elses project which they can always do
-					epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleAdmin)
+					epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleAdmin)
 				}
 				queryArgs := make([]interface{}, 0, len(args.Users)+2)
 				queryArgs = append(queryArgs, args.Host, args.Project)
-				tx := service.Get(tlbx).Data().Begin()
-				defer tx.Rollback()
 				for _, u := range args.Users {
 					app.BadReqIf(u.Equal(args.Host), "can not remove host from project")
 					queryArgs = append(queryArgs, u)
 				}
 				_, err := tx.Exec(Strf(`UPDATE users SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
 				PanicOn(err)
-				_, err = tx.Exec(Strf(`DELETE FROM fcmTokens WHERE host=? AND project=? %s`, sql.InCondition(true, `user`, len(args.Users))), queryArgs...)
+				_, err = srv.User().Exec(Strf(`DELETE FROM fcmTokens WHERE 1=1 %s`, sql.InCondition(true, `user`, len(args.Users))), args.Users.ToIs()...)
 				PanicOn(err)
 				for _, u := range args.Users {
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil, nil)
@@ -613,7 +613,9 @@ var (
 				args := a.(*project.GetActivities)
 				args.Limit = sql.Limit100(args.Limit)
 				app.BadReqIf(args.OccuredAfter != nil && args.OccuredBefore != nil, "only one of occurredBefore or occurredAfter may be used")
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				query := bytes.NewBufferString(`SELECT occurredOn, user, task, item, itemType, taskDeleted, itemDeleted, action, taskName, itemName, extraInfo FROM activities WHERE host=? AND project=?`)
 				queryArgs := make([]interface{}, 0, 7)
 				queryArgs = append(queryArgs, args.Host, args.Project)
@@ -642,7 +644,7 @@ var (
 				res := &project.GetActivitiesRes{
 					Set: make([]*project.Activity, 0, args.Limit),
 				}
-				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(res.Set)+1 == iLimit {
@@ -658,74 +660,8 @@ var (
 						res.Set = append(res.Set, pa)
 					}
 				}, query.String(), queryArgs...))
+				tx.Commit()
 				return res
-			},
-		},
-		{
-			Description:  "register for fcm",
-			Path:         (&project.RegisterForFCM{}).Path(),
-			Timeout:      500,
-			MaxBodyBytes: app.KB,
-			IsPrivate:    false,
-			GetDefaultArgs: func() interface{} {
-				return &project.RegisterForFCM{}
-			},
-			GetExampleArgs: func() interface{} {
-				return &project.RegisterForFCM{
-					Host:  app.ExampleID(),
-					ID:    app.ExampleID(),
-					Token: "abc:123",
-				}
-			},
-			GetExampleResponse: func() interface{} {
-				return app.ExampleID()
-			},
-			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*project.RegisterForFCM)
-				app.BadReqIf(args.Token == "", "empty string is not a valid fcm token")
-				client := epsutil.GetFCMClient(tlbx)
-				if client == nil {
-					client = ptr.ID(tlbx.NewID())
-				}
-				me := me.Get(tlbx)
-				epsutil.MustHaveAccess(tlbx, args.Host, args.ID, &me, cnsts.RoleReader)
-				tx := service.Get(tlbx).Data().Begin()
-				defer tx.Rollback()
-				epsutil.TaskMustExist(tx, args.Host, args.ID, args.ID)
-				_, err := tx.Exec(`INSERT INTO fcmTokens (host, project, token, user, registeredOn) VALUES (?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host), project=VALUES(project), token=VALUES(token), user=VALUES(user), registeredOn=VALUES(registeredOn)`, args.Host, args.ID, args.Token, me)
-				PanicOn(err)
-				tx.Commit()
-				return client
-			},
-		},
-		{
-			Description:  "unregister from fcm",
-			Path:         (&project.UnregisterFromFCM{}).Path(),
-			Timeout:      500,
-			MaxBodyBytes: app.KB,
-			IsPrivate:    false,
-			GetDefaultArgs: func() interface{} {
-				return &project.UnregisterFromFCM{}
-			},
-			GetExampleArgs: func() interface{} {
-				return &project.UnregisterFromFCM{
-					Host:  app.ExampleID(),
-					ID:    app.ExampleID(),
-					Token: "abc:123",
-				}
-			},
-			GetExampleResponse: func() interface{} {
-				return nil
-			},
-			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				args := a.(*project.UnregisterFromFCM)
-				me := me.Get(tlbx)
-				tx := service.Get(tlbx).Data().Begin()
-				defer tx.Rollback()
-				_, err := tx.Exec(`DELETE FROM fcmTokens WHERE host=? AND project=? AND user=? AND token=?`, args.Host, args.ID, me, args.Token)
-				PanicOn(err)
-				tx.Commit()
-				return nil
 			},
 		},
 	}
@@ -761,16 +697,6 @@ var (
 	}
 )
 
-func OnSetSocials(tlbx app.Tlbx, user *user.User) error {
-	srv := service.Get(tlbx)
-	tx := srv.Data().Begin()
-	defer tx.Rollback()
-	_, err := tx.Exec(`UPDATE users SET handle=?, alias=?, hasAvatar=? WHERE id=?`, user.Handle, user.Alias, user.HasAvatar, user.ID)
-	PanicOn(err)
-	tx.Commit()
-	return nil
-}
-
 func OnDelete(tlbx app.Tlbx, me ID) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().Begin()
@@ -791,12 +717,27 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	PanicOn(err)
 	_, err = tx.Exec(`DELETE FROM comments WHERE host=?`, me)
 	PanicOn(err)
-	_, err = tx.Exec(`DELETE FROM fcmTokens WHERE host=? OR user=?`, me, me)
-	PanicOn(err)
 	_, err = tx.Exec(`UPDATE users set isActive=0 WHERE id=?`, me)
 	PanicOn(err)
 	srv.Store().MustDeletePrefix(cnsts.FileBucket, epsutil.StorePrefix(me))
 	tx.Commit()
+}
+
+func OnSetSocials(tlbx app.Tlbx, user *user.User) error {
+	srv := service.Get(tlbx)
+	tx := srv.Data().Begin()
+	defer tx.Rollback()
+	_, err := tx.Exec(`UPDATE users SET handle=?, alias=?, hasAvatar=? WHERE id=?`, user.Handle, user.Alias, user.HasAvatar, user.ID)
+	PanicOn(err)
+	tx.Commit()
+	return nil
+}
+
+func ValidateFCMTopic(tlbx app.Tlbx, topic IDs) (sqlh.Tx, error) {
+	app.BadReqIf(len(topic) != 2, "fcm topic must be 2 ids, host then project")
+	tx := service.Get(tlbx).Data().Begin()
+	epsutil.IMustHaveAccess(tlbx, tx, topic[0], topic[1], cnsts.RoleReader)
+	return tx, nil
 }
 
 func GetOne(tlbx app.Tlbx, host, id ID) *project.Project {
@@ -948,9 +889,10 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	app.BadReqIf(args.HandlePrefix != nil && StrLen(*args.HandlePrefix) >= 15, "handlePrefix must be < 15 chars long")
-	epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+	tx := service.Get(tlbx).Data().Begin()
+	defer tx.Rollback()
+	epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 	limit := sql.Limit100(args.Limit)
-	srv := service.Get(tlbx)
 	res := &project.GetUsersRes{
 		Set: make([]*project.User, 0, limit),
 	}
@@ -988,7 +930,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 		}
 		query.WriteString(Strf(` handle ASC LIMIT %d`, limit))
 	}
-	PanicOn(srv.Data().Query(func(rows isql.Rows) {
+	PanicOn(tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == int(limit) {
 				res.More = true
@@ -999,5 +941,6 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 			res.Set = append(res.Set, u)
 		}
 	}, query.String(), queryArgs...))
+	tx.Commit()
 	return res
 }

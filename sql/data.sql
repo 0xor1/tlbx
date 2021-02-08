@@ -164,18 +164,6 @@ CREATE TABLE comments(
   UNIQUE INDEX(host, project, createdOn, createdBy, task)
 );
 
-DROP TABLE IF EXISTS fcmTokens;
-CREATE TABLE fcmTokens(
-  host BINARY(16) NOT NULL,
-  project BINARY(16) NOT NULL,
-  token VARCHAR(255) NOT NULL,
-  user BINARY(16) NOT NULL,
-  registeredOn DATETIME(3) NOT NULL,
-  PRIMARY KEY(host, project, token),
-  INDEX(user),
-  INDEX(registeredOn)
-);
-
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 #********************************MAGIC PROCEDURE WARNING*********************************#
 # THIS PROCEDURE MUST ONLY BE CALLED INTERNALLY BY 

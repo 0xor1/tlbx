@@ -57,7 +57,10 @@ var (
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				args.Description = StrTrimWS(args.Description)
 				validate.Str("description", args.Description, tlbx, 0, descriptionMaxLen)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
+				srv := service.Get(tlbx)
+				tx := srv.Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleWriter)
 				t := &task.Task{
 					ID:          tlbx.NewID(),
 					Parent:      &args.Parent,
@@ -89,11 +92,8 @@ var (
 					// if Im assigning to someone that isnt me,
 					// validate that user has write access to this
 					// project
-					epsutil.MustHaveAccess(tlbx, args.Host, args.Project, args.User, cnsts.RoleWriter)
+					epsutil.MustHaveAccess(tlbx, tx, args.Host, args.Project, args.User, cnsts.RoleWriter)
 				}
-				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
-				defer tx.Rollback()
 				// lock project, required for any action that will change aggregate values nad/or tree structure
 				epsutil.MustLockProject(tx, args.Host, args.Project)
 				// get correct next sib value from either prevSib if
@@ -180,16 +180,16 @@ var (
 					// nothing to update
 					return nil
 				}
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
 				if args.ID.Equal(args.Project) {
 					app.ReturnIf(!me.Equal(args.Host), http.StatusForbidden, "only the host may edit the project root node")
 					app.ReturnIf(args.User != nil, http.StatusForbidden, "user value is not settable on the project root node")
 					app.ReturnIf(args.Parent != nil, http.StatusForbidden, "parent value is not settable on the project root node")
 					app.ReturnIf(args.PrevSib != nil, http.StatusForbidden, "prevSib value is not settable on the project root node")
 				} else {
-					epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
+					epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleWriter)
 				}
-				tx := service.Get(tlbx).Data().Begin()
-				defer tx.Rollback()
 				treeUpdateRequired := false
 				simpleUpdateRequired := false
 				if args.Parent != nil ||
@@ -325,7 +325,7 @@ var (
 						(args.User.V != nil && t.User == nil) ||
 						(args.User.V != nil && t.User != nil && !t.User.Equal(*args.User.V))) {
 					if args.User.V != nil && !args.User.V.Equal(me) {
-						epsutil.MustHaveAccess(tlbx, args.Host, args.Project, args.User.V, cnsts.RoleWriter)
+						epsutil.MustHaveAccess(tlbx, tx, args.Host, args.Project, args.User.V, cnsts.RoleWriter)
 					}
 					t.User = args.User.V
 					simpleUpdateRequired = true
@@ -527,9 +527,9 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Get)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				t := GetOne(tx, args.Host, args.Project, args.ID)
 				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
 				tx.Commit()
@@ -563,13 +563,15 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.GetAncestors)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)
 				res := &task.GetSetRes{
 					Set:  make([]*task.Task, 0, args.Limit),
 					More: false,
 				}
-				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(res.Set)+1 == iLimit {
@@ -581,6 +583,7 @@ var (
 						res.Set = append(res.Set, t)
 					}
 				}, Strf(`%s SELECT %s FROM tasks t JOIN ancestors a ON t.id = a.id WHERE t.host=? AND t.project=? ORDER BY a.n ASC LIMIT ?`, sql_ancestors_cte, Sql_task_columns_prefixed), args.Host, args.Project, args.ID, args.Host, args.Project, args.Host, args.Project, args.Limit))
+				tx.Commit()
 				return res
 			},
 		},
@@ -612,7 +615,9 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.GetChildren)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)
 				res := &task.GetSetRes{
 					Set:  make([]*task.Task, 0, args.Limit),
@@ -629,7 +634,7 @@ var (
 					queryArgs = append(queryArgs, *args.After)
 				}
 				queryArgs = append(queryArgs, args.Host, args.Project, args.Host, args.Project, args.Limit)
-				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(res.Set)+1 == iLimit {
@@ -641,6 +646,7 @@ var (
 						res.Set = append(res.Set, t)
 					}
 				}, Strf(`WITH RECURSIVE sibs (n, id) AS (SELECT 0 AS n, %s AS id FROM tasks WHERE host=? AND project=? AND id=? UNION SELECT s.n + 1 AS n, t.nextSib AS id FROM tasks t, sibs s WHERE t.host=? AND t.project=? AND t.id = s.id) CYCLE id RESTRICT SELECT %s FROM tasks t JOIN sibs s ON t.id = s.id WHERE t.host=? AND t.project=? ORDER BY s.n ASC LIMIT ?`, sql_filter, Sql_task_columns_prefixed), queryArgs...))
+				tx.Commit()
 				return res
 			},
 		},

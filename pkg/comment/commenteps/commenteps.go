@@ -45,9 +45,9 @@ var (
 				me := me.Get(tlbx)
 				args.Body = StrTrimWS(args.Body)
 				validate.Str("body", args.Body, tlbx, bodyMinLen, bodyMaxLen)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleWriter)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleWriter)
 				epsutil.TaskMustExist(tx, args.Host, args.Project, args.Task)
 				c := &comment.Comment{
 					Task:      args.Task,
@@ -172,7 +172,9 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*comment.Get)
-				epsutil.IMustHaveAccess(tlbx, args.Host, args.Project, cnsts.RoleReader)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)
 				res := &comment.GetRes{
 					Set:  make([]*comment.Comment, 0, args.Limit),
@@ -190,7 +192,7 @@ var (
 					qryArgs = append(qryArgs, args.Host, args.Project, *args.After, *args.After)
 				}
 				qry.WriteString(sqlh.OrderLimit100(`createdOn`, false, args.Limit))
-				PanicOn(service.Get(tlbx).Data().Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows isql.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(res.Set)+1 == iLimit {
@@ -202,6 +204,7 @@ var (
 						res.Set = append(res.Set, t)
 					}
 				}, qry.String(), qryArgs...))
+				tx.Commit()
 				return res
 			},
 		},
