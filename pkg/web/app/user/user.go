@@ -334,7 +334,7 @@ type RegisterForFCM struct {
 }
 
 func (_ *RegisterForFCM) Path() string {
-	return "/project/registerForFCM"
+	return "/user/registerForFCM"
 }
 
 func (a *RegisterForFCM) Do(c *app.Client) (*ID, error) {
