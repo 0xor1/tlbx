@@ -65,7 +65,8 @@ let v = new Vue({
           })
           mapi.sendMDo().finally(()=>{
             if (this._ctx.pMe != null && 
-              this._ctx.project != null) {  
+              this._ctx.project != null &&
+              this.$api.fcm.isEnabled()) {  
               this.$api.fcm.init(false).then(()=>{
                 this.$api.user.setFCMEnabled(true).then(()=>{
                   this.$api.user.registerForFCM({
@@ -79,8 +80,10 @@ let v = new Vue({
               this._ctx.loading = false
             }
           })
+        } else {
+          this.$api.user.unregisterFromFCM()
         }
-      }
+      } 
     },
     ctx(){
       let completer = null

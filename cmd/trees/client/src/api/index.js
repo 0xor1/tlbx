@@ -149,6 +149,9 @@ function newApi(isMDoApi) {
       return new Promise(mDoCompleterFunc)
     },
     fcm: {
+      isEnabled(){
+        return fcmEnabled
+      },
       init(askForPerm) {
         if (askForPerm === true || Notification.permission === "granted") {
             return Notification.requestPermission().then((permission) => {
@@ -267,6 +270,7 @@ function newApi(isMDoApi) {
           notAuthed = false
           memCache.me = res
           memCache[res.id] = res
+          fcmEnabled = res.fcmEnabled
           return res
         })
       },
@@ -311,6 +315,7 @@ function newApi(isMDoApi) {
           if (res != null ) {
             memCache.me = res
             memCache[res.id] = res
+            fcmEnabled = res.fcmEnabled
           } else {
             notAuthed = true
           }
@@ -408,15 +413,6 @@ function newApi(isMDoApi) {
         // true/false
         return doReq('/user/setFCMEnabled', {val}).then(()=>{
           fcmEnabled = val
-          if (fcmEnabled) {
-            if (fcmOnEnabled != null) {
-              fcmOnEnabled()
-            }
-          } else {
-            if (fcmOnDisabled != null) {
-              fcmOnDisabled()
-            }
-          }
         })
       },
       registerForFCM(args){
@@ -429,7 +425,9 @@ function newApi(isMDoApi) {
         })
       },
       unregisterFromFCM(){
-        return doReq('/user/unregisterFromFCM', {client: fcmClientId})
+        if (fcmEnabled && fcmClientId != null) {
+          return doReq('/user/unregisterFromFCM', {client: fcmClientId})
+        }
       }
     },
     project: {

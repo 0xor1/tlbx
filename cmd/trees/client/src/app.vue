@@ -85,7 +85,7 @@
           projectActivity: this.projectActivity || [],
           moreProjectActivity: this.moreProjectActivity || false,
           projectActivityExcludeDeleted: this.projectActivityExcludeDeleted === false? false: true,
-          realtimeEnabled: Notification.permission === "granted",
+          realtimeEnabled: Notification.permission === "granted" && this.$api.fcm.isEnabled(),
           loadingProjectActivity: false,
           projectActivityLastGotOn: null,
           projectActivityCurrentPollDelayMs: 60000,
@@ -157,9 +157,7 @@
                 topic: [this.$u.rtr.host(), this.$u.rtr.project()]
               }).then(()=>{
                 this.realtimeEnabled = true
-              }).finally(()=>{
-              this.togglingRealtimeEnabled = false
-            })
+              })
             }).finally(()=>{
               this.togglingRealtimeEnabled = false
             })
