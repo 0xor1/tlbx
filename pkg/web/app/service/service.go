@@ -42,7 +42,7 @@ func Mware(pool iredis.Pool, user, pwd, data isql.ReplicaSet, email email.Client
 		sql.Mware(sqlData, data),
 		emailmw.Mware(emailName, email),
 		storemw.Mware(storeName, store),
-		fcmmw.Mware(fcmName, fcm),
+		fcmmw.Mware(sqlUser, fcmName, fcm),
 	}
 	return func(tlbx app.Tlbx) {
 		for _, mw := range mwares {

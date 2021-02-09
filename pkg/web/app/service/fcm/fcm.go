@@ -9,7 +9,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/fcm"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/web/app"
-	sqlh "github.com/0xor1/tlbx/pkg/web/app/service/sql"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 )
 
 type tlbxKey struct {
@@ -18,16 +18,17 @@ type tlbxKey struct {
 
 type Client interface {
 	fcm.Client
-	AsyncSend(fcmDB sqlh.ClientCore, topic IDs, data map[string]string, timeout time.Duration)
+	AsyncSend(topic IDs, data map[string]string, timeout time.Duration)
 	RawAsyncSend(fcmType string, tokens []string, data map[string]string, timeout time.Duration)
 }
 
-func Mware(name string, fcm fcm.Client) func(app.Tlbx) {
+func Mware(userSqlName, name string, fcm fcm.Client) func(app.Tlbx) {
 	return func(tlbx app.Tlbx) {
 		tlbx.Set(tlbxKey{name}, &client{
-			tlbx: tlbx,
-			name: name,
-			fcm:  fcm,
+			tlbx:        tlbx,
+			userSqlName: userSqlName,
+			name:        name,
+			fcm:         fcm,
 		})
 	}
 }
@@ -37,9 +38,10 @@ func Get(tlbx app.Tlbx, name string) Client {
 }
 
 type client struct {
-	tlbx app.Tlbx
-	name string
-	fcm  fcm.Client
+	tlbx        app.Tlbx
+	userSqlName string
+	name        string
+	fcm         fcm.Client
 }
 
 func (c *client) Send(ctx context.Context, m *messaging.MulticastMessage) (*messaging.BatchResponse, error) {
@@ -69,10 +71,10 @@ func (c *client) do(do func(), action string) {
 	})
 }
 
-func (c *client) AsyncSend(fcmDB sqlh.ClientCore, topic IDs, data map[string]string, timeout time.Duration) {
+func (c *client) AsyncSend(topic IDs, data map[string]string, timeout time.Duration) {
 	app.BadReqIf(len(topic) == 0 || len(topic) > 5, "topic must be 1-5 ids long")
 	tokens := make([]string, 0, 20)
-	fcmDB.Query(func(rows isql.Rows) {
+	sql.Get(c.tlbx, c.userSqlName).Query(func(rows isql.Rows) {
 		for rows.Next() {
 			token := ""
 			PanicOn(rows.Scan(&token))
