@@ -242,7 +242,7 @@ func Run(configs ...func(*Config)) {
 		// check all requests have a X-Client header
 		BadReqIf(!(ep.SkipXClientCheck && method == http.MethodGet) &&
 			tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
-		
+
 		if ep.MaxBodyBytes > 0 {
 			tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, ep.MaxBodyBytes)
 		}
