@@ -1,6 +1,6 @@
 module github.com/0xor1/tlbx
 
-go 1.14
+go 1.15
 
 require (
 	cloud.google.com/go v0.76.0 // indirect
