@@ -6,6 +6,42 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestStrEllipsis(t *testing.T) {
+	a := assert.New(t)
+	s := `0123456789`
+	Do(func() {
+		StrEllipsis(s, 3)
+	}, func(r interface{}) {
+		a.Contains(r.(Error).Message(), "str ellipsis max must be greater than 3")
+	})
+	StrEllipsis(s, 4)
+	a.Equal("0...", StrEllipsis(s, 4))
+}
+
+func TestStrLower(t *testing.T) {
+	a := assert.New(t)
+	s := `ABC`
+	a.Equal(`abc`, StrLower(s))
+}
+
+func TestStrUpper(t *testing.T) {
+	a := assert.New(t)
+	s := `abc`
+	a.Equal(`ABC`, StrUpper(s))
+}
+
+func TestStrTrim(t *testing.T) {
+	a := assert.New(t)
+	s := `$$abc$$`
+	a.Equal(`abc`, StrTrim(s, "$$"))
+}
+
+func TestStrTrimWS(t *testing.T) {
+	a := assert.New(t)
+	s := ` abc     `
+	a.Equal(`abc`, StrTrimWS(s))
+}
+
 func TestStrLen(t *testing.T) {
 	a := assert.New(t)
 	s := `平仮名, ひらがな`

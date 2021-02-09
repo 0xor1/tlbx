@@ -80,3 +80,36 @@ func Test_ID(t *testing.T) {
 
 	a.Equal(1, len(IDs{id1}.ToIs()))
 }
+
+func Test_zeroIDErrs(t *testing.T) {
+	a := assert.New(t)
+	id := &ID{}
+	bs, err := id.MarshalText()
+	a.Nil(err)
+	err = id.UnmarshalText(bs)
+	a.Equal(zeroIDErr, err)
+	bs, err = id.MarshalBinary()
+	a.Nil(err)
+	err = id.UnmarshalBinary(bs)
+	a.Equal(zeroIDErr, err)
+	err = id.Scan(bs)
+	a.Equal(zeroIDErr, err)
+	_, err = id.Value()
+	a.Equal(zeroIDErr, err)
+}
+
+func Test_IDsStrJoin(t *testing.T) {
+	a := assert.New(t)
+	ids := IDs{ID{}, ID{}}
+	idsStr := ids.StrJoin("_")
+	a.Equal("00000000000000000000000000_00000000000000000000000000", idsStr)
+}
+
+func Test_PanicIfZeroID(t *testing.T) {
+	a := assert.New(t)
+	Do(func() {
+		PanicIfZeroID(ID{})
+	}, func(r interface{}) {
+		a.Equal(r.(Error).Value(), zeroIDErr)
+	})
+}

@@ -7,9 +7,10 @@ import (
 )
 
 func StrEllipsis(s string, max uint) string {
+	PanicIf(max < 4, "str ellipsis max must be greater than 3")
 	runes := []rune(s)
 	if len(runes) > int(max) {
-		runes = runes[:max]
+		runes = runes[:max-3]
 		s = string(runes) + "..."
 	}
 	return s
@@ -21,6 +22,10 @@ func StrJoin(strs []string, sep string) string {
 
 func StrLower(s string) string {
 	return strings.ToLower(s)
+}
+
+func StrUpper(s string) string {
+	return strings.ToUpper(s)
 }
 
 func StrTrim(s, cutset string) string {
