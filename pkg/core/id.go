@@ -2,6 +2,7 @@ package core
 
 import (
 	"database/sql/driver"
+	"fmt"
 	"io"
 	"math/rand"
 	"sync"
@@ -205,7 +206,8 @@ func (ids IDs) StrJoin(sep string) string {
 	return StrJoin(strs, sep)
 }
 
-var zeroIDErr = Err("zero id detected")
+// use fmt.Errorf as no stack trace here.
+var zeroIDErr = fmt.Errorf("zero id detected")
 
 func PanicIfZeroID(id ID) {
 	// I cant think of a good reason why a nil value would ever
