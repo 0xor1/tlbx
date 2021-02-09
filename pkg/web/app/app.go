@@ -240,8 +240,9 @@ func Run(configs ...func(*Config)) {
 		ep, exists := router[tlbx.req.URL.Path]
 		ReturnIf(!exists, http.StatusNotFound, "")
 		// check all requests have a X-Client header
-		BadReqIf(!ep.SkipXClientCheck && tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
-
+		BadReqIf(!(ep.SkipXClientCheck && method == http.MethodGet) &&
+			tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
+		
 		if ep.MaxBodyBytes > 0 {
 			tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, ep.MaxBodyBytes)
 		}
