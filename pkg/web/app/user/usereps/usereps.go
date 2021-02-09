@@ -480,7 +480,25 @@ func New(
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
-				me.Del(tlbx)
+				if me.Exists(tlbx) {
+					m := me.Get(tlbx)
+					srv := service.Get(tlbx)
+					tokens := make([]string, 0, 5)
+					tx := srv.User().Begin()
+					defer tx.Rollback()
+					tx.Query(func(rows isql.Rows) {
+						for rows.Next() {
+							token := ""
+							PanicOn(rows.Scan(&token))
+							tokens = append(tokens, token)
+						}
+					}, `SELECT DISTINCT token FROM fcmTokens WHERE user=?`, m)
+					_, err := tx.Exec(`DELETE FROM fcmTokens WHERE user=?`, m)
+					PanicOn(err)
+					srv.FCM().RawAsyncSend("logout", tokens, map[string]string{}, 0)
+					tx.Commit()
+					me.Del(tlbx)
+				}
 				return nil
 			},
 		},
@@ -789,13 +807,11 @@ func New(
 						// no tokens to notify
 						return nil
 					}
-					valStr := "true"
+					fcmType := "enabled"
 					if !args.Val {
-						valStr = "false"
+						fcmType = "disabled"
 					}
-					service.Get(tlbx).FCM().RawAsyncSend(tokens, map[string]string{
-						"fcmEnabled": valStr,
-					}, 0)
+					service.Get(tlbx).FCM().RawAsyncSend(fcmType, tokens, map[string]string{}, 0)
 					return nil
 				},
 			},

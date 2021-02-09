@@ -19,7 +19,7 @@ type tlbxKey struct {
 type Client interface {
 	fcm.Client
 	AsyncSend(fcmDB sqlh.ClientCore, topic IDs, data map[string]string, timeout time.Duration)
-	RawAsyncSend(tokens []string, data map[string]string, timeout time.Duration)
+	RawAsyncSend(fcmType string, tokens []string, data map[string]string, timeout time.Duration)
 }
 
 func Mware(name string, fcm fcm.Client) func(app.Tlbx) {
@@ -69,16 +69,8 @@ func (c *client) do(do func(), action string) {
 	})
 }
 
-var clientHeaderName = "X-Fcm-Client"
-
 func (c *client) AsyncSend(fcmDB sqlh.ClientCore, topic IDs, data map[string]string, timeout time.Duration) {
 	app.BadReqIf(len(topic) == 0 || len(topic) > 5, "topic must be 1-5 ids long")
-	_, clientExists := data[clientHeaderName]
-	PanicIf(clientExists, clientHeaderName+" is a reserved fcm push property for internal api use")
-	client := c.tlbx.Req().Header.Get(clientHeaderName)
-	if client != "" {
-		data[clientHeaderName] = client
-	}
 	tokens := make([]string, 0, 20)
 	fcmDB.Query(func(rows isql.Rows) {
 		for rows.Next() {
@@ -87,13 +79,26 @@ func (c *client) AsyncSend(fcmDB sqlh.ClientCore, topic IDs, data map[string]str
 			tokens = append(tokens, token)
 		}
 	}, `SELECT DISTINCT f.token FROM fcmTokens f JOIN users u ON f.user=u.id WHERE topic=? AND u.fcmEnabled=1`, topic.StrJoin("_"))
-	c.RawAsyncSend(tokens, data, timeout)
+	c.RawAsyncSend("data", tokens, data, timeout)
 }
 
+var clientHeaderName = "X-Fcm-Client"
+var fcmTypeName = "X-Fcm-Type"
+
 // this should only be used by AsyncSend and in usereps
-func (c *client) RawAsyncSend(tokens []string, data map[string]string, timeout time.Duration) {
+func (c *client) RawAsyncSend(fcmType string, tokens []string, data map[string]string, timeout time.Duration) {
+	PanicIf(fcmType == "", "fcmType must be none empty string")
+	_, fcmTypeExists := data[fcmTypeName]
+	PanicIf(fcmTypeExists, fcmTypeName+" is a reserved fcm push property for internal api use")
+	data[fcmTypeName] = fcmType
 	if len(tokens) == 0 {
 		return
+	}
+	_, clientExists := data[clientHeaderName]
+	PanicIf(clientExists, clientHeaderName+" is a reserved fcm push property for internal api use")
+	client := c.tlbx.Req().Header.Get(clientHeaderName)
+	if client != "" {
+		data[clientHeaderName] = client
 	}
 	if timeout <= 0 {
 		timeout = 2 * time.Second
