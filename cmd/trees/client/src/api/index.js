@@ -12,6 +12,10 @@ const fcmVapidKey = "BIrxz8PBCCRX2XekUa2zAKdYnKLhj9uHKhuSW5gc0WXWSCeh4Kx3c3GjHse
 let fcm = firebase.messaging()
 let fcmClientId = null
 let fcmToken = null
+let fcmEnabled = false
+let fcmOnLogout = null
+let fcmOnEnabled = null
+let fcmOnDisabled = null
 
 let notAuthed = false
 let memCache = {}
@@ -166,6 +170,15 @@ function newApi(isMDoApi) {
             })
         }
       },
+      onLogout(fn){
+        fcmOnLogout = fn
+      },
+      onEnabled(fn){
+        fcmOnEnabled = fn
+      },
+      onDisabled(fn){
+        fcmOnDisabled = fn
+      },
       onMessage(fn){
         fcm.onMessage((msg)=>{
           if (msg != null && msg.data != null) {
@@ -174,11 +187,32 @@ function newApi(isMDoApi) {
               d.extraInfo = JSON.parse(d.extraInfo)
             }
             console.log(d)
-            if (fcmClientId === d.client) {
+            if (fcmClientId === d['X-Fcm-Client']) {
               console.log("fcm came from action on this client")
               return 
             }
-            fn(d)
+            switch (d['X-Fcm-Type']) {
+              case 'data':
+                fn(d)
+                break
+              case 'logout':
+                if (fcmOnLogout != null) {
+                  fcmOnLogout()
+                }
+                break
+              case 'enabled':
+                if (fcmOnEnabled != null) {
+                  fcmOnEnabled()
+                }
+                break
+              case 'disabled':
+                if (fcmOnDisabled != null) {
+                  fcmOnDisabled()
+                }
+                break
+              default:
+                throw 'unexpected X-Fcm-Type: ' + d['X-Fcm-Type']
+            }
           } else {
             console.log("unexpected fcm msg format received", msg)
           }
@@ -369,6 +403,33 @@ function newApi(isMDoApi) {
         
         }
         return new Promise(completer)
+      },
+      setFCMEnabled(val){
+        // true/false
+        return doReq('/user/setFCMEnabled', {val}).then(()=>{
+          fcmEnabled = val
+          if (fcmEnabled) {
+            if (fcmOnEnabled != null) {
+              fcmOnEnabled()
+            }
+          } else {
+            if (fcmOnDisabled != null) {
+              fcmOnDisabled()
+            }
+          }
+        })
+      },
+      registerForFCM(args){
+        // topic
+        args.token = fcmToken
+        args.client = fcmClientId
+        return doReq('/user/registerForFCM', args).then((clientId)=>{
+          fcmClientId = clientId
+          return null
+        })
+      },
+      unregisterFromFCM(){
+        return doReq('/user/unregisterFromFCM', {client: fcmClientId})
       }
     },
     project: {
@@ -430,22 +491,6 @@ function newApi(isMDoApi) {
       getActivities(args) {
         // host, project, task, item, user, occuredAfter, occuredBefore, limit
         return doReq('/project/getActivities', args)
-      },
-      registerForFCM(args){
-        // host, id
-        args.token = fcmToken
-        return doReq('/project/registerForFCM', args).then((clientId)=>{
-          fcmClientId = clientId
-          return null
-        })
-      },
-      unregisterFromFCM(args){
-        // host, id
-        args.token = fcmToken
-        return doReq('/project/unregisterFromFCM', args).then(()=>{
-          fcmClientId = null
-          return null
-        })
       }
     },
     task: {

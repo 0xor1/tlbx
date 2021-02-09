@@ -105,6 +105,19 @@
       },
       init(){
         this.$u.copyProps(this.initState(), this)
+        this.$api.fcm.onLogout(()=>{
+          this.loginout()
+        })
+        this.$api.fcm.onEnabled(()=>{
+          if (!this.realtimeEnabled) {
+            this.toggleRealtime()
+          }
+        })
+        this.$api.fcm.onDisabled(()=>{
+          if (this.realtimeEnabled) {
+            this.toggleRealtime()
+          }
+        })
         if (window.innerWidth <= 480) {
           this.showMenu = false
           this.showProjectActivity = false
@@ -131,44 +144,33 @@
         }
         this.togglingRealtimeEnabled = true
         if (this.realtimeEnabled) {
-          this.$api.project.unregisterFromFCM({
-            host: this.$u.rtr.host(), 
-            id: this.$u.rtr.project()
-          }).then(()=>{
+          this.$api.user.setFCMEnabled(false).then(()=>{
             this.realtimeEnabled = false
           }).finally(()=>{
             this.togglingRealtimeEnabled = false
           })
         } else {
           this.$api.fcm.init(true).then(()=>{
-            this.$api.project.registerForFCM({
-              host: this.$u.rtr.host(), 
-              id: this.$u.rtr.project()
-            }).then(()=>{
+            this.$api.user.setFCMEnabled(true).then(()=>{
               this.realtimeEnabled = true
+              return this.$api.user.registerForFCM({
+                topic: [this.$u.rtr.host(), this.$u.rtr.project()]
+              }).then(()=>{
+                this.realtimeEnabled = true
+              }).finally(()=>{
+              this.togglingRealtimeEnabled = false
+            })
             }).finally(()=>{
-            this.togglingRealtimeEnabled = false
-          })
+              this.togglingRealtimeEnabled = false
+            })
           })
         }
       },
       loginout() {
         if (this.me != null) {
-          if (this.$u.rtr.project() != null) {
-            let mapi = this.$api.newMDoApi()
-            mapi.project.unregisterFromFCM({
-              host: this.$u.rtr.host(),
-              id: this.$u.rtr.project()
-            })
-            mapi.user.logout().then(()=>{
-              this.goto('/login')
-            })
-            mapi.sendMDo()
-          } else {
-            this.$api.user.logout().then(()=>{
-              this.goto('/login')
-            })
-          }
+          this.$api.user.logout().then(()=>{
+            this.goto('/login')
+          })
         } else {
           this.goto('/login')
         }
