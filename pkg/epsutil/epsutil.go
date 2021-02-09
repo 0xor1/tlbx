@@ -178,7 +178,7 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 		d["itemName"] = *itemName
 	}
 	srv := service.Get(tlbx)
-	srv.FCM().AsyncSend(IDs{host, project}, map[string]string{}, 0)
+	srv.FCM().AsyncSend(IDs{host, project}, d, 0)
 }
 
 func ActivityItemRename(tx sql.Tx, host, project, item ID, newItemName string, isTask bool) {
