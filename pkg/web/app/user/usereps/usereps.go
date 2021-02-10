@@ -123,7 +123,7 @@ func New(
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
 					PanicOn(err)
 				}
-				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), activateCode))
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), activateCode), args.Handle)
 				setPwd(tlbx, pwdtx, id, args.Pwd, args.ConfirmPwd)
 				usrtx.Commit()
 				pwdtx.Commit()
@@ -157,7 +157,7 @@ func New(
 				if fullUser == nil || fullUser.ActivateCode == nil {
 					return nil
 				}
-				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), *fullUser.ActivateCode))
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), *fullUser.ActivateCode), fullUser.Handle)
 				return nil
 			},
 		},
@@ -926,12 +926,20 @@ var (
 	avatarDim     = 250
 )
 
-func sendActivateEmail(srv service.Layer, sendTo, from, link string) {
-	srv.Email().MustSend([]string{sendTo}, from, "Activate", `<a href="`+link+`">Activate</a>`, `Activate `+link)
+func sendActivateEmail(srv service.Layer, sendTo, from, link string, handle *string) {
+	html := `<p>Thank you for registering.</p><p>Click this link to activate your account:</p><p><a href="` + link + `">Activate</a></p><p>If you didn't register for this account you can simply ignore this email.</p>`
+	txt := "Thank you for registering.\nClick this link to activate your account:\n\n" + link + "\n\nIf you didn't register for this account you can simply ignore this email."
+	if handle != nil {
+		html = Strf("Hi %s,\n\n", *handle) + html
+		txt = Strf("Hi %s,\n\n", *handle) + txt
+	}
+	srv.Email().MustSend([]string{sendTo}, from, "Activate", html, txt)
 }
 
 func sendConfirmChangeEmailEmail(srv service.Layer, sendTo, from, link string) {
-	srv.Email().MustSend([]string{sendTo}, from, "Confirm change email", `<a href="`+link+`">Confirm change email</a>`, `Confirm change email `+link)
+	srv.Email().MustSend([]string{sendTo}, from, "Confirm change email",
+		`<p>Click this link to change the email associated with your account:</p><p><a href="`+link+`">Confirm change email</a></p>`,
+		"Confirm change email:\n\n"+link)
 }
 
 func sendResetPwdEmail(srv service.Layer, sendTo, from, newPwd string) {

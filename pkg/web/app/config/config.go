@@ -51,11 +51,11 @@ func GetBase(file ...string) *config.Config {
 	c := config.New(file...)
 	// session cookie store
 	c.SetDefault("session.secure", false)
-	c.SetDefault("session.authKey64s", []interface{}{
+	c.SetDefault("session.authKey64s", []string{
 		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
 		"WK_2RgRx6vjfWVkpiwOCB1fvv1yklnltstBjYlQGfRsl6LyVV4mkt6UamUylmkwC8MEgb9bSGr1FYgM2Zk20Ug",
 	})
-	c.SetDefault("session.encrKey32s", []interface{}{
+	c.SetDefault("session.encrKey32s", []string{
 		"3ICuYRUelY-4Fhak0Iw0_5CW24bJvxFWM0jAA78IIp8",
 		"u80sYkgbBav52fJXbENYhN3Iyof7WhuLHHMaS_rmUQw",
 	})
@@ -67,10 +67,7 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("activateFmtLink", "http://localhost:8081/#/activate?email=%s&code=%s")
 	c.SetDefault("confirmChangeEmailFmtLink", "http://localhost:8081/#/confirmChangeEmail?me=%s&code=%s")
 	c.SetDefault("staticDir", "client/dist")
-	c.SetDefault("contentSecurityPolicies", []interface{}{
-		"style-src-elem 'self' https://fonts.googleapis.com",
-		"font-src 'self' https://fonts.gstatic.com",
-	})
+	c.SetDefault("contentSecurityPolicies", []string{})
 	c.SetDefault("log.type", "local")
 	c.SetDefault("email.type", "local")
 	c.SetDefault("email.apikey", "")
