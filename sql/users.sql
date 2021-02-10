@@ -13,15 +13,24 @@ CREATE TABLE users (
     hasAvatar BOOLEAN NULL,
     fcmEnabled BOOLEAN NULL,
     registeredOn DATETIME(3) NOT NULL,
-    activatedOn DATETIME(3) NULL,
+    activatedOn DATETIME(3) NOT NULL,
 	newEmail VARCHAR(250) NULL,
 	activateCode VARCHAR(250) NULL,
 	changeEmailCode VARCHAR(250) NULL,
 	lastPwdResetOn DATETIME(3) NULL,
     PRIMARY KEY email (email),
     UNIQUE INDEX id (id),
+    INDEX(activatedOn, registeredOn),
     UNIQUE INDEX handle (handle)
 );
+
+# cleanup old registrations that have not been activated in a week
+SET GLOBAL event_scheduler=ON;
+DROP EVENT IF EXISTS userRegistrationCleanup;
+CREATE EVENT userRegistrationCleanup
+ON SCHEDULE EVERY 24 HOUR
+STARTS CURRENT_TIMESTAMP + INTERVAL 1 HOUR
+DO DELETE FROM users WHERE activatedOn=CAST('0000-00-00 00:00:00.000' AS DATETIME(3)) AND registeredOn < DATE_SUB(NOW(), INTERVAL 7 DAY);
 
 DROP TABLE IF EXISTS fcmTokens;
 CREATE TABLE fcmTokens (
