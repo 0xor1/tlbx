@@ -17,24 +17,24 @@ import (
 func main() {
 	config := config.Get("config.json")
 	app.Run(func(c *app.Config) {
-		c.StaticDir = config.StaticDir
-		c.ContentSecurityPolicies = config.ContentSecurityPolicies
+		c.StaticDir = config.Web.StaticDir
+		c.ContentSecurityPolicies = config.Web.ContentSecurityPolicies
 		c.Name = "Trees"
 		c.Description = "A simple project management app which stores tasks in trees"
 		c.TlbxSetup = app.TlbxMwares{
 			session.BasicMware(
-				config.Session.AuthKey64s,
-				config.Session.EncrKey32s,
-				config.Session.Secure),
-			ratelimit.MeMware(config.Cache, config.RateLimit.PerMinute),
-			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store, config.FCM),
+				config.Web.Session.AuthKey64s,
+				config.Web.Session.EncrKey32s,
+				config.Web.Session.Secure),
+			ratelimit.MeMware(config.Redis.RateLimit, config.Web.RateLimit),
+			service.Mware(config.Redis.Cache, config.SQL.User, config.SQL.Pwd, config.SQL.Data, config.Email, config.Store, config.FCM),
 		}
 		c.Log = config.Log
 		c.Endpoints = app.JoinEps(
 			usereps.New(
-				config.FromEmail,
-				config.ActivateFmtLink,
-				config.ConfirmChangeEmailFmtLink,
+				config.App.FromEmail,
+				config.App.ActivateFmtLink,
+				config.App.ConfirmChangeEmailFmtLink,
 				nil,
 				projecteps.OnDelete,
 				projecteps.OnSetSocials,
