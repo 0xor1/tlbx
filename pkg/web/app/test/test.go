@@ -91,6 +91,7 @@ type rig struct {
 	cat         *testUser
 	dan         *testUser
 	log         log.Log
+	rateLimit   iredis.Pool
 	cache       iredis.Pool
 	user        isql.ReplicaSet
 	pwd         isql.ReplicaSet
@@ -123,6 +124,10 @@ func (r *rig) Cat() User {
 
 func (r *rig) Dan() User {
 	return r.dan
+}
+
+func (r *rig) RateLimit() iredis.Pool {
+	return r.rateLimit
 }
 
 func (r *rig) Cache() iredis.Pool {
@@ -174,16 +179,17 @@ func NewRig(
 	buckets ...string,
 ) Rig {
 	r := &rig{
-		unique:  Strf("%d", os.Getpid()),
-		log:     config.Log,
-		cache:   config.Cache,
-		email:   config.Email,
-		store:   config.Store,
-		fcm:     config.FCM,
-		user:    config.User,
-		pwd:     config.Pwd,
-		data:    config.Data,
-		useAuth: useUsers,
+		unique:    Strf("%d", os.Getpid()),
+		log:       config.Log,
+		rateLimit: config.Redis.RateLimit,
+		cache:     config.Redis.Cache,
+		email:     config.Email,
+		store:     config.Store,
+		fcm:       config.FCM,
+		user:      config.SQL.User,
+		pwd:       config.SQL.Pwd,
+		data:      config.SQL.Data,
+		useAuth:   useUsers,
 	}
 
 	for _, bucket := range buckets {
@@ -195,9 +201,9 @@ func NewRig(
 		eps = append(
 			eps,
 			usereps.New(
-				config.FromEmail,
-				config.ActivateFmtLink,
-				config.ConfirmChangeEmailFmtLink,
+				config.App.FromEmail,
+				config.App.ActivateFmtLink,
+				config.App.ConfirmChangeEmailFmtLink,
 				onActivate,
 				onDelete,
 				onSetSocials,
@@ -206,10 +212,10 @@ func NewRig(
 	go app.Run(func(c *app.Config) {
 		c.TlbxSetup = app.TlbxMwares{
 			session.BasicMware(
-				config.Session.AuthKey64s,
-				config.Session.EncrKey32s,
-				config.Session.Secure),
-			ratelimit.MeMware(r.cache, 1000000),
+				config.Web.Session.AuthKey64s,
+				config.Web.Session.EncrKey32s,
+				config.Web.Session.Secure),
+			ratelimit.MeMware(r.rateLimit, 1000000),
 			service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store, r.fcm),
 		}
 		c.Endpoints = eps

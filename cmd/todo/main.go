@@ -15,17 +15,17 @@ func main() {
 	config := config.Get()
 	eps := []*app.Endpoint{}
 	app.Run(func(c *app.Config) {
-		c.StaticDir = config.StaticDir
-		c.ContentSecurityPolicies = config.ContentSecurityPolicies
+		c.StaticDir = config.Web.StaticDir
+		c.ContentSecurityPolicies = config.Web.ContentSecurityPolicies
 		c.Name = "Todo"
 		c.Description = "A simple Todo list application, create multiple lists with many items which can be marked complete or uncomplete"
 		c.TlbxSetup = app.TlbxMwares{
 			session.BasicMware(
-				config.Session.AuthKey64s,
-				config.Session.EncrKey32s,
-				config.Session.Secure),
-			ratelimit.MeMware(config.Cache),
-			service.Mware(config.Cache, config.User, config.Pwd, config.Data, config.Email, config.Store, config.FCM),
+				config.Web.Session.AuthKey64s,
+				config.Web.Session.EncrKey32s,
+				config.Web.Session.Secure),
+			ratelimit.MeMware(config.Redis.RateLimit, config.Web.RateLimit),
+			service.Mware(config.Redis.Cache, config.SQL.User, config.SQL.Pwd, config.SQL.Data, config.Email, config.Store, config.FCM),
 		}
 		c.Log = config.Log
 		c.Endpoints = append(
@@ -33,9 +33,9 @@ func main() {
 				append(
 					eps,
 					usereps.New(
-						config.FromEmail,
-						config.ActivateFmtLink,
-						config.ConfirmChangeEmailFmtLink,
+						config.App.FromEmail,
+						config.App.ActivateFmtLink,
+						config.App.ConfirmChangeEmailFmtLink,
 						nil,
 						listeps.OnDelete,
 						usereps.NopOnSetSocials,

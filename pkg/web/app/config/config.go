@@ -24,64 +24,72 @@ import (
 )
 
 type Config struct {
-	Session struct {
-		Secure     bool
-		AuthKey64s [][]byte
-		EncrKey32s [][]byte
+	Log log.Log
+	Web struct {
+		StaticDir               string
+		ContentSecurityPolicies []string
+		RateLimit               int
+		Session                 struct {
+			Secure     bool
+			AuthKey64s [][]byte
+			EncrKey32s [][]byte
+		}
 	}
-	FromEmail                 string
-	ActivateFmtLink           string
-	ConfirmChangeEmailFmtLink string
-	StaticDir                 string
-	ContentSecurityPolicies   []string
-	RateLimit                 struct {
-		PerMinute int
+	App struct {
+		FromEmail                 string
+		ActivateFmtLink           string
+		ConfirmChangeEmailFmtLink string
 	}
-	Log   log.Log
+	Redis struct {
+		RateLimit iredis.Pool
+		Cache     iredis.Pool
+	}
+	SQL struct {
+		User isql.ReplicaSet
+		Pwd  isql.ReplicaSet
+		Data isql.ReplicaSet
+	}
 	Email email.Client
 	Store store.Client
 	FCM   fcm.Client
-	Cache iredis.Pool
-	User  isql.ReplicaSet
-	Pwd   isql.ReplicaSet
-	Data  isql.ReplicaSet
 }
 
 func GetBase(file ...string) *config.Config {
 	c := config.New(file...)
+	c.SetDefault("log.type", "local")
+	c.SetDefault("web.staticDir", "client/dist")
+	c.SetDefault("web.contentSecurityPolicies", []string{})
+	c.SetDefault("web.rateLimit", 300)
 	// session cookie store
-	c.SetDefault("session.secure", false)
-	c.SetDefault("session.authKey64s", []string{
+	c.SetDefault("web.session.secure", false)
+	c.SetDefault("web.session.authKey64s", []string{
 		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
 		"WK_2RgRx6vjfWVkpiwOCB1fvv1yklnltstBjYlQGfRsl6LyVV4mkt6UamUylmkwC8MEgb9bSGr1FYgM2Zk20Ug",
 	})
-	c.SetDefault("session.encrKey32s", []string{
+	c.SetDefault("web.session.encrKey32s", []string{
 		"3ICuYRUelY-4Fhak0Iw0_5CW24bJvxFWM0jAA78IIp8",
 		"u80sYkgbBav52fJXbENYhN3Iyof7WhuLHHMaS_rmUQw",
 	})
+	c.SetDefault("app.fromEmail", "test@test.localhost")
+	c.SetDefault("app.activateFmtLink", "http://localhost:8081/#/activate?email=%s&code=%s")
+	c.SetDefault("app.confirmChangeEmailFmtLink", "http://localhost:8081/#/confirmChangeEmail?me=%s&code=%s")
+	c.SetDefault("redis.rateLimit", "localhost:6379")
+	c.SetDefault("redis.cache", "localhost:6379")
+	c.SetDefault("sql.user.primary", "users:C0-Mm-0n-U5-3r5@tcp(localhost:3306)/users?parseTime=true&loc=UTC&multiStatements=true")
+	c.SetDefault("sql.user.slaves", []string{})
+	c.SetDefault("sql.pwd.primary", "pwds:C0-Mm-0n-Pwd5@tcp(localhost:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true")
+	c.SetDefault("sql.pwd.slaves", []string{})
+	c.SetDefault("sql.data.primary", "data:C0-Mm-0n-Da-Ta@tcp(localhost:3306)/data?parseTime=true&loc=UTC&multiStatements=true")
+	c.SetDefault("sql.data.slaves", []string{})
+	c.SetDefault("sql.connMaxLifetime", 5*time.Second)
+	c.SetDefault("sql.maxIdleConns", 50)
+	c.SetDefault("sql.maxOpenConns", 100)
+	c.SetDefault("email.type", "local")
+	c.SetDefault("email.apikey", "")
 	c.SetDefault("aws.region", "local")
 	c.SetDefault("aws.s3.endpoint", "http://localhost:9000")
 	c.SetDefault("aws.s3.creds.id", "localtest")
 	c.SetDefault("aws.s3.creds.secret", "localtest")
-	c.SetDefault("fromEmail", "test@test.localhost")
-	c.SetDefault("activateFmtLink", "http://localhost:8081/#/activate?email=%s&code=%s")
-	c.SetDefault("confirmChangeEmailFmtLink", "http://localhost:8081/#/confirmChangeEmail?me=%s&code=%s")
-	c.SetDefault("staticDir", "client/dist")
-	c.SetDefault("contentSecurityPolicies", []string{})
-	c.SetDefault("log.type", "local")
-	c.SetDefault("email.type", "local")
-	c.SetDefault("email.apikey", "")
-	c.SetDefault("cache", "localhost:6379")
-	c.SetDefault("user.primary", "users:C0-Mm-0n-U5-3r5@tcp(localhost:3306)/users?parseTime=true&loc=UTC&multiStatements=true")
-	c.SetDefault("user.slaves", []string{})
-	c.SetDefault("pwd.primary", "pwds:C0-Mm-0n-Pwd5@tcp(localhost:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true")
-	c.SetDefault("pwd.slaves", []string{})
-	c.SetDefault("data.primary", "data:C0-Mm-0n-Da-Ta@tcp(localhost:3306)/data?parseTime=true&loc=UTC&multiStatements=true")
-	c.SetDefault("data.slaves", []string{})
-	c.SetDefault("sql.connMaxLifetime", 5*time.Second)
-	c.SetDefault("sql.maxIdleConns", 50)
-	c.SetDefault("sql.maxOpenConns", 100)
-	c.SetDefault("rateLimit.perMinute", 300)
 	c.SetDefault("fcm.serviceAccountKeyFile", "")
 
 	return c
@@ -96,6 +104,53 @@ func GetProcessed(c *config.Config) *Config {
 	default:
 		PanicIf(true, "unsupported log type %s", c.GetString("log.type"))
 	}
+
+	res.Web.StaticDir = c.GetString("web.staticDir")
+	res.Web.ContentSecurityPolicies = c.GetStringSlice("web.contentSecurityPolicies")
+	res.Web.RateLimit = c.GetInt("web.rateLimit")
+	res.Web.Session.Secure = c.GetBool("web.session.secure")
+	authKey64s := c.GetStringSlice("web.session.authKey64s")
+	encrKey32s := c.GetStringSlice("web.session.encrKey32s")
+	for i := range authKey64s {
+		authBytes, err := base64.RawURLEncoding.DecodeString(authKey64s[i])
+		PanicOn(err)
+		PanicIf(len(authBytes) != 64, "sessionAuthBytes length is not 64")
+		res.Web.Session.AuthKey64s = append(res.Web.Session.AuthKey64s, authBytes)
+		encrBytes, err := base64.RawURLEncoding.DecodeString(encrKey32s[i])
+		PanicOn(err)
+		PanicIf(len(encrBytes) != 32, "sessionEncrBytes length is not 32")
+		res.Web.Session.EncrKey32s = append(res.Web.Session.EncrKey32s, encrBytes)
+	}
+
+	res.App.FromEmail = c.GetString("app.fromEmail")
+	res.App.ActivateFmtLink = c.GetString("app.activateFmtLink")
+	res.App.ConfirmChangeEmailFmtLink = c.GetString("app.confirmChangeEmailFmtLink")
+
+	res.Redis.RateLimit = iredis.CreatePool(c.GetString("redis.rateLimit"))
+	res.Redis.Cache = iredis.CreatePool(c.GetString("redis.cache"))
+
+	sqlMaxLifetime := c.GetDuration("sql.connMaxLifetime")
+	sqlMaxIdleConns := c.GetInt("sql.maxIdleConns")
+	sqlMaxOpenConns := c.GetInt("sql.maxOpenConns")
+
+	var err error
+	res.SQL.User, err = isql.NewReplicaSet(c.GetString("sql.user.primary"), c.GetStringSlice("sql.user.slaves")...)
+	PanicOn(err)
+	res.SQL.User.SetConnMaxLifetime(sqlMaxLifetime)
+	res.SQL.User.SetMaxIdleConns(sqlMaxIdleConns)
+	res.SQL.User.SetMaxOpenConns(sqlMaxOpenConns)
+
+	res.SQL.Pwd, err = isql.NewReplicaSet(c.GetString("sql.pwd.primary"), c.GetStringSlice("sql.pwd.slaves")...)
+	PanicOn(err)
+	res.SQL.Pwd.SetConnMaxLifetime(sqlMaxLifetime)
+	res.SQL.Pwd.SetMaxIdleConns(sqlMaxIdleConns)
+	res.SQL.Pwd.SetMaxOpenConns(sqlMaxOpenConns)
+
+	res.SQL.Data, err = isql.NewReplicaSet(c.GetString("sql.data.primary"), c.GetStringSlice("sql.data.slaves")...)
+	PanicOn(err)
+	res.SQL.Data.SetConnMaxLifetime(sqlMaxLifetime)
+	res.SQL.Data.SetMaxIdleConns(sqlMaxIdleConns)
+	res.SQL.Data.SetMaxOpenConns(sqlMaxOpenConns)
 
 	switch c.GetString("email.type") {
 	case "local":
@@ -133,52 +188,6 @@ func GetProcessed(c *config.Config) *Config {
 	} else {
 		res.FCM = fcm.NewNopClient(res.Log)
 	}
-
-	res.StaticDir = c.GetString("staticDir")
-	res.ContentSecurityPolicies = c.GetStringSlice("contentSecurityPolicies")
-	res.FromEmail = c.GetString("fromEmail")
-	res.ActivateFmtLink = c.GetString("activateFmtLink")
-	res.ConfirmChangeEmailFmtLink = c.GetString("confirmChangeEmailFmtLink")
-	res.RateLimit.PerMinute = c.GetInt("rateLimit.perMinute")
-
-	res.Session.Secure = c.GetBool("session.secure")
-	authKey64s := c.GetStringSlice("session.authKey64s")
-	encrKey32s := c.GetStringSlice("session.encrKey32s")
-	for i := range authKey64s {
-		authBytes, err := base64.RawURLEncoding.DecodeString(authKey64s[i])
-		PanicOn(err)
-		PanicIf(len(authBytes) != 64, "sessionAuthBytes length is not 64")
-		res.Session.AuthKey64s = append(res.Session.AuthKey64s, authBytes)
-		encrBytes, err := base64.RawURLEncoding.DecodeString(encrKey32s[i])
-		PanicOn(err)
-		PanicIf(len(encrBytes) != 32, "sessionEncrBytes length is not 32")
-		res.Session.EncrKey32s = append(res.Session.EncrKey32s, encrBytes)
-	}
-
-	res.Cache = iredis.CreatePool(c.GetString("cache"))
-
-	sqlMaxLifetime := c.GetDuration("sql.connMaxLifetime")
-	sqlMaxIdleConns := c.GetInt("sql.maxIdleConns")
-	sqlMaxOpenConns := c.GetInt("sql.maxOpenConns")
-
-	var err error
-	res.User, err = isql.NewReplicaSet(c.GetString("user.primary"), c.GetStringSlice("user.slaves")...)
-	PanicOn(err)
-	res.User.SetConnMaxLifetime(sqlMaxLifetime)
-	res.User.SetMaxIdleConns(sqlMaxIdleConns)
-	res.User.SetMaxOpenConns(sqlMaxOpenConns)
-
-	res.Pwd, err = isql.NewReplicaSet(c.GetString("pwd.primary"), c.GetStringSlice("pwd.slaves")...)
-	PanicOn(err)
-	res.Pwd.SetConnMaxLifetime(sqlMaxLifetime)
-	res.Pwd.SetMaxIdleConns(sqlMaxIdleConns)
-	res.Pwd.SetMaxOpenConns(sqlMaxOpenConns)
-
-	res.Data, err = isql.NewReplicaSet(c.GetString("data.primary"), c.GetStringSlice("data.slaves")...)
-	PanicOn(err)
-	res.Data.SetConnMaxLifetime(sqlMaxLifetime)
-	res.Data.SetMaxIdleConns(sqlMaxIdleConns)
-	res.Data.SetMaxOpenConns(sqlMaxOpenConns)
 
 	return res
 }
