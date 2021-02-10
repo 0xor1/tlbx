@@ -117,7 +117,7 @@ func New(
 				defer usrtx.Rollback()
 				pwdtx := srv.Pwd().Begin()
 				defer pwdtx.Rollback()
-				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, fcmEnabled, Now(), activateCode)
+				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, fcmEnabled, Now(), time.Time{}, activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
@@ -187,7 +187,7 @@ func New(
 				user := getUser(tx, &args.Email, nil)
 				app.BadReqIf(*user.ActivateCode != args.Code, "")
 				now := Now()
-				user.ActivatedOn = &now
+				user.ActivatedOn = now
 				user.ActivateCode = nil
 				updateUser(tx, user)
 				if onActivate != nil {
@@ -950,7 +950,7 @@ type fullUser struct {
 	user.User
 	Email           string
 	RegisteredOn    time.Time
-	ActivatedOn     *time.Time
+	ActivatedOn     time.Time
 	NewEmail        *string
 	ActivateCode    *string
 	ChangeEmailCode *string
