@@ -76,12 +76,12 @@ export default {
                     return `<div class="markdown">${dompurify.sanitize(marked(txt))}</div>`
                 },
                 ellipsis(txt, len) {
-                    if (len == null) {
-                        throw new Error('len must be defined')
+                    if (len == null || len < 4) {
+                        throw new Error('len must be greater than 3')
                     }
                     let res = txt
                     if (txt.length > len) {
-                        res = txt.substring(0, len) + '...'
+                        res = txt.substring(0, len-3) + '...'
                     }
                     return res
                 },

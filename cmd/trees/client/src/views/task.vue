@@ -1113,7 +1113,8 @@ div.root {
             text-align: right;
             &.name{
               text-align: left;
-              min-width: 20pc;
+              min-width: 21pc;
+              max-width: 21pc;
             }
           }
           &.confirm-delete {
@@ -1196,6 +1197,7 @@ div.root {
         min-width: 21pc;
       }
       td.note{
+        max-width: 21pc;
         text-align: left;
         input {
           width: calc(100% - 0.8pc);
