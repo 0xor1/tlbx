@@ -336,35 +336,7 @@ func config(configs ...func(*Config)) *Config {
 		MDoMaxBodyBytes: MB,
 		Name:            "Web App",
 		Description:     "A web app",
-		Endpoints: []*Endpoint{
-			{
-				Description:  "A test endpoint to echo back the args",
-				Path:         "/test/echo",
-				Timeout:      100,
-				MaxBodyBytes: MB,
-				IsPrivate:    false,
-				GetDefaultArgs: func() interface{} {
-					return &map[string]interface{}{}
-				},
-				GetExampleArgs: func() interface{} {
-					return &map[string]interface{}{
-						"a": "ali",
-						"b": "bob",
-						"c": "cat",
-					}
-				},
-				GetExampleResponse: func() interface{} {
-					return &map[string]interface{}{
-						"a": "ali",
-						"b": "bob",
-						"c": "cat",
-					}
-				},
-				Handler: func(tlbx Tlbx, args interface{}) interface{} {
-					return args
-				},
-			},
-		},
+		Endpoints:       nil,
 		Serve: func(h http.HandlerFunc) {
 			server.Run(func(c *server.Config) {
 				c.Log = l
@@ -891,6 +863,32 @@ var defaultEps = []*Endpoint{
 		},
 		Handler: func(tlbx Tlbx, _ interface{}) interface{} {
 			return "pong"
+		},
+	},
+	{
+		Description:  "echo back the json obj args",
+		Path:         "/echo",
+		Timeout:      500,
+		MaxBodyBytes: KB,
+		GetDefaultArgs: func() interface{} {
+			return &map[string]interface{}{}
+		},
+		GetExampleArgs: func() interface{} {
+			return &map[string]interface{}{
+				"a": "ali",
+				"b": "bob",
+				"c": "cat",
+			}
+		},
+		GetExampleResponse: func() interface{} {
+			return &map[string]interface{}{
+				"a": "ali",
+				"b": "bob",
+				"c": "cat",
+			}
+		},
+		Handler: func(tlbx Tlbx, args interface{}) interface{} {
+			return args
 		},
 	},
 }

@@ -31,6 +31,8 @@ const (
 )
 
 type Rig interface {
+	// root http server handler
+	RootHandler() http.HandlerFunc
 	// unique
 	Unique() string
 	// http
@@ -100,6 +102,10 @@ type rig struct {
 	store       store.Client
 	fcm         fcm.Client
 	useAuth     bool
+}
+
+func (r *rig) RootHandler() http.HandlerFunc {
+	return r.rootHandler
 }
 
 func (r *rig) Unique() string {
@@ -209,23 +215,25 @@ func NewRig(
 				onSetSocials,
 				validateFcmTopic)...)
 	}
-	go app.Run(func(c *app.Config) {
-		c.TlbxSetup = app.TlbxMwares{
-			session.BasicMware(
-				config.Web.Session.AuthKey64s,
-				config.Web.Session.EncrKey32s,
-				config.Web.Session.Secure),
-			ratelimit.MeMware(r.rateLimit, 1000000),
-			service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store, r.fcm),
-		}
-		c.Endpoints = eps
-		c.Serve = func(h http.HandlerFunc) {
-			r.rootHandler = h
-		}
-	})
+	Go(func() {
+		app.Run(func(c *app.Config) {
+			c.TlbxSetup = app.TlbxMwares{
+				session.BasicMware(
+					config.Web.Session.AuthKey64s,
+					config.Web.Session.EncrKey32s,
+					config.Web.Session.Secure),
+				ratelimit.MeMware(r.rateLimit, 1000000),
+				service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store, r.fcm),
+			}
+			c.Endpoints = eps
+			c.Serve = func(h http.HandlerFunc) {
+				r.rootHandler = h
+			}
+		})
+	}, r.log.ErrorOn)
 
 	// sleep to ensure r.rootHandler has been passed to rig struct
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	r.ali = r.createUser("ali", emailSuffix, pwd)
 	r.bob = r.createUser("bob", emailSuffix, pwd)
 	r.cat = r.createUser("cat", emailSuffix, pwd)
