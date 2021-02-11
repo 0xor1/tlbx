@@ -205,8 +205,11 @@ function newApi(isMDoApi) {
         fcm.onMessage((msg)=>{
           if (msg != null && msg.data != null) {
             let d = msg.data
-            if (d.extraInfo != null) {
+            if (d.extraInfo != null && d.extraInfo.length > 0) {
               d.extraInfo = JSON.parse(d.extraInfo)
+            }
+            if (d.ancestors != null && d.ancestors.length > 0) {
+              d.ancestors = JSON.parse(d.ancestors)
             }
             console.log(d)
             if (fcmClientId === d['X-Fcm-Client']) {
