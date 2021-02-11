@@ -24,7 +24,7 @@ import (
 
 type extraInfo struct {
 	Type vitem.Type `json:"type"`
-	Note string     `json:"string"`
+	Note string     `json:"note"`
 	Est  *uint64    `json:"est,omitempty"`
 	Inc  uint64     `json:"inc"`
 }
