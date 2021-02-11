@@ -343,7 +343,8 @@ var (
 					for _, t := range ts {
 						if t != nil {
 							idStr := t.ID.String()
-							// this check is for the one special case that newPrevSib may also be the oldParent
+							// this check is for the two special cases that newPrevSib may also be the oldParent
+							// or the newParent may also be the oldPrevSib
 							// thus saving a duplicated update query
 							if !updated[idStr] {
 								updated[idStr] = true
@@ -355,6 +356,19 @@ var (
 				}
 				if simpleUpdateRequired || treeUpdateRequired {
 					update(t, oldParent, oldPrevSib, newParent, newPrevSib)
+					if treeUpdateRequired {
+						if newParent != nil {
+							// if we moved parent we must recalculate aggregate values on the new and old parents ancestral chains
+							epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, newParent.ID)
+							epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, oldParent.ID)
+						} else if t.Parent != nil {
+							// need to do the t.Parent nil check here incase it's the root project node having est value updated
+							// here a tree update is required but the task has not been moved parents
+							// so it must have had an est value changed on it, so update from its parent
+							epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
+						}
+
+					}
 					if args.Name != nil {
 						args.Name.V = StrEllipsis(args.Name.V, 50)
 					}
@@ -381,22 +395,7 @@ var (
 						CostEst:     args.CostEst,
 					}, nil)
 				}
-				if treeUpdateRequired {
-					if oldParent != nil {
-						// if we moved parent we must recalculate aggregate values on the old parents ancestral chain
-						epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, oldParent.ID)
-					}
-					updatedTaskIDs := epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, t.ID)
-					if len(updatedTaskIDs) == 0 && t.Parent != nil {
-						// if updating aggregate values on the task being updated results in no change,
-						// need to make sure we explicitly update through the new parent also
-						epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
-					} else {
-						// else all updates did occur and t was definitely updated
-						// so call getOne again make sure we'r returning fresh aggregate values
-						t = GetOne(tx, args.Host, args.Project, t.ID)
-					}
-				}
+
 				if nameUpdated {
 					epsutil.ActivityItemRename(tx, args.Host, args.Project, args.ID, t.Name, true)
 				}
@@ -407,8 +406,9 @@ var (
 					// if the task moved parent get both old and new parents for response
 					res.OldParent = GetOne(tx, args.Host, args.Project, oldParent.ID)
 					res.NewParent = GetOne(tx, args.Host, args.Project, args.Parent.V)
-				} else if t.Parent != nil {
+				} else if treeUpdateRequired && t.Parent != nil {
 					// task didnt move parent, and it's not the root project node
+					// but an est value was updated so return old parent
 					res.OldParent = GetOne(tx, args.Host, args.Project, *t.Parent)
 				}
 				tx.Commit()
