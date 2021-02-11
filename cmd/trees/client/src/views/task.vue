@@ -77,7 +77,7 @@
         <p v-if="t0.description.length > 0" v-html="$u.fmt.md(t0.description)"></p>
       </div>
       <div v-for="(type, idx) in ['time', 'cost']" :key="idx">
-        <div v-if="$root.show[type]" :class="['items', type+'s']">
+        <div v-if="$root.show[type] && (vitem[type].set.length > 0 || $u.perm.canWrite(pMe))" :class="['items', type+'s']">
           <div class="heading">{{type}} <span class="medium" v-if="type == 'cost'">{{$u.fmt.currencySymbol(project.currencyCode)}}</span> <span class="medium">{{$u.fmt[type](t0[type+'Inc'])}}</span><span class="medium" v-if="task.set.length > 0"> | {{$u.fmt[type](t0[type+'SubInc'])}}</span></div>
           <div v-if="$u.perm.canWrite(pMe)" class="create-form">
             <div title="note">
@@ -124,7 +124,7 @@
           <div v-if="vitem[type].more"><button @click.stop.prevent="vitemLoadMore(type)">load more</button></div>
         </div>
       </div>
-      <div v-if="$root.show.file && project.fileLimit > 0" class="items files">
+      <div v-if="$root.show.file && project.fileLimit > 0 && (file.set.length > 0 || $u.perm.canWrite(pMe))" class="items files">
         <div class="heading">file <span class="medium">{{$u.fmt.bytes(t0.fileSize)}}</span><span class="medium" v-if="task.set.length > 0"> | {{$u.fmt.bytes(t0.fileSubSize)}}</span></div>
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div @click.stop="fileButtonClick" class="file-selector" title="choose file">
