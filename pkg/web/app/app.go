@@ -16,6 +16,7 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/log"
+	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/server"
 )
 
@@ -25,6 +26,7 @@ const (
 	GB int64 = 1000000000
 
 	ApiPathPrefix = "/api"
+	pingPath      = "/ping"
 	docsPath      = ApiPathPrefix + "/docs"
 	mdoPath       = ApiPathPrefix + "/mdo"
 )
@@ -75,6 +77,7 @@ func Run(configs ...func(*Config)) {
 	// id pool
 	idGenPool := NewIDGenPool(c.IDGenPoolSize)
 	// endpoints
+	c.Endpoints = JoinEps(defaultEps, c.Endpoints)
 	router := map[string]*Endpoint{}
 	router[docsPath] = nil
 	router[mdoPath] = nil
@@ -92,11 +95,11 @@ func Run(configs ...func(*Config)) {
 			"endpoint: %q, missing GetExampleArgs", ep.Path)
 		PanicIf(ep.GetExampleResponse == nil,
 			"endpoint: %q, missing GetExampleResponse", ep.Path)
-		ep.Path = ApiPathPrefix + ep.Path
-		path := StrLower(ep.Path)
-		_, exists := router[path]
+		path := ApiPathPrefix + ep.Path
+		lPath := StrLower(path)
+		_, exists := router[lPath]
 		PanicIf(exists, "duplicate endpoint path: %q", path)
-		router[path] = ep
+		router[lPath] = ep
 		if !ep.IsPrivate {
 			docs.Endpoints = append(docs.Endpoints, &endpointDoc{
 				Description:     ep.Description,
@@ -847,4 +850,47 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 
 func MustCall(c *Client, path string, args interface{}, res interface{}) {
 	PanicOn(Call(c, path, args, res))
+}
+
+type Ping struct{}
+
+func (_ *Ping) Path() string {
+	return pingPath
+}
+
+func (a *Ping) Do(c *Client) (string, error) {
+	res := ptr.String("")
+	err := Call(c, a.Path(), a, &res)
+	if res != nil {
+		return *res, err
+	}
+	return "", err
+}
+
+func (a *Ping) MustDo(c *Client) string {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+var defaultEps = []*Endpoint{
+	{
+		Description:      "ping",
+		Path:             (&Ping{}).Path(),
+		Timeout:          500,
+		MaxBodyBytes:     KB,
+		SkipXClientCheck: true,
+		GetDefaultArgs: func() interface{} {
+			return nil
+		},
+		GetExampleArgs: func() interface{} {
+			return nil
+		},
+		GetExampleResponse: func() interface{} {
+			return "pong"
+		},
+		Handler: func(tlbx Tlbx, _ interface{}) interface{} {
+			return "pong"
+		},
+	},
 }
