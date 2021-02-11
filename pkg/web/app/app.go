@@ -538,12 +538,6 @@ type mDoReq struct {
 	Path    string                 `json:"path"`
 	Args    map[string]interface{} `json:"args"`
 }
-
-type mDoRespJson struct {
-	Status int           `json:"status"`
-	Header http.Header   `json:"header,omitempty"`
-	Body   *bytes.Buffer `json:"body"`
-}
 type mDoResp struct {
 	returnHeaders bool
 	status        int
@@ -564,14 +558,16 @@ func (r *mDoResp) WriteHeader(status int) {
 }
 
 func (r *mDoResp) MarshalJSON() ([]byte, error) {
-	jsObj := &mDoRespJson{
-		Status: r.status,
-		Body:   r.body,
+	b := r.body.String()
+	if b == "" || b == "<nil>" {
+		b = "null"
 	}
 	if r.returnHeaders {
-		jsObj.Header = r.header
+		h := json.MustMarshal(r.header)
+		return []byte(Strf(`{"status":%d,"header":%s,"body":%s}`, r.status, string(h), b)), nil
+	} else {
+		return []byte(Strf(`{"status":%d,"body":%s}`, r.status, b)), nil
 	}
-	return json.Marshal(jsObj)
 }
 
 type Endpoint struct {
