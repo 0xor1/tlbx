@@ -12,6 +12,7 @@ const fcmVapidKey = "BIrxz8PBCCRX2XekUa2zAKdYnKLhj9uHKhuSW5gc0WXWSCeh4Kx3c3GjHse
 let fcm = firebase.messaging()
 let fcmClientId = null
 let fcmToken = null
+let fcmCurrentTopic = null
 let fcmEnabled = false
 let fcmOnLogout = null
 let fcmOnEnabled = null
@@ -22,6 +23,21 @@ let memCache = {}
 let meInFlight = false
 let userGetInFlight = {}
 let globalErrorHandler = null
+let fcmUnregisterFn = ()=>{
+  if (fcmClientId != null && navigator.sendBeacon != null) {
+    navigator.sendBeacon(`/api/user/unregisterFromFCM?args={client:"${fcmClientId}"}`)
+  }
+}
+window.addEventListener("unload", fcmUnregisterFn);
+document.addEventListener("visibilitychange", ()=>{
+  if (document.visibilityState === 'visible') {
+    if (fcmEnabled == true && fcmCurrentTopic != null) {
+      window.api.user.registerForFCM({topic: fcmCurrentTopic})
+    }
+  } else {
+    fcmUnregisterFn()
+  }
+});
 
 function NewError(status, body) {
   return {
@@ -278,6 +294,8 @@ function newApi(isMDoApi) {
         memCache = {}
         return doReq('/user/logout').then(()=>{
           notAuthed = true
+          fcmEnabled = false
+          fcmCurrentTopic = null
         })
       },
       me() {
@@ -417,6 +435,14 @@ function newApi(isMDoApi) {
       },
       registerForFCM(args){
         // topic
+        if (fcmEnabled == false) {
+          // if fcm isn't enabled just return
+          // empty success promise
+          return new Promise((res)=>{
+            res()
+          })
+        }
+        fcmCurrentTopic = args.topic
         args.token = fcmToken
         args.client = fcmClientId
         return doReq('/user/registerForFCM', args).then((clientId)=>{
@@ -426,7 +452,9 @@ function newApi(isMDoApi) {
       },
       unregisterFromFCM(){
         if (fcmEnabled && fcmClientId != null) {
-          return doReq('/user/unregisterFromFCM', {client: fcmClientId})
+          return doReq('/user/unregisterFromFCM', {client: fcmClientId}).then(()=>{
+            fcmCurrentTopic = null
+          })
         }
       }
     },
