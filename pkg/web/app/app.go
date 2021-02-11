@@ -217,6 +217,7 @@ func Run(configs ...func(*Config)) {
 						subReq, err := http.NewRequest(http.MethodPut, StrLower(mdoReq.Path)+"?isSubMDo=true", bytes.NewReader(argsBytes))
 						PanicOn(err)
 						PanicIf(subReq.URL.Path == mdoPath, "can't have mdo request inside an mdo request")
+						PanicIf(!strings.HasPrefix(subReq.URL.Path, ApiPathPrefixSegment), "can't have none api request inside an mdo request")
 						for _, c := range tlbx.req.Cookies() {
 							subReq.AddCookie(c)
 						}
@@ -518,9 +519,7 @@ func writeJsonOk(w http.ResponseWriter, body interface{}) {
 }
 
 func writeJson(w http.ResponseWriter, status int, body interface{}) {
-	bodyBytes, err := json.Marshal(body)
-	PanicOn(err)
-	writeJsonRaw(w, status, bodyBytes)
+	writeJsonRaw(w, status, json.MustMarshal(body))
 }
 
 func writeJsonRaw(w http.ResponseWriter, status int, body []byte) {
@@ -540,6 +539,11 @@ type mDoReq struct {
 	Args    map[string]interface{} `json:"args"`
 }
 
+type mDoRespJson struct {
+	Status int           `json:"status"`
+	Header http.Header   `json:"header,omitempty"`
+	Body   *bytes.Buffer `json:"body"`
+}
 type mDoResp struct {
 	returnHeaders bool
 	status        int
@@ -560,13 +564,14 @@ func (r *mDoResp) WriteHeader(status int) {
 }
 
 func (r *mDoResp) MarshalJSON() ([]byte, error) {
-	if r.returnHeaders {
-		h, err := json.Marshal(r.header)
-		PanicOn(err)
-		return []byte(Strf(`{"status":%d,"header":%s,"body":%s}`, r.status, h, r.body)), nil
-	} else {
-		return []byte(Strf(`{"status":%d,"body":%s}`, r.status, r.body)), nil
+	jsObj := &mDoRespJson{
+		Status: r.status,
+		Body:   r.body,
 	}
+	if r.returnHeaders {
+		jsObj.Header = r.header
+	}
+	return json.Marshal(jsObj)
 }
 
 type Endpoint struct {
@@ -863,32 +868,6 @@ var defaultEps = []*Endpoint{
 		},
 		Handler: func(tlbx Tlbx, _ interface{}) interface{} {
 			return "pong"
-		},
-	},
-	{
-		Description:  "echo back the json obj args",
-		Path:         "/echo",
-		Timeout:      500,
-		MaxBodyBytes: KB,
-		GetDefaultArgs: func() interface{} {
-			return &map[string]interface{}{}
-		},
-		GetExampleArgs: func() interface{} {
-			return &map[string]interface{}{
-				"a": "ali",
-				"b": "bob",
-				"c": "cat",
-			}
-		},
-		GetExampleResponse: func() interface{} {
-			return &map[string]interface{}{
-				"a": "ali",
-				"b": "bob",
-				"c": "cat",
-			}
-		},
-		Handler: func(tlbx Tlbx, args interface{}) interface{} {
-			return args
 		},
 	},
 }
