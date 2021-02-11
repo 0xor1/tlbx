@@ -25,7 +25,7 @@ let userGetInFlight = {}
 let globalErrorHandler = null
 let fcmUnregisterFn = ()=>{
   if (fcmClientId != null && navigator.sendBeacon != null) {
-    navigator.sendBeacon(`/api/user/unregisterFromFCM?args={client:"${fcmClientId}"}`)
+    navigator.sendBeacon(`/api/user/unregisterFromFCM?args={"client":"${fcmClientId}"}`)
   }
 }
 window.addEventListener("unload", fcmUnregisterFn);
