@@ -25,7 +25,7 @@ let userGetInFlight = {}
 let globalErrorHandler = null
 let fcmUnregisterFnCalled = false
 let fcmUnregisterFn = ()=>{
-  if (fcmUnregisterFnCalled == false && fcmClientId != null && navigator.sendBeacon != null) {
+  if (memCache.me != null && fcmUnregisterFnCalled == false && fcmClientId != null && navigator.sendBeacon != null) {
     fcmUnregisterFnCalled = true
     navigator.sendBeacon(`/api/user/unregisterFromFCM?args={"client":"${fcmClientId}"}`)
   }
@@ -34,7 +34,7 @@ window.addEventListener("unload", fcmUnregisterFn);
 document.addEventListener("visibilitychange", ()=>{
   if (document.visibilityState === 'visible') {
     fcmUnregisterFnCalled = false
-    if (fcmEnabled == true && fcmCurrentTopic != null) {
+    if (memCache.me != null && fcmEnabled == true && fcmCurrentTopic != null) {
       window.api.user.registerForFCM({topic: fcmCurrentTopic})
     }
   } else {
