@@ -211,7 +211,12 @@ function newApi(isMDoApi) {
               d.extraInfo = null
             }
             if (d.ancestors != null && d.ancestors.length > 0) {
-              d.ancestors = JSON.parse(d.ancestors)
+              let ancestors = JSON.parse(d.ancestors)
+              d.ancestors = {}
+              let len = ancestors.length
+              for(let i = 0; i < len; i++) {
+                d.ancestors[ancestors[i]] = true
+              }
             } else {
               d.ancestors = null
             }
