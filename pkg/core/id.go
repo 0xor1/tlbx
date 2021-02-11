@@ -206,6 +206,27 @@ func (ids IDs) StrJoin(sep string) string {
 	return StrJoin(strs, sep)
 }
 
+func IDsMerge(idss ...IDs) IDs {
+	count := 0
+	for _, ids := range idss {
+		count += len(ids)
+	}
+	mergeMap := make(map[string]bool, count)
+	merge := make(IDs, 0, count)
+	for _, ids := range idss {
+		for _, id := range ids {
+			str := id.String()
+			Println(str)
+			if !mergeMap[str] {
+				mergeMap[str] = true
+				merge = append(merge, id)
+			}
+		}
+	}
+	return merge
+
+}
+
 // use fmt.Errorf as no stack trace here.
 var zeroIDErr = fmt.Errorf("zero id detected")
 

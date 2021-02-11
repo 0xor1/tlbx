@@ -105,6 +105,27 @@ func Test_IDsStrJoin(t *testing.T) {
 	a.Equal("00000000000000000000000000_00000000000000000000000000", idsStr)
 }
 
+func Test_IDsMerge(t *testing.T) {
+	a := assert.New(t)
+	gen := NewIDGen()
+	u := gen.MustNew()
+	v := gen.MustNew()
+	w := gen.MustNew()
+	x := gen.MustNew()
+	y := gen.MustNew()
+	z := gen.MustNew()
+	one := IDs{w, x, y, z}
+	two := IDs{u, v, w, x, y, z}
+	merged := IDsMerge(one, two)
+	a.Equal(merged[0], w)
+	a.Equal(merged[1], x)
+	a.Equal(merged[2], y)
+	a.Equal(merged[3], z)
+	a.Equal(merged[4], u)
+	a.Equal(merged[5], v)
+	a.Equal(6, len(merged))
+}
+
 func Test_PanicIfZeroID(t *testing.T) {
 	a := assert.New(t)
 	Do(func() {
