@@ -86,14 +86,14 @@ var (
 				_, err = tx.Exec(`UPDATE tasks SET fileN=fileN+1, fileSize=fileSize+? WHERE host=? AND project=? AND id=?`, f.Size, innerArgs.Host, innerArgs.Project, innerArgs.Task)
 				PanicOn(err)
 				// propogate aggregate sizes upwards
-				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task)
+				ancestors := epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task)
 				epsutil.LogActivity(tlbx, tx, innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID, cnsts.TypeFile, cnsts.ActionCreated, &f.Name, struct {
 					Size uint64 `json:"size"`
 					Type string `json:"type"`
 				}{
 					Size: uint64(args.Size),
 					Type: args.Type,
-				}, nil)
+				}, nil, ancestors)
 				res := &file.CreateRes{
 					Task: taskeps.GetOne(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task),
 					File: f,
@@ -274,9 +274,9 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`UPDATE tasks SET fileN=fileN-1, fileSize=fileSize-? WHERE host=? AND project=? AND id=?`, f.Size, args.Host, args.Project, args.Task)
 				PanicOn(err)
-				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
+				ancestors := epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeFile, cnsts.ActionDeleted, &f.Name, nil, nil)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeFile, cnsts.ActionDeleted, &f.Name, nil, nil, ancestors)
 				t := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				srv.Store().MustDelete(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
 				tx.Commit()

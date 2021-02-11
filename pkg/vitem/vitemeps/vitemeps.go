@@ -100,7 +100,7 @@ var (
 				_, err = tx.Exec(Strf(`UPDATE tasks SET %sEst=?, %sInc=? WHERE host=? AND project=? AND id=?`, i.Type, i.Type), gtr(true), gtr(false), args.Host, args.Project, args.Task)
 				PanicOn(err)
 				// propogate aggregate values upwards
-				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
+				ancestors := epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, i.ID, cnsts.TypeVitem, cnsts.ActionCreated, nil, &extraInfo{
 					Type: args.Type,
 					Note: StrEllipsis(args.Note, 50),
@@ -111,7 +111,7 @@ var (
 					Note: args.Note,
 					Est:  args.Est,
 					Inc:  args.Inc,
-				})
+				}, ancestors)
 				tx.Commit()
 				return vitem.VitemRes{
 					Task: tsk,
@@ -196,10 +196,11 @@ var (
 				}
 				_, err := tx.Exec(`UPDATE vitems SET inc=?, note=? WHERE host=? AND project=? AND task=? AND id=? AND type=? `, t.Inc, t.Note, args.Host, args.Project, t.Task, t.ID, t.Type)
 				PanicOn(err)
+				var ancestors IDs
 				if treeUpdate {
 					_, err = tx.Exec(Strf(`UPDATE tasks SET %sInc=%sInc%s? WHERE host=? AND project=? AND id=?`, args.Type, args.Type, sign), diff, args.Host, args.Project, t.Task)
 					PanicOn(err)
-					epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
+					ancestors = epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				}
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionUpdated, nil, &extraInfo{
 					Type: t.Type,
@@ -209,7 +210,7 @@ var (
 					Type: t.Type,
 					Note: t.Note,
 					Inc:  t.Inc,
-				})
+				}, ancestors)
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				tx.Commit()
 				return &vitem.VitemRes{
@@ -255,7 +256,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(Strf(`UPDATE tasks SET %sInc=%sInc-? WHERE host=? AND project=? AND id=?`, args.Type, args.Type), v.Inc, args.Host, args.Project, args.Task)
 				PanicOn(err)
-				epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
+				ancestors := epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
 				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeVitem, cnsts.ActionDeleted, nil, &extraInfo{
 					Type: v.Type,
@@ -265,7 +266,7 @@ var (
 					Type: v.Type,
 					Note: v.Note,
 					Inc:  v.Inc,
-				})
+				}, ancestors)
 				tsk := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				tx.Commit()
 				return tsk

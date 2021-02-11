@@ -117,7 +117,8 @@ func StorePrefix(host ID, projectAndOrTask ...ID) string {
 	return prefix
 }
 
-func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}, fcmExtraInfo interface{}) {
+func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}, fcmExtraInfo interface{}, ancestors IDs) {
+	// ancestors ids are the ancestors effected by the associated change
 	PanicIf(itemType == cnsts.TypeTask && !task.Equal(item), "item type is task but item and task ids are different")
 	me := me.Get(tlbx)
 	var ei *string
@@ -153,7 +154,7 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 		PanicOn(err)
 	}
 	// ***************************************
-	// start sendind fcm notifications section
+	// start sending fcm notifications section
 	// ***************************************
 	if fcmExtraInfo != nil {
 		// if fcmExtraInfo is passed use that instead of activity log extraInfo
@@ -162,6 +163,10 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 	row := tx.QueryRow(`SELECT handle FROM users WHERE host=? AND project=? AND id=?`, host, project, me)
 	handle := ""
 	PanicOn(row.Scan(&handle))
+	if ancestors == nil {
+		// just to ensure "ancestors" property is always an json array []
+		ancestors = IDs{}
+	}
 	d := map[string]string{
 		"host":       host.String(),
 		"project":    project.String(),
@@ -173,6 +178,7 @@ func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemTyp
 		"occurredOn": occurredOn.Format(time.RFC3339),
 		"action":     string(action),
 		"extraInfo":  eiStr,
+		"ancestors":  string(json.MustMarshal(ancestors)),
 	}
 	if itemName != nil {
 		d["itemName"] = *itemName

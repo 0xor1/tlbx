@@ -104,7 +104,7 @@ var (
 				PanicOn(err)
 				_, err = tx.Exec(`INSERT INTO tasks (host, project, id, parent, firstChild, nextSib, user, name, description, isParallel, createdBy, createdOn, timeEst, timeInc, timeSubMin, timeSubEst, timeSubInc, costEst, costInc, costSubEst, costSubInc, fileN, fileSize, fileSubN, fileSubSize, childN, descN) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, p.Host, p.ID, p.ID, p.Parent, p.FirstChild, p.NextSib, p.User, p.Name, p.Description, p.IsParallel, p.CreatedBy, p.CreatedOn, p.TimeEst, p.TimeInc, p.TimeSubMin, p.TimeSubEst, p.TimeSubInc, p.CostEst, p.CostInc, p.CostSubEst, p.CostSubInc, p.FileN, p.FileSize, p.FileSubN, p.FileSubSize, p.ChildN, p.DescN)
 				PanicOn(err)
-				epsutil.LogActivity(tlbx, tx, me, p.ID, p.ID, p.ID, cnsts.TypeTask, cnsts.ActionCreated, ptr.String(p.Name), nil, nil)
+				epsutil.LogActivity(tlbx, tx, me, p.ID, p.ID, p.ID, cnsts.TypeTask, cnsts.ActionCreated, ptr.String(p.Name), nil, nil, nil)
 				tx.Commit()
 				return p
 			},
@@ -268,7 +268,7 @@ var (
 						PanicOn(err)
 						epsutil.ActivityItemRename(tx, me, p.ID, p.ID, p.Name, true)
 					}
-					epsutil.LogActivity(tlbx, tx, me, p.ID, p.ID, p.ID, cnsts.TypeTask, cnsts.ActionUpdated, ptr.String(p.Name), args[i], nil)
+					epsutil.LogActivity(tlbx, tx, me, p.ID, p.ID, p.ID, cnsts.TypeTask, cnsts.ActionUpdated, ptr.String(p.Name), args[i], nil, nil)
 				}
 				tx.Commit()
 				return ps
@@ -389,7 +389,7 @@ var (
 					u.Role = args.Users[i].Role
 					_, err := tx.Exec(`INSERT INTO users (host, project, id, handle, alias, hasAvatar, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, u.ID, u.Handle, u.Alias, u.HasAvatar, u.IsActive, u.Role)
 					PanicOn(err)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionCreated, nil, u.Role, nil)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionCreated, nil, u.Role, nil, nil)
 				}
 				tx.Commit()
 				userTx.Commit()
@@ -506,7 +506,7 @@ var (
 					count, err := res.RowsAffected()
 					PanicOn(err)
 					app.ReturnIf(count != 1, http.StatusNotFound, "user: %s not found", u.ID)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionUpdated, nil, u.Role, nil)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u.ID, cnsts.TypeUser, cnsts.ActionUpdated, nil, u.Role, nil, nil)
 				}
 				tx.Commit()
 				return nil
@@ -560,7 +560,7 @@ var (
 				_, err = srv.User().Exec(Strf(`DELETE FROM fcmTokens WHERE 1=1 %s`, sql.InCondition(true, `user`, len(args.Users))), args.Users.ToIs()...)
 				PanicOn(err)
 				for _, u := range args.Users {
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil, nil)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil, nil, nil)
 				}
 				tx.Commit()
 				return nil

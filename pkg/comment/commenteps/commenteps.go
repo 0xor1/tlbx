@@ -59,7 +59,7 @@ var (
 				// insert new comment
 				_, err := tx.Exec(`INSERT INTO comments (host, project, task, id, createdBy, createdOn, body) VALUES (?, ?, ?, ?, ?, ?, ?)`, args.Host, args.Project, args.Task, c.ID, c.CreatedBy, c.CreatedOn, c.Body)
 				PanicOn(err)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, c.ID, cnsts.TypeComment, cnsts.ActionCreated, nil, StrEllipsis(args.Body, 50), StrEllipsis(args.Body, 1000))
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, c.ID, cnsts.TypeComment, cnsts.ActionCreated, nil, StrEllipsis(args.Body, 50), StrEllipsis(args.Body, 1000), nil)
 				tx.Commit()
 				return c
 			},
@@ -100,7 +100,7 @@ var (
 				c.Body = args.Body
 				_, err := tx.Exec(`UPDATE comments SET body=? WHERE host=? AND project=? AND task=? AND id=?`, c.Body, args.Host, args.Project, c.Task, c.ID)
 				PanicOn(err)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeComment, cnsts.ActionUpdated, nil, StrEllipsis(args.Body, 50), StrEllipsis(args.Body, 1000))
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeComment, cnsts.ActionUpdated, nil, StrEllipsis(args.Body, 50), StrEllipsis(args.Body, 1000), nil)
 				tx.Commit()
 				return c
 			},
@@ -140,7 +140,7 @@ var (
 				_, err := tx.Exec(`DELETE FROM comments WHERE host=? AND project=? AND task=? AND id=?`, args.Host, args.Project, args.Task, args.ID)
 				PanicOn(err)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeComment, cnsts.ActionDeleted, nil, StrEllipsis(c.Body, 50), StrEllipsis(c.Body, 1000))
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeComment, cnsts.ActionDeleted, nil, StrEllipsis(c.Body, 50), StrEllipsis(c.Body, 1000), nil)
 				tx.Commit()
 				return nil
 			},

@@ -123,10 +123,10 @@ var (
 				// insert new task
 				_, err := tx.Exec(Strf(`INSERT INTO tasks (host, project, %s) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, sql_task_columns), args.Host, args.Project, t.ID, t.Parent, t.FirstChild, t.NextSib, t.User, t.Name, t.Description, t.CreatedBy, t.CreatedOn, t.TimeEst, t.TimeInc, t.TimeSubMin, t.TimeSubEst, t.TimeSubInc, t.CostEst, t.CostInc, t.CostSubEst, t.CostSubInc, t.FileN, t.FileSize, t.FileSubN, t.FileSubSize, t.ChildN, t.DescN, t.IsParallel)
 				PanicOn(err)
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, t.ID, t.ID, cnsts.TypeTask, cnsts.ActionCreated, &t.Name, nil, nil)
 				// at this point the tree structure has been updated so all tasks are pointing to the correct new positions
 				// all that remains to do is update aggregate values
-				epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Parent)
+				ancestors := epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, args.Parent)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, t.ID, t.ID, cnsts.TypeTask, cnsts.ActionCreated, &t.Name, nil, nil, ancestors)
 				p := GetOne(tx, args.Host, args.Project, *t.Parent)
 				tx.Commit()
 				return &task.CreateRes{
@@ -355,17 +355,19 @@ var (
 					}
 				}
 				if simpleUpdateRequired || treeUpdateRequired {
+					var ancestors IDs
 					update(t, oldParent, oldPrevSib, newParent, newPrevSib)
 					if treeUpdateRequired {
 						if newParent != nil {
 							// if we moved parent we must recalculate aggregate values on the new and old parents ancestral chains
-							epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, newParent.ID)
-							epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, oldParent.ID)
+							ancestors = epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, newParent.ID)
+							moreAncestors := epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, oldParent.ID)
+							ancestors = IDsMerge(ancestors, moreAncestors)
 						} else if t.Parent != nil {
 							// need to do the t.Parent nil check here incase it's the root project node having est value updated
 							// here a tree update is required but the task has not been moved parents
 							// so it must have had an est value changed on it, so update from its parent
-							epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
+							ancestors = epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
 						}
 
 					}
@@ -393,7 +395,7 @@ var (
 						User:        args.User,
 						TimeEst:     args.TimeEst,
 						CostEst:     args.CostEst,
-					}, nil)
+					}, nil, ancestors)
 				}
 
 				if nameUpdated {
@@ -478,10 +480,10 @@ var (
 					PanicOn(err)
 					_, err = tx.Exec(`UPDATE tasks SET firstChild=?, nextSib=? WHERE host=? AND project=? AND id=?`, prevNode.FirstChild, prevNode.NextSib, args.Host, args.Project, prevNode.ID)
 					PanicOn(err)
-					epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
+					ancestors := epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
 					t.Name = StrEllipsis(t.Name, 50)
 					t.Description = StrEllipsis(t.Description, 50)
-					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.ID, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, &t.Name, t, nil)
+					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.ID, args.ID, cnsts.TypeTask, cnsts.ActionDeleted, &t.Name, t, nil, ancestors)
 
 					sql_in_tasks := sqlh.InCondition(true, `task`, len(tasksToDelete))
 					// first get all time/cost/file/comment ids being deleted then
