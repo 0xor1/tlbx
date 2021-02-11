@@ -67,13 +67,13 @@ let v = new Vue({
             if (this._ctx.pMe != null && 
               this._ctx.project != null &&
               this.$api.fcm.isEnabled()) {  
-              this.$api.fcm.init(false).then(()=>{
-                this.$api.user.setFCMEnabled(true).then(()=>{
-                  this.$api.user.registerForFCM({
-                    topic: [this.$u.rtr.host(), this.$u.rtr.project()]
-                  })
+              this.$api.fcm.init(false).
+              then(()=>{
+                return this.$api.user.registerForFCM({
+                  topic: [this.$u.rtr.host(), this.$u.rtr.project()]
                 })
-              }).finally(()=>{
+              }).
+              finally(()=>{
                 this._ctx.loading = false
               })
             } else {

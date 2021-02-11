@@ -150,17 +150,21 @@
             this.togglingRealtimeEnabled = false
           })
         } else {
-          this.$api.fcm.init(true).then(()=>{
-            this.$api.user.setFCMEnabled(true).then(()=>{
-              this.realtimeEnabled = true
-              return this.$api.user.registerForFCM({
-                topic: [this.$u.rtr.host(), this.$u.rtr.project()]
-              }).then(()=>{
-                this.realtimeEnabled = true
-              })
-            }).finally(()=>{
-              this.togglingRealtimeEnabled = false
+          this.$api.fcm.init(true).
+          then(()=>{
+            return this.$api.user.setFCMEnabled(true)
+          }).
+          then(()=>{
+            this.realtimeEnabled = true
+            return this.$api.user.registerForFCM({
+              topic: [this.$u.rtr.host(), this.$u.rtr.project()]
             })
+          }).
+          then(()=>{
+            this.realtimeEnabled = true
+          }).
+          finally(()=>{
+            this.togglingRealtimeEnabled = false
           })
         }
       },
