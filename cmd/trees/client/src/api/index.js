@@ -207,9 +207,13 @@ function newApi(isMDoApi) {
             let d = msg.data
             if (d.extraInfo != null && d.extraInfo.length > 0) {
               d.extraInfo = JSON.parse(d.extraInfo)
+            } else {
+              d.extraInfo = null
             }
             if (d.ancestors != null && d.ancestors.length > 0) {
               d.ancestors = JSON.parse(d.ancestors)
+            } else {
+              d.ancestors = null
             }
             console.log(d)
             if (fcmClientId === d['X-Fcm-Client']) {
