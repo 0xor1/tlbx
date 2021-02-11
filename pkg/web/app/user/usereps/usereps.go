@@ -872,11 +872,12 @@ func New(
 				},
 			},
 			&app.Endpoint{
-				Description:  "unregister from fcm",
-				Path:         (&user.UnregisterFromFCM{}).Path(),
-				Timeout:      500,
-				MaxBodyBytes: app.KB,
-				IsPrivate:    false,
+				Description:      "unregister from fcm",
+				SkipXClientCheck: true,
+				Path:             (&user.UnregisterFromFCM{}).Path(),
+				Timeout:          500,
+				MaxBodyBytes:     app.KB,
+				IsPrivate:        false,
 				GetDefaultArgs: func() interface{} {
 					return &user.UnregisterFromFCM{}
 				},
