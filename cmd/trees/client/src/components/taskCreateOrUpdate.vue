@@ -11,8 +11,7 @@
       </span>
       <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
       <span>
-        <input v-model="description" placeholder="description" @blur="validate" @keyup="validate" @keydown.enter="ok">
-        <label> description</label>
+        <textarea :class="{err: description.length > 1250}" v-model="description" rows="4" placeholder="description" @blur="validate" @keyup="validate" @keydown.enter="ok"></textarea>
       </span>
       <span v-if="descriptionErr.length > 0" class="err">{{descriptionErr}}</span>
       <span v-if="!isCrt && $u.rtr.project() != updateTask.id">
@@ -294,8 +293,8 @@ div > div {
     display: inline;
     margin-right: 15px;
   }
-  input[type="number"] {
-    width: 10pc;
+  input:not([type="checkbox"]), textarea {
+    width: 14pc;
   }
 }
 </style>
