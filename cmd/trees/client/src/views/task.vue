@@ -571,7 +571,7 @@
           }).then((t)=>{
             if (idx > 0) {
               this.task.set.splice(idx, 1)
-              this.$u.copyProps(t, this.task[0])
+              this.$u.copyProps(t, this.task.set[0])
               this.task.dltIdx = -1
               this.project.fileSubSize - (dltT.fileSize + dltT.fileSubSize)
             } else {

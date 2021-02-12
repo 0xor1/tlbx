@@ -11,10 +11,10 @@
       </span>
       <span v-if="nameErr.length > 0" class="err">{{nameErr}}</span>
       <span>
-        <textarea :class="{err: description.length > 1250}" v-model="description" rows="4" placeholder="description" @blur="validate" @keyup="validate" @keydown.enter="ok"></textarea>
+        <textarea :class="{err: description.length > 1250}" v-model="description" rows="4" placeholder="description" @blur="validate" @keyup="validate"></textarea>
       </span>
       <span v-if="descriptionErr.length > 0" class="err">{{descriptionErr}}</span>
-      <span v-if="!isCrt && $u.rtr.project() != updateTask.id">
+      <span v-if="isCrt || $u.rtr.project() != updateTask.id">
         <input v-model="user" placeholder="user id" @blur="validate" @keydown.enter="ok"> 
         <label> user id</label>
       </span>
@@ -105,7 +105,7 @@
         this.$u.copyProps(this.initState(), this)
         this.$root.ctx().then((ctx)=>{
             this.project = ctx.project
-            this.user = this.parentUserId
+            this.user = this.set[0].user
             if (!this.isCrt) {
               let t = this.updateTask
               this.prevSibId = null
@@ -243,11 +243,12 @@
             }
             if (isUpdate) {
               this.$api.task.update(args).then((res)=>{
-                this.set[this.updIdx] = res.task
+                let oldNextSib = this.set[this.updIdx].nextSib
+                this.$u.copyProps(res.task, this.set[this.updIdx])
                 if (res.oldParent != null && this.updIdx > 0) {
                   this.$u.copyProps(res.oldParent, this.set[0])
                 }
-                this.close(res.newParent != null)
+                this.close(res.newParent != null || res.task.nextSib != oldNextSib)
                 this.$emit("refreshProjectActivity", true)
               })
             } else {
