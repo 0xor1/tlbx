@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"syscall"
 	"time"
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/project"
@@ -14,6 +14,7 @@ import (
 	j "github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 //util program to generate and manipulate perfect k-ary trees of subtasks in tw projects
@@ -25,15 +26,11 @@ func main() {
 	var inst string
 	fs.StringVar(&inst, "i", "http://sunbeam.teamwork.localhost", "installation url base for running tests on")
 	var user string
-	fs.StringVar(&user, "u", "donalin+dev1@gmail.com", "user email for basic auth")
-	var pwd string
-	fs.StringVar(&pwd, "p", "test", "user pwd for basic auth")
+	fs.StringVar(&user, "u", "test@test.test", "user email for basic auth")
 	var treesHost string
-	fs.StringVar(&treesHost, "th", "https://dev.project-trees.com", "the url host of the project trees env")
+	fs.StringVar(&treesHost, "th", "https://task-trees.com", "the url host of the task trees env")
 	var treesUser string
-	fs.StringVar(&treesUser, "tu", "daniel.robinson.spam@gmail.com", "user email for project trees env")
-	var treesPwd string
-	fs.StringVar(&treesPwd, "tp", "My-T35t-Pwd", "user pwd for project trees env")
+	fs.StringVar(&treesUser, "tu", "test@test.test", "user email for task trees env")
 	var treeK uint
 	fs.UintVar(&treeK, "k", 3, "k-ary tree k value must be >1")
 	var treeH uint
@@ -44,16 +41,26 @@ func main() {
 	if treeK < 2 {
 		panic("treeK value less than 2")
 	}
+	Print("Enter TW Password: ")
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	PanicOn(err)
+	pwd := string(bytePassword)
+	Println()
+	Print("Enter trees Password: ")
+	bytePassword, err = terminal.ReadPassword(int(syscall.Stdin))
+	PanicOn(err)
+	treesPwd := string(bytePassword)
+	Println()
 	projectName += "_" + time.Now().Format("20060102150405")
-	fmt.Println("outputCsvFile =", outputCsvFile)
-	fmt.Println("i =", inst)
-	fmt.Println("u =", user)
-	fmt.Println("p =", pwd)
-	fmt.Println("k =", treeK)
-	fmt.Println("h =", treeH)
+	Println("outputCsvFile =", outputCsvFile)
+	Println("i =", inst)
+	Println("u =", user)
+	Println("p = *******")
+	Println("k =", treeK)
+	Println("h =", treeH)
 	totalTasksToCreate := (pow(treeK, treeH+1) - 1) / (treeK - 1)
-	fmt.Println("N =", totalTasksToCreate)
-	fmt.Println("pn =", projectName)
+	Println("N =", totalTasksToCreate)
+	Println("pn =", projectName)
 
 	runTW(inst, user, pwd, projectName, treeK, treeH)
 	runTrees(treesHost, treesUser, treesPwd, projectName, treeK, treeH)
@@ -66,37 +73,38 @@ func runTW(inst, user, pwd, projectName string, treeK, treeH uint) {
 		pwd:  pwd,
 	}
 
-	fmt.Println("starting in TW")
-	fmt.Println("get my id")
+	Println("starting in TW")
+	Println("get my id")
 	myId := rm.get("/me.json", nil).MustInt64("person", "id")
-	fmt.Println("myId =", myId)
+	Println("myId =", myId)
 
-	fmt.Println("create project")
+	Println("create project")
 	pj := j.MustFromString(`{"project":{}}`)
 	pj.MustGet("project").MustSet("name", projectName).MustSet("people", int64Str(myId)).MustSet("use-tasks", true)
 	projectId := rm.post("/projects.json", pj).MustInt64("id")
-	fmt.Println("projectId =", projectId)
+	Println("projectId =", projectId)
 
-	fmt.Println("create tasklist")
-	tasklistId := rm.post(fmt.Sprintf("/projects/%d/tasklists.json", projectId), j.MustNew().MustSet("todo-list", "name", "twtrees")).MustInt64("TASKLISTID")
-	fmt.Println("tasklistId =", tasklistId)
+	Println("create tasklist")
+	tasklistId := rm.post(Strf("/projects/%d/tasklists.json", projectId), j.MustNew().MustSet("todo-list", "name", "twtrees")).MustInt64("TASKLISTID")
+	Println("tasklistId =", tasklistId)
 
-	fmt.Println("create root task")
+	Println("create root task")
 	pj = j.MustFromString(`{"todo-item":{}}`)
 	pj.MustGet("todo-item").MustSet("content", "0").MustSet("estimated-minutes", 60).MustSet("start-date", todayDateString()).MustSet("due-date", tomorrowDateString())
-	rootTaskId := rm.post(fmt.Sprintf("/tasklists/%d/tasks.json", tasklistId), pj).MustInt64("id")
-	fmt.Println("rootTaskId =", rootTaskId)
+	rootTaskId := rm.post(Strf("/tasklists/%d/tasks.json", tasklistId), pj).MustInt64("id")
+	Println("rootTaskId =", rootTaskId)
 
 	start := time.Now()
 	twCreatePerfectKaryTree(rm, tasklistId, rootTaskId, 0, 0, treeK, treeH)
-	fmt.Println("time to create tree (excluding root node)", time.Now().Sub(start))
+	Println()
+	Println("time to create tree (excluding root node)", time.Now().Sub(start))
 
 	start = time.Now()
 	pj = j.MustFromString(`{"todo-item":{}}`)
 	pj.MustGet("todo-item").MustSet("start-date", tomorrowDateString()).MustSet("due-date", dayAfterTomorrowDateString()).MustSet("push-subtasks", true).MustSet("push-dependents", true).MustSet("use-defaults", false)
-	rm.put(fmt.Sprintf("/tasks/%d.json", rootTaskId), pj)
-	fmt.Println("time to push start/due dates", time.Now().Sub(start))
-	fmt.Println("finished in TW")
+	rm.put(Strf("/tasks/%d.json", rootTaskId), pj)
+	Println("time to push start/due dates", time.Now().Sub(start))
+	Println("finished in TW")
 }
 
 func runTrees(host, email, pwd, projectName string, treeK, treeH uint) {
@@ -106,18 +114,19 @@ func runTrees(host, email, pwd, projectName string, treeK, treeH uint) {
 		Pwd:   pwd,
 	}).MustDo(c)
 
-	fmt.Println("starting in Trees")
+	Println("starting in Trees")
 
-	fmt.Println("create project")
+	Println("create project")
 	p := (&project.Create{
 		Name: projectName,
 	}).MustDo(c)
-	fmt.Println("projectId =", p.ID.String())
+	Println("projectId =", p.ID.String())
 
 	start := time.Now()
 	treesCreatePerfectKaryTree(me, c, p.ID, p.ID, 0, 0, treeK, treeH)
-	fmt.Println("time to create tree (excluding root node)", time.Now().Sub(start))
-	fmt.Println("finished in Trees")
+	Println()
+	Println("time to create tree (excluding root node)", time.Now().Sub(start))
+	Println("finished in Trees")
 }
 
 func pow(x, y uint) uint {
@@ -182,10 +191,10 @@ func twCreatePerfectKaryTree(rm *twReqMaker, tasklistId, parentTaskId, lastUsedN
 	}
 	for i := uint(0); i < k; i++ {
 		lastUsedNameIdx++
-		fmt.Printf("\rcreating node %d", lastUsedNameIdx)
+		Printf("\rcreating node %d", lastUsedNameIdx)
 		pj := j.MustFromString(`{"todo-item":{}}`)
 		pj.MustGet("todo-item").MustSet("content", int64Str(lastUsedNameIdx)).MustSet("estimated-minutes", 60).MustSet("start-date", todayDateString()).MustSet("due-date", tomorrowDateString()).MustSet("parentTaskId", parentTaskId)
-		taskId := rm.post(fmt.Sprintf("/tasklists/%d/tasks.json", tasklistId), pj).MustInt64("id")
+		taskId := rm.post(Strf("/tasklists/%d/tasks.json", tasklistId), pj).MustInt64("id")
 		lastUsedNameIdx = twCreatePerfectKaryTree(rm, tasklistId, taskId, lastUsedNameIdx, currentDepth+1, k, h)
 	}
 	return lastUsedNameIdx
@@ -198,9 +207,9 @@ func treesCreatePerfectKaryTree(me *user.User, c *app.Client, projectId, parentI
 	var previousSiblingId *ID
 	for i := uint(0); i < k; i++ {
 		lastUsedNameIdx++
-		fmt.Printf("\rcreating node %d", lastUsedNameIdx)
+		Printf("\rcreating node %d", lastUsedNameIdx)
 		isParallel := true
-		est := uint64(lastUsedNameIdx)
+		est := uint64(60)
 		if i%2 == 0 {
 			isParallel = false
 		}
@@ -222,7 +231,7 @@ func treesCreatePerfectKaryTree(me *user.User, c *app.Client, projectId, parentI
 }
 
 func int64Str(i int64) string {
-	return fmt.Sprintf("%d", i)
+	return Strf("%d", i)
 }
 
 func panicIf(e error) {
