@@ -22,6 +22,11 @@ import (
 	"github.com/0xor1/trees/pkg/task/taskeps"
 )
 
+type extraInfo struct {
+	Size uint64 `json:"size"`
+	Type string `json:"type"`
+}
+
 var (
 	Eps = []*app.Endpoint{
 		{
@@ -87,10 +92,7 @@ var (
 				PanicOn(err)
 				// propogate aggregate sizes upwards
 				ancestors := epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, innerArgs.Host, innerArgs.Project, innerArgs.Task)
-				epsutil.LogActivity(tlbx, tx, innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID, cnsts.TypeFile, cnsts.ActionCreated, &f.Name, struct {
-					Size uint64 `json:"size"`
-					Type string `json:"type"`
-				}{
+				epsutil.LogActivity(tlbx, tx, innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID, cnsts.TypeFile, cnsts.ActionCreated, &f.Name, &extraInfo{
 					Size: uint64(args.Size),
 					Type: args.Type,
 				}, nil, ancestors)
@@ -276,7 +278,10 @@ var (
 				PanicOn(err)
 				ancestors := epsutil.SetAncestralChainAggregateValuesFromParentOfTask(tx, args.Host, args.Project, args.Task)
 				// set activities to deleted
-				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeFile, cnsts.ActionDeleted, &f.Name, nil, nil, ancestors)
+				epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Task, args.ID, cnsts.TypeFile, cnsts.ActionDeleted, &f.Name, &extraInfo{
+					Size: uint64(f.Size),
+					Type: f.Type,
+				}, nil, ancestors)
 				t := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
 				srv.Store().MustDelete(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
 				tx.Commit()
