@@ -1260,9 +1260,11 @@ div.root {
       .btn {
         cursor: pointer;
       }
-      .action > img {
-        height: 1pc;
-        width: 1pc;
+      .action {
+        &> a > img, &> img{
+          height: 1pc;
+          width: 1pc;
+        }
       }
     }
   }

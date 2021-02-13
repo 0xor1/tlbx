@@ -220,6 +220,9 @@ export default {
                     if (abbreviate) {
                         if (value < 1000) {
                             div = 1
+                            if (value % 1 == 0) {
+                                decPlaces = 0
+                            }
                         } else if (value < 10000) {
                             div = 1000
                             decPlaces = 2

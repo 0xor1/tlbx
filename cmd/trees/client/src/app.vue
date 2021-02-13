@@ -39,10 +39,24 @@
             <div :class="{entry: true, 'task-deleted': a.taskDeleted, deleted: a.itemDeleted}" v-for="(a, index) in projectActivity" :key="index" @click.stop.prevent="gotoActivityTask(a)">
               <user :userId="a.user"></user> 
               <span v-if="a.itemType == `task`">
-                {{a.action}} {{a.itemType}} {{a.taskName}}
+                {{a.action}} {{a.itemType}} <strong>{{a.taskName}}</strong>
               </span>
-              <span v-else>
-                {{a.action}} {{a.itemType}}<span v-if="a.itemName != null"> {{a.itemName}}</span>, on task {{a.taskName}}
+              <span v-else-if="a.itemType == 'vitem'">
+                {{a.action == 'created'? 'logged': a.action}}
+                <strong>{{a.extraInfo.type == 'time'? $u.fmt.time(a.extraInfo.inc): $u.fmt.currencySymbol(project.currencyCode) + $u.fmt.cost(a.extraInfo.inc, true)}}</strong>
+                on <strong>{{a.taskName}}</strong>
+              </span>
+              <span v-else-if="a.itemType == 'file'">
+                {{a.action == 'created'? 'uploaded': a.action}}
+                <strong>{{$u.fmt.bytes(a.extraInfo.size)}}</strong>
+                file
+                <strong>{{a.itemName}}</strong> 
+                on <strong>{{a.taskName}}</strong>
+              </span>
+              <span v-else-if="a.itemType == 'comment'">
+                {{a.action == 'created'? 'commented': a.action}}
+                <strong>{{$u.fmt.ellipsis(a.extraInfo, 25)}}</strong>
+                on <strong>{{a.taskName}}</strong>
               </span>
               <br>
               <span class="datetime"> {{$u.fmt.datetime(a.occurredOn)}}</span>
