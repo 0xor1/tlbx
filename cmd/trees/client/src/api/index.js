@@ -253,6 +253,9 @@ function newApi(isMDoApi) {
         })
       }
     },
+    docs(){
+      return doReq('/docs')
+    },
     user: {
       register(alias, handle, email, pwd, confirmPwd) {
         return doReq('/user/register', {alias, handle, email, pwd, confirmPwd})

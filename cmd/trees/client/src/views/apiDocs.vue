@@ -1,5 +1,5 @@
 <template>
-  <div class="root">
+  <div class="root" v-html="docs">
   </div>
 </template>
 
@@ -11,10 +11,15 @@
     },
     methods: {
       initState (){
-        return {}
+        return {
+            docs: {}
+        }
       },
       init() {
         this.$u.copyProps(this.initState(), this)
+        this.$api.docs().then((docs)=>{
+            this.docs = docs
+        })
       }
     },
     mounted(){
