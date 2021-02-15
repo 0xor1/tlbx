@@ -192,6 +192,7 @@ func Run(configs ...func(*Config)) {
 		tlbx.req.URL.Path = lPath
 		// endpoint docs
 		if lPath == docsPath {
+			tlbx.resp.Header().Set("Cache-Control", "public, max-age=3600, immutable")
 			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
 			return
 		}

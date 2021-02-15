@@ -7,6 +7,7 @@ import login from '../views/login.vue'
 import projects from '../views/projects.vue'
 import projectUser from '../views/projectUser.vue'
 import task from '../views/task.vue'
+import apiDocs from '../views/apiDocs.vue'
 import api from '@/api'
 
 vue.use(vueRouter)
@@ -63,6 +64,11 @@ const routes = [
     path: '/host/:host/project/:project/task/:task',
     name: 'task',
     component: task
+  },
+  {
+    path: '/api/docs',
+    name: 'tasapiDocsk',
+    component: apiDocs
   },
   {
     path: '*',

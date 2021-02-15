@@ -17,6 +17,9 @@
                 <span>{{f}}<input @click.stop type="checkbox" v-model="$root.show[f]"></span>
               </div>
             </div>
+            <div class="btn" @click.stop.prevent="$u.rtr.goto('/api/docs')">
+              api
+            </div>
             <div class="btn" @click.stop.prevent="loginout">
               {{ me? 'logout': 'login'}}
             </div>
