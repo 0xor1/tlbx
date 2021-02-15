@@ -67,7 +67,7 @@ const routes = [
   },
   {
     path: '/api/docs',
-    name: 'tasapiDocsk',
+    name: 'apiDocs',
     component: apiDocs
   },
   {
