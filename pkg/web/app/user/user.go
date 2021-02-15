@@ -4,6 +4,7 @@ import (
 	"io"
 
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
@@ -278,6 +279,40 @@ func (a *Get) Do(c *app.Client) ([]*User, error) {
 }
 
 func (a *Get) MustDo(c *app.Client) []*User {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+type SetJin struct {
+	Val *json.Json `json:"val"`
+}
+
+func (_ *SetJin) Path() string {
+	return "/user/setJin"
+}
+
+func (a *SetJin) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *SetJin) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
+
+type GetJin struct{}
+
+func (_ *GetJin) Path() string {
+	return "/user/getJin"
+}
+
+func (a *GetJin) Do(c *app.Client) (*json.Json, error) {
+	res := &json.Json{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *GetJin) MustDo(c *app.Client) *json.Json {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res

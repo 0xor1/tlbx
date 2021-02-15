@@ -2,6 +2,7 @@ package json
 
 import (
 	"bytes"
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"io"
@@ -257,9 +258,34 @@ func (j *Json) MarshalJSON() ([]byte, error) {
 }
 
 func (j *Json) UnmarshalJSON(p []byte) error {
-	jNew, err := FromReader(bytes.NewReader(p))
+	jNew, err := FromBytes(p)
 	j.data = jNew.data
 	return ToError(err)
+}
+
+func (j *Json) UnmarshalText(p []byte) error {
+	return j.UnmarshalJSON(p)
+}
+
+func (j *Json) UnmarshalBinary(p []byte) error {
+	return j.UnmarshalJSON(p)
+}
+
+func (j *Json) Value() (driver.Value, error) {
+	return j.ToBytes()
+}
+
+func (j *Json) Scan(src interface{}) error {
+	switch x := src.(type) {
+	case nil:
+		return nil
+	case string:
+		return j.UnmarshalText([]byte(x))
+	case []byte:
+		return j.UnmarshalBinary(x)
+	}
+
+	return Err("unexpected scan value: %v, type: %T", src, src)
 }
 
 func (j *Json) Exists(path ...interface{}) bool {

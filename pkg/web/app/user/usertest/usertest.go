@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
@@ -30,7 +31,8 @@ func Everything(t *testing.T) {
 		func(t app.Tlbx, i IDs) (sql.Tx, error) {
 			tx := service.Get(t).Pwd().Begin()
 			return tx, nil
-		})
+		},
+		true)
 	defer r.CleanUp()
 
 	a := assert.New(t)
@@ -302,6 +304,21 @@ func Everything(t *testing.T) {
 	(&user.SetFCMEnabled{
 		Val: true,
 	}).MustDo(ac)
+
+	js := (&user.GetJin{}).MustDo(ac)
+	a.Nil(js)
+
+	(&user.SetJin{
+		Val: json.MustFromString(`{"test":"yolo"}`),
+	}).MustDo(ac)
+
+	js = (&user.GetJin{}).MustDo(ac)
+	a.Equal("yolo", js.MustString("test"))
+
+	(&user.SetJin{}).MustDo(ac)
+
+	js = (&user.GetJin{}).MustDo(ac)
+	a.Nil(js)
 
 	(&user.UnregisterFromFCM{
 		Client: app.ExampleID(),

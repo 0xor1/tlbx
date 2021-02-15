@@ -18,6 +18,7 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/crypt"
 	"github.com/0xor1/tlbx/pkg/isql"
+	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
@@ -48,6 +49,7 @@ func New(
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User) error,
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
+	enableJin bool,
 ) []*app.Endpoint {
 	enableSocials := onSetSocials != nil
 	enableFCM := validateFcmTopic != nil
@@ -396,6 +398,8 @@ func New(
 				defer pwdTx.Rollback()
 				_, err := tx.Exec(`DELETE FROM users WHERE id=?`, m)
 				PanicOn(err)
+				_, err = tx.Exec(`DELETE FROM jin WHERE user=?`, m)
+				PanicOn(err)
 				_, err = tx.Exec(`DELETE FROM fcmTokens WHERE user=?`, m)
 				PanicOn(err)
 				_, err = pwdTx.Exec(`DELETE FROM pwds WHERE id=?`, m)
@@ -540,6 +544,63 @@ func New(
 				return &user.User
 			},
 		},
+	}
+	if enableJin {
+		eps = append(eps,
+			&app.Endpoint{
+				Description:  "set users jin (json bin), adhoc json content",
+				Path:         (&user.SetJin{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: 10 * app.KB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return &user.SetJin{}
+				},
+				GetExampleArgs: func() interface{} {
+					return &user.SetJin{
+						Val: exampleJin,
+					}
+				},
+				GetExampleResponse: func() interface{} {
+					return nil
+				},
+				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+					args := a.(*user.SetJin)
+					me := me.Get(tlbx)
+					srv := service.Get(tlbx)
+					if args.Val == nil {
+						_, err := srv.User().Exec(`DELETE FROM jin WHERE user=?`, me)
+						PanicOn(err)
+					} else {
+						_, err := srv.User().Exec(`INSERT INTO jin (user, val) VALUES (?, ?) ON DUPLICATE KEY UPDATE val=VALUES(val)`, me, args.Val)
+						PanicOn(err)
+					}
+					return nil
+				},
+			},
+			&app.Endpoint{
+				Description:  "get users jin (json bin), adhoc json content",
+				Path:         (&user.GetJin{}).Path(),
+				Timeout:      500,
+				MaxBodyBytes: app.KB,
+				IsPrivate:    false,
+				GetDefaultArgs: func() interface{} {
+					return nil
+				},
+				GetExampleArgs: func() interface{} {
+					return nil
+				},
+				GetExampleResponse: func() interface{} {
+					return exampleJin
+				},
+				Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
+					me := me.Get(tlbx)
+					srv := service.Get(tlbx)
+					res := &json.Json{}
+					sqlh.PanicIfIsntNoRows(srv.User().QueryRow(`SELECT val FROM jin WHERE user=?`, me).Scan(&res))
+					return res
+				},
+			})
 	}
 	if enableSocials {
 		eps = append(eps,
@@ -925,6 +986,7 @@ var (
 	scryptSaltLen = 256
 	scryptKeyLen  = 256
 	avatarDim     = 250
+	exampleJin    = json.MustFromString(`{"v":1, "saveDir":"/my/save/dir", "startTab":"favourites"}`)
 )
 
 func sendActivateEmail(srv service.Layer, sendTo, from, link string, handle *string) {

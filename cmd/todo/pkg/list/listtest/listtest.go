@@ -25,7 +25,8 @@ func Everything(t *testing.T) {
 		nil,
 		listeps.OnDelete,
 		usereps.NopOnSetSocials,
-		nil)
+		nil,
+		false)
 	defer r.CleanUp()
 
 	name1 := "Test list 1"

@@ -23,7 +23,8 @@ func Everything(t *testing.T) {
 		false,
 		nil, nil,
 		nil,
-		nil)
+		nil,
+		false)
 	defer r.CleanUp()
 
 	g2 := playGame(a, []*app.Client{

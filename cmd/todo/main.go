@@ -39,7 +39,8 @@ func main() {
 						nil,
 						listeps.OnDelete,
 						usereps.NopOnSetSocials,
-						nil)...),
+						nil,
+						false)...),
 				listeps.Eps...),
 			itemeps.Eps...)
 	})

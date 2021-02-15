@@ -182,6 +182,7 @@ func NewRig(
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User) error,
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
+	enableJin bool,
 	buckets ...string,
 ) Rig {
 	r := &rig{
@@ -213,7 +214,8 @@ func NewRig(
 				onActivate,
 				onDelete,
 				onSetSocials,
-				validateFcmTopic)...)
+				validateFcmTopic,
+				enableJin)...)
 	}
 	Go(func() {
 		app.Run(func(c *app.Config) {

@@ -116,7 +116,8 @@ func Test(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		nil)
+		nil,
+		false)
 	defer r.CleanUp()
 
 	a := assert.New(t)
