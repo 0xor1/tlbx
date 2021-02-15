@@ -19,8 +19,8 @@ func main() {
 	app.Run(func(c *app.Config) {
 		c.StaticDir = config.Web.StaticDir
 		c.ContentSecurityPolicies = config.Web.ContentSecurityPolicies
-		c.Name = "Trees"
-		c.Description = "A simple project management app which stores tasks in trees"
+		c.Name = "trees"
+		c.Description = "a simple project management app which stores tasks in trees"
 		c.TlbxSetup = app.TlbxMwares{
 			session.BasicMware(
 				config.Web.Session.AuthKey64s,
@@ -38,7 +38,8 @@ func main() {
 				nil,
 				projecteps.OnDelete,
 				projecteps.OnSetSocials,
-				projecteps.ValidateFCMTopic),
+				projecteps.ValidateFCMTopic,
+				true),
 			projecteps.Eps,
 			taskeps.Eps,
 			vitemeps.Eps,

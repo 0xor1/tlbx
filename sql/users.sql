@@ -24,6 +24,13 @@ CREATE TABLE users (
     UNIQUE INDEX handle (handle)
 );
 
+DROP TABLE IF EXISTS jin;
+CREATE TABLE jin (
+    user BINARY(16) NOT NULL,
+    val VARCHAR(10000) NOT NULL,
+    PRIMARY KEY user (user)
+);
+
 # cleanup old registrations that have not been activated in a week
 SET GLOBAL event_scheduler=ON;
 DROP EVENT IF EXISTS userRegistrationCleanup;
