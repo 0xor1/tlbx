@@ -38,17 +38,17 @@
       <div class="summary">
         <table>
           <tr class="header">
-            <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name" v-for="(s, idx) in taskSections" :key="idx">
+            <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name() + ' ' + (idx % 2 !== 0? 'light': 'dark')  " v-for="(s, idx) in taskSections" :key="idx">
               {{s.name()}}
             </th>
           </tr>
           <tr class="header">
-            <th :class="c.name" v-for="(c, idx) in taskSectionHeaders" :key="idx">
+            <th :class="c.sectionClass" v-for="(c, idx) in taskSectionHeaders" :key="idx">
               {{c.name}}
             </th>
           </tr>
           <tr class="row" v-for="(t, idx) in task.set" :key="t.id" @click.stop.prevent="$u.rtr.goto(`/host/${$u.rtr.host()}/project/${$u.rtr.project()}/task/${t.id}`)">
-            <td :title="taskTitle(t)" v-bind:class="c.name" v-for="(c, idx) in taskCols" :key="idx">
+            <td :title="taskTitle(t)" :class="c.name + ' ' + c.sectionClass" v-for="(c, idx) in taskCols" :key="idx">
               <span :title="t.isParallel? 'parallel': 'sequential'" :class="{'parallel-indicator': true, 'parallel': t.isParallel}" v-if="c.name == 'name'">{{t.isParallel? "&#8649;": "&#8699;"}}</span>{{c.name == "user"? "" : c.get(t)}}
               <user v-if="c.name=='user'" :userId="c.get(t)"></user>
             </td>
@@ -217,8 +217,15 @@
       },
       taskSectionHeaders(){
         let res = []
-        this.taskSections.forEach((section)=>{
+        this.taskSections.forEach((section, idx)=>{
           if (section.cols.length > 1) {
+            section.cols.forEach((col)=>{
+              if (idx % 2 === 0) {
+                col.sectionClass = 'dark'
+              } else {
+                col.sectionClass = 'light'
+              }
+            })
             res = res.concat(section.cols)
           }
         })
@@ -226,7 +233,14 @@
       },
       taskCols(){
         let res = []
-        this.taskSections.forEach((section)=>{
+        this.taskSections.forEach((section, idx)=>{
+          section.cols.forEach((col)=>{
+            if (idx % 2 === 0) {
+              col.sectionClass = 'dark'
+            } else {
+              col.sectionClass = 'light'
+            }
+          })
           res = res.concat(section.cols)
         })
         return res
@@ -1131,9 +1145,7 @@ div.root {
           .action{
             cursor: pointer;
           }
-          > * {
-            background-color: #333;
-          }
+          font-size: 1.1pc;
           font-weight: bold;
         }
       }
@@ -1265,6 +1277,18 @@ div.root {
           height: 1pc;
           width: 1pc;
         }
+      }
+    }
+  }
+  tr {
+    &:not(:nth-child(3)) {
+      td:first-child {
+        padding-left: 1.5pc;
+      }
+    }
+    th, td {
+      &.light {
+        background: #222;
       }
     }
   }
