@@ -278,7 +278,7 @@ export default {
                 bytes(size) {
                     let unit = "B"
                     let div = 1
-                    if (size > kb) {
+                    if (size >= kb) {
                         if (size < mb) {
                             unit = "KB"
                             div = kb
