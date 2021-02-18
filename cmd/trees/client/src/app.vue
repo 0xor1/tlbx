@@ -58,7 +58,7 @@
               </span>
               <span v-else-if="a.itemType == 'comment'">
                 {{a.action == 'created'? 'commented': a.action}}
-                <strong>{{$u.fmt.ellipsis(a.extraInfo, 25)}}</strong>
+                <strong :title="a.extraInfo">{{$u.fmt.ellipsis(a.extraInfo, 25)}}</strong>
                 on <strong>{{a.taskName}}</strong>
               </span>
               <br>

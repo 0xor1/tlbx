@@ -93,13 +93,13 @@
               <input :class="{err: vitem[type].estErr}" v-model="vitem[type].estStr" type="text" :placeholder="vitem[type].placeholder" @blur="vitemValidate(type, true)" @keyup="vitemValidate(type)" @keydown.enter="vitemSubmit(type)"/>
             </div>
             <div>
-              <button @click.stop="vitemSubmit(type)">create</button>
+              <button @click.stop="vitemSubmit(type)">log</button>
             </div>
           </div>
           <table v-if="vitem[type].set.length > 0">
             <tr class="header">
               <th class="note">note</th>
-              <th v-if="$root.show.date">created</th>
+              <th v-if="$root.show.date">logged</th>
               <th v-if="$root.show.user">user</th>
               <th>inc <span v-if="type == 'cost'" class="small">{{$u.fmt.currencySymbol(project.currencyCode)}}</span></th>
             </tr>
@@ -134,13 +134,13 @@
             <span v-else class="input-file">select file</span>
           </div>
           <div>
-            <button @click.stop="fileSubmit()">create</button>
+            <button @click.stop="fileSubmit()">upload</button>
           </div>
         </div>
         <table v-if="file.set.length > 0">
           <tr class="header">
             <th class="name">name</th>
-            <th v-if="$root.show.date">created</th>
+            <th v-if="$root.show.date">uploaded</th>
             <th v-if="$root.show.user">user</th>
             <th>size</th>
           </tr>
@@ -169,10 +169,10 @@
         <div class="heading">comment</div>
         <div v-if="$u.perm.canWrite(pMe)" class="create-form">
           <div class="body" title="body">
-            <span :class="{err: comment.bodyStr.length > 1000, 'small': true}">
+            <span :class="{err: comment.bodyStr.length > 10000, 'small': true}">
               avail chars ({{10000 - comment.bodyStr.length}}) 
               <a @click.stop.prevent="commentTglPreview" href="">{{comment.preview? 'edit': 'preview'}}</a>
-              | <a @click.stop.prevent="commentSubmit" href="">create</a>
+              | <a @click.stop.prevent="commentSubmit" href="">post</a>
             </span><br>
             <textarea v-if="!comment.preview" rows="4" cols="40" :class="{err: comment.bodyStr.length > 10000}" @keydown.enter="commentEnter" v-model="comment.bodyStr" placeholder="comment"></textarea>
             <div v-else class="preview" v-html="$u.fmt.md(comment.bodyStr)"></div>
