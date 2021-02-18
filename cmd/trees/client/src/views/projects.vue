@@ -333,6 +333,22 @@
 .column-filters {
   margin: 0.6pc 0 0.6pc 0;
 }
+div.root{
+  .projects {
+    table {
+      tr {
+        td:not(:nth-child(3)) {
+          // this whole selector is just to undo the
+          // task.vue left indentation on name column
+          // all the css needs redoing for the whole app
+          // from scratch, and all components need to be
+          // SCOPED.
+          padding-left: 0;
+        }
+      }
+    }
+  }
+}
 table {
   margin: 1pc 0 1pc 0;
   border-collapse: collapse;
