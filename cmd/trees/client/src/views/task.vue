@@ -1280,15 +1280,17 @@ div.root {
       }
     }
   }
-  tr {
-    &:not(:nth-child(3)) {
-      td:first-child {
-        padding-left: 1.5pc;
+  .summary{
+    tr {
+      &:not(:nth-child(3)) {
+        td:first-child {
+          padding-left: 1.5pc;
+        }
       }
-    }
-    th, td {
-      &.light {
-        background: #222;
+      th, td {
+        &.light {
+          background: #222;
+        }
       }
     }
   }

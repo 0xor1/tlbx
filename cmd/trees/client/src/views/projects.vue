@@ -335,15 +335,10 @@
 }
 div.root{
   .projects {
-    table {
-      tr {
-        td:not(:nth-child(3)) {
-          // this whole selector is just to undo the
-          // task.vue left indentation on name column
-          // all the css needs redoing for the whole app
-          // from scratch, and all components need to be
-          // SCOPED.
-          padding-left: 0;
+    tr {
+      th, td {
+        &.light {
+          background: #222;
         }
       }
     }
