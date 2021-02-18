@@ -21,17 +21,17 @@
         <div class="projects">
           <table>
             <tr class="header">
-              <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name" v-for="(s, index) in sections" :key="index">
+              <th :colspan="s.cols.length" :rowspan="s.cols.length == 1? 2: 1" :class="s.name+ ' ' + (index % 2 !== 0? 'light': 'dark')" v-for="(s, index) in sections" :key="index">
                 {{s.name}}
               </th>
             </tr>
             <tr class="header">
-              <th :class="c.name" v-for="(c, index) in colHeaders" :key="index">
+              <th :class="c.sectionClass" v-for="(c, index) in colHeaders" :key="index">
                 {{c.name}}
               </th>
             </tr>
             <tr class="row" @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)" v-for="(p, index) in ps" :key="p.id">
-              <td :class="c.name" v-for="(c, index) in cols" :key="index">
+              <td :class="c.name + ' ' + c.sectionClass" v-for="(c, index) in cols" :key="index">
                 {{ c.get(p) }}
               </td>
               <td v-if="isMe" class="action" @click.stop="showUpdate(p)" title="update">
@@ -97,7 +97,14 @@
       },
       colHeaders(){
         let res = []
-        this.sections.forEach((section)=>{
+        this.sections.forEach((section, idx)=>{
+          section.cols.forEach((col)=>{
+            if (idx % 2 === 0) {
+              col.sectionClass = 'dark'
+            } else {
+              col.sectionClass = 'light'
+            }
+          })
           if (section.cols.length > 1) {
             res = res.concat(section.cols)
           }
@@ -106,7 +113,14 @@
       },
       cols(){
         let res = []
-        this.sections.forEach((section)=>{
+        this.sections.forEach((section, idx)=>{
+          section.cols.forEach((col)=>{
+            if (idx % 2 === 0) {
+              col.sectionClass = 'dark'
+            } else {
+              col.sectionClass = 'light'
+            }
+          })
           res = res.concat(section.cols)
         })
         return res
