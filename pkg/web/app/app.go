@@ -26,7 +26,6 @@ const (
 	GB int64 = 1000000000
 
 	ApiPathPrefix = "/api"
-	pingPath      = "/ping"
 	docsPath      = ApiPathPrefix + "/docs"
 	mdoPath       = ApiPathPrefix + "/mdo"
 )
@@ -78,7 +77,7 @@ func Run(configs ...func(*Config)) {
 	idGenPool := NewIDGenPool(c.IDGenPoolSize)
 	// endpoints
 	c.Endpoints = JoinEps(defaultEps, c.Endpoints)
-	router := map[string]*Endpoint{}
+	router := make(map[string]*Endpoint, len(c.Endpoints))
 	router[docsPath] = nil
 	router[mdoPath] = nil
 	docs := &endpointsDocs{
@@ -829,7 +828,7 @@ func MustCall(c *Client, path string, args interface{}, res interface{}) {
 type Ping struct{}
 
 func (_ *Ping) Path() string {
-	return pingPath
+	return "/api/ping"
 }
 
 func (a *Ping) Do(c *Client) (string, error) {
@@ -849,7 +848,7 @@ func (a *Ping) MustDo(c *Client) string {
 
 var defaultEps = []*Endpoint{
 	{
-		Description:      "ping",
+		Description:      "ping the api server",
 		Path:             (&Ping{}).Path(),
 		Timeout:          500,
 		MaxBodyBytes:     KB,
