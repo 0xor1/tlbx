@@ -16,6 +16,10 @@ func StrEllipsis(s string, max uint) string {
 	return s
 }
 
+func StrRepeat(s string, count int) string {
+	return strings.Repeat(s, count)
+}
+
 func StrJoin(strs []string, sep string) string {
 	return strings.Join(strs, sep)
 }

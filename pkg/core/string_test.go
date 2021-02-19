@@ -18,6 +18,12 @@ func TestStrEllipsis(t *testing.T) {
 	a.Equal("0...", StrEllipsis(s, 4))
 }
 
+func TestStrRepeat(t *testing.T) {
+	a := assert.New(t)
+	s := `ABC`
+	a.Equal(`ABCABCABC`, StrRepeat(s, 3))
+}
+
 func TestStrLower(t *testing.T) {
 	a := assert.New(t)
 	s := `ABC`

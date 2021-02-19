@@ -652,12 +652,18 @@ type UpStream struct {
 	Args interface{}
 }
 
+var streamDocs = map[string]interface{}{
+	"body": "content bytes",
+	"headers": map[string]string{
+		"Content-Type":   "mime type",
+		"Content-Length": "content bytes count",
+		"Content-Name":   "name",
+		"Content-Args":   "optional args json string",
+	},
+}
+
 func (_ *UpStream) MarshalJSON() ([]byte, error) {
-	return json.Marshal(`body contains content bytes plus headers:
-"Content-Type": "mime_type",
-"Content-Length": bytes_count,
-"Content-Name": "name",
-"Content-Args": "optional_args_json_string"`)
+	return json.Marshal(streamDocs)
 }
 
 type DownStream struct {
@@ -712,11 +718,7 @@ func (s *DownStream) MustFromResp(r *http.Response) {
 }
 
 func (_ *DownStream) MarshalJSON() ([]byte, error) {
-	return json.Marshal(`body contains content bytes plus headers:
-"Content-Type": "mime_type",
-"Content-Length": bytes_count,
-"Content-Name": "name",
-"Content-Id": "id_string"`)
+	return json.Marshal(streamDocs)
 }
 
 type httpClient interface {
