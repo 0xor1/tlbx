@@ -792,11 +792,12 @@ func New(
 				},
 			},
 			&app.Endpoint{
-				Description:  "get avatar",
-				Path:         (&user.GetAvatar{}).Path(),
-				Timeout:      500,
-				MaxBodyBytes: app.KB,
-				IsPrivate:    false,
+				Description:      "get avatar",
+				Path:             (&user.GetAvatar{}).Path(),
+				Timeout:          500,
+				MaxBodyBytes:     app.KB,
+				SkipXClientCheck: true,
+				IsPrivate:        false,
 				GetDefaultArgs: func() interface{} {
 					return &user.GetAvatar{}
 				},
