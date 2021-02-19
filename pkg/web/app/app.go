@@ -500,14 +500,14 @@ func isSubMDo(r *http.Request) bool {
 }
 
 type MDoReq struct {
-	Header bool       `json:"header"`
-	Path   string     `json:"path"`
-	Args   *json.Json `json:"args"`
+	Header bool       `json:"header,omitempty"`
+	Path   string     `json:"path,omitempty"`
+	Args   *json.Json `json:"args,omitempty"`
 }
 
 type MDoResp struct {
 	Status int         `json:"status"`
-	Header http.Header `json:"header"`
+	Header http.Header `json:"header,omitempty"`
 	Body   *json.Json  `json:"body"`
 }
 
@@ -1022,10 +1022,16 @@ func getTypeInfo(t reflect.Type, ti *typeInfo) {
 			ti.Array = true
 			getTypeInfo(t.Elem(), ti)
 		}
+	case reflect.Map:
+		ti.Type = "map[" + t.Key().Name() + "]"
+		fInfo := &typeInfo{}
+		getTypeInfo(t.Elem(), fInfo)
+		ti.Fields = append(ti.Fields, fInfo)
 	case reflect.Struct:
 		if t.Name() == "Time" {
 			ti.Type = StrLower(t.Name())
 		} else {
+			ti.Type = "struct"
 			for i := 0; i < t.NumField(); i++ {
 				f := t.Field(i)
 				if f.Anonymous {
