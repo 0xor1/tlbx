@@ -7,12 +7,15 @@
       http methods, <strong>args</strong> can be passed as <strong>JSON</strong> in the request body or
       as stringified json in the query parameter args e.g. <strong>?args={"name":"val"}</strong>
     </p>
+    <p>
+      multiple endpoints can be called at once using the <strong>/api/mdo</strong> endpoint
+    </p>
     <div v-for="(sec, idx) in docs.sections" :key="idx">
       <h2 class="expandable" @click.stop.prevent="toggleSection(idx)">{{sec.name}} [{{sec.collapse?'+':'-'}}]</h2>
-      <div v-if="!sec.collapse">
+      <div class="indent" v-if="!sec.collapse">
         <div v-for="(ep, epIdx) in sec.endpoints" :key="epIdx">
           <h3 class="expandable" @click.stop.prevent="toggleEp(idx, epIdx)">{{ep.path}} [{{ep.collapse?'+':'-'}}]</h3>
-          <div v-if="!ep.collapse">
+          <div class="indent" v-if="!ep.collapse">
             <p>{{ep.description}}<br>max body size: {{ep.maxBodyBytes === 1000? '1KB': $u.fmt.bytes(ep.maxBodyBytes)}}<br>timeout: {{ep.timeout}}ms</p>
             <div v-if="ep.argsTypes != null">
               <h4 class="expandable" @click.stop.prevent="ep.collapseArgsTypes = !ep.collapseArgsTypes">args types [{{ep.collapseArgsTypes?'+':'-'}}]</h4>
@@ -50,7 +53,7 @@
     methods: {
       initState (){
         return {
-            docs: {}
+          docs: {}
         }
       },
       init() {
@@ -60,6 +63,9 @@
           let sectionsMap = {}
           docs.endpoints.forEach((ep)=>{
             let rawSegs = ep.path.replace('/api/', '').split('/')
+            if (rawSegs.length == 1) {
+              rawSegs = ['api', rawSegs[0]]
+            }
             if (rawSegs.length > 1) {
               ep.collapse = true
               ep.collapseArgsTypes = true
@@ -130,5 +136,8 @@
 .expandable{
   cursor: pointer;
   text-decoration: underline;
+}
+.indent{
+  padding-left: 2pc;
 }
 </style>

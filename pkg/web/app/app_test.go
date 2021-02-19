@@ -30,7 +30,7 @@ func Test(t *testing.T) {
 		[]*app.Endpoint{
 			{
 				Description:  "echo back the json obj args",
-				Path:         "/echo",
+				Path:         "/test/echo",
 				Timeout:      500,
 				MaxBodyBytes: app.KB,
 				GetDefaultArgs: func() interface{} {
@@ -56,7 +56,7 @@ func Test(t *testing.T) {
 			},
 			{
 				Description:  "redirect",
-				Path:         "/redirect",
+				Path:         "/test/redirect",
 				Timeout:      500,
 				MaxBodyBytes: app.KB,
 				GetDefaultArgs: func() interface{} {
@@ -75,7 +75,7 @@ func Test(t *testing.T) {
 			},
 			{
 				Description:  "timeout",
-				Path:         "/timeout",
+				Path:         "/test/timeout",
 				Timeout:      100,
 				MaxBodyBytes: app.KB,
 				GetDefaultArgs: func() interface{} {
@@ -94,7 +94,7 @@ func Test(t *testing.T) {
 			},
 			{
 				Description:  "panic",
-				Path:         "/panic",
+				Path:         "/test/panic",
 				Timeout:      100,
 				MaxBodyBytes: app.KB,
 				GetDefaultArgs: func() interface{} {
@@ -125,47 +125,39 @@ func Test(t *testing.T) {
 	a.Equal("pong", (&app.Ping{}).MustDo(c))
 
 	// test mdo and basic reponse statuses
-	req, err := http.NewRequest(http.MethodPut, "/api/mdo", json.MustFromBytes(json.MustMarshal(
-		map[string]interface{}{
-			"0": map[string]interface{}{
-				"path": "/api/ping",
-			},
-			"1": map[string]interface{}{
-				"path": "/api/echo",
-				"args": map[string]interface{}{
-					"msg": "yolo",
-				},
-			},
-			"2": map[string]interface{}{
-				"path": "/api/redirect",
-			},
-			"3": map[string]interface{}{
-				"path": "/api/timeout",
-			},
-			"4": map[string]interface{}{
-				"path": "/api/panic",
-			},
+	mdoRes := (&app.MDo{
+		"0": {
+			Path: "/api/ping",
 		},
-	)).MustToReader())
+		"1": {
+			Path: "/api/test/echo",
+			Args: json.FromInterface(map[string]interface{}{
+				"msg": "yolo",
+			}),
+		},
+		"2": {
+			Path: "/api/test/redirect",
+		},
+		"3": {
+			Path: "/api/test/timeout",
+		},
+		"4": {
+			Path: "/api/test/panic",
+		},
+	}).MustDo(c)
+	a.Equal(http.StatusOK, mdoRes["0"].Status)
+	a.Equal(http.StatusOK, mdoRes["1"].Status)
+	a.Equal("yolo", mdoRes["1"].Body.MustString("msg"))
+	a.Equal(http.StatusMovedPermanently, mdoRes["2"].Status)
+	a.Equal(http.StatusServiceUnavailable, mdoRes["3"].Status)
+	a.Equal(http.StatusInternalServerError, mdoRes["4"].Status)
+
+	// test static file headers
+	req, err := http.NewRequest(http.MethodGet, "/notfound", nil)
 	req.Header.Add("X-Client", "tlbx-app-tests")
 	PanicOn(err)
 	w := httptest.NewRecorder()
 	r.RootHandler().ServeHTTP(w, req)
-	a.Equal(http.StatusOK, w.Result().StatusCode)
-	body := json.MustFromReader(w.Body)
-	a.Equal(http.StatusOK, body.MustInt("0", "status"))
-	a.Equal(http.StatusOK, body.MustInt("1", "status"))
-	a.Equal(http.StatusMovedPermanently, body.MustInt("2", "status"))
-	a.Equal(http.StatusServiceUnavailable, body.MustInt("3", "status"))
-	a.Equal(http.StatusInternalServerError, body.MustInt("4", "status"))
-
-	// test static file headers
-	req, err = http.NewRequest(http.MethodGet, "/notfound", nil)
-	req.Header.Add("X-Client", "tlbx-app-tests")
-	PanicOn(err)
-	w = httptest.NewRecorder()
-	r.RootHandler().ServeHTTP(w, req)
-	Println(string(w.Body.Bytes()))
 	a.Equal(http.StatusNotFound, w.Result().StatusCode)
 	a.Equal(w.Header().Get("Cache-Control"), "public, max-age=3600, immutable")
 	a.Equal(w.Header().Get("X-Frame-Options"), "DENY")

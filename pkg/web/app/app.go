@@ -25,9 +25,8 @@ const (
 	MB int64 = 1000000
 	GB int64 = 1000000000
 
-	ApiPathPrefix = "/api"
-	docsPath      = ApiPathPrefix + "/docs"
-	mdoPath       = ApiPathPrefix + "/mdo"
+	ApiPathPrefix        = "/api"
+	ApiPathPrefixSegment = ApiPathPrefix + "/"
 )
 
 type Config struct {
@@ -67,6 +66,7 @@ type TlbxMwares []func(Tlbx)
 
 func Run(configs ...func(*Config)) {
 	c := config(configs...)
+	mDoEp.MaxBodyBytes = c.MDoMaxBodyBytes
 	// static file server
 	staticFileDir, err := filepath.Abs(c.StaticDir)
 	PanicOn(err)
@@ -78,8 +78,6 @@ func Run(configs ...func(*Config)) {
 	// endpoints
 	c.Endpoints = JoinEps(defaultEps, c.Endpoints)
 	router := make(map[string]*Endpoint, len(c.Endpoints))
-	router[docsPath] = nil
-	router[mdoPath] = nil
 	docs := &endpointsDocs{
 		Name:        c.Name,
 		Description: c.Description,
@@ -124,15 +122,15 @@ func Run(configs ...func(*Config)) {
 			docs.Endpoints = append(docs.Endpoints, epDocs)
 		}
 	}
-	delete(router, docsPath)
-	delete(router, mdoPath)
 	docsBytes := json.MustMarshal(docs)
-	ApiPathPrefixSegment := ApiPathPrefix + "/"
 	// Handle requests!
 	var root http.HandlerFunc
 	root = func(w http.ResponseWriter, r *http.Request) {
 		// tlbx
 		tlbx := &tlbx{
+			mDoMax:         c.MDoMax,
+			docsBytes:      docsBytes,
+			root:           root,
 			resp:           &responseWrapper{w: w},
 			req:            r,
 			start:          NowMilli(),
@@ -202,57 +200,7 @@ func Run(configs ...func(*Config)) {
 		tlbx.resp.Header().Set("Cache-Control", "no-cache, no-store")
 		// lower path now we have passed static file server
 		tlbx.req.URL.Path = lPath
-		// endpoint docs
-		if lPath == docsPath {
-			tlbx.resp.Header().Set("Cache-Control", "public, max-age=3600, immutable")
-			writeJsonRaw(tlbx.resp, http.StatusOK, docsBytes)
-			return
-		}
-		// do mdo
-		if lPath == mdoPath {
-			// check all requests have a X-Client header
-			BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
-			if c.MDoMaxBodyBytes > 0 {
-				tlbx.req.Body = http.MaxBytesReader(tlbx.resp, tlbx.req.Body, c.MDoMaxBodyBytes)
-			}
-			mDoReqs := map[string]*mDoReq{}
-			getJsonArgs(tlbx, &mDoReqs)
-			BadReqIf(len(mDoReqs) == 0, "empty mdo req")
-			BadReqIf(len(mDoReqs) > c.MDoMax, "too many mdo reqs, max reqs allowed: %d", c.MDoMax)
-			fullMDoResp := map[string]*mDoResp{}
-			fullMDoRespMtx := &sync.Mutex{}
-			does := make([]func(), 0, len(mDoReqs))
-			for key := range mDoReqs {
-				does = append(does, func(key string, mdoReq *mDoReq) func() {
-					return func() {
-						argsBytes, err := json.Marshal(mdoReq.Args)
-						PanicOn(err)
-						subReq, err := http.NewRequest(http.MethodPut, StrLower(mdoReq.Path)+"?isSubMDo=true", bytes.NewReader(argsBytes))
-						PanicOn(err)
-						PanicIf(subReq.URL.Path == mdoPath, "can't have mdo request inside an mdo request")
-						PanicIf(!strings.HasPrefix(subReq.URL.Path, ApiPathPrefixSegment), "can't have none api request inside an mdo request")
-						for _, c := range tlbx.req.Cookies() {
-							subReq.AddCookie(c)
-						}
-						for name := range tlbx.req.Header {
-							subReq.Header.Add(name, tlbx.req.Header.Get(name))
-						}
-						subResp := &mDoResp{returnHeaders: mdoReq.Headers, header: http.Header{}, body: new(bytes.Buffer)}
-						root(subResp, subReq)
-						fullMDoRespMtx.Lock()
-						defer fullMDoRespMtx.Unlock()
-						for _, val := range subResp.Header().Values("Set-Cookie") {
-							tlbx.Resp().Header().Add("Set-Cookie", val)
-						}
-						fullMDoResp[key] = subResp
-					}
-				}(key, mDoReqs[key]))
-			}
-			err = GoGroup(does...)
-			PanicOn(err)
-			writeJsonOk(tlbx.resp, fullMDoResp)
-			return
-		}
+
 		// endpoints
 		ep, exists := router[tlbx.req.URL.Path]
 		ReturnIf(!exists, http.StatusNotFound, "")
@@ -313,7 +261,9 @@ func Run(configs ...func(*Config)) {
 				tlbx.resp.WriteHeader(http.StatusOK)
 				_, err = io.Copy(tlbx.resp, s.Content)
 				PanicOn(err)
-			} else {
+			} else if resBs, ok := res.([]byte); ok {
+				writeJsonRaw(tlbx.resp, http.StatusOK, resBs)
+			} else if res != nil {
 				writeJsonOk(tlbx.resp, res)
 			}
 			cancel()
@@ -427,6 +377,9 @@ type Tlbx interface {
 }
 
 type tlbx struct {
+	mDoMax         int
+	docsBytes      []byte
+	root           http.HandlerFunc
 	resp           *responseWrapper
 	req            *http.Request
 	start          time.Time
@@ -546,11 +499,18 @@ func isSubMDo(r *http.Request) bool {
 	return r.URL.Query().Get("isSubMDo") == "true"
 }
 
-type mDoReq struct {
-	Headers bool                   `json:"headers"`
-	Path    string                 `json:"path"`
-	Args    map[string]interface{} `json:"args"`
+type MDoReq struct {
+	Header bool       `json:"header"`
+	Path   string     `json:"path"`
+	Args   *json.Json `json:"args"`
 }
+
+type MDoResp struct {
+	Status int         `json:"status"`
+	Header http.Header `json:"header"`
+	Body   *json.Json  `json:"body"`
+}
+
 type mDoResp struct {
 	returnHeaders bool
 	status        int
@@ -844,7 +804,7 @@ func MustCall(c *Client, path string, args interface{}, res interface{}) {
 type Ping struct{}
 
 func (_ *Ping) Path() string {
-	return "/api/ping"
+	return "/ping"
 }
 
 func (a *Ping) Do(c *Client) (string, error) {
@@ -862,32 +822,186 @@ func (a *Ping) MustDo(c *Client) string {
 	return res
 }
 
-var defaultEps = []*Endpoint{
-	{
-		Description:      "ping the api server",
-		Path:             (&Ping{}).Path(),
-		Timeout:          500,
-		MaxBodyBytes:     KB,
-		SkipXClientCheck: true,
-		GetDefaultArgs: func() interface{} {
-			return nil
-		},
-		GetExampleArgs: func() interface{} {
-			return nil
-		},
-		GetExampleResponse: func() interface{} {
-			return "pong"
-		},
-		Handler: func(tlbx Tlbx, _ interface{}) interface{} {
-			return "pong"
-		},
+var pingEp = &Endpoint{
+	Description:      "ping the api server",
+	Path:             (&Ping{}).Path(),
+	Timeout:          500,
+	MaxBodyBytes:     KB,
+	SkipXClientCheck: true,
+	GetDefaultArgs: func() interface{} {
+		return nil
 	},
+	GetExampleArgs: func() interface{} {
+		return nil
+	},
+	GetExampleResponse: func() interface{} {
+		return "pong"
+	},
+	Handler: func(tlbx Tlbx, _ interface{}) interface{} {
+		return "pong"
+	},
+}
+
+type Docs struct{}
+
+func (_ *Docs) Path() string {
+	return "/docs"
+}
+
+func (a *Docs) Do(c *Client) (*json.Json, error) {
+	res := &json.Json{}
+	err := Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *Docs) MustDo(c *Client) *json.Json {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+var docsEp = &Endpoint{
+	Description:      "get the api docs",
+	Path:             (&Docs{}).Path(),
+	Timeout:          500,
+	MaxBodyBytes:     KB,
+	SkipXClientCheck: true,
+	GetDefaultArgs: func() interface{} {
+		return nil
+	},
+	GetExampleArgs: func() interface{} {
+		return nil
+	},
+	GetExampleResponse: func() interface{} {
+		return nil
+	},
+	Handler: func(t Tlbx, _ interface{}) interface{} {
+		tlbx := t.(*tlbx)
+		tlbx.resp.Header().Set("Cache-Control", "public, max-age=3600, immutable")
+		return tlbx.docsBytes
+	},
+}
+
+type MDo map[string]*MDoReq
+
+func (_ *MDo) Path() string {
+	return "/mdo"
+}
+
+func (a *MDo) Do(c *Client) (map[string]*MDoResp, error) {
+	res := &map[string]*MDoResp{}
+	err := Call(c, a.Path(), a, &res)
+	if res != nil {
+		return *res, err
+	}
+	return nil, err
+}
+
+func (a *MDo) MustDo(c *Client) map[string]*MDoResp {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
+var mDoEp = &Endpoint{
+	Description:      "perform multiple requests in parallel",
+	Path:             (&MDo{}).Path(),
+	Timeout:          2000,
+	MaxBodyBytes:     MB,
+	SkipXClientCheck: true,
+	GetDefaultArgs: func() interface{} {
+		return &MDo{}
+	},
+	GetExampleArgs: func() interface{} {
+		return &MDo{
+			"0": {
+				Header: true,
+				Path:   "/api/users/get",
+				Args: json.FromInterface(map[string]interface{}{
+					"nameStartsWith": "joe",
+				}),
+			},
+			"1": {
+				Path: "/api/users/me",
+			},
+			"2": {
+				Path: "/api/users/notfound",
+			},
+		}
+	},
+	GetExampleResponse: func() interface{} {
+		return &map[string]*MDoResp{
+			"0": {
+				Status: http.StatusOK,
+				Header: http.Header{
+					"Content-Type": []string{"application/json"},
+				},
+				Body: json.MustFromString(`{"id":2,"name":"joe bloggs"}`),
+			},
+			"1": {
+				Status: http.StatusOK,
+				Body:   json.MustFromString(`{"id":1,"name":"bob"}`),
+			},
+			"2": {
+				Status: http.StatusNotFound,
+				Body:   json.MustFromString(`"Not Found"`),
+			},
+		}
+	},
+	Handler: func(t Tlbx, a interface{}) interface{} {
+		tlbx := t.(*tlbx)
+		mDoReqsPtr := a.(*MDo)
+		if mDoReqsPtr == nil {
+			return nil
+		}
+		mDoReqs := *mDoReqsPtr
+		BadReqIf(tlbx.req.Header.Get("X-Client") == "", "X-Client header missing")
+		BadReqIf(len(mDoReqs) == 0, "empty mdo req")
+		BadReqIf(len(mDoReqs) > tlbx.mDoMax, "too many mdo reqs, max reqs allowed: %d", tlbx.mDoMax)
+		fullMDoResp := map[string]*mDoResp{}
+		fullMDoRespMtx := &sync.Mutex{}
+		does := make([]func(), 0, len(mDoReqs))
+		for key := range mDoReqs {
+			does = append(does, func(key string, mdoReq *MDoReq) func() {
+				return func() {
+					argsBytes, err := json.Marshal(mdoReq.Args)
+					PanicOn(err)
+					subReq, err := http.NewRequest(http.MethodPut, StrLower(mdoReq.Path)+"?isSubMDo=true", bytes.NewReader(argsBytes))
+					PanicOn(err)
+					PanicIf(subReq.URL.Path == ApiPathPrefix+(&MDo{}).Path(), "can't have mdo request inside an mdo request")
+					PanicIf(!strings.HasPrefix(subReq.URL.Path, ApiPathPrefixSegment), "can't have none api request inside an mdo request")
+					for _, c := range tlbx.req.Cookies() {
+						subReq.AddCookie(c)
+					}
+					for name := range tlbx.req.Header {
+						subReq.Header.Add(name, tlbx.req.Header.Get(name))
+					}
+					subResp := &mDoResp{returnHeaders: mdoReq.Header, header: http.Header{}, body: new(bytes.Buffer)}
+					tlbx.root(subResp, subReq)
+					fullMDoRespMtx.Lock()
+					defer fullMDoRespMtx.Unlock()
+					for _, val := range subResp.Header().Values("Set-Cookie") {
+						tlbx.Resp().Header().Add("Set-Cookie", val)
+					}
+					fullMDoResp[key] = subResp
+				}
+			}(key, mDoReqs[key]))
+		}
+		PanicOn(GoGroup(does...))
+		return fullMDoResp
+	},
+}
+
+var defaultEps = []*Endpoint{
+	pingEp,
+	docsEp,
+	mDoEp,
 }
 
 type typeInfo struct {
 	Name      string        `json:"name,omitempty"`
 	Ptr       bool          `json:"ptr,omitempty"`
-	Arry      bool          `json:"array,omitempty"`
+	Array     bool          `json:"array,omitempty"`
 	OmitEmpty bool          `json:"omitEmpty,omitempty"`
 	Type      interface{}   `json:"type,omitempty"`
 	Fields    []interface{} `json:"fields,omitempty"`
@@ -905,7 +1019,7 @@ func getTypeInfo(t reflect.Type, ti *typeInfo) {
 		if t.Name() == "ID" || t.Name() == "string" {
 			ti.Type = StrLower(t.Name())
 		} else {
-			ti.Arry = true
+			ti.Array = true
 			getTypeInfo(t.Elem(), ti)
 		}
 	case reflect.Struct:
