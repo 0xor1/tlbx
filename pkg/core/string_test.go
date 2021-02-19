@@ -24,6 +24,12 @@ func TestStrRepeat(t *testing.T) {
 	a.Equal(`ABCABCABC`, StrRepeat(s, 3))
 }
 
+func TestStrSplit(t *testing.T) {
+	a := assert.New(t)
+	s := `A,B,C`
+	a.Equal([]string{`A`, `B`, `C`}, StrSplit(s, ","))
+}
+
 func TestStrLower(t *testing.T) {
 	a := assert.New(t)
 	s := `ABC`

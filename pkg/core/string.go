@@ -20,6 +20,10 @@ func StrRepeat(s string, count int) string {
 	return strings.Repeat(s, count)
 }
 
+func StrSplit(s string, sep string) []string {
+	return strings.Split(s, sep)
+}
+
 func StrJoin(strs []string, sep string) string {
 	return strings.Join(strs, sep)
 }
