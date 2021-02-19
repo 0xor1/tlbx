@@ -112,11 +112,13 @@ func Run(configs ...func(*Config)) {
 			if epDocs.DefaultArgs != nil {
 				ti := &typeInfo{}
 				getTypeInfo(reflect.TypeOf(epDocs.DefaultArgs), ti)
+				ti.Ptr = false
 				epDocs.ArgsTypes = ti
 			}
 			if epDocs.ExampleRes != nil {
 				ti := &typeInfo{}
 				getTypeInfo(reflect.TypeOf(epDocs.ExampleRes), ti)
+				ti.Ptr = false
 				epDocs.ResTypes = ti
 			}
 			docs.Endpoints = append(docs.Endpoints, epDocs)
