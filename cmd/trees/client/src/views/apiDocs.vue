@@ -8,14 +8,22 @@
       as stringified json in the query parameter args e.g. <strong>?args={"name":"val"}</strong>
     </p>
     <div v-for="(sec, idx) in docs.sections" :key="idx">
-      <h2 class="expandable" @click.stop.prevent="sec.collapse = !sec.collapse">{{sec.name}} [{{sec.collapse?'+':'-'}}]</h2>
+      <h2 class="expandable" @click.stop.prevent="toggleSection(idx)">{{sec.name}} [{{sec.collapse?'+':'-'}}]</h2>
       <div v-if="!sec.collapse">
-        <div v-for="(ep, idx) in sec.endpoints" :key="idx">
-          <h3 class="expandable" @click.stop.prevent="ep.collapse = !ep.collapse">{{ep.path}} [{{ep.collapse?'+':'-'}}]</h3>
+        <div v-for="(ep, epIdx) in sec.endpoints" :key="epIdx">
+          <h3 class="expandable" @click.stop.prevent="toggleEp(idx, epIdx)">{{ep.path}} [{{ep.collapse?'+':'-'}}]</h3>
           <div v-if="!ep.collapse">
             <p>{{ep.description}}</p>
             <p>max body size: {{ep.maxBodyBytes === 1000? '1KB': $u.fmt.bytes(ep.maxBodyBytes)}}</p>
-            <p>timeout: {{ep.timeoutMilli}}ms</p>
+            <p>timeout: {{ep.timeout}}ms</p>
+            <div>
+              <h4>args types</h4>
+              <div v-html="$u.fmt.md('```\n'+JSON.stringify(ep.argsTypes, null, 4)+'\n```')"></div>
+            </div>
+            <div>
+              <h4>res types</h4>
+              <div v-html="$u.fmt.md('```\n'+JSON.stringify(ep.resTypes, null, 4)+'\n```')"></div>
+            </div>
             <div>
               <h4>default args</h4>
               <div v-html="$u.fmt.md('```\n'+JSON.stringify(ep.defaultArgs, null, 4)+'\n```')"></div>
@@ -26,7 +34,7 @@
             </div>
             <div>
               <h4>example response</h4>
-              <div v-html="$u.fmt.md('```\n'+JSON.stringify(ep.exampleResponse, null, 4)+'\n```')"></div>
+              <div v-html="$u.fmt.md('```\n'+JSON.stringify(ep.exampleRes, null, 4)+'\n```')"></div>
             </div>
           </div>
         </div>
@@ -69,6 +77,22 @@
           docs.sections = sectionsArray
           this.docs = docs
         })
+      },
+      toggleSection(idx) {
+        let s = this.docs.sections[idx]
+        if (s.collapse) {
+          s.collapse = false
+        } else {
+          // if collapsing section, collapse all children for next opening
+          s.collapse = true
+          s.endpoints.forEach((ep)=>{
+            ep.collapse = true
+          })
+        }
+      },
+      toggleEp(idx, epIdx) {
+        let ep = this.docs.sections[idx].endpoints[epIdx]
+        ep.collapse = !ep.collapse
       }
     },
     mounted(){
