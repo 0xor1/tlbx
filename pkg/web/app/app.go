@@ -909,26 +909,30 @@ func getTypeInfo(t reflect.Type, ti *typeInfo) {
 			getTypeInfo(t.Elem(), ti)
 		}
 	case reflect.Struct:
-		for i := 0; i < t.NumField(); i++ {
-			f := t.Field(i)
-			if f.Anonymous {
-				getTypeInfo(f.Type, ti)
-			} else {
-				fInfo := &typeInfo{Name: f.Name}
-				if f.Tag != "" {
-					jsonParts := StrSplit(f.Tag.Get("json"), ",")
-					if jsonParts[0] == "-" {
-						fInfo = nil
-					} else {
-						if jsonParts[0] != "" {
-							fInfo.Name = jsonParts[0]
+		if t.Name() == "Time" {
+			res.Type = StrLower(t.Name())
+		} else {
+			for i := 0; i < t.NumField(); i++ {
+				f := t.Field(i)
+				if f.Anonymous {
+					getTypeInfo(f.Type, ti)
+				} else {
+					fInfo := &typeInfo{Name: f.Name}
+					if f.Tag != "" {
+						jsonParts := StrSplit(f.Tag.Get("json"), ",")
+						if jsonParts[0] == "-" {
+							fInfo = nil
+						} else {
+							if jsonParts[0] != "" {
+								fInfo.Name = jsonParts[0]
+							}
+							fInfo.OmitEmpty = len(jsonParts) > 1 && jsonParts[1] == "omitempty"
 						}
-						fInfo.OmitEmpty = len(jsonParts) > 1 && jsonParts[1] == "omitempty"
 					}
-				}
-				if fInfo != nil {
-					getTypeInfo(f.Type, fInfo)
-					ti.Fields = append(ti.Fields, fInfo)
+					if fInfo != nil {
+						getTypeInfo(f.Type, fInfo)
+						ti.Fields = append(ti.Fields, fInfo)
+					}
 				}
 			}
 		}
