@@ -100,15 +100,26 @@ func Run(configs ...func(*Config)) {
 		PanicIf(exists, "duplicate endpoint path: %q", path)
 		router[lPath] = ep
 		if !ep.IsPrivate {
-			docs.Endpoints = append(docs.Endpoints, &endpointDoc{
-				Description:     ep.Description,
-				Path:            path,
-				Timeout:         ep.Timeout,
-				MaxBodyBytes:    ep.MaxBodyBytes,
-				DefaultArgs:     ep.GetDefaultArgs(),
-				ExampleArgs:     ep.GetExampleArgs(),
-				ExampleResponse: ep.GetExampleResponse(),
-			})
+			epDocs := &endpointDoc{
+				Description:  ep.Description,
+				Path:         path,
+				Timeout:      ep.Timeout,
+				MaxBodyBytes: ep.MaxBodyBytes,
+				DefaultArgs:  ep.GetDefaultArgs(),
+				ExampleArgs:  ep.GetExampleArgs(),
+				ExampleRes:   ep.GetExampleResponse(),
+			}
+			if epDocs.DefaultArgs != nil {
+				ti := &typeInfo{}
+				getTypeInfo(reflect.TypeOf(epDocs.DefaultArgs), ti)
+				epDocs.ArgsTypes = ti
+			}
+			if epDocs.ExampleRes != nil {
+				ti := &typeInfo{}
+				getTypeInfo(reflect.TypeOf(epDocs.ExampleRes), ti)
+				epDocs.ResTypes = ti
+			}
+			docs.Endpoints = append(docs.Endpoints, epDocs)
 		}
 	}
 	delete(router, docsPath)
@@ -602,14 +613,15 @@ type endpointsDocs struct {
 }
 
 type endpointDoc struct {
-	Description     string      `json:"description"`
-	Path            string      `json:"path"`
-	Timeout         int64       `json:"timeoutMilli"`
-	MaxBodyBytes    int64       `json:"maxBodyBytes"`
-	ArgsTypes       interface{} `json:"argsTypes"`
-	DefaultArgs     interface{} `json:"defaultArgs"`
-	ExampleArgs     interface{} `json:"exampleArgs"`
-	ExampleResponse interface{} `json:"exampleResponse"`
+	Description  string      `json:"description"`
+	Path         string      `json:"path"`
+	Timeout      int64       `json:"timeout"`
+	MaxBodyBytes int64       `json:"maxBodyBytes"`
+	ArgsTypes    interface{} `json:"argsTypes"`
+	ResTypes     interface{} `json:"resTypes"`
+	DefaultArgs  interface{} `json:"defaultArgs"`
+	ExampleArgs  interface{} `json:"exampleArgs"`
+	ExampleRes   interface{} `json:"exampleRes"`
 }
 
 func checkErrForMaxBytes(tlbx *tlbx, err error) {
@@ -868,4 +880,57 @@ var defaultEps = []*Endpoint{
 			return "pong"
 		},
 	},
+}
+
+type typeInfo struct {
+	Name      string        `json:"name,omitempty"`
+	Ptr       bool          `json:"ptr,omitempty"`
+	Arry      bool          `json:"array,omitempty"`
+	OmitEmpty bool          `json:"omitEmpty,omitempty"`
+	Type      interface{}   `json:"type,omitempty"`
+	Fields    []interface{} `json:"fields,omitempty"`
+}
+
+func getTypeInfo(t reflect.Type, ti *typeInfo) {
+	if ti == nil {
+		return
+	}
+	switch t.Kind() {
+	case reflect.Ptr:
+		ti.Ptr = true
+		getTypeInfo(t.Elem(), ti)
+	case reflect.Array, reflect.Slice:
+		if t.Name() == "ID" || t.Name() == "string" {
+			ti.Type = StrLower(t.Name())
+		} else {
+			ti.Arry = true
+			getTypeInfo(t.Elem(), ti)
+		}
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			if f.Anonymous {
+				getTypeInfo(f.Type, ti)
+			} else {
+				fInfo := &typeInfo{Name: f.Name}
+				if f.Tag != "" {
+					jsonParts := StrSplit(f.Tag.Get("json"), ",")
+					if jsonParts[0] == "-" {
+						fInfo = nil
+					} else {
+						if jsonParts[0] != "" {
+							fInfo.Name = jsonParts[0]
+						}
+						fInfo.OmitEmpty = len(jsonParts) > 1 && jsonParts[1] == "omitempty"
+					}
+				}
+				if fInfo != nil {
+					getTypeInfo(f.Type, fInfo)
+					ti.Fields = append(ti.Fields, fInfo)
+				}
+			}
+		}
+	default:
+		ti.Type = t.Kind().String()
+	}
 }
