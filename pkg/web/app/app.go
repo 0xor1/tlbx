@@ -910,7 +910,7 @@ func getTypeInfo(t reflect.Type, ti *typeInfo) {
 		}
 	case reflect.Struct:
 		if t.Name() == "Time" {
-			res.Type = StrLower(t.Name())
+			ti.Type = StrLower(t.Name())
 		} else {
 			for i := 0; i < t.NumField(); i++ {
 				f := t.Field(i)
