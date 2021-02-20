@@ -499,6 +499,7 @@
         padding: 0.5pc;
         border-radius: 0.5pc;
         background: $inputActiveColor;
+        overflow-x: auto;
         code{
           background: transparent;
         }

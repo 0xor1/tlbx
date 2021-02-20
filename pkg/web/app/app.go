@@ -108,16 +108,30 @@ func Run(configs ...func(*Config)) {
 				ExampleRes:   ep.GetExampleResponse(),
 			}
 			if epDocs.DefaultArgs != nil {
-				ti := &typeInfo{}
-				getTypeInfo(reflect.TypeOf(epDocs.DefaultArgs), ti)
-				ti.Ptr = false
-				epDocs.ArgsTypes = ti
+				if _, ok := epDocs.DefaultArgs.(*UpStream); !ok {
+					ti := &typeInfo{}
+					getTypeInfo(reflect.TypeOf(epDocs.DefaultArgs), ti)
+					ti.Ptr = false
+					epDocs.ArgsTypes = ti
+				} else {
+					// in the case that its an stream just use the default json from the stream
+					// itself explain the request structure
+					epDocs.ArgsTypes = epDocs.DefaultArgs
+					epDocs.DefaultArgs = nil
+				}
 			}
 			if epDocs.ExampleRes != nil {
-				ti := &typeInfo{}
-				getTypeInfo(reflect.TypeOf(epDocs.ExampleRes), ti)
-				ti.Ptr = false
-				epDocs.ResTypes = ti
+				if _, ok := epDocs.DefaultArgs.(*DownStream); !ok {
+					ti := &typeInfo{}
+					getTypeInfo(reflect.TypeOf(epDocs.ExampleRes), ti)
+					ti.Ptr = false
+					epDocs.ResTypes = ti
+				} else {
+					// in the case that its an stream just use the default json from the stream
+					// itself explain the request structure
+					epDocs.ResTypes = epDocs.ExampleRes
+					epDocs.ExampleRes = nil
+				}
 			}
 			docs.Endpoints = append(docs.Endpoints, epDocs)
 		}
@@ -1028,7 +1042,7 @@ func getTypeInfo(t reflect.Type, ti *typeInfo) {
 		getTypeInfo(t.Elem(), fInfo)
 		ti.Fields = append(ti.Fields, fInfo)
 	case reflect.Struct:
-		if t.Name() == "Time" {
+		if t.Name() == "Time" || t.Name() == "Json" {
 			ti.Type = StrLower(t.Name())
 		} else {
 			ti.Type = "struct"

@@ -19,23 +19,23 @@
             <p>{{ep.description}}<br>max body size: {{ep.maxBodyBytes === 1000? '1KB': $u.fmt.bytes(ep.maxBodyBytes)}}<br>timeout: {{ep.timeout}}ms</p>
             <div v-if="ep.argsTypes != null">
               <h4 class="expandable" @click.stop.prevent="ep.collapseArgsTypes = !ep.collapseArgsTypes">args types [{{ep.collapseArgsTypes?'+':'-'}}]</h4>
-              <div v-if="!ep.collapseArgsTypes" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.argsTypes, null, 4)+'\n```')"></div>
+              <div v-if="!ep.collapseArgsTypes" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.argsTypes, null, 2)+'\n```')"></div>
             </div>
             <div v-if="ep.resTypes != null">
               <h4 class="expandable" @click.stop.prevent="ep.collapseResTypes = !ep.collapseResTypes">res types [{{ep.collapseResTypes?'+':'-'}}]</h4>
-              <div v-if="!ep.collapseResTypes" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.resTypes, null, 4)+'\n```')"></div>
+              <div v-if="!ep.collapseResTypes" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.resTypes, null, 2)+'\n```')"></div>
             </div>
             <div v-if="ep.defaultArgs != null">
               <h4 class="expandable" @click.stop.prevent="ep.collapseDefaultArgs = !ep.collapseDefaultArgs">default args [{{ep.collapseDefaultArgs?'+':'-'}}]</h4>
-              <div v-if="!ep.collapseDefaultArgs" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.defaultArgs, null, 4)+'\n```')"></div>
+              <div v-if="!ep.collapseDefaultArgs" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.defaultArgs, null, 2)+'\n```')"></div>
             </div>
             <div v-if="ep.exampleArgs != null">
               <h4 class="expandable" @click.stop.prevent="ep.collapseExampleArgs = !ep.collapseExampleArgs">example args [{{ep.collapseExampleArgs?'+':'-'}}]</h4>
-              <div v-if="!ep.collapseExampleArgs" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.exampleArgs, null, 4)+'\n```')"></div>
+              <div v-if="!ep.collapseExampleArgs" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.exampleArgs, null, 2)+'\n```')"></div>
             </div>
             <div v-if="ep.exampleRes != null">
               <h4 class="expandable" @click.stop.prevent="ep.collapseExampleRes = !ep.collapseExampleRes">example response [{{ep.collapseExampleRes?'+':'-'}}]</h4>
-              <div v-if="!ep.collapseExampleRes" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.exampleRes, null, 4)+'\n```')"></div>
+              <div v-if="!ep.collapseExampleRes" v-html="$u.fmt.md('```\n'+JSON.stringify(ep.exampleRes, null, 2)+'\n```')"></div>
             </div>
           </div>
         </div>
