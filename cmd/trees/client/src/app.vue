@@ -491,8 +491,8 @@
   }
   div.markdown {
     img{
-      max-height: 20pc;
-      max-width: 20pc;
+      max-height: 40pc;
+      max-width: 40pc;
     }
     pre {
         @include border();
