@@ -277,7 +277,7 @@ func Run(configs ...func(*Config)) {
 				PanicOn(err)
 			} else if resBs, ok := res.([]byte); ok {
 				writeJsonRaw(tlbx.resp, http.StatusOK, resBs)
-			} else if res != nil {
+			} else {
 				writeJsonOk(tlbx.resp, res)
 			}
 			cancel()
