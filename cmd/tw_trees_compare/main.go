@@ -32,19 +32,19 @@ func main() {
 	var treesUser string
 	fs.StringVar(&treesUser, "tu", "test@test.test", "user email for task trees env")
 	var treeK uint
-	fs.UintVar(&treeK, "k", 3, "k-ary tree k value must be >1")
+	fs.UintVar(&treeK, "k", 3, "k-ary tree k value must be >0")
 	var treeH uint
 	fs.UintVar(&treeH, "h", 3, "k-ary tree h value")
 	var projectName string
 	fs.StringVar(&projectName, "pn", "twtrees", "project name to use in tw projects")
 	fs.Parse(os.Args[1:])
-	if treeK < 2 {
-		panic("treeK value less than 2")
+	if treeK < 1 {
+		panic("treeK value less than 1")
 	}
 	Print("Enter TW Password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 	PanicOn(err)
-	pwd := string(bytePassword)
+	//pwd := string(bytePassword)
 	Println()
 	Print("Enter trees Password: ")
 	bytePassword, err = terminal.ReadPassword(int(syscall.Stdin))
@@ -58,11 +58,16 @@ func main() {
 	Println("p = *******")
 	Println("k =", treeK)
 	Println("h =", treeH)
-	totalTasksToCreate := (pow(treeK, treeH+1) - 1) / (treeK - 1)
+	var totalTasksToCreate uint
+	if treeK == 1 {
+		totalTasksToCreate = treeH
+	} else {
+		totalTasksToCreate = (pow(treeK, treeH+1) - 1) / (treeK - 1)
+	}
 	Println("N =", totalTasksToCreate)
 	Println("pn =", projectName)
 
-	runTW(inst, user, pwd, projectName, treeK, treeH)
+	//runTW(inst, user, pwd, projectName, treeK, treeH)
 	runTrees(treesHost, treesUser, treesPwd, projectName, treeK, treeH)
 }
 
