@@ -933,7 +933,7 @@
         }
       },
       commentEnter(e){
-        if (!e.shiftKey) {
+        if (e.shiftKey) {
           e.preventDefault()
           this.commentSubmit()
         }
@@ -964,7 +964,7 @@
         this.comment.updIdx = -1
       },
       commentSubmitUpd(e){
-        if (!e.shiftKey) {
+        if (e.shiftKey) {
           e.preventDefault()
           if(!this.comment.loading) {
             this.comment.loading = true
