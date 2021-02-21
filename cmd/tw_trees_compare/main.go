@@ -44,7 +44,7 @@ func main() {
 	Print("Enter TW Password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 	PanicOn(err)
-	//pwd := string(bytePassword)
+	pwd := string(bytePassword)
 	Println()
 	Print("Enter trees Password: ")
 	bytePassword, err = terminal.ReadPassword(int(syscall.Stdin))
@@ -67,7 +67,7 @@ func main() {
 	Println("N =", totalTasksToCreate)
 	Println("pn =", projectName)
 
-	//runTW(inst, user, pwd, projectName, treeK, treeH)
+	runTW(inst, user, pwd, projectName, treeK, treeH)
 	runTrees(treesHost, treesUser, treesPwd, projectName, treeK, treeH)
 }
 
