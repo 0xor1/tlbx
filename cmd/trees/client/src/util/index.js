@@ -300,9 +300,21 @@ export default {
                         }
                     }
                     if (div == 1) {
-                        return (size / div) + unit
+                        return size + unit
                     }
-                    return (size / div).toPrecision(3) + unit
+                    let val = (size / div)
+                    if (val >= 100) {
+                        val = Math.floor(val)
+                    } else if (val >= 10) {
+                        val *= 10
+                        val = Math.floor(val)
+                        val /= 10
+                    } else {
+                        val *= 100
+                        val = Math.floor(val)
+                        val /= 100
+                    }
+                    return  val + unit
                 }
             },
             parse: {
