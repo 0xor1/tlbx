@@ -316,9 +316,11 @@ var (
 					t.Description = args.Description.V
 					simpleUpdateRequired = true
 				}
+				isParallelChanged := false
 				if args.IsParallel != nil && t.IsParallel != args.IsParallel.V {
 					t.IsParallel = args.IsParallel.V
 					treeUpdateRequired = true
+					isParallelChanged = true
 				}
 				if args.User != nil &&
 					((args.User.V == nil && t.User != nil) ||
@@ -358,16 +360,31 @@ var (
 					var ancestors IDs
 					update(t, oldParent, oldPrevSib, newParent, newPrevSib)
 					if treeUpdateRequired {
+						if isParallelChanged {
+							// if parallel has been changed need to recalculate agg values on this task as it effects minimum time
+							ancestors = epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, t.ID)
+							if len(ancestors) > 0 {
+								// here we know the task was updated as it's id was returned in the ancestors set
+								// so we need to get it again as the timeMin value has changed
+								t = GetOne(tx, args.Host, args.Project, t.ID)
+							}
+						}
 						if newParent != nil {
 							// if we moved parent we must recalculate aggregate values on the new and old parents ancestral chains
-							ancestors = epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, newParent.ID)
+							if len(ancestors) < 2 {
+								// if ancestors has less than 2 entries the new parent hasn't been updated yet
+								ancestors = epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, newParent.ID)
+							}
 							moreAncestors := epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, oldParent.ID)
 							ancestors = IDsMerge(ancestors, moreAncestors)
 						} else if t.Parent != nil {
 							// need to do the t.Parent nil check here incase it's the root project node having est value updated
 							// here a tree update is required but the task has not been moved parents
 							// so it must have had an est value changed on it, so update from its parent
-							ancestors = epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
+							if len(ancestors) < 2 {
+								// if ancestors has less than 2 entries the parent hasn't been updated yet by the call in the isParallelChanged section above.
+								ancestors = epsutil.SetAncestralChainAggregateValuesFromTask(tx, args.Host, args.Project, *t.Parent)
+							}
 						}
 
 					}

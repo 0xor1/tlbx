@@ -149,7 +149,7 @@ func Everything(t *testing.T) {
 		Description: "",
 		IsParallel:  true,
 		User:        ptr.ID(r.Ali().ID()),
-		TimeEst:     100,
+		TimeEst:     50,
 	}).MustDo(ac).Task
 	a.NotNil(t1p2)
 
@@ -175,7 +175,7 @@ func Everything(t *testing.T) {
 		Host:       r.Ali().ID(),
 		Project:    p.ID,
 		ID:         p.ID,
-		IsParallel: &field.Bool{V: false},
+		IsParallel: &field.Bool{V: true},
 		TimeEst:    &field.UInt64{V: 50},
 		CostEst:    &field.UInt64{V: 50},
 	}).MustDo(ac)
