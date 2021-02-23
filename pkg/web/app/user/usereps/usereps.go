@@ -117,16 +117,16 @@ func New(
 				}
 				usrtx := srv.User().Begin()
 				defer usrtx.Rollback()
-				pwdtx := srv.Pwd().Begin()
-				defer pwdtx.Rollback()
 				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, fcmEnabled, Now(), time.Time{}, activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
 					PanicOn(err)
 				}
-				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), activateCode), args.Handle)
+				pwdtx := srv.Pwd().Begin()
+				defer pwdtx.Rollback()
 				setPwd(tlbx, pwdtx, id, args.Pwd, args.ConfirmPwd)
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), activateCode), args.Handle)
 				usrtx.Commit()
 				pwdtx.Commit()
 				return nil
@@ -324,13 +324,13 @@ func New(
 						mustWaitDur := (10 * time.Minute) - Now().Sub(*user.LastPwdResetOn)
 						app.BadReqIf(mustWaitDur > 0, "must wait %d seconds before reseting pwd again", int64(math.Ceil(mustWaitDur.Seconds())))
 					}
+					user.LastPwdResetOn = &now
+					updateUser(tx, user)
 					pwdtx := srv.Pwd().Begin()
 					defer pwdtx.Rollback()
 					newPwd := `$aA1` + crypt.UrlSafeString(12)
 					setPwd(tlbx, pwdtx, user.ID, newPwd, newPwd)
 					sendResetPwdEmail(srv, args.Email, fromEmail, newPwd)
-					user.LastPwdResetOn = &now
-					updateUser(tx, user)
 					pwdtx.Commit()
 				}
 				tx.Commit()
@@ -394,15 +394,15 @@ func New(
 				app.BadReqIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), "incorrect pwd")
 				tx := srv.User().Begin()
 				defer tx.Rollback()
-				pwdTx := srv.Pwd().Begin()
-				defer pwdTx.Rollback()
-				_, err := pwdTx.Exec(`DELETE FROM pwds WHERE id=?`, m)
-				PanicOn(err)
-				_, err = tx.Exec(`DELETE FROM users WHERE id=?`, m)
+				_, err := tx.Exec(`DELETE FROM users WHERE id=?`, m)
 				PanicOn(err)
 				_, err = tx.Exec(`DELETE FROM jin WHERE user=?`, m)
 				PanicOn(err)
 				_, err = tx.Exec(`DELETE FROM fcmTokens WHERE user=?`, m)
+				PanicOn(err)
+				pwdTx := srv.Pwd().Begin()
+				defer pwdTx.Rollback()
+				_, err = pwdTx.Exec(`DELETE FROM pwds WHERE id=?`, m)
 				PanicOn(err)
 				if onDelete != nil {
 					onDelete(tlbx, m)
