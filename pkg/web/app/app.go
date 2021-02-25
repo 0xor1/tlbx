@@ -254,7 +254,10 @@ func Run(configs ...func(*Config)) {
 				args = s
 				argsStr := tlbx.req.Header.Get("Content-Args")
 				if s.Args != nil && argsStr != "" {
-					PanicOn(json.Unmarshal([]byte(argsStr), &s.Args))
+					d := json.NewDecoder(bytes.NewBufferString(argsStr))
+					d.DisallowUnknownFields()
+					err = d.Decode(&s.Args)
+					BadReqIf(err != nil, "error unmarshalling json: %s", err)
 				}
 			} else {
 				getJsonArgs(tlbx, args)
@@ -621,7 +624,9 @@ func getJsonArgs(tlbx *tlbx, args interface{}) {
 		checkErrForMaxBytes(tlbx, err)
 	}
 	if len(argsBytes) > 0 {
-		err := json.Unmarshal(argsBytes, args)
+		d := json.NewDecoder(bytes.NewBuffer(argsBytes))
+		d.DisallowUnknownFields()
+		err := d.Decode(args)
 		BadReqIf(err != nil, "error unmarshalling json: %s", err)
 	}
 }

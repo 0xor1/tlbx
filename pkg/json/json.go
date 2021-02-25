@@ -52,6 +52,10 @@ func Unmarshal(data []byte, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
+func NewDecoder(r io.Reader) *json.Decoder {
+	return json.NewDecoder(r)
+}
+
 func MustUnmarshal(data []byte, v interface{}) {
 	PanicOn(Unmarshal(data, v))
 }
