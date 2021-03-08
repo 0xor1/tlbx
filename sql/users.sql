@@ -28,7 +28,8 @@ DROP TABLE IF EXISTS jin;
 CREATE TABLE jin (
     user BINARY(16) NOT NULL,
     val VARCHAR(10000) NOT NULL,
-    PRIMARY KEY user (user)
+    PRIMARY KEY user (user),
+    FOREIGN KEY (user) REFERENCES users (id) ON DELETE CASCADE
 );
 
 # cleanup old registrations that have not been activated in a week
