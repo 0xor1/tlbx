@@ -5,6 +5,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/0xor1/trees/pkg/comment/commenteps"
 	"github.com/0xor1/trees/pkg/config"
@@ -35,6 +36,10 @@ func main() {
 				config.App.FromEmail,
 				config.App.ActivateFmtLink,
 				config.App.ConfirmChangeEmailFmtLink,
+				me.Exists,
+				me.Set,
+				me.Get,
+				me.Del,
 				nil,
 				projecteps.OnDelete,
 				projecteps.OnSetSocials,

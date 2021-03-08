@@ -12,6 +12,7 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/trees/pkg/config"
 	"github.com/0xor1/trees/pkg/file/fileeps"
@@ -35,6 +36,10 @@ func Everything(t *testing.T) {
 		config.Get(),
 		append(append(projecteps.Eps, taskeps.Eps...), fileeps.Eps...),
 		true,
+		me.Exists,
+		me.Set,
+		me.Get,
+		me.Del,
 		nil,
 		projecteps.OnDelete,
 		projecteps.OnSetSocials,
