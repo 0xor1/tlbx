@@ -10,6 +10,7 @@ import (
 	"github.com/0xor1/tlbx/cmd/games/pkg/game"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/logrusorgru/aurora"
 	"github.com/stretchr/testify/assert"
@@ -21,6 +22,10 @@ func Everything(t *testing.T) {
 		config.Get(),
 		append(game.Eps, blockerseps.Eps...),
 		false,
+		me.Exists,
+		me.Set,
+		me.Get,
+		me.Del,
 		nil, nil,
 		nil,
 		nil,

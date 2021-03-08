@@ -13,6 +13,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,10 @@ func Everything(t *testing.T) {
 		config.Get(),
 		append(listeps.Eps, itemeps.Eps...),
 		true,
+		me.Exists,
+		me.Set,
+		me.Get,
+		me.Del,
 		nil,
 		listeps.OnDelete,
 		usereps.NopOnSetSocials,

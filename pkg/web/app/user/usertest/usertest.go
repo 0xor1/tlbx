@@ -14,6 +14,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/config"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
@@ -25,6 +26,10 @@ func Everything(t *testing.T) {
 		config.GetProcessed(config.GetBase()),
 		nil,
 		true,
+		me.Exists,
+		me.Set,
+		me.Get,
+		me.Del,
 		func(tlbx app.Tlbx, user *user.User) {},
 		func(tlbx app.Tlbx, id ID) {},
 		usereps.NopOnSetSocials,

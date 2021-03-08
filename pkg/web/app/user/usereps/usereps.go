@@ -24,7 +24,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
-	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
@@ -45,6 +44,10 @@ func New(
 	fromEmail,
 	activateFmtLink,
 	confirmChangeEmailFmtLink string,
+	sessionExists func(app.Tlbx) bool,
+	sessionSet func(app.Tlbx, ID),
+	sessionGet func(app.Tlbx) ID,
+	sessionDel func(app.Tlbx),
 	onActivate func(app.Tlbx, *user.User),
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User) error,
@@ -84,7 +87,7 @@ func New(
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				app.BadReqIf(me.Exists(tlbx), "already logged in")
+				app.BadReqIf(sessionExists(tlbx), "already logged in")
 				args := a.(*user.Register)
 				args.Email = StrTrimWS(args.Email)
 				if !enableSocials {
@@ -221,7 +224,7 @@ func New(
 				args.NewEmail = StrTrimWS(args.NewEmail)
 				validate.Str("email", args.NewEmail, tlbx, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
-				me := me.Get(tlbx)
+				me := sessionGet(tlbx)
 				changeEmailCode := crypt.UrlSafeString(250)
 				tx := srv.User().Begin()
 				defer tx.Rollback()
@@ -253,7 +256,7 @@ func New(
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				srv := service.Get(tlbx)
-				me := me.Get(tlbx)
+				me := sessionGet(tlbx)
 				tx := srv.User().Begin()
 				defer tx.Rollback()
 				fullUser := getUser(tx, nil, &me)
@@ -359,7 +362,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.SetPwd)
 				srv := service.Get(tlbx)
-				me := me.Get(tlbx)
+				me := sessionGet(tlbx)
 				pwd := getPwd(srv, me)
 				app.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.CurrentPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
 				pwdtx := srv.Pwd().Begin()
@@ -389,7 +392,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.Delete)
 				srv := service.Get(tlbx)
-				m := me.Get(tlbx)
+				m := sessionGet(tlbx)
 				pwd := getPwd(srv, m)
 				app.BadReqIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), "incorrect pwd")
 				tx := srv.User().Begin()
@@ -407,7 +410,7 @@ func New(
 				if onDelete != nil {
 					onDelete(tlbx, m)
 				}
-				me.Del(tlbx)
+				sessionDel(tlbx)
 				tx.Commit()
 				pwdTx.Commit()
 				return nil
@@ -464,7 +467,7 @@ func New(
 					pwdtx.Commit()
 				}
 				tx.Commit()
-				me.Set(tlbx, user.ID)
+				sessionSet(tlbx, user.ID)
 				return &user.User
 			},
 		},
@@ -484,8 +487,8 @@ func New(
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
-				if me.Exists(tlbx) {
-					m := me.Get(tlbx)
+				if sessionExists(tlbx) {
+					m := sessionGet(tlbx)
 					srv := service.Get(tlbx)
 					tokens := make([]string, 0, 5)
 					tx := srv.User().Begin()
@@ -501,7 +504,7 @@ func New(
 					PanicOn(err)
 					srv.FCM().RawAsyncSend("logout", tokens, map[string]string{}, 0)
 					tx.Commit()
-					me.Del(tlbx)
+					sessionDel(tlbx)
 				}
 				return nil
 			},
@@ -533,10 +536,10 @@ func New(
 				return ex
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
-				if !me.Exists(tlbx) {
+				if !sessionExists(tlbx) {
 					return nil
 				}
-				me := me.Get(tlbx)
+				me := sessionGet(tlbx)
 				tx := service.Get(tlbx).User().Begin()
 				defer tx.Rollback()
 				user := getUser(tx, nil, &me)
@@ -566,7 +569,7 @@ func New(
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.SetJin)
-					me := me.Get(tlbx)
+					me := sessionGet(tlbx)
 					srv := service.Get(tlbx)
 					if args.Val == nil {
 						_, err := srv.User().Exec(`DELETE FROM jin WHERE user=?`, me)
@@ -594,7 +597,7 @@ func New(
 					return exampleJin
 				},
 				Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
-					me := me.Get(tlbx)
+					me := sessionGet(tlbx)
 					srv := service.Get(tlbx)
 					res := &json.Json{}
 					sqlh.PanicIfIsntNoRows(srv.User().QueryRow(`SELECT val FROM jin WHERE user=?`, me).Scan(&res))
@@ -680,7 +683,7 @@ func New(
 					args := a.(*user.SetHandle)
 					validate.Str("handle", args.Handle, tlbx, handleMinLen, handleMaxLen, handleRegex)
 					srv := service.Get(tlbx)
-					me := me.Get(tlbx)
+					me := sessionGet(tlbx)
 					tx := srv.User().Begin()
 					defer tx.Rollback()
 					user := getUser(tx, nil, &me)
@@ -715,7 +718,7 @@ func New(
 						validate.Str("alias", *args.Alias, tlbx, 0, aliasMaxLen)
 					}
 					srv := service.Get(tlbx)
-					me := me.Get(tlbx)
+					me := sessionGet(tlbx)
 					tx := srv.User().Begin()
 					defer tx.Rollback()
 					user := getUser(tx, nil, &me)
@@ -745,7 +748,7 @@ func New(
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*app.UpStream)
 					defer args.Content.Close()
-					me := me.Get(tlbx)
+					me := sessionGet(tlbx)
 					srv := service.Get(tlbx)
 					tx := srv.User().Begin()
 					defer tx.Rollback()
@@ -846,7 +849,7 @@ func New(
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.SetFCMEnabled)
-					me := me.Get(tlbx)
+					me := sessionGet(tlbx)
 					tx := service.Get(tlbx).User().Begin()
 					defer tx.Rollback()
 					u := getUser(tx, nil, &me)
@@ -904,7 +907,7 @@ func New(
 					if client == nil {
 						client = ptr.ID(tlbx.NewID())
 					}
-					me := me.Get(tlbx)
+					me := sessionGet(tlbx)
 					tx := service.Get(tlbx).User().Begin()
 					defer tx.Rollback()
 					u := getUser(tx, nil, &me)
@@ -953,7 +956,7 @@ func New(
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.UnregisterFromFCM)
-					me := me.Get(tlbx)
+					me := sessionGet(tlbx)
 					tx := service.Get(tlbx).User().Begin()
 					defer tx.Rollback()
 					_, err := tx.Exec(`DELETE FROM fcmTokens WHERE user=? AND client=?`, me, args.Client)
