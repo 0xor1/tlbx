@@ -88,6 +88,8 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("email.type", "local")
 	c.SetDefault("email.apikey", "")
 	c.SetDefault("aws.region", "local")
+	c.SetDefault("aws.ses.creds.id", "localtest")
+	c.SetDefault("aws.ses.creds.secret", "localtest")
 	c.SetDefault("aws.s3.endpoint", "http://localhost:9000")
 	c.SetDefault("aws.s3.creds.id", "localtest")
 	c.SetDefault("aws.s3.creds.secret", "localtest")
