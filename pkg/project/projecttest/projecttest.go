@@ -10,6 +10,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
@@ -33,6 +34,7 @@ func Everything(t *testing.T) {
 		projecteps.OnSetSocials,
 		projecteps.ValidateFCMTopic,
 		true,
+		ratelimit.MeMware,
 		cnsts.FileBucket)
 	defer r.CleanUp()
 
