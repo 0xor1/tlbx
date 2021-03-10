@@ -171,7 +171,6 @@ func GetProcessed(c *config.Config) *Config {
 					&aws.Config{
 						Region:      ptr.String(c.GetString("aws.region")),
 						Credentials: credentials.NewStaticCredentials(c.GetString("aws.ses.creds.id"), c.GetString("aws.ses.creds.secret"), ""),
-						DisableSSL:  ptr.Bool(true),
 					})))
 	default:
 		PanicIf(true, "unsupported email type %s", c.GetString("email.type"))
