@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/ses"
 	"google.golang.org/api/option"
 )
 
@@ -163,6 +164,15 @@ func GetProcessed(c *config.Config) *Config {
 			ApiVersion: 1,
 		}))
 		res.Email = email.NewSparkPostClient(spClient)
+	case "ses":
+		res.Email = email.NewSESClient(
+			ses.New(
+				session.New(
+					&aws.Config{
+						Region:      ptr.String(c.GetString("aws.region")),
+						Credentials: credentials.NewStaticCredentials(c.GetString("aws.ses.creds.id"), c.GetString("aws.ses.creds.secret"), ""),
+						DisableSSL:  ptr.Bool(true),
+					})))
 	default:
 		PanicIf(true, "unsupported email type %s", c.GetString("email.type"))
 	}

@@ -3,7 +3,9 @@ package email
 import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/log"
+	"github.com/0xor1/tlbx/pkg/ptr"
 	sp "github.com/SparkPost/gosparkpost"
+	"github.com/aws/aws-sdk-go/service/ses"
 )
 
 type Client interface {
@@ -61,5 +63,50 @@ func (c *sparkPostClient) Send(sendTo []string, from, subject, html, text string
 }
 
 func (c *sparkPostClient) MustSend(sendTo []string, from, subject, html, text string) {
+	PanicOn(c.Send(sendTo, from, subject, html, text))
+}
+
+func NewSESClient(ses *ses.SES) Client {
+	return &sesClient{
+		ses: ses,
+	}
+}
+
+type sesClient struct {
+	ses *ses.SES
+}
+
+func (c *sesClient) Send(sendTo []string, from, subject, html, text string) error {
+	sendToPtrs := make([]*string, 0, len(sendTo))
+	for _, a := range sendTo {
+		sendToPtrs = append(sendToPtrs, ptr.String(a))
+	}
+	utf8 := ptr.String("UTF-8")
+	_, err := c.ses.SendEmail(&ses.SendEmailInput{
+		Destination: &ses.Destination{
+			ToAddresses: sendToPtrs,
+		},
+		Message: &ses.Message{
+			Body: &ses.Body{
+				Html: &ses.Content{
+					Charset: utf8,
+					Data:    ptr.String(html),
+				},
+				Text: &ses.Content{
+					Charset: utf8,
+					Data:    ptr.String(text),
+				},
+			},
+			Subject: &ses.Content{
+				Charset: utf8,
+				Data:    ptr.String(subject),
+			},
+		},
+		Source: ptr.String(from),
+	})
+	return ToError(err)
+}
+
+func (c *sesClient) MustSend(sendTo []string, from, subject, html, text string) {
 	PanicOn(c.Send(sendTo, from, subject, html, text))
 }
