@@ -9,17 +9,30 @@ import (
 	"github.com/0xor1/tlbx/pkg/iredis"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
+	"github.com/0xor1/tlbx/pkg/web/app/session/opt"
 	"github.com/0xor1/tlbx/pkg/web/server/realip"
 	"github.com/gomodule/redigo/redis"
 )
 
 func MeMware(cache iredis.Pool, perMinute ...int) func(app.Tlbx) {
+	return BasicMware(me.Exists, func(t app.Tlbx) string {
+		return me.Get(t).String()
+	}, cache, perMinute...)
+}
+
+func OptMware(cache iredis.Pool, perMinute ...int) func(app.Tlbx) {
+	return BasicMware(opt.Exists, func(t app.Tlbx) string {
+		return opt.Get(t).ID.String()
+	}, cache, perMinute...)
+}
+
+func BasicMware(sesExists func(app.Tlbx) bool, sesID func(app.Tlbx) string, cache iredis.Pool, perMinute ...int) func(app.Tlbx) {
 	PanicIf(len(perMinute) != 0 && perMinute[0] < 1, "perMinute must be >= 1")
 	return Mware(func(c *Config) {
 		c.KeyGen = func(tlbx app.Tlbx) string {
 			var key string
-			if me.Exists(tlbx) {
-				key = me.Get(tlbx).String()
+			if sesExists(tlbx) {
+				key = sesID(tlbx)
 			}
 			return Strf("rate-limiter-%s-%s", realip.RealIP(tlbx.Req()), key)
 		}

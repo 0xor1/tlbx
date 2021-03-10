@@ -10,6 +10,7 @@ import (
 	"github.com/0xor1/tlbx/cmd/games/pkg/game"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/logrusorgru/aurora"
@@ -29,7 +30,8 @@ func Everything(t *testing.T) {
 		nil, nil,
 		nil,
 		nil,
-		false)
+		false,
+		ratelimit.MeMware)
 	defer r.CleanUp()
 
 	g2 := playGame(a, []*app.Client{

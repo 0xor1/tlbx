@@ -16,7 +16,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
-	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
@@ -187,6 +186,7 @@ func NewRig(
 	onSetSocials func(app.Tlbx, *user.User) error,
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
 	enableJin bool,
+	rateLimitMware func(iredis.Pool, ...int) func(app.Tlbx),
 	buckets ...string,
 ) Rig {
 	r := &rig{
@@ -232,7 +232,7 @@ func NewRig(
 					config.Web.Session.AuthKey64s,
 					config.Web.Session.EncrKey32s,
 					config.Web.Session.Secure),
-				ratelimit.MeMware(r.rateLimit, 1000000),
+				rateLimitMware(r.rateLimit, 1000000),
 				service.Mware(r.cache, r.user, r.pwd, r.data, r.email, r.store, r.fcm),
 			}
 			c.Endpoints = eps

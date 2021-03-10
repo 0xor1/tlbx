@@ -10,6 +10,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
+	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usertest"
 
@@ -121,7 +122,8 @@ func Test(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		false)
+		false,
+		ratelimit.MeMware)
 	defer r.CleanUp()
 
 	a := assert.New(t)
