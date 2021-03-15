@@ -9,8 +9,6 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/ptr"
-	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
-	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/trees/pkg/comment/commenteps"
 	"github.com/0xor1/trees/pkg/config"
@@ -31,20 +29,14 @@ func Everything(t *testing.T) {
 	}()
 
 	a := assert.New(t)
-	r := test.NewRig(
+	r := test.NewMeRig(
 		config.Get(),
 		append(append(projecteps.Eps, taskeps.Eps...), commenteps.Eps...),
-		true,
-		me.Exists,
-		me.Set,
-		me.Get,
-		me.Del,
 		nil,
 		projecteps.OnDelete,
 		projecteps.OnSetSocials,
 		projecteps.ValidateFCMTopic,
 		true,
-		ratelimit.MeMware,
 		cnsts.FileBucket)
 	defer r.CleanUp()
 
