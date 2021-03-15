@@ -14,6 +14,10 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+func NoMware(cache iredis.Pool, perMinute ...int) func(app.Tlbx) {
+	return BasicMware(func(t app.Tlbx) bool { return false }, nil, cache, perMinute...)
+}
+
 func MeMware(cache iredis.Pool, perMinute ...int) func(app.Tlbx) {
 	return BasicMware(me.Exists, func(t app.Tlbx) string {
 		return me.Get(t).String()

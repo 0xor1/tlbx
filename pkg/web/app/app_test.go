@@ -10,7 +10,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
-	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usertest"
 
@@ -26,7 +25,7 @@ func Test(t *testing.T) {
 	// Now test all the functionality that usereps tests
 	// doesnt use, i.e. mdo/upstreams/downstreams/redirects
 
-	r := test.NewRig(
+	r := test.NewNoRig(
 		config.GetProcessed(config.GetBase()),
 		[]*app.Endpoint{
 			{
@@ -112,18 +111,7 @@ func Test(t *testing.T) {
 					return nil
 				},
 			},
-		},
-		false,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
-		false,
-		ratelimit.MeMware)
+		})
 	defer r.CleanUp()
 
 	a := assert.New(t)

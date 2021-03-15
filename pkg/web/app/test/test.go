@@ -16,9 +16,12 @@ import (
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
+	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
+	"github.com/0xor1/tlbx/pkg/web/app/session/me"
+	"github.com/0xor1/tlbx/pkg/web/app/session/opt"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 )
@@ -171,6 +174,82 @@ func (r *rig) Do(req *http.Request) (*http.Response, error) {
 	rec := httptest.NewRecorder()
 	r.rootHandler(rec, req)
 	return rec.Result(), nil
+}
+
+func NewNoRig(
+	config *config.Config,
+	eps []*app.Endpoint,
+	buckets ...string,
+) Rig {
+	return NewRig(
+		config,
+		eps,
+		false,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		false,
+		ratelimit.NoMware,
+		buckets...)
+}
+
+func NewMeRig(
+	config *config.Config,
+	eps []*app.Endpoint,
+	onActivate func(app.Tlbx, *user.User),
+	onDelete func(app.Tlbx, ID),
+	onSetSocials func(app.Tlbx, *user.User) error,
+	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
+	enableJin bool,
+	buckets ...string,
+) Rig {
+	return NewRig(
+		config,
+		eps,
+		true,
+		me.Exists,
+		me.Set,
+		me.Get,
+		me.Del,
+		onActivate,
+		onDelete,
+		onSetSocials,
+		validateFcmTopic,
+		enableJin,
+		ratelimit.MeMware,
+		buckets...)
+}
+
+func NewOptRig(
+	config *config.Config,
+	eps []*app.Endpoint,
+	onActivate func(app.Tlbx, *user.User),
+	onDelete func(app.Tlbx, ID),
+	onSetSocials func(app.Tlbx, *user.User) error,
+	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
+	enableJin bool,
+	buckets ...string,
+) Rig {
+	return NewRig(
+		config,
+		eps,
+		true,
+		opt.AuthedExists,
+		opt.AuthedSet,
+		opt.AuthedGet,
+		opt.Del,
+		onActivate,
+		onDelete,
+		onSetSocials,
+		validateFcmTopic,
+		enableJin,
+		ratelimit.OptMware,
+		buckets...)
 }
 
 func NewRig(

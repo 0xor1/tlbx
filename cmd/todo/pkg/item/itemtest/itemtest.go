@@ -13,8 +13,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
-	"github.com/0xor1/tlbx/pkg/web/app/ratelimit"
-	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/stretchr/testify/assert"
@@ -22,20 +20,14 @@ import (
 
 func Everything(t *testing.T) {
 	a := assert.New(t)
-	r := test.NewRig(
+	r := test.NewMeRig(
 		config.Get(),
 		append(listeps.Eps, itemeps.Eps...),
-		true,
-		me.Exists,
-		me.Set,
-		me.Get,
-		me.Del,
 		nil,
 		listeps.OnDelete,
 		usereps.NopOnSetSocials,
 		nil,
-		false,
-		ratelimit.MeMware)
+		false)
 	defer r.CleanUp()
 
 	testList1 := (&list.Create{
