@@ -25,8 +25,9 @@ import (
 )
 
 type Config struct {
-	Log log.Log
-	Web struct {
+	Version string
+	Log     log.Log
+	Web     struct {
 		StaticDir               string
 		ContentSecurityPolicies []string
 		RateLimit               int
@@ -57,6 +58,7 @@ type Config struct {
 
 func GetBase(file ...string) *config.Config {
 	c := config.New(file...)
+	c.SetDefault("version", "dev")
 	c.SetDefault("log.type", "local")
 	c.SetDefault("web.staticDir", "client/dist")
 	c.SetDefault("web.contentSecurityPolicies", []string{})
@@ -100,6 +102,8 @@ func GetBase(file ...string) *config.Config {
 
 func GetProcessed(c *config.Config) *Config {
 	res := &Config{}
+
+	res.Version = c.GetString("version")
 
 	switch c.GetString("log.type") {
 	case "local":
