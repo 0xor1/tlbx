@@ -16,6 +16,14 @@ func StrEllipsis(s string, max uint) string {
 	return s
 }
 
+func StrReplaceAll(s, old, new string) string {
+	return StrReplace(s, old, new, -1)
+}
+
+func StrReplace(s, old, new string, n int) string {
+	return strings.Replace(s, old, new, n)
+}
+
 func StrRepeat(s string, count int) string {
 	return strings.Repeat(s, count)
 }

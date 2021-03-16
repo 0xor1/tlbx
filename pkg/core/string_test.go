@@ -24,6 +24,18 @@ func TestStrRepeat(t *testing.T) {
 	a.Equal(`ABCABCABC`, StrRepeat(s, 3))
 }
 
+func TestStrReplaceAll(t *testing.T) {
+	a := assert.New(t)
+	s := `ABCB`
+	a.Equal(`ADCD`, StrReplaceAll(s, `B`, `D`))
+}
+
+func TestStrReplace(t *testing.T) {
+	a := assert.New(t)
+	s := `ABCB`
+	a.Equal(`ADCB`, StrReplace(s, `B`, `D`, 1))
+}
+
 func TestStrSplit(t *testing.T) {
 	a := assert.New(t)
 	s := `A,B,C`
