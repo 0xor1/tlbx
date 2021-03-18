@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -33,6 +34,7 @@ type Config struct {
 	Log                     log.Log
 	Version                 string
 	StaticDir               string
+	ProvideApiDocs          bool
 	ContentSecurityPolicies []string
 	// id
 	IDGenPoolSize int
@@ -78,6 +80,7 @@ func Run(configs ...func(*Config)) {
 	// endpoints
 	c.Endpoints = JoinEps(defaultEps, c.Endpoints)
 	router := make(map[string]*Endpoint, len(c.Endpoints))
+	lDocsPath := strings.ToLower(ApiPathPrefix + docsEp.Path)
 	docs := &endpointsDocs{
 		Name:        c.Name,
 		Description: c.Description,
@@ -136,14 +139,19 @@ func Run(configs ...func(*Config)) {
 			docs.Endpoints = append(docs.Endpoints, epDocs)
 		}
 	}
-	docsBytes := json.MustMarshal(docs)
+	if c.ProvideApiDocs {
+		// write docs to StaticDir/api/docs.json
+		apiDocsDir := filepath.Join(c.StaticDir, `api`)
+		PanicOn(os.MkdirAll(apiDocsDir, os.ModePerm))
+		PanicOn(ioutil.WriteFile(filepath.Join(apiDocsDir, `docs.json`), json.MustMarshal(docs), os.ModePerm))
+	}
+	docs = nil
 	// Handle requests!
 	var root http.HandlerFunc
 	root = func(w http.ResponseWriter, r *http.Request) {
 		// tlbx
 		tlbx := &tlbx{
 			mDoMax:         c.MDoMax,
-			docsBytes:      docsBytes,
 			root:           root,
 			resp:           &responseWrapper{w: w},
 			req:            r,
@@ -202,7 +210,11 @@ func Run(configs ...func(*Config)) {
 			}
 		}()
 		// serve static file
-		if method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefixSegment) {
+		if (method == http.MethodGet && !strings.HasPrefix(lPath, ApiPathPrefixSegment)) || lPath == lDocsPath {
+			if lPath == lDocsPath {
+				tlbx.req.Method = http.MethodGet
+				tlbx.req.URL.Path += `.json`
+			}
 			// set common headers
 			tlbx.resp.Header().Set("Cache-Control", "public, max-age=3600, immutable")
 			tlbx.resp.Header().Set("X-Frame-Options", "DENY")
@@ -312,6 +324,7 @@ func config(configs ...func(*Config)) *Config {
 		Log:             l,
 		Version:         "dev",
 		StaticDir:       ".",
+		ProvideApiDocs:  true,
 		IDGenPoolSize:   50,
 		MDoMax:          20,
 		MDoMaxBodyBytes: MB,
@@ -395,7 +408,6 @@ type Tlbx interface {
 
 type tlbx struct {
 	mDoMax         int
-	docsBytes      []byte
 	root           http.HandlerFunc
 	resp           *responseWrapper
 	req            *http.Request
@@ -895,9 +907,9 @@ var docsEp = &Endpoint{
 		return nil
 	},
 	Handler: func(t Tlbx, _ interface{}) interface{} {
-		tlbx := t.(*tlbx)
-		tlbx.resp.Header().Set("Cache-Control", "public, max-age=3600, immutable")
-		return tlbx.docsBytes
+		// this endpoint exists just for docs, it is handled by
+		// the static file server as the docs json is written to file.
+		return nil
 	},
 }
 

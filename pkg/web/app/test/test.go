@@ -306,6 +306,7 @@ func NewRig(
 	}
 	Go(func() {
 		app.Run(func(c *app.Config) {
+			c.ProvideApiDocs = false
 			c.TlbxSetup = app.TlbxMwares{
 				session.BasicMware(
 					config.Web.Session.AuthKey64s,
