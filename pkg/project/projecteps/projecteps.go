@@ -155,10 +155,10 @@ var (
 			MaxBodyBytes: app.KB,
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
-				return &project.GetLatestPublic{}
+				return nil
 			},
 			GetExampleArgs: func() interface{} {
-				return &project.GetLatestPublic{}
+				return nil
 			},
 			GetExampleResponse: func() interface{} {
 				return &project.GetLatestPublicRes{
