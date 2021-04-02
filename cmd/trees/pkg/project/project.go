@@ -115,6 +115,28 @@ func (a *Get) MustDo(c *app.Client) *GetRes {
 	return res
 }
 
+type GetLatestPublic struct {}
+
+type GetLatestPublicRes struct {
+	Set  []*Project `json:"set"`
+}
+
+func (_ *GetLatestPublic) Path() string {
+	return "/project/getLatestPublic"
+}
+
+func (a *GetLatestPublic) Do(c *app.Client) (*GetLatestPublicRes, error) {
+	res := &GetLatestPublicRes{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *GetLatestPublic) MustDo(c *app.Client) *GetLatestPublicRes {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
 type Update struct {
 	ID           ID              `json:"id,omitempty"`
 	Name         *field.String   `json:"name,omitempty"`
