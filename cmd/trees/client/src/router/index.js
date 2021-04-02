@@ -77,8 +77,8 @@ const routes = [
     component: apiDocs
   },
   {
-    path: '*',
-    redirect: '/login'
+    path: '/:pathMatch(.*)*',
+    redirect: '/public/projects'
   }
 ]
 
