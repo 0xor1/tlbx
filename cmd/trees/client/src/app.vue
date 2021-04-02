@@ -9,6 +9,9 @@
             <div class="btn" v-if="me" @click.stop.prevent="goHome()">
               home
             </div>
+            <div class="btn" @click.stop.prevent="goToLatest()">
+              latest
+            </div>
             <div class="btn" @click.stop.prevent="showFields=!showFields">
               show
             </div>
@@ -196,6 +199,9 @@
       },
       goHome(){
         this.goto(`/host/${this.me.id}/projects`)
+      },
+      goToLatest(){
+        this.goto(`/public/projects`)
       },
       gotoActivityTask(a){
         if (!a.taskDeleted) {

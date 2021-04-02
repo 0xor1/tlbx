@@ -6,6 +6,7 @@ import register from '../views/register.vue'
 import login from '../views/login.vue'
 import projects from '../views/projects.vue'
 import projectUser from '../views/projectUser.vue'
+import publicProjects from '../views/publicProjects.vue'
 import task from '../views/task.vue'
 import apiDocs from '../views/apiDocs.vue'
 import api from '@/api'
@@ -14,11 +15,11 @@ vue.use(vueRouter)
 
 // if session is authed and going to login or register
 // redirect to my projects
-const authedCheck = (to, from, next)=>{
+const authedCheck = (to, from, next) => {
   let me = null
-  api.user.me().then((res)=>{
+  api.user.me().then((res) => {
     me = res
-  }).finally(()=>{
+  }).finally(() => {
     if (me != null) {
       next(`/host/${me.id}/projects`)
       return
@@ -49,6 +50,11 @@ const routes = [
     name: 'login',
     component: login,
     beforeEnter: authedCheck
+  },
+  {
+    path: '/public/projects',
+    name: 'publicProjects',
+    component: publicProjects
   },
   {
     path: '/host/:host/projects',

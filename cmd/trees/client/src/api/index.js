@@ -3,10 +3,10 @@ import firebase from "firebase/app";
 import "firebase/messaging";
 
 firebase.initializeApp({
-    apiKey: "AIzaSyAg43CfgwC2HLC9x582IMq2UwM6NQ3FRCc",
-    projectId: "trees-82a30",
-    messagingSenderId: "69294578877",
-    appId: "1:69294578877:web:1edb203c55b78f43956bd4",
+  apiKey: "AIzaSyAg43CfgwC2HLC9x582IMq2UwM6NQ3FRCc",
+  projectId: "trees-82a30",
+  messagingSenderId: "69294578877",
+  appId: "1:69294578877:web:1edb203c55b78f43956bd4",
 });
 const fcmVapidKey = "BIrxz8PBCCRX2XekUa2zAKdYnKLhj9uHKhuSW5gc0WXWSCeh4Kx3c3GjHselJg0ARUgNJvcZLkd6roGfErpodRM"
 let fcm = firebase.messaging()
@@ -24,18 +24,18 @@ let meInFlight = false
 let userGetInFlight = {}
 let globalErrorHandler = null
 let fcmUnregisterFnCalled = false
-let fcmUnregisterFn = ()=>{
+let fcmUnregisterFn = () => {
   if (memCache.me != null && fcmUnregisterFnCalled == false && fcmClientId != null && navigator.sendBeacon != null) {
     fcmUnregisterFnCalled = true
     navigator.sendBeacon(`/api/user/unregisterFromFCM?args={"client":"${fcmClientId}"}`)
   }
 }
 window.addEventListener("unload", fcmUnregisterFn);
-document.addEventListener("visibilitychange", ()=>{
+document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === 'visible') {
     fcmUnregisterFnCalled = false
     if (memCache.me != null && fcmEnabled == true && fcmCurrentTopic != null) {
-      window.api.user.registerForFCM({topic: fcmCurrentTopic})
+      window.api.user.registerForFCM({ topic: fcmCurrentTopic })
     }
   } else {
     fcmUnregisterFn()
@@ -72,7 +72,7 @@ function newApi(isMDoApi) {
       }).catch((err) => {
         let errObj = NewError(err.response.status, err.response.data)
         if (globalErrorHandler != null) {
-            // dont show error just for checking if logged in
+          // dont show error just for checking if logged in
           globalErrorHandler(errObj.body)
         }
         throw errObj
@@ -95,7 +95,7 @@ function newApi(isMDoApi) {
   }
 
   return {
-    setGlobalErrorHandler: (fn)=>{
+    setGlobalErrorHandler: (fn) => {
       globalErrorHandler = fn
     },
     newMDoApi: () => {
@@ -160,7 +160,7 @@ function newApi(isMDoApi) {
           for (let i = 0, il = awaitingMDoList.length; i < il; i++) {
             awaitingMDoList[i].reject(error)
           }
-        }).finally(()=>{
+        }).finally(() => {
           mDoSending = false
           mDoSent = true
         })
@@ -168,41 +168,41 @@ function newApi(isMDoApi) {
       return new Promise(mDoCompleterFunc)
     },
     fcm: {
-      isEnabled(){
+      isEnabled() {
         return fcmEnabled
       },
       init(askForPerm) {
         if (askForPerm === true || Notification.permission === "granted") {
-            return Notification.requestPermission().then((permission) => {
-                if (permission === 'granted') {
-                    return fcm.getToken({vapidKey: fcmVapidKey}).then((token)=>{
-                        if (token) {
-                            fcmToken = token
-                        } else {
-                            throw "fcm token error"
-                        }
-                    })
+          return Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+              return fcm.getToken({ vapidKey: fcmVapidKey }).then((token) => {
+                if (token) {
+                  fcmToken = token
                 } else {
-                    throw "fcm notifications permission not given"
+                  throw "fcm token error"
                 }
-            })
+              })
+            } else {
+              throw "fcm notifications permission not given"
+            }
+          })
         } else {
-            return new Promise((res, rej)=>{
-                rej("fcm notifications permission not given")
-            })
+          return new Promise((res, rej) => {
+            rej("fcm notifications permission not given")
+          })
         }
       },
-      onLogout(fn){
+      onLogout(fn) {
         fcmOnLogout = fn
       },
-      onEnabled(fn){
+      onEnabled(fn) {
         fcmOnEnabled = fn
       },
-      onDisabled(fn){
+      onDisabled(fn) {
         fcmOnDisabled = fn
       },
-      onMessage(fn){
-        fcm.onMessage((msg)=>{
+      onMessage(fn) {
+        fcm.onMessage((msg) => {
           if (msg != null && msg.data != null) {
             let d = msg.data
             if (d.extraInfo != null && d.extraInfo.length > 0) {
@@ -214,7 +214,7 @@ function newApi(isMDoApi) {
               let ancestors = JSON.parse(d.ancestors)
               d.ancestors = {}
               let len = ancestors.length
-              for(let i = 0; i < len; i++) {
+              for (let i = 0; i < len; i++) {
                 d.ancestors[ancestors[i]] = true
               }
             } else {
@@ -223,7 +223,7 @@ function newApi(isMDoApi) {
             console.log(d)
             if (fcmClientId === d['X-Fcm-Client']) {
               console.log("fcm came from action on this client")
-              return 
+              return
             }
             switch (d['X-Fcm-Type']) {
               case 'data':
@@ -253,54 +253,54 @@ function newApi(isMDoApi) {
         })
       }
     },
-    docs(){
+    docs() {
       return doReq('/docs')
     },
     user: {
       register(alias, handle, email, pwd, confirmPwd) {
-        return doReq('/user/register', {alias, handle, email, pwd, confirmPwd})
+        return doReq('/user/register', { alias, handle, email, pwd, confirmPwd })
       },
       resendActivateLink(email) {
-        return doReq('/user/resendActivateLink', {email})
+        return doReq('/user/resendActivateLink', { email })
       },
       activate(email, code) {
-        return doReq('/user/activate', {email, code})
+        return doReq('/user/activate', { email, code })
       },
       changeEmail(newEmail) {
-        return doReq('/user/changeEmail', {newEmail})
+        return doReq('/user/changeEmail', { newEmail })
       },
       resendChangeEmailLink: () => {
         return doReq('/user/resendChangeEmailLink')
       },
       confirmChangeEmail(me, code) {
-        return doReq('/user/confirmChangeEmail', {me, code})
+        return doReq('/user/confirmChangeEmail', { me, code })
       },
       resetPwd(email) {
-        return doReq('/user/resetPwd', {email})
+        return doReq('/user/resetPwd', { email })
       },
       setHandle(handle) {
-        return doReq('/user/setHandle', {handle: handle}).then(()=>{
+        return doReq('/user/setHandle', { handle: handle }).then(() => {
           memCache.me.handle = handle
         })
       },
       setAlias(alias) {
-        return doReq('/user/setAlias', {alias}).then(()=>{
+        return doReq('/user/setAlias', { alias }).then(() => {
           memCache.me.alias = alias
         })
       },
       setAvatar(avatar) {
-        return doReq('/user/setAvatar', avatar).then(()=>{
+        return doReq('/user/setAvatar', avatar).then(() => {
           memCache.me.hasAvatar = avatar === null
         })
       },
       setPwd(currentPwd, newPwd, confirmNewPwd) {
-        return doReq('/user/setPwd', {currentPwd, newPwd, confirmNewPwd})
+        return doReq('/user/setPwd', { currentPwd, newPwd, confirmNewPwd })
       },
       delete(pwd) {
-        return doReq('/user/delete', {pwd})
+        return doReq('/user/delete', { pwd })
       },
       login(email, pwd) {
-        return doReq('/user/login', {email, pwd}).then((res)=>{
+        return doReq('/user/login', { email, pwd }).then((res) => {
           notAuthed = false
           memCache.me = res
           memCache[res.id] = res
@@ -310,7 +310,7 @@ function newApi(isMDoApi) {
       },
       logout() {
         memCache = {}
-        return doReq('/user/logout').then(()=>{
+        return doReq('/user/logout').then(() => {
           notAuthed = true
           fcmEnabled = false
           fcmCurrentTopic = null
@@ -348,7 +348,7 @@ function newApi(isMDoApi) {
         }
         meInFlight = true
         return doReq('/user/me').then((res) => {
-          if (res != null ) {
+          if (res != null) {
             memCache.me = res
             memCache[res.id] = res
             fcmEnabled = res.fcmEnabled
@@ -356,25 +356,25 @@ function newApi(isMDoApi) {
             notAuthed = true
           }
           return res
-        }).finally(()=>{
+        }).finally(() => {
           meInFlight = false
         })
       },
-      one(id){
-        return this.get([id]).then((res)=>{
+      one(id) {
+        return this.get([id]).then((res) => {
           if (res != null && res.length > 0) {
             return res[0]
           }
           throw NewError(404, "no such user")
         })
       },
-      get(ids){
+      get(ids) {
         if (typeof ids === "string") {
           ids = [ids]
         }
         let toGet = []
         let someInFlight = false
-        ids.forEach((id)=>{
+        ids.forEach((id) => {
           if (memCache[id] == null && userGetInFlight[id] == null) {
             toGet.push(id)
           } else if (!someInFlight && userGetInFlight[id]) {
@@ -387,7 +387,7 @@ function newApi(isMDoApi) {
           return new Promise((resolve) => {
             let res = []
             // all users are already cached resolve now.
-            ids.forEach((id)=>{
+            ids.forEach((id) => {
               res.push(memCache[id])
             })
             resolve(res)
@@ -397,18 +397,18 @@ function newApi(isMDoApi) {
         // and get them, and return a promis to be resolved later.
         if (toGet.length > 0) {
           someInFlight = true
-          toGet.forEach((id)=>{
+          toGet.forEach((id) => {
             userGetInFlight[id] = true
           })
-          doReq('/user/get', {users: toGet}).then((res) => {
+          doReq('/user/get', { users: toGet }).then((res) => {
             if (res != null) {
-              res.forEach((user)=>{
+              res.forEach((user) => {
                 memCache[user.id] = user
               })
             }
-          }).finally(()=>{
+          }).finally(() => {
             // must always clear up in flight list no matter what.
-            toGet.forEach((id)=>{
+            toGet.forEach((id) => {
               delete userGetInFlight[id]
             })
             someInFlight = false
@@ -435,42 +435,42 @@ function newApi(isMDoApi) {
           }
           let res = []
           // req is finished, return what users we have
-          ids.forEach((id)=>{
+          ids.forEach((id) => {
             if (memCache[id] != null) {
               res.push(memCache[id])
             }
           })
           resolve(res)
-        
+
         }
         return new Promise(completer)
       },
-      setFCMEnabled(val){
+      setFCMEnabled(val) {
         // true/false
-        return doReq('/user/setFCMEnabled', {val}).then(()=>{
+        return doReq('/user/setFCMEnabled', { val }).then(() => {
           fcmEnabled = val
         })
       },
-      registerForFCM(args){
+      registerForFCM(args) {
         // topic
         if (fcmEnabled == false) {
           // if fcm isn't enabled just return
           // empty success promise
-          return new Promise((res)=>{
+          return new Promise((res) => {
             res()
           })
         }
         fcmCurrentTopic = args.topic
         args.token = fcmToken
         args.client = fcmClientId
-        return doReq('/user/registerForFCM', args).then((clientId)=>{
+        return doReq('/user/registerForFCM', args).then((clientId) => {
           fcmClientId = clientId
           return null
         })
       },
-      unregisterFromFCM(){
+      unregisterFromFCM() {
         if (fcmEnabled && fcmClientId != null) {
-          return doReq('/user/unregisterFromFCM', {client: fcmClientId}).then(()=>{
+          return doReq('/user/unregisterFromFCM', { client: fcmClientId }).then(() => {
             fcmCurrentTopic = null
           })
         }
@@ -485,7 +485,7 @@ function newApi(isMDoApi) {
         // host, id
         args.ids = [args.id]
         delete args.id
-        return this.get(args).then((res)=>{
+        return this.get(args).then((res) => {
           if (res.set.length > 0) {
             return res.set[0]
           }
@@ -499,13 +499,16 @@ function newApi(isMDoApi) {
         // host, others, ids, namePrefix, isArchived, isPublic, createdOnMin, createdOnMax, startOnMin, startOnMax, endOnMin, endOnMax, after, sort, asc, limit
         return doReq('/project/get', args)
       },
+      getLatestPublic() {
+        return doReq('/project/getLatestPublic')
+      },
       update(ps) {
         // [id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic]       
         return doReq('/project/update', ps)
       },
       updateOne(args) {
         // id, name, currencyCode, hoursPerDay, daysPerWeek, startOn, endOn, isArchived, isPublic       
-        return doReq('/project/update', [args]).then((ps)=>{
+        return doReq('/project/update', [args]).then((ps) => {
           return ps[0]
         })
       },
