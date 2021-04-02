@@ -149,6 +149,34 @@ var (
 			},
 		},
 		{
+			Description:  "Get latest public projects",
+			Path:         (&project.GetLatestPublic{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &project.GetLatestPublic{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &project.GetLatestPublic{}
+			},
+			GetExampleResponse: func() interface{} {
+				return &project.GetLatestPublicRes{
+					Set: []*project.Project{
+						exampleProject,
+					},
+				}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				res := &project.GetLatestPublicRes{}
+				tmpRes := getLatestPublicProjects(tlbx)
+				if tmpRes != nil {
+					res.Set = tmpRes.Set
+				}
+				return res
+			},
+		},
+		{
 			Description:  "Update a project",
 			Path:         (&project.Updates{}).Path(),
 			Timeout:      500,
@@ -780,7 +808,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	res := &project.GetRes{
 		Set: make([]*project.Project, 0, args.Limit),
 	}
-	query := bytes.NewBufferString(`SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, p.fileLimit, t.parent, t.firstChild, t.nextSib, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`)
+	query := bytes.NewBufferString(projects_select_columns)
 	queryArgs := make([]interface{}, 0, 14)
 	idsLen := len(args.IDs)
 	if idsLen > 0 {
@@ -886,6 +914,24 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	return res
 }
 
+func getLatestPublicProjects(tlbx app.Tlbx) *project.GetRes {
+	limit := 100
+	srv := service.Get(tlbx)
+	res := &project.GetRes{
+		Set: make([]*project.Project, 0, limit),
+	}
+	query := bytes.NewBufferString(projects_select_columns)
+	query.WriteString(` p.isPublic=1 ORDER BY p.createdOn DESC`)
+	PanicOn(srv.Data().Query(func(rows isql.Rows) {
+		for rows.Next() {
+			p := &project.Project{}
+			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.EndOn, &p.IsPublic, &p.FileLimit, &p.Parent, &p.FirstChild, &p.NextSib, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.TimeEst, &p.TimeInc, &p.TimeSubMin, &p.TimeSubEst, &p.TimeSubInc, &p.CostEst, &p.CostInc, &p.CostSubEst, &p.CostSubInc, &p.FileN, &p.FileSize, &p.FileSubN, &p.FileSubSize, &p.ChildN, &p.DescN, &p.IsParallel))
+			res.Set = append(res.Set, p)
+		}
+	}, query.String()))
+	return res
+}
+
 func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	app.BadReqIf(args.HandlePrefix != nil && StrLen(*args.HandlePrefix) >= 15, "handlePrefix must be < 15 chars long")
@@ -944,3 +990,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	tx.Commit()
 	return res
 }
+
+var (
+	projects_select_columns = `SELECT p.host, p.id, p.isArchived, p.name, p.createdOn, p.currencyCode, p.hoursPerDay, p.daysPerWeek, p.startOn, p.endOn, p.isPublic, p.fileLimit, t.parent, t.firstChild, t.nextSib, t.user, t.name, t.description, t.createdBy, t.createdOn, t.timeEst, t.timeInc, t.timeSubMin, t.timeSubEst, t.timeSubInc, t.costEst, t.costInc, t.costSubEst, t.costSubInc, t.fileN, t.fileSize, t.fileSubN, t.fileSubSize, t.childN, t.descN, t.isParallel FROM projects p JOIN tasks t ON (t.host=p.host AND t.project=p.id AND t.id=p.id) WHERE`
+)

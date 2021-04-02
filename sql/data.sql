@@ -74,7 +74,8 @@ CREATE TABLE projects(
   UNIQUE INDEX(host, isArchived, isPublic, name, createdOn, id),
   UNIQUE INDEX(host, isArchived, isPublic, createdOn, name, id),
   UNIQUE INDEX(host, isArchived, isPublic, startOn, name, id),
-  UNIQUE INDEX(host, isArchived, isPublic, endOn, name, id)
+  UNIQUE INDEX(host, isArchived, isPublic, endOn, name, id),
+  INDEX(isPublic, createdOn)
 );
 
 DROP TABLE IF EXISTS tasks;

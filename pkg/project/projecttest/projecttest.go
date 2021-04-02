@@ -83,6 +83,8 @@ func Everything(t *testing.T) {
 		Limit:        100,
 	}).MustDo(ac).Set[0]
 
+	a.Equal(0, len((&project.GetLatestPublic{}).MustDo(ac).Set))
+
 	a.Zero(len((&project.Get{
 		Host:         p1.ID,
 		IsArchived:   false,
@@ -124,6 +126,8 @@ func Everything(t *testing.T) {
 	a.Equal(endOn, *p1.EndOn)
 	a.False(p1.IsArchived)
 	a.True(p1.IsPublic)
+
+	a.Equal(p1, (&project.GetLatestPublic{}).MustDo(ac).Set[0])
 
 	// call it with a new client -> none logged in user (will only return public projects)
 	p1 = (&project.One{Host: r.Ali().ID(), ID: p1.ID}).MustDo(r.NewClient())
