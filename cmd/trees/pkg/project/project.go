@@ -127,7 +127,7 @@ func (_ *GetLatestPublic) Path() string {
 
 func (a *GetLatestPublic) Do(c *app.Client) (*GetLatestPublicRes, error) {
 	res := &GetLatestPublicRes{}
-	err := app.Call(c, a.Path(), a, &res)
+	err := app.Call(c, a.Path(), nil, &res)
 	return res, err
 }
 
