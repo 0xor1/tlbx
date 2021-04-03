@@ -4,6 +4,7 @@ import activate from '../views/activate.vue'
 import confirmChangeEmail from '../views/confirmChangeEmail.vue'
 import register from '../views/register.vue'
 import login from '../views/login.vue'
+import resetPwd from '../views/resetPwd.vue'
 import projects from '../views/projects.vue'
 import projectUser from '../views/projectUser.vue'
 import publicProjects from '../views/publicProjects.vue'
@@ -49,6 +50,12 @@ const routes = [
     path: '/login',
     name: 'login',
     component: login,
+    beforeEnter: authedCheck
+  },
+  {
+    path: '/resetPwd',
+    name: 'resetPwd',
+    component: resetPwd,
     beforeEnter: authedCheck
   },
   {

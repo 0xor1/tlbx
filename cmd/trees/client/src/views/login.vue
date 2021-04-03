@@ -7,6 +7,7 @@
     <span v-if="pwdErr.length > 0" class="err">{{pwdErr}}</span>
     <button @click="login">login</button>
     <a href="/#/register">register</a>
+    <span class="small"><a href="/#/resetPwd">reset pwd?</a></span>
   </div>
 </template>
 
@@ -68,6 +69,9 @@ div.root {
   button, a{
     display: inline;
     margin-right: 15px;
+  }
+  .small{
+    font-size: 0.75pc;
   }
 }
 </style>
