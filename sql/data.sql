@@ -108,7 +108,6 @@ CREATE TABLE tasks(
   descN BIGINT UNSIGNED NOT NULL,
   isParallel BOOL NOT NULL,
   PRIMARY KEY (host, project, id),
-  UNIQUE INDEX(host, user, id),
   UNIQUE INDEX(host, project, parent, id),
   UNIQUE INDEX(host, project, nextSib, id),
   UNIQUE INDEX(host, project, user, id)
