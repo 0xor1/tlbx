@@ -722,6 +722,13 @@ var (
 		},
 		Role:     cnsts.RoleReader,
 		IsActive: true,
+		TimeEst:  13,
+		TimeInc:  13,
+		CostEst:  13,
+		CostInc:  13,
+		FileN:    13,
+		FileSize: 13,
+		TaskN:    13,
 	}
 )
 
