@@ -1551,6 +1551,10 @@ div.root {
       }
     }
     .items {
+      &:not(.comments),
+      .comment-body {
+        overflow-x: auto;
+      }
       &.comments {
         textarea {
           width: calc(100% - 0.8pc);
