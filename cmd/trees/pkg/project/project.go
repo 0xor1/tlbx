@@ -115,10 +115,10 @@ func (a *Get) MustDo(c *app.Client) *GetRes {
 	return res
 }
 
-type GetLatestPublic struct {}
+type GetLatestPublic struct{}
 
 type GetLatestPublicRes struct {
-	Set  []*Project `json:"set"`
+	Set []*Project `json:"set"`
 }
 
 func (_ *GetLatestPublic) Path() string {
@@ -202,6 +202,13 @@ type User struct {
 	user.User
 	Role     cnsts.Role `json:"role"`
 	IsActive bool       `json:"isActive"`
+	TimeEst  uint64     `json:"timeEst"`
+	TimeInc  uint64     `json:"timeInc"`
+	CostEst  uint64     `json:"costEst"`
+	CostInc  uint64     `json:"costInc"`
+	FileN    uint64     `json:"fileN"`
+	FileSize uint64     `json:"fileSize"`
+	TaskN    uint64     `json:"taskN"`
 }
 
 type AddUsers struct {
