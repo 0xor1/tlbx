@@ -1,10 +1,14 @@
 <template>
-  <div class="root"></div>
+  <div class="root">
+    <table>
+      <tr></tr>
+    </table>
+  </div>
 </template>
 
 <script>
 export default {
-  name: "projectUser",
+  name: "projectUsers",
   data: function () {
     return this.initState();
   },
@@ -14,6 +18,10 @@ export default {
     },
     init() {
       this.$u.copyProps(this.initState(), this);
+      this.$api.project.getUsers({
+        host: this.$u.rtr.host(),
+        project: this.$u.rtr.project(),
+      });
     },
   },
   mounted() {

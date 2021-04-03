@@ -7,6 +7,7 @@ import login from '../views/login.vue'
 import resetPwd from '../views/resetPwd.vue'
 import projects from '../views/projects.vue'
 import projectUser from '../views/projectUser.vue'
+import projectUsers from '../views/projectUsers.vue'
 import publicProjects from '../views/publicProjects.vue'
 import task from '../views/task.vue'
 import apiDocs from '../views/apiDocs.vue'
@@ -67,6 +68,11 @@ const routes = [
     path: '/host/:host/projects',
     name: 'projects',
     component: projects
+  },
+  {
+    path: '/host/:host/project/:project/users',
+    name: 'projectUsers',
+    component: projectUsers
   },
   {
     path: '/host/:host/project/:project/user/:user',
