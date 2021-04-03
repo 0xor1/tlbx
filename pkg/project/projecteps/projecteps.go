@@ -942,35 +942,36 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	res := &project.GetUsersRes{
 		Set: make([]*project.User, 0, limit),
 	}
-	query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar, isActive, role FROM users WHERE host=? AND project=?`)
+	query := bytes.NewBufferString(`SELECT u.id, u.handle, u.alias, u.hasAvatar, u.isActive, u.role, COALESCE(SUM(t.timeEst), 0), COALESCE(SUM(ti.inc), 0), COALESCE(SUM(t.costEst), 0), COALESCE(SUM(ci.inc), 0), COALESCE(COUNT(f.id), 0), COALESCE(SUM(f.size), 0), COALESCE(COUNT(t.id), 0) FROM users u LEFT JOIN tasks t ON (t.host=u.host AND t.project=u.project AND t.user=u.id) LEFT JOIN vitems ti ON (ti.host=u.host AND ti.project=u.project AND ti.createdBy=u.id AND ti.type='time') LEFT JOIN vitems ci ON (ci.host=u.host AND ci.project=u.project AND ci.createdBy=u.id AND ci.type='cost') LEFT JOIN files f ON (f.host=u.host AND f.project=u.project AND f.createdBy=u.id) WHERE u.host=? AND u.project=?`)
 	queryArgs := make([]interface{}, 0, 14)
 	queryArgs = append(queryArgs, args.Host, args.Project)
 	idsLen := len(args.IDs)
 	if idsLen > 0 {
-		query.WriteString(sql.InCondition(true, `id`, idsLen))
-		query.WriteString(sql.OrderByField(`id`, idsLen))
+		query.WriteString(sql.InCondition(true, `u.id`, idsLen))
+		query.WriteString(` GROUP BY u.id`)
+		query.WriteString(sql.OrderByField(`u.id`, idsLen))
 		Is := args.IDs.ToIs()
 		queryArgs = append(queryArgs, Is...)
 		queryArgs = append(queryArgs, Is...)
 	} else {
-		query.WriteString(` AND isActive=1`)
+		query.WriteString(` AND u.isActive=1`)
 		if ptr.StringOr(args.HandlePrefix, "") != "" {
-			query.WriteString(` AND handle LIKE ?`)
+			query.WriteString(` AND u.handle LIKE ?`)
 			queryArgs = append(queryArgs, Strf(`%s%%`, *args.HandlePrefix))
 		}
 		if args.Role != nil {
-			query.WriteString(` AND role=?`)
+			query.WriteString(` AND u.role=?`)
 			queryArgs = append(queryArgs, *args.Role)
 		}
 		if args.After != nil {
 			if ptr.StringOr(args.HandlePrefix, "") == "" {
-				query.WriteString(` AND role >= (SELECT role FROM users WHERE host=? AND project=? AND id=?)`)
+				query.WriteString(` AND u.role >= (SELECT role FROM users WHERE host=? AND project=? AND id=?)`)
 				queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 			}
-			query.WriteString(` AND handle > (SELECT handle FROM users WHERE host=? AND project=? AND id=?)`)
+			query.WriteString(` AND u.handle > (SELECT handle FROM users WHERE host=? AND project=? AND id=?)`)
 			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 		}
-		query.WriteString(` ORDER BY`)
+		query.WriteString(` GROUP BY u.id ORDER BY`)
 		if ptr.StringOr(args.HandlePrefix, "") == "" {
 			query.WriteString(` role ASC,`)
 		}
@@ -983,7 +984,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 				break
 			}
 			u := &project.User{}
-			PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar, &u.IsActive, &u.Role))
+			PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar, &u.IsActive, &u.Role, &u.TimeEst, &u.TimeInc, &u.CostEst, &u.CostInc, &u.FileN, &u.FileSize, &u.TaskN))
 			res.Set = append(res.Set, u)
 		}
 	}, query.String(), queryArgs...))
