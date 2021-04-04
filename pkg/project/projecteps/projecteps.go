@@ -971,18 +971,14 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 			queryArgs = append(queryArgs, *args.Role)
 		}
 		if args.After != nil {
-			if ptr.StringOr(args.HandlePrefix, "") == "" {
-				query.WriteString(` AND u.role >= (SELECT role FROM users WHERE host=? AND project=? AND id=?)`)
-				queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
-			}
+			query.WriteString(` AND u.role >= (SELECT role FROM users WHERE host=? AND project=? AND id=?)`)
+			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 			query.WriteString(` AND u.handle > (SELECT handle FROM users WHERE host=? AND project=? AND id=?)`)
 			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 		}
 		query.WriteString(` GROUP BY u.id ORDER BY`)
-		if ptr.StringOr(args.HandlePrefix, "") == "" {
-			query.WriteString(` role ASC,`)
-		}
-		query.WriteString(Strf(` handle ASC LIMIT %d`, limit))
+		query.WriteString(Strf(` (u.id=?) DESC, role ASC, handle ASC LIMIT %d`, limit))
+		queryArgs = append(queryArgs, args.Project)
 	}
 	PanicOn(tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
