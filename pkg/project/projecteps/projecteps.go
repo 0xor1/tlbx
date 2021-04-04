@@ -949,16 +949,13 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	res := &project.GetUsersRes{
 		Set: make([]*project.User, 0, limit),
 	}
-	query := bytes.NewBufferString(`SELECT u.id, u.handle, u.alias, u.hasAvatar, u.isActive, u.role, COALESCE(SUM(t.timeEst), 0), COALESCE(SUM(ti.inc), 0), COALESCE(SUM(t.costEst), 0), COALESCE(SUM(ci.inc), 0), COALESCE(COUNT(f.id), 0), COALESCE(SUM(f.size), 0), COALESCE(COUNT(t.id), 0) FROM users u LEFT JOIN tasks t ON (t.host=u.host AND t.project=u.project AND t.user=u.id) LEFT JOIN vitems ti ON (ti.host=u.host AND ti.project=u.project AND ti.createdBy=u.id AND ti.type='time') LEFT JOIN vitems ci ON (ci.host=u.host AND ci.project=u.project AND ci.createdBy=u.id AND ci.type='cost') LEFT JOIN files f ON (f.host=u.host AND f.project=u.project AND f.createdBy=u.id) WHERE u.host=? AND u.project=?`)
-	queryArgs := make([]interface{}, 0, 14)
+	query := bytes.NewBufferString(`WITH selector (host, project, id) AS (SELECT host, project, id FROM users u WHERE u.host=? AND u.project=?`)
+	queryArgs := make([]interface{}, 0, 14+len(args.IDs))
 	queryArgs = append(queryArgs, args.Host, args.Project)
 	idsLen := len(args.IDs)
+	Is := args.IDs.ToIs()
 	if idsLen > 0 {
 		query.WriteString(sql.InCondition(true, `u.id`, idsLen))
-		query.WriteString(` GROUP BY u.id`)
-		query.WriteString(sql.OrderByField(`u.id`, idsLen))
-		Is := args.IDs.ToIs()
-		queryArgs = append(queryArgs, Is...)
 		queryArgs = append(queryArgs, Is...)
 	} else {
 		query.WriteString(` AND u.isActive=1`)
@@ -976,10 +973,20 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 			query.WriteString(` AND u.handle > (SELECT handle FROM users WHERE host=? AND project=? AND id=?)`)
 			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
 		}
-		query.WriteString(` GROUP BY u.id ORDER BY`)
-		query.WriteString(Strf(` (u.id=?) DESC, role ASC, handle ASC LIMIT %d`, limit))
+		query.WriteString(Strf(` ORDER BY (u.id=?) DESC, role ASC, handle ASC LIMIT %d`, limit))
 		queryArgs = append(queryArgs, args.Host)
 	}
+	query.WriteString(`) SELECT u.id, u.handle, u.alias, u.hasAvatar, u.isActive, u.role, t.timeEst, vi.timeInc, t.costEst, vi.costInc, f.fileN, f.fileSize, t.taskN FROM users u JOIN (SELECT s.id AS id, COALESCE(SUM(t.timeEst), 0) AS timeEst, COALESCE(SUM(t.costEst), 0) AS costEst, COALESCE(COUNT(t.id), 0) AS taskN FROM selector s LEFT JOIN tasks t ON (t.host=s.host AND t.project=s.project AND t.user=s.id) GROUP BY s.id) t ON t.id = u.id JOIN (SELECT  s.id AS id, COALESCE(SUM(CASE vi.type WHEN 'time' THEN vi.inc ELSE 0 END), 0) AS timeInc, COALESCE(SUM(CASE vi.type WHEN 'cost' THEN vi.inc ELSE 0 END), 0) AS costInc FROM selector s LEFT JOIN vitems vi ON (vi.host=s.host AND vi.project=s.project AND vi.createdBy=s.id) GROUP BY s.id) vi ON vi.id = u.id JOIN (SELECT s.id AS id, COALESCE(COUNT(f.id), 0) AS fileN, COALESCE(SUM(f.size), 0) AS fileSize FROM selector s LEFT JOIN files f ON (f.host=s.host AND f.project=s.project AND f.createdBy=s.id) GROUP BY s.id) f ON f.id = u.id JOIN selector s ON u.host=s.host AND u.project=s.project AND u.id = s.id`)
+
+	if idsLen > 0 {
+		query.WriteString(sql.OrderByField(`u.id`, idsLen))
+		queryArgs = append(queryArgs, Is...)
+	} else {
+		query.WriteString(` ORDER BY (u.id=?) DESC, role ASC, handle ASC`)
+		queryArgs = append(queryArgs, args.Host)
+	}
+	Println(query.String())
+	Println(queryArgs...)
 	PanicOn(tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == int(limit) {
