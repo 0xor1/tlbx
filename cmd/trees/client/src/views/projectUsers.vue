@@ -259,7 +259,9 @@ export default {
         (!this.isDlting && // cant execute more than one dlt at a time
           this.$u.rtr.host() !== u.id && // cant delete host
           this.$u.perm.canAdmin(this.pMe)) || // must be an admin
-        (this.pMe != null && u.id === this.pMe.id)
+        (this.pMe != null &&
+          u.id === this.pMe.id &&
+          this.$u.rtr.host() !== u.id)
       ); // or you can remove yourself from a project
     },
     tglDltIdx(idx) {
