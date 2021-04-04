@@ -978,7 +978,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 		}
 		query.WriteString(` GROUP BY u.id ORDER BY`)
 		query.WriteString(Strf(` (u.id=?) DESC, role ASC, handle ASC LIMIT %d`, limit))
-		queryArgs = append(queryArgs, args.Project)
+		queryArgs = append(queryArgs, args.Host)
 	}
 	PanicOn(tx.Query(func(rows isql.Rows) {
 		for rows.Next() {
