@@ -8,7 +8,7 @@ services:
       dockerfile: docker/sql.dockerfile
     image: tlbx-testall-sql
     environment:
-      MYSQL_ROOT_PASSWORD: dev
+      MYSQL_ROOT_PASSWORD: root
     ports:
     - "3306:3306"
 

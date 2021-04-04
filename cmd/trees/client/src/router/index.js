@@ -10,6 +10,7 @@ import projectUser from '../views/projectUser.vue'
 import projectUsers from '../views/projectUsers.vue'
 import publicProjects from '../views/publicProjects.vue'
 import task from '../views/task.vue'
+import tree from '../views/tree.vue'
 import apiDocs from '../views/apiDocs.vue'
 import api from '@/api'
 
@@ -83,6 +84,11 @@ const routes = [
     path: '/host/:host/project/:project/task/:task',
     name: 'task',
     component: task
+  },
+  {
+    path: '/host/:host/project/:project/tree/:task',
+    name: 'tree',
+    component: tree
   },
   {
     path: '/api/docs',

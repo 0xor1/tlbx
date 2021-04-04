@@ -8,7 +8,7 @@ services:
       dockerfile: cmd/todo/sql.dockerfile
     image: tlbx-todo-sql
     environment:
-      MYSQL_ROOT_PASSWORD: dev
+      MYSQL_ROOT_PASSWORD: root
     ports:
     - "3306:3306"
 

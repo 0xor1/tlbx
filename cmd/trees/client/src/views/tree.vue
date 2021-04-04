@@ -4,7 +4,7 @@
 
 <script>
 export default {
-  name: "tree",
+  name: "projectUser",
   data: function () {
     return this.initState();
   },

@@ -3,8 +3,23 @@
     <p v-if="loading">loading..</p>
     <div v-else class="content">
       <h1>Project Users</h1>
+      <div v-if="$u.perm.canAdmin(pMe)" class="add-user">
+        <input
+          ref="userId"
+          v-model="addUserId"
+          placeholder="user id"
+          @keydown.enter="addUser"
+        />
+        <select v-model="addRole">
+          <option v-for="(r, idx) in roles" v-bind:value="idx" v-bind:key="idx">
+            {{ r }}
+          </option>
+        </select>
+        <button @click.stop.prevent="addUser()">add</button>
+      </div>
       <table>
         <tr class="header">
+          <th colspan="1" rowspan="2">role</th>
           <th colspan="1" rowspan="2">user</th>
           <th
             :colspan="s.cols.length"
@@ -27,11 +42,18 @@
         </tr>
         <tr
           class="row"
-          @click="$u.rtr.goto(`/host/${p.host}/project/${p.id}/task/${p.id}`)"
-          v-for="u in users"
+          @click="
+            $u.rtr.goto(
+              `/host/${project.host}/project/${project.id}/user/${u.id}`
+            )
+          "
+          v-for="(u, idx) in users"
           :key="u.id"
         >
-          <td class="user">
+          <td class="left">
+            {{ u.id == $u.rtr.host() ? "host" : $u.fmt.role(u.role) }}
+          </td>
+          <td class="left">
             <user :userId="u.id"></user>
           </td>
           <td
@@ -40,6 +62,22 @@
             :key="index"
           >
             {{ c.get(u) }}
+          </td>
+          <td
+            v-if="canDlt(u)"
+            class="action"
+            @click.stop="tglDltIdx(idx)"
+            title="delete safety"
+          >
+            <img src="@/assets/trash.svg" />
+          </td>
+          <td
+            v-if="dltIdx === idx"
+            class="action confirm-delete"
+            @click.stop="dlt(idx)"
+            title="delete"
+          >
+            <img src="@/assets/trash-red.svg" />
           </td>
         </tr>
       </table>
@@ -102,7 +140,11 @@ export default {
         more: false,
         loading: true,
         loadingMore: false,
-        deleteIndex: -2,
+        isDlting: false,
+        dltIdx: -2,
+        addUserId: "",
+        addRole: 2,
+        roles: ["admin", "writer", "reader"],
         commonSections: [
           {
             name: () => "time",
@@ -211,6 +253,41 @@ export default {
           });
       }
     },
+    addUser() {},
+    canDlt(u) {
+      return (
+        (!this.isDlting && // cant execute more than one dlt at a time
+          this.$u.rtr.host() !== u.id && // cant delete host
+          this.$u.perm.canAdmin(this.pMe)) || // must be an admin
+        (this.pMe != null && u.id === this.pMe.id)
+      ); // or you can remove yourself from a project
+    },
+    tglDltIdx(idx) {
+      if (this.dltIdx === idx) {
+        this.dltIdx = -1;
+        return;
+      }
+      this.dltIdx = idx;
+    },
+    dlt(idx) {
+      if (this.isDlting) {
+        return;
+      }
+      this.isDlting = true;
+      this.$api.project
+        .removeUsers({
+          host: this.$u.rtr.host(),
+          project: this.$u.rtr.project(),
+          users: [this.users[idx].id],
+        })
+        .then(() => {
+          this.users.splice(idx, 1);
+        })
+        .finally(() => {
+          this.dltIdx = -1;
+          this.isDlting = false;
+        });
+    },
   },
   mounted() {
     this.init();
@@ -228,7 +305,7 @@ div.root {
   & > .content {
     table {
       td {
-        &.user {
+        &.left {
           text-align: left;
         }
       }
