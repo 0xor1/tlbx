@@ -17,6 +17,28 @@
       </task-create-or-update>
     </div>
     <div v-else class="content">
+      <div class="tools">
+        <img
+          title="tree"
+          class="icon"
+          src="@/assets/tree.svg"
+          @click.stop.prevent="
+            $u.rtr.goto(
+              `/host/${$u.rtr.host()}/project/${$u.rtr.project()}/tree/${$u.rtr.task()}`
+            )
+          "
+        />
+        <img
+          title="users"
+          class="icon"
+          src="@/assets/users.svg"
+          @click.stop.prevent="
+            $u.rtr.goto(
+              `/host/${$u.rtr.host()}/project/${$u.rtr.project()}/users`
+            )
+          "
+        />
+      </div>
       <div class="breadcrumb">
         <span>
           <user :goToHome="true" :userId="$u.rtr.host()"></user>
@@ -1484,9 +1506,16 @@ export default {
 };
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 @import "../style.scss";
 div.root {
+  div.tools {
+    img.icon {
+      margin: 0.5pc 0.5pc 0 0;
+      width: 1.5pc;
+      cursor: pointer;
+    }
+  }
   > .content {
     > .breadcrumb {
       white-space: nowrap;
