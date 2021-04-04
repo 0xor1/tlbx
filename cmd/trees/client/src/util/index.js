@@ -1,6 +1,14 @@
 import marked from 'marked'
 import dompurify from 'dompurify'
 
+marked.use({
+    renderer: {
+        image(href, title) {
+            return `<div class="md-img"><img src="${href}" title="${title}"/></div>`
+        }
+    }
+})
+
 let kb = 1000
 let mb = kb * kb
 let gb = mb * kb
@@ -10,7 +18,7 @@ let eb = pb * tb
 
 let self = null
 
-function nullOr(val){
+function nullOr(val) {
     if (val == null) {
         return null
     }
@@ -18,9 +26,9 @@ function nullOr(val){
 }
 
 export default {
-    install(vue){
+    install(vue) {
         vue.prototype.$u = {
-            _main_init_utils(vue){
+            _main_init_utils(vue) {
                 self = vue
             },
             cnsts: {
@@ -28,37 +36,37 @@ export default {
                 cost: "cost"
             },
             copyProps(src, dst) {
-                for(const [key, value] of Object.entries(src)) {
+                for (const [key, value] of Object.entries(src)) {
                     dst[key] = value
                 }
             },
             nullOr: nullOr,
             rtr: {
-                goHome (){
+                goHome() {
                     let path = "/login"
-                    self.$api.user.me().then((me)=>{
+                    self.$api.user.me().then((me) => {
                         if (me != null) {
                             path = `/host/${me.id}/projects`
                         }
-                    }).catch(()=>{}).finally(()=>{
+                    }).catch(() => { }).finally(() => {
                         self.$u.rtr.goto(path)
                     })
                 },
-                goto (path){
+                goto(path) {
                     if (self.$router.currentRoute.path != path) {
                         self.$router.push(path)
                     }
                 },
-                name(){
+                name() {
                     return nullOr(self.$router.currentRoute.name)
                 },
-                host(){
+                host() {
                     return nullOr(self.$router.currentRoute.params.host)
                 },
-                project(){
+                project() {
                     return nullOr(self.$router.currentRoute.params.project)
                 },
-                task(){
+                task() {
                     return nullOr(self.$router.currentRoute.params.task)
                 }
             },
@@ -68,7 +76,7 @@ export default {
                 canRead: (pMe) => pMe != null && pMe.isActive === true && pMe.role < 3
             },
             fmt: {
-                mdLinkify(txt){
+                mdLinkify(txt) {
                     // replace all instances of [foo](bar) with <a href="bar">foo</a> tag
                     return txt.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
                 },
@@ -81,7 +89,7 @@ export default {
                     }
                     let res = txt
                     if (txt.length > len) {
-                        res = txt.substring(0, len-3) + '...'
+                        res = txt.substring(0, len - 3) + '...'
                     }
                     return res
                 },
@@ -176,37 +184,37 @@ export default {
                     }
                     return res
                 },
-                currencySymbol(code){
+                currencySymbol(code) {
                     let symbol = code
                     if (code != null) {
                         // only support symbols for the major currencies
-                        switch(code) {
+                        switch (code) {
                             case "USD":
-                                symbol= '$'
+                                symbol = '$'
                                 break;
                             case "EUR":
-                                symbol= '€'
+                                symbol = '€'
                                 break;
                             case "CAD":
-                                symbol= 'C$'
+                                symbol = 'C$'
                                 break;
                             case "AUD":
-                                symbol= 'A$'
+                                symbol = 'A$'
                                 break;
                             case "JPY":
-                                symbol= '¥'
+                                symbol = '¥'
                                 break;
                             case "GBP":
-                                symbol= '£'
+                                symbol = '£'
                                 break;
                             case "CNY", "CNH":
-                                symbol= 'CN¥'
+                                symbol = 'CN¥'
                                 break;
                             case "CHF":
-                                symbol= 'Fr'
+                                symbol = 'Fr'
                                 break;
                             case "NZD":
-                                symbol= 'NZ$'
+                                symbol = 'NZ$'
                                 break;
                         }
                     }
@@ -216,7 +224,7 @@ export default {
                     let div = 1
                     let decPlaces = 2
                     let orderSymbol = ""
-                    value /= 100 
+                    value /= 100
                     if (abbreviate) {
                         if (value < 1000) {
                             div = 1
@@ -273,7 +281,7 @@ export default {
                             orderSymbol = "t"
                         }
                     }
-                    return (value/div).toFixed(decPlaces) + orderSymbol
+                    return (value / div).toFixed(decPlaces) + orderSymbol
                 },
                 bytes(size) {
                     let unit = "B"
@@ -314,11 +322,11 @@ export default {
                         val = Math.floor(val)
                         val /= 100
                     }
-                    return  val + unit
+                    return val + unit
                 }
             },
             parse: {
-                time(str){
+                time(str) {
                     if (str != null && str.length > 0) {
                         str = str.trim()
                         if (str == "0") {
@@ -351,7 +359,7 @@ export default {
                             if (match[3].length == 1) {
                                 match[3] += "0"
                             }
-                            let newVal = parseInt(match[1]+match[3])
+                            let newVal = parseInt(match[1] + match[3])
                             newVal = Math.floor(newVal)
                             if (!isNaN(newVal) && newVal != null) {
                                 return newVal

@@ -1580,8 +1580,7 @@ div.root {
       }
     }
     .items {
-      &:not(.comments),
-      .comment-body {
+      &:not(.comments) {
         overflow-x: auto;
       }
       &.comments {

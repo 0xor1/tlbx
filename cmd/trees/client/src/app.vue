@@ -605,6 +605,9 @@ export default {
     color: #c33;
   }
   div.markdown {
+    div.md-img {
+      overflow-x: auto;
+    }
     img {
       max-height: 40pc;
       max-width: 40pc;
