@@ -14,9 +14,61 @@ let fcmClientId = null
 let fcmToken = null
 let fcmCurrentTopic = null
 let fcmEnabled = false
+let fcmOnMessage = null
 let fcmOnLogout = null
 let fcmOnEnabled = null
 let fcmOnDisabled = null
+fcm.onMessage((msg) => {
+  if (msg != null && msg.data != null) {
+    let d = msg.data
+    if (d.extraInfo != null && d.extraInfo.length > 0) {
+      d.extraInfo = JSON.parse(d.extraInfo)
+    } else {
+      d.extraInfo = null
+    }
+    if (d.ancestors != null && d.ancestors.length > 0) {
+      let ancestors = JSON.parse(d.ancestors)
+      d.ancestors = {}
+      let len = ancestors.length
+      for (let i = 0; i < len; i++) {
+        d.ancestors[ancestors[i]] = true
+      }
+    } else {
+      d.ancestors = null
+    }
+    console.log(d)
+    if (fcmClientId === d['X-Fcm-Client']) {
+      console.log("fcm came from action on this client")
+      return
+    }
+    switch (d['X-Fcm-Type']) {
+      case 'data':
+        if (fcmOnMessage != null) {
+          fcmOnMessage(d)
+        }
+        break
+      case 'logout':
+        if (fcmOnLogout != null) {
+          fcmOnLogout()
+        }
+        break
+      case 'enabled':
+        if (fcmOnEnabled != null) {
+          fcmOnEnabled()
+        }
+        break
+      case 'disabled':
+        if (fcmOnDisabled != null) {
+          fcmOnDisabled()
+        }
+        break
+      default:
+        throw 'unexpected X-Fcm-Type: ' + d['X-Fcm-Type']
+    }
+  } else {
+    console.log("unexpected fcm msg format received", msg)
+  }
+})
 
 let notAuthed = false
 let memCache = {}
@@ -202,55 +254,7 @@ function newApi(isMDoApi) {
         fcmOnDisabled = fn
       },
       onMessage(fn) {
-        fcm.onMessage((msg) => {
-          if (msg != null && msg.data != null) {
-            let d = msg.data
-            if (d.extraInfo != null && d.extraInfo.length > 0) {
-              d.extraInfo = JSON.parse(d.extraInfo)
-            } else {
-              d.extraInfo = null
-            }
-            if (d.ancestors != null && d.ancestors.length > 0) {
-              let ancestors = JSON.parse(d.ancestors)
-              d.ancestors = {}
-              let len = ancestors.length
-              for (let i = 0; i < len; i++) {
-                d.ancestors[ancestors[i]] = true
-              }
-            } else {
-              d.ancestors = null
-            }
-            console.log(d)
-            if (fcmClientId === d['X-Fcm-Client']) {
-              console.log("fcm came from action on this client")
-              return
-            }
-            switch (d['X-Fcm-Type']) {
-              case 'data':
-                fn(d)
-                break
-              case 'logout':
-                if (fcmOnLogout != null) {
-                  fcmOnLogout()
-                }
-                break
-              case 'enabled':
-                if (fcmOnEnabled != null) {
-                  fcmOnEnabled()
-                }
-                break
-              case 'disabled':
-                if (fcmOnDisabled != null) {
-                  fcmOnDisabled()
-                }
-                break
-              default:
-                throw 'unexpected X-Fcm-Type: ' + d['X-Fcm-Type']
-            }
-          } else {
-            console.log("unexpected fcm msg format received", msg)
-          }
-        })
+        fcmOnMessage = fn
       }
     },
     docs() {
