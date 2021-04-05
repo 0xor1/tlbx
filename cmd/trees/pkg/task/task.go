@@ -211,13 +211,16 @@ func (_ *GetTree) Path() string {
 	return "/task/getTree"
 }
 
-func (a *GetTree) Do(c *app.Client) (*GetTreeRes, error) {
+func (a *GetTree) Do(c *app.Client) (GetTreeRes, error) {
 	res := &GetTreeRes{}
 	err := app.Call(c, a.Path(), a, res)
-	return res, err
+	if res == nil {
+		return nil, err
+	}
+	return *res, err
 }
 
-func (a *GetTree) MustDo(c *app.Client) *GetTreeRes {
+func (a *GetTree) MustDo(c *app.Client) GetTreeRes {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
