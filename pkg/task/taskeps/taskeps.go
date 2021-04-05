@@ -669,6 +669,53 @@ var (
 				return res
 			},
 		},
+		{
+			Description:  "get task tree",
+			Path:         (&task.GetTree{}).Path(),
+			Timeout:      500,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &task.GetTree{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &task.GetTree{
+					Host:    app.ExampleID(),
+					Project: app.ExampleID(),
+					ID:      app.ExampleID(),
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return &task.GetTreeRes{
+					app.ExampleID(): ExampleTask,
+				}
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*task.GetTree)
+				tx := service.Get(tlbx).Data().Begin()
+				defer tx.Rollback()
+				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
+				t := GetOne(tx, args.Host, args.Project, args.ID)
+				app.ReturnIf(t == nil, http.StatusNotFound, "task not found")
+				app.BadReqIf(t.DescN > 1000, "get tree may only be called on a task with descN <= 1000")
+				res := task.GetTreeRes{
+					t.ID: t,
+				}
+				if t.DescN > 0 {
+					queryArgs := make([]interface{}, 0, 10)
+					queryArgs = append(queryArgs, args.Host, args.Project, args.ID, args.Host, args.Project, args.Host, args.Project)
+					PanicOn(tx.Query(func(rows isql.Rows) {
+						for rows.Next() {
+							t, err := Scan(rows)
+							PanicOn(err)
+							res[t.ID] = t
+						}
+					}, Strf(`WITH RECURSIVE nodes (id) AS (SELECT id FROM tasks WHERE host=? AND project=? AND parent=? UNION SELECT t.id FROM tasks t JOIN nodes n ON t.parent = n.id WHERE t.host=? AND t.project=?) CYCLE id RESTRICT SELECT %s FROM tasks t JOIN nodes n ON t.id = n.id WHERE t.host=? AND t.project=?`, Sql_task_columns_prefixed), queryArgs...))
+				}
+				tx.Commit()
+				return res
+			},
+		},
 	}
 
 	nameMinLen        = 1

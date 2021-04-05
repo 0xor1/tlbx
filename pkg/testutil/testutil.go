@@ -3,28 +3,12 @@ package testutil
 import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/web/app/test"
-	"github.com/0xor1/trees/pkg/task/taskeps"
 )
 
 // only suitable for small test trees for visual validation
 // whilst writing/debugging unit tests
-func GrabFullTree(r test.Rig, host, project ID) map[string]*task.Task {
-	tree := map[string]*task.Task{}
-	rows, err := r.Data().Primary().Query(Strf(`SELECT %s FROM tasks t WHERE t.host=? AND t.Project=?`, taskeps.Sql_task_columns_prefixed), host, project)
-	if rows != nil {
-		defer rows.Close()
-	}
-	PanicOn(err)
-	for rows.Next() {
-		t, err := taskeps.Scan(rows)
-		PanicOn(err)
-		tree[t.ID.String()] = t
-	}
-	return tree
-}
 
-func PrintFullTree(project ID, tree map[string]*task.Task) {
+func PrintFullTree(root ID, tree task.GetTreeRes) {
 	var print func(t *task.Task, as []*task.Task)
 	print = func(t *task.Task, as []*task.Task) {
 		p := 0
@@ -48,10 +32,10 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 			Println(v)
 		}
 		if t.FirstChild != nil {
-			print(tree[t.FirstChild.String()], append(as, t))
+			print(tree[*t.FirstChild], append(as, t))
 		}
 		if t.NextSib != nil {
-			print(tree[t.NextSib.String()], as)
+			print(tree[*t.NextSib], as)
 		}
 	}
 	println("n: name")
@@ -70,5 +54,5 @@ func PrintFullTree(project ID, tree map[string]*task.Task) {
 	println("fs: fileSize")
 	println("fss: fileSubSize")
 	println()
-	print(tree[project.String()], nil)
+	print(tree[root], nil)
 }

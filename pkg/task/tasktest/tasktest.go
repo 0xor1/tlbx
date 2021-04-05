@@ -23,7 +23,7 @@ import (
 
 func Everything(t *testing.T) {
 	var (
-		tree map[string]*task.Task
+		tree task.GetTreeRes
 		pID  ID
 	)
 	defer func() {
@@ -151,6 +151,13 @@ func Everything(t *testing.T) {
 		TimeEst:     50,
 	}).MustDo(ac).Task
 	a.NotNil(t1p2)
+
+	tree = (&task.GetTree{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      p.ID,
+	}).MustDo(ac)
+	a.Len(tree, 7)
 
 	uRes := (&task.Update{
 		Host:        r.Ali().ID(),
@@ -416,5 +423,9 @@ func Everything(t *testing.T) {
 	}).MustDo(ac)
 
 	pID = p.ID
-	tree = testutil.GrabFullTree(r, r.Ali().ID(), p.ID)
+	tree = (&task.GetTree{
+		Host:    r.Ali().ID(),
+		Project: p.ID,
+		ID:      p.ID,
+	}).MustDo(ac)
 }
