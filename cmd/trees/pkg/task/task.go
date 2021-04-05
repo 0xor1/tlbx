@@ -197,3 +197,28 @@ func (a *GetChildren) MustDo(c *app.Client) *GetSetRes {
 	PanicOn(err)
 	return res
 }
+
+// can only be called on a node with <= 1000 descN
+type GetTree struct {
+	Host    ID `json:"host"`
+	Project ID `json:"project"`
+	ID      ID `json:"id"`
+}
+
+type GetTreeRes map[ID]*Task
+
+func (_ *GetTree) Path() string {
+	return "/task/getTree"
+}
+
+func (a *GetTree) Do(c *app.Client) (*GetTreeRes, error) {
+	res := &GetTreeRes{}
+	err := app.Call(c, a.Path(), a, res)
+	return res, err
+}
+
+func (a *GetTree) MustDo(c *app.Client) *GetTreeRes {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
