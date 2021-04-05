@@ -111,6 +111,12 @@
             }}</strong>
             on <strong>{{ a.taskName }}</strong>
           </span>
+          <span v-else-if="a.itemType == 'user'">
+            {{ a.action == "created" ? "added" : "removed" }}
+            <user :userId="a.item"></user>
+            {{ a.action == "created" ? "to" : "from" }}
+            the project
+          </span>
           <span v-else-if="a.itemType == 'file'">
             {{ a.action == "created" ? "uploaded" : a.action }}
             <strong>{{ $u.fmt.bytes(a.extraInfo.size) }}</strong>
