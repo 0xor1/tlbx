@@ -266,11 +266,19 @@ export default {
         return;
       }
       this.addingUser = true;
-      this.$api.project.addUsers({
-        host: this.$u.rtr.host(),
-        project: this.$u.rtr.project(),
-        users: [{ id: this.addUserId, role: this.addRole }],
-      });
+      this.$api.project
+        .addUsers({
+          host: this.$u.rtr.host(),
+          project: this.$u.rtr.project(),
+          users: [{ id: this.addUserId, role: this.addRole }],
+        })
+        .then(() => {
+          this.init();
+        })
+        .finally(() => {
+          this.addUserId = "";
+          this.addingUser = false;
+        });
     },
     canDlt(u) {
       return (
