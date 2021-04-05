@@ -1498,6 +1498,10 @@ export default {
   mounted() {
     this.init();
   },
+  destroyed() {
+    // remove fcm listener when leaving view
+    this.$api.fcm.onMessage(null);
+  },
   watch: {
     $route() {
       this.init();
