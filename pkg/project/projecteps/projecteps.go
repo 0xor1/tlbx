@@ -949,8 +949,13 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	res := &project.GetUsersRes{
 		Set: make([]*project.User, 0, limit),
 	}
-	query := bytes.NewBufferString(`WITH selector (host, project, id) AS (SELECT host, project, id FROM users u WHERE u.host=? AND u.project=?`)
+	query := bytes.NewBufferString(`WITH`)
 	queryArgs := make([]interface{}, 0, 14+len(args.IDs))
+	if args.After != nil {
+		query.WriteString(` after (role, handle) AS (SELECT u.role, u.handle FROM users u WHERE u.host=? AND u.project=? AND u.id=?),`)
+		queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
+	}
+	query.WriteString(` selector (host, project, id) AS (SELECT u.host, u.project, u.id FROM users u WHERE u.host=? AND u.project=?`)
 	queryArgs = append(queryArgs, args.Host, args.Project)
 	idsLen := len(args.IDs)
 	Is := args.IDs.ToIs()
@@ -968,10 +973,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 			queryArgs = append(queryArgs, *args.Role)
 		}
 		if args.After != nil {
-			query.WriteString(` AND u.role >= (SELECT role FROM users WHERE host=? AND project=? AND id=?)`)
-			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
-			query.WriteString(` AND u.handle > (SELECT handle FROM users WHERE host=? AND project=? AND id=?)`)
-			queryArgs = append(queryArgs, args.Host, args.Project, *args.After)
+			query.WriteString(` AND (u.role > (SELECT role FROM after) OR (u.role = (SELECT role FROM after) AND u.handle > (SELECT handle FROM after)))`)
 		}
 		query.WriteString(Strf(` ORDER BY (u.id=?) DESC, role ASC, handle ASC LIMIT %d`, limit))
 		queryArgs = append(queryArgs, args.Host)
