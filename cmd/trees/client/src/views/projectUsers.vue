@@ -2,19 +2,25 @@
   <div class="root">
     <p v-if="loading">loading..</p>
     <div v-else class="content">
-      <h1>Project Users</h1>
+      <h1>
+        <a
+          :href="`/#/host/${project.host}/project/${project.id}/task/${project.id}`"
+          >{{ project.name }}</a
+        >
+        - users
+      </h1>
       <div v-if="$u.perm.canAdmin(pMe)" class="add-user">
+        <select v-model="addRole">
+          <option v-for="(r, idx) in roles" v-bind:value="idx" v-bind:key="idx">
+            {{ r }}
+          </option>
+        </select>
         <input
           ref="userId"
           v-model="addUserId"
           placeholder="user id"
           @keydown.enter="addUser"
         />
-        <select v-model="addRole">
-          <option v-for="(r, idx) in roles" v-bind:value="idx" v-bind:key="idx">
-            {{ r }}
-          </option>
-        </select>
         <button @click.stop.prevent="addUser()">add</button>
       </div>
       <table>
@@ -145,6 +151,7 @@ export default {
         addUserId: "",
         addRole: 2,
         roles: ["admin", "writer", "reader"],
+        addingUser: false,
         commonSections: [
           {
             name: () => "time",
@@ -253,7 +260,18 @@ export default {
           });
       }
     },
-    addUser() {},
+    addUser() {
+      this.addUserId = this.addUserId.trim();
+      if (this.addingUser || this.addUserId.length < 20) {
+        return;
+      }
+      this.addingUser = true;
+      this.$api.project.addUsers({
+        host: this.$u.rtr.host(),
+        project: this.$u.rtr.project(),
+        users: [{ id: this.addUserId, role: this.addRole }],
+      });
+    },
     canDlt(u) {
       return (
         (!this.isDlting && // cant execute more than one dlt at a time
@@ -305,6 +323,14 @@ export default {
 <style lang="scss" scoped>
 div.root {
   & > .content {
+    .add-user {
+      select {
+        height: 1.85pc;
+      }
+      & > * {
+        margin-right: 1pc;
+      }
+    }
     table {
       td {
         &.left {
