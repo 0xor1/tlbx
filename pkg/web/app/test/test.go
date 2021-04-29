@@ -20,8 +20,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
-	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	"github.com/0xor1/tlbx/pkg/web/app/session/opt"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 )
@@ -189,10 +187,6 @@ func NewNoRig(
 		nil,
 		nil,
 		nil,
-		nil,
-		nil,
-		nil,
-		nil,
 		false,
 		ratelimit.NoMware,
 		buckets...)
@@ -212,10 +206,6 @@ func NewMeRig(
 		config,
 		eps,
 		true,
-		me.Exists,
-		me.Set,
-		me.Get,
-		me.Del,
 		onActivate,
 		onDelete,
 		onSetSocials,
@@ -225,41 +215,10 @@ func NewMeRig(
 		buckets...)
 }
 
-func NewOptRig(
-	config *config.Config,
-	eps []*app.Endpoint,
-	onActivate func(app.Tlbx, *user.User),
-	onDelete func(app.Tlbx, ID),
-	onSetSocials func(app.Tlbx, *user.User) error,
-	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
-	enableJin bool,
-	buckets ...string,
-) Rig {
-	return NewRig(
-		config,
-		eps,
-		true,
-		opt.AuthedExists,
-		opt.AuthedSet,
-		opt.AuthedGet,
-		opt.Del,
-		onActivate,
-		onDelete,
-		onSetSocials,
-		validateFcmTopic,
-		enableJin,
-		ratelimit.OptMware,
-		buckets...)
-}
-
 func NewRig(
 	config *config.Config,
 	eps []*app.Endpoint,
 	useUsers bool,
-	sessionExists func(app.Tlbx) bool,
-	sessionSet func(app.Tlbx, ID),
-	sessionGet func(app.Tlbx) ID,
-	sessionDel func(app.Tlbx),
 	onActivate func(app.Tlbx, *user.User),
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User) error,
@@ -294,10 +253,6 @@ func NewRig(
 				config.App.FromEmail,
 				config.App.ActivateFmtLink,
 				config.App.ConfirmChangeEmailFmtLink,
-				sessionExists,
-				sessionSet,
-				sessionGet,
-				sessionDel,
 				onActivate,
 				onDelete,
 				onSetSocials,
@@ -353,11 +308,10 @@ func (r *rig) createUser(handleSuffix, emailSuffix, pwd string) *testUser {
 	c := r.NewClient()
 	if r.useAuth {
 		(&user.Register{
-			Handle:     ptr.String(Strf("%s%s", handleSuffix, r.unique)),
-			Alias:      ptr.String(handleSuffix),
-			Email:      email,
-			Pwd:        pwd,
-			ConfirmPwd: pwd,
+			Handle: ptr.String(Strf("%s%s", handleSuffix, r.unique)),
+			Alias:  ptr.String(handleSuffix),
+			Email:  email,
+			Pwd:    pwd,
 		}).MustDo(c)
 
 		var code string

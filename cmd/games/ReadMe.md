@@ -1,7 +1,7 @@
 games
 =====
 
-A web app to turn based multiplayer games.
+A web app for turn based multiplayer games.
 
 ## run
 

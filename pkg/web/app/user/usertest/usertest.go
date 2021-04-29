@@ -42,28 +42,25 @@ func Everything(t *testing.T) {
 	pwd := "1aA$_t;3"
 
 	(&user.Register{
-		Handle:     ptr.String(handle),
-		Alias:      ptr.String(alias),
-		Email:      email,
-		Pwd:        pwd,
-		ConfirmPwd: pwd,
+		Handle: ptr.String(handle),
+		Alias:  ptr.String(alias),
+		Email:  email,
+		Pwd:    pwd,
 	}).MustDo(c)
 
 	// check existing email err
 	err := (&user.Register{
-		Handle:     ptr.String("not_used"),
-		Email:      email,
-		Pwd:        pwd,
-		ConfirmPwd: pwd,
+		Handle: ptr.String("not_used"),
+		Email:  email,
+		Pwd:    pwd,
 	}).Do(c)
 	a.Equal(&app.ErrMsg{Status: 400, Msg: "email or handle already registered"}, err)
 
 	// check existing handle err
 	err = (&user.Register{
-		Handle:     ptr.String(handle),
-		Email:      "email@email.test",
-		Pwd:        pwd,
-		ConfirmPwd: pwd,
+		Handle: ptr.String(handle),
+		Email:  "email@email.test",
+		Pwd:    pwd,
 	}).Do(c)
 	a.Equal(&app.ErrMsg{Status: 400, Msg: "email or handle already registered"}, err)
 
@@ -126,9 +123,8 @@ func Everything(t *testing.T) {
 
 	newPwd := pwd + "123abc"
 	(&user.SetPwd{
-		CurrentPwd:    pwd,
-		NewPwd:        newPwd,
-		ConfirmNewPwd: newPwd,
+		OldPwd: pwd,
+		NewPwd: newPwd,
 	}).MustDo(c)
 
 	(&user.Logout{}).MustDo(c)
@@ -199,10 +195,9 @@ func Everything(t *testing.T) {
 	}).MustDo(c)
 
 	(&user.Register{
-		Handle:     ptr.String(handle),
-		Email:      email,
-		Pwd:        pwd,
-		ConfirmPwd: pwd,
+		Handle: ptr.String(handle),
+		Email:  email,
+		Pwd:    pwd,
 	}).MustDo(c)
 
 	row = r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)

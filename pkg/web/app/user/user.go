@@ -9,11 +9,10 @@ import (
 )
 
 type Register struct {
-	Alias      *string `json:"alias,omitempty"`
-	Handle     *string `json:"handle,omitempty"`
-	Email      string  `json:"email"`
-	Pwd        string  `json:"pwd"`
-	ConfirmPwd string  `json:"confirmPwd"`
+	Alias  *string `json:"alias,omitempty"`
+	Handle *string `json:"handle,omitempty"`
+	Email  string  `json:"email"`
+	Pwd    string  `json:"pwd"`
 }
 
 func (_ *Register) Path() string {
@@ -178,9 +177,8 @@ func (a *SetAvatar) MustDo(c *app.Client) {
 }
 
 type SetPwd struct {
-	CurrentPwd    string `json:"currentPwd"`
-	NewPwd        string `json:"newPwd"`
-	ConfirmNewPwd string `json:"confirmNewPwd"`
+	OldPwd string `json:"oldPwd"`
+	NewPwd string `json:"newPwd"`
 }
 
 func (_ *SetPwd) Path() string {
@@ -220,13 +218,13 @@ func (_ *Login) Path() string {
 	return "/user/login"
 }
 
-func (a *Login) Do(c *app.Client) (*User, error) {
-	res := &User{}
+func (a *Login) Do(c *app.Client) (*Me, error) {
+	res := &Me{}
 	err := app.Call(c, a.Path(), a, &res)
 	return res, err
 }
 
-func (a *Login) MustDo(c *app.Client) *User {
+func (a *Login) MustDo(c *app.Client) *Me {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -246,19 +244,24 @@ func (a *Logout) MustDo(c *app.Client) {
 	PanicOn(a.Do(c))
 }
 
+type Me struct {
+	User
+	FcmEnabled *bool `json:"fcmEnabled,omitempty"`
+}
+
 type GetMe struct{}
 
 func (_ *GetMe) Path() string {
 	return "/user/me"
 }
 
-func (a *GetMe) Do(c *app.Client) (*User, error) {
-	res := &User{}
+func (a *GetMe) Do(c *app.Client) (*Me, error) {
+	res := &Me{}
 	err := app.Call(c, a.Path(), nil, &res)
 	return res, err
 }
 
-func (a *GetMe) MustDo(c *app.Client) *User {
+func (a *GetMe) MustDo(c *app.Client) *Me {
 	res, err := a.Do(c)
 	PanicOn(err)
 	return res
@@ -339,11 +342,10 @@ func (a *GetAvatar) MustDo(c *app.Client) *app.DownStream {
 }
 
 type User struct {
-	ID         ID      `json:"id"`
-	Handle     *string `json:"handle,omitempty"`
-	Alias      *string `json:"alias,omitempty"`
-	HasAvatar  *bool   `json:"hasAvatar,omitempty"`
-	FcmEnabled *bool   `json:"fcmEnabled,omitempty"`
+	ID        ID      `json:"id"`
+	Handle    *string `json:"handle,omitempty"`
+	Alias     *string `json:"alias,omitempty"`
+	HasAvatar *bool   `json:"hasAvatar,omitempty"`
 }
 
 type SetFCMEnabled struct {

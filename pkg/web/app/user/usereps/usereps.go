@@ -25,7 +25,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	"github.com/0xor1/tlbx/pkg/web/app/session/opt"
 	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
@@ -42,64 +41,10 @@ var NopOnSetSocials = func(_ app.Tlbx, _ *user.User) error {
 	return nil
 }
 
-func NewMe(
-	fromEmail,
-	activateFmtLink,
-	confirmChangeEmailFmtLink string,
-	onActivate func(app.Tlbx, *user.User),
-	onDelete func(app.Tlbx, ID),
-	onSetSocials func(app.Tlbx, *user.User) error,
-	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
-	enableJin bool,
-) []*app.Endpoint {
-	return New(
-		fromEmail,
-		activateFmtLink,
-		confirmChangeEmailFmtLink,
-		me.Exists,
-		me.Set,
-		me.Get,
-		me.Del,
-		onActivate,
-		onDelete,
-		onSetSocials,
-		validateFcmTopic,
-		enableJin)
-}
-
-func NewOpt(
-	fromEmail,
-	activateFmtLink,
-	confirmChangeEmailFmtLink string,
-	onActivate func(app.Tlbx, *user.User),
-	onDelete func(app.Tlbx, ID),
-	onSetSocials func(app.Tlbx, *user.User) error,
-	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
-	enableJin bool,
-) []*app.Endpoint {
-	return New(
-		fromEmail,
-		activateFmtLink,
-		confirmChangeEmailFmtLink,
-		opt.AuthedExists,
-		opt.AuthedSet,
-		opt.AuthedGet,
-		opt.Del,
-		onActivate,
-		onDelete,
-		onSetSocials,
-		validateFcmTopic,
-		enableJin)
-}
-
 func New(
 	fromEmail,
 	activateFmtLink,
 	confirmChangeEmailFmtLink string,
-	sessionExists func(app.Tlbx) bool,
-	sessionSet func(app.Tlbx, ID),
-	sessionGet func(app.Tlbx) ID,
-	sessionDel func(app.Tlbx),
 	onActivate func(app.Tlbx, *user.User),
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User) error,
@@ -125,9 +70,8 @@ func New(
 			},
 			GetExampleArgs: func() interface{} {
 				ex := &user.Register{
-					Email:      "joe@bloggs.example",
-					Pwd:        "J03-8l0-Gg5-Pwd",
-					ConfirmPwd: "J03-8l0-Gg5-Pwd",
+					Email: "joe@bloggs.example",
+					Pwd:   "J03-8l0-Gg5-Pwd",
 				}
 				if enableSocials {
 					ex.Handle = ptr.String("bloe_joggs")
@@ -139,7 +83,7 @@ func New(
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				app.BadReqIf(sessionExists(tlbx), "already logged in")
+				app.BadReqIf(me.AuthedExists(tlbx), "already logged in")
 				args := a.(*user.Register)
 				args.Email = StrTrimWS(args.Email)
 				if !enableSocials {
@@ -160,7 +104,7 @@ func New(
 				}
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
 				activateCode := crypt.UrlSafeString(250)
-				id := tlbx.NewID()
+				id := me.Get(tlbx).ID()
 				srv := service.Get(tlbx)
 				var hasAvatar *bool
 				if enableSocials {
@@ -180,7 +124,7 @@ func New(
 				}
 				pwdtx := srv.Pwd().Begin()
 				defer pwdtx.Rollback()
-				setPwd(tlbx, pwdtx, id, args.Pwd, args.ConfirmPwd)
+				setPwd(tlbx, pwdtx, id, args.Pwd)
 				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), activateCode), args.Handle)
 				usrtx.Commit()
 				pwdtx.Commit()
@@ -276,7 +220,7 @@ func New(
 				args.NewEmail = StrTrimWS(args.NewEmail)
 				validate.Str("email", args.NewEmail, tlbx, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
-				me := sessionGet(tlbx)
+				me := me.AuthedGet(tlbx)
 				changeEmailCode := crypt.UrlSafeString(250)
 				tx := srv.User().Begin()
 				defer tx.Rollback()
@@ -308,7 +252,7 @@ func New(
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				srv := service.Get(tlbx)
-				me := sessionGet(tlbx)
+				me := me.AuthedGet(tlbx)
 				tx := srv.User().Begin()
 				defer tx.Rollback()
 				fullUser := getUser(tx, nil, &me)
@@ -384,7 +328,7 @@ func New(
 					pwdtx := srv.Pwd().Begin()
 					defer pwdtx.Rollback()
 					newPwd := `$aA1` + crypt.UrlSafeString(12)
-					setPwd(tlbx, pwdtx, user.ID, newPwd, newPwd)
+					setPwd(tlbx, pwdtx, user.ID, newPwd)
 					sendResetPwdEmail(srv, args.Email, fromEmail, newPwd)
 					pwdtx.Commit()
 				}
@@ -403,9 +347,8 @@ func New(
 			},
 			GetExampleArgs: func() interface{} {
 				return &user.SetPwd{
-					CurrentPwd:    "J03-8l0-Gg5-Pwd",
-					NewPwd:        "N3w-J03-8l0-Gg5-Pwd",
-					ConfirmNewPwd: "N3w-J03-8l0-Gg5-Pwd",
+					OldPwd: "J03-8l0-Gg5-Pwd",
+					NewPwd: "N3w-J03-8l0-Gg5-Pwd",
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -414,12 +357,12 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.SetPwd)
 				srv := service.Get(tlbx)
-				me := sessionGet(tlbx)
+				me := me.AuthedGet(tlbx)
 				pwd := getPwd(srv, me)
-				app.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.CurrentPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
+				app.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.OldPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
 				pwdtx := srv.Pwd().Begin()
 				defer pwdtx.Rollback()
-				setPwd(tlbx, pwdtx, me, args.NewPwd, args.ConfirmNewPwd)
+				setPwd(tlbx, pwdtx, me, args.NewPwd)
 				pwdtx.Commit()
 				return nil
 			},
@@ -444,7 +387,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.Delete)
 				srv := service.Get(tlbx)
-				m := sessionGet(tlbx)
+				m := me.AuthedGet(tlbx)
 				pwd := getPwd(srv, m)
 				app.BadReqIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), "incorrect pwd")
 				tx := srv.User().Begin()
@@ -462,7 +405,7 @@ func New(
 				if onDelete != nil {
 					onDelete(tlbx, m)
 				}
-				sessionDel(tlbx)
+				me.Del(tlbx)
 				tx.Commit()
 				pwdTx.Commit()
 				return nil
@@ -484,9 +427,8 @@ func New(
 				}
 			},
 			GetExampleResponse: func() interface{} {
-				ex := &user.User{
-					ID: app.ExampleID(),
-				}
+				ex := &user.Me{}
+				ex.ID = app.ExampleID()
 				if enableSocials {
 					ex.Handle = ptr.String("bloe_joggs")
 					ex.Alias = ptr.String("Joe Bloggs")
@@ -515,12 +457,12 @@ func New(
 				if len(pwd.Salt) != scryptSaltLen || len(pwd.Pwd) != scryptKeyLen || pwd.N != scryptN || pwd.R != scryptR || pwd.P != scryptP {
 					pwdtx := srv.Pwd().Begin()
 					defer pwdtx.Rollback()
-					setPwd(tlbx, pwdtx, user.ID, args.Pwd, args.Pwd)
+					setPwd(tlbx, pwdtx, user.ID, args.Pwd)
 					pwdtx.Commit()
 				}
 				tx.Commit()
-				sessionSet(tlbx, user.ID)
-				return &user.User
+				me.AuthedSet(tlbx, user.ID)
+				return &user.Me
 			},
 		},
 		{
@@ -539,8 +481,8 @@ func New(
 				return nil
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
-				if sessionExists(tlbx) {
-					m := sessionGet(tlbx)
+				if me.AuthedExists(tlbx) {
+					m := me.AuthedGet(tlbx)
 					srv := service.Get(tlbx)
 					tokens := make([]string, 0, 5)
 					tx := srv.User().Begin()
@@ -556,7 +498,7 @@ func New(
 					PanicOn(err)
 					srv.FCM().RawAsyncSend("logout", tokens, map[string]string{}, 0)
 					tx.Commit()
-					sessionDel(tlbx)
+					me.Del(tlbx)
 				}
 				return nil
 			},
@@ -574,9 +516,8 @@ func New(
 				return nil
 			},
 			GetExampleResponse: func() interface{} {
-				ex := &user.User{
-					ID: app.ExampleID(),
-				}
+				ex := &user.Me{}
+				ex.ID = app.ExampleID()
 				if enableSocials {
 					ex.Handle = ptr.String("bloe_joggs")
 					ex.Alias = ptr.String("Joe Bloggs")
@@ -588,15 +529,15 @@ func New(
 				return ex
 			},
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
-				if !sessionExists(tlbx) {
+				if !me.AuthedExists(tlbx) {
 					return nil
 				}
-				me := sessionGet(tlbx)
+				me := me.AuthedGet(tlbx)
 				tx := service.Get(tlbx).User().Begin()
 				defer tx.Rollback()
 				user := getUser(tx, nil, &me)
 				tx.Commit()
-				return &user.User
+				return &user.Me
 			},
 		},
 	}
@@ -621,7 +562,7 @@ func New(
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.SetJin)
-					me := sessionGet(tlbx)
+					me := me.AuthedGet(tlbx)
 					srv := service.Get(tlbx)
 					if args.Val == nil {
 						_, err := srv.User().Exec(`DELETE FROM jin WHERE user=?`, me)
@@ -649,7 +590,7 @@ func New(
 					return exampleJin
 				},
 				Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
-					me := sessionGet(tlbx)
+					me := me.AuthedGet(tlbx)
 					srv := service.Get(tlbx)
 					res := &json.Json{}
 					sqlh.PanicIfIsntNoRows(srv.User().QueryRow(`SELECT val FROM jin WHERE user=?`, me).Scan(&res))
@@ -674,20 +615,14 @@ func New(
 					}
 				},
 				GetExampleResponse: func() interface{} {
-					var fcmEnabled *bool
-					if enableFCM {
-						fcmEnabled = ptr.Bool(true)
-					}
-					ex := []user.User{
+					return []user.User{
 						{
-							ID:         app.ExampleID(),
-							Handle:     ptr.String("bloe_joggs"),
-							Alias:      ptr.String("Joe Bloggs"),
-							HasAvatar:  ptr.Bool(true),
-							FcmEnabled: fcmEnabled,
+							ID:        app.ExampleID(),
+							Handle:    ptr.String("bloe_joggs"),
+							Alias:     ptr.String("Joe Bloggs"),
+							HasAvatar: ptr.Bool(true),
 						},
 					}
-					return ex
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.Get)
@@ -696,7 +631,7 @@ func New(
 					}
 					validate.MaxIDs(tlbx, "users", args.Users, 1000)
 					srv := service.Get(tlbx)
-					query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar, fcmEnabled FROM users WHERE id IN(?`)
+					query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar FROM users WHERE id IN(?`)
 					queryArgs := make([]interface{}, 0, len(args.Users))
 					queryArgs = append(queryArgs, args.Users[0])
 					for _, id := range args.Users[1:] {
@@ -708,7 +643,7 @@ func New(
 					PanicOn(srv.User().Query(func(rows isql.Rows) {
 						for rows.Next() {
 							u := &user.User{}
-							PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar, &u.FcmEnabled))
+							PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
 							res = append(res, u)
 						}
 					}, query.String(), queryArgs...))
@@ -735,7 +670,7 @@ func New(
 					args := a.(*user.SetHandle)
 					validate.Str("handle", args.Handle, tlbx, handleMinLen, handleMaxLen, handleRegex)
 					srv := service.Get(tlbx)
-					me := sessionGet(tlbx)
+					me := me.AuthedGet(tlbx)
 					tx := srv.User().Begin()
 					defer tx.Rollback()
 					user := getUser(tx, nil, &me)
@@ -770,7 +705,7 @@ func New(
 						validate.Str("alias", *args.Alias, tlbx, 0, aliasMaxLen)
 					}
 					srv := service.Get(tlbx)
-					me := sessionGet(tlbx)
+					me := me.AuthedGet(tlbx)
 					tx := srv.User().Begin()
 					defer tx.Rollback()
 					user := getUser(tx, nil, &me)
@@ -800,7 +735,7 @@ func New(
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*app.UpStream)
 					defer args.Content.Close()
-					me := sessionGet(tlbx)
+					me := me.AuthedGet(tlbx)
 					srv := service.Get(tlbx)
 					tx := srv.User().Begin()
 					defer tx.Rollback()
@@ -901,7 +836,7 @@ func New(
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.SetFCMEnabled)
-					me := sessionGet(tlbx)
+					me := me.AuthedGet(tlbx)
 					tx := service.Get(tlbx).User().Begin()
 					defer tx.Rollback()
 					u := getUser(tx, nil, &me)
@@ -959,7 +894,7 @@ func New(
 					if client == nil {
 						client = ptr.ID(tlbx.NewID())
 					}
-					me := sessionGet(tlbx)
+					me := me.AuthedGet(tlbx)
 					tx := service.Get(tlbx).User().Begin()
 					defer tx.Rollback()
 					u := getUser(tx, nil, &me)
@@ -1008,7 +943,7 @@ func New(
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.UnregisterFromFCM)
-					me := sessionGet(tlbx)
+					me := me.AuthedGet(tlbx)
 					tx := service.Get(tlbx).User().Begin()
 					defer tx.Rollback()
 					_, err := tx.Exec(`DELETE FROM fcmTokens WHERE user=? AND client=?`, me, args.Client)
@@ -1066,7 +1001,7 @@ func sendResetPwdEmail(srv service.Layer, sendTo, from, newPwd string) {
 }
 
 type fullUser struct {
-	user.User
+	user.Me
 	Email           string
 	RegisteredOn    time.Time
 	ActivatedOn     time.Time
@@ -1122,8 +1057,7 @@ func getPwd(srv service.Layer, id ID) *pwd {
 	return res
 }
 
-func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd, confirmPwd string) {
-	app.BadReqIf(pwd != confirmPwd, "pwds do not match")
+func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd string) {
 	validate.Str("pwd", pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
 	salt := crypt.Bytes(scryptSaltLen)
 	pwdBs := crypt.ScryptKey([]byte(pwd), salt, scryptN, scryptR, scryptP, scryptKeyLen)
