@@ -28,6 +28,7 @@ type Config struct {
 	Version string
 	Log     log.Log
 	Web     struct {
+		AppBindTo               string
 		StaticDir               string
 		ContentSecurityPolicies []string
 		RateLimit               int
@@ -61,10 +62,11 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("version", "dev")
 	c.SetDefault("log.type", "local")
 	c.SetDefault("web.staticDir", "client/dist")
+	c.SetDefault("web.appBindTo", ":8080")
 	c.SetDefault("web.contentSecurityPolicies", []string{})
 	c.SetDefault("web.rateLimit", 300)
 	// session cookie store
-	c.SetDefault("web.session.secure", false)
+	c.SetDefault("web.session.secure", true)
 	c.SetDefault("web.session.authKey64s", []string{
 		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
 		"WK_2RgRx6vjfWVkpiwOCB1fvv1yklnltstBjYlQGfRsl6LyVV4mkt6UamUylmkwC8MEgb9bSGr1FYgM2Zk20Ug",
@@ -112,6 +114,7 @@ func GetProcessed(c *config.Config) *Config {
 		PanicIf(true, "unsupported log type %s", c.GetString("log.type"))
 	}
 
+	res.Web.AppBindTo = c.GetString("web.appBindTo")
 	res.Web.StaticDir = c.GetString("web.staticDir")
 	res.Web.ContentSecurityPolicies = c.GetStringSlice("web.contentSecurityPolicies")
 	res.Web.RateLimit = c.GetInt("web.rateLimit")
