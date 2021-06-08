@@ -9,8 +9,6 @@
     <span v-if="!emailIsValid" class="err">email is not valid</span>
     <input v-model="pwd" placeholder="pwd" type="password" @blur="validate" @keydown.enter="register">
     <span v-if="pwdErr.length > 0" class="err">{{pwdErr}}</span>
-    <input v-model="confirmPwd" placeholder="confirm pwd" type="password" @blur="validate" @keydown.enter="register">
-    <span v-if="!pwdsMatch" class="err">pwds don't match</span>
     <button @click="register">register</button>
     <a href="/#/login">login</a>
     <span v-if="registered">check your emails for confirmation link</span>
@@ -32,8 +30,6 @@
         email: "",
         pwdErr: "",
         pwd: "",
-        pwdsMatch: true,
-        confirmPwd: "",
         registered: false,
         alreadyLoggedIn: false,
         registerErr: ""
@@ -76,12 +72,11 @@
             this.pwdErr = ""
           }
         }
-        this.pwdsMatch = this.confirmPwd.length === 0 || this.pwd === this.confirmPwd
-        return this.emailIsValid && this.pwdErr.length === 0 && this.pwdsMatch
+        return this.emailIsValid && this.pwdErr.length === 0
       },
       register: function(){
         if (this.validate()) {
-          this.$api.user.register(this.alias, this.handle, this.email, this.pwd, this.confirmPwd).then(()=>{
+          this.$api.user.register(this.alias, this.handle, this.email, this.pwd).then(()=>{
             this.registered = true
           }).catch((err)=>{
             this.alreadyLoggedIn = err.response.data === "already logged in"

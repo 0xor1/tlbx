@@ -261,8 +261,8 @@ function newApi(isMDoApi) {
       return doReq('/docs')
     },
     user: {
-      register(alias, handle, email, pwd, confirmPwd) {
-        return doReq('/user/register', { alias, handle, email, pwd, confirmPwd })
+      register(alias, handle, email, pwd) {
+        return doReq('/user/register', { alias, handle, email, pwd })
       },
       resendActivateLink(email) {
         return doReq('/user/resendActivateLink', { email })
@@ -297,8 +297,8 @@ function newApi(isMDoApi) {
           memCache.me.hasAvatar = avatar === null
         })
       },
-      setPwd(currentPwd, newPwd, confirmNewPwd) {
-        return doReq('/user/setPwd', { currentPwd, newPwd, confirmNewPwd })
+      setPwd(oldPwd, newPwd) {
+        return doReq('/user/setPwd', { oldPwd, newPwd })
       },
       delete(pwd) {
         return doReq('/user/delete', { pwd })

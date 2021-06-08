@@ -424,7 +424,7 @@ div.root {
     th,
     td {
       &.light {
-        background: #222;
+        background: #555;
       }
     }
   }

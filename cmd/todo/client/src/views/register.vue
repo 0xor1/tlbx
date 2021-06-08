@@ -1,14 +1,10 @@
 <template>
   <div class="root">
     <h1>Register</h1>
-    <input v-model="alias" placeholder="alias" @blur="validate" @keydown.enter="register">
-    <span v-if="aliasErr.length > 0" class="err">{{aliasErr}}</span>
     <input v-model="email" placeholder="email" @blur="validate" @keydown.enter="register">
     <span v-if="!emailIsValid" class="err">email is not valid</span>
     <input v-model="pwd" placeholder="pwd" type="password" @blur="validate" @keydown.enter="register">
     <span v-if="pwdErr.length > 0" class="err">{{pwdErr}}</span>
-    <input v-model="confirmPwd" placeholder="confirm pwd" type="password" @blur="validate" @keydown.enter="register">
-    <span v-if="!pwdsMatch" class="err">pwds don't match</span>
     <button @click="register">register</button>
     <a href="/#/login">login</a>
     <span v-if="registered">check your emails for confirmation link</span>
@@ -23,14 +19,10 @@
     name: 'login',
     data: function() {
       return {
-        aliasErr: true,
-        alias: "",
         emailIsValid: true,
         email: "",
         pwdErr: "",
         pwd: "",
-        pwdsMatch: true,
-        confirmPwd: "",
         registered: false,
         alreadyLoggedIn: false,
         registerErr: ""
@@ -38,11 +30,6 @@
     },
     methods: {
       validate: function(){
-        if (this.alias.length > 20) {
-            this.aliasErr = "alias must be less than 20 characters long"
-        } else {
-            this.aliasErr = ""
-        }
         if (this.email.length > 0) {
           this.emailIsValid = /^.+@.+\..+$/.test(this.email)
         }
@@ -61,12 +48,11 @@
             this.pwdErr = ""
           }
         }
-        this.pwdsMatch = this.confirmPwd.length === 0 || this.pwd === this.confirmPwd
-        return this.emailIsValid && this.pwdErr.length === 0 && this.pwdsMatch
+        return this.emailIsValid && this.pwdErr.length === 0
       },
       register: function(){
         if (this.validate()) {
-          api.user.register(this.alias, this.email, this.pwd, this.confirmPwd).then(()=>{
+          api.user.register(this.email, this.pwd).then(()=>{
             this.registered = true
           }).catch((err)=>{
             this.alreadyLoggedIn = err.response.data === "already logged in"

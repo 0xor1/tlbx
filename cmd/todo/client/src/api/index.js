@@ -111,8 +111,8 @@ let newApi = (isMDoApi) => {
       return new Promise(mDoCompleterFunc)
     },
     user: {
-      register: (alias, email, pwd, confirmPwd) => {
-        return doReq('/user/register', {alias, email, pwd, confirmPwd})
+      register: (email, pwd) => {
+        return doReq('/user/register', {email, pwd})
       },
       resendActivateLink: (email) => {
         return doReq('/user/resendActivateLink', {email})
@@ -137,8 +137,8 @@ let newApi = (isMDoApi) => {
           memCache.me.alias = alias
         })
       },
-      setPwd: (currentPwd, newPwd, confirmNewPwd) => {
-        return doReq('/user/setPwd', {currentPwd, newPwd, confirmNewPwd})
+      setPwd: (oldPwd, newPwd) => {
+        return doReq('/user/setPwd', {oldPwd, newPwd})
       },
       delete: (pwd) => {
         return doReq('/user/delete', {pwd})
