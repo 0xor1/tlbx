@@ -52,7 +52,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Create)
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				args.Name = StrTrimWS(args.Name)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				args.Description = StrTrimWS(args.Description)
@@ -168,7 +168,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Update)
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				if args.Parent == nil &&
 					args.PrevSib == nil &&
 					args.Name == nil &&
@@ -456,7 +456,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Delete)
 				app.BadReqIf(args.ID.Equal(args.Project), "use project delete endpoint to delete a project node")
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()

@@ -56,7 +56,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.Create)
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				args.Name = StrTrimWS(args.Name)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				if args.CurrencyCode == "" {
@@ -211,7 +211,7 @@ var (
 					return nil
 				}
 				app.BadReqIf(len(args) > 100, "can not update more than 100 projects at a time")
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				ids := make(IDs, 0, len(args))
 				namesSet := make([]bool, len(args))
 				dupes := map[string]bool{}
@@ -325,7 +325,7 @@ var (
 					return nil
 				}
 				app.BadReqIf(len(args) > 100, "can not delete more than 100 projects at a time")
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				queryArgs := append([]interface{}{me}, IDs(args).ToIs()...)
 				inID := sql.InCondition(true, "id", len(args))
 				inProject := sql.InCondition(true, "project", len(args))
@@ -443,14 +443,14 @@ var (
 				return exampleUser
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
-				if !me.Exists(tlbx) {
+				if !me.AuthedExists(tlbx) {
 					return nil
 				}
 				args := a.(*project.GetMe)
 				users := getUsers(tlbx, &project.GetUsers{
 					Host:    args.Host,
 					Project: args.Project,
-					IDs:     IDs{me.Get(tlbx)},
+					IDs:     IDs{me.AuthedGet(tlbx)},
 				})
 				if len(users.Set) == 0 {
 					return nil
@@ -566,7 +566,7 @@ var (
 				if len(args.Users) == 0 {
 					return nil
 				}
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()
@@ -827,8 +827,8 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 	if !args.Others {
 		query.WriteString(` p.host=?`)
 		queryArgs = append(queryArgs, args.Host)
-		if me.Exists(tlbx) {
-			me := me.Get(tlbx)
+		if me.AuthedExists(tlbx) {
+			me := me.AuthedGet(tlbx)
 			if !me.Equal(args.Host) {
 				query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT u.project FROM users u WHERE u.host=? AND u.isActive=1 AND u.id=?))`)
 				queryArgs = append(queryArgs, args.Host, me)
@@ -838,15 +838,15 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 		// asking for other peoples projects which host is an active member of
 		query.WriteString(` p.id IN (SELECT u.project FROM users u WHERE u.host <> ? AND u.isActive=1 AND u.id=?)`)
 		queryArgs = append(queryArgs, args.Host, args.Host)
-		if me.Exists(tlbx) {
-			me := me.Get(tlbx)
+		if me.AuthedExists(tlbx) {
+			me := me.AuthedGet(tlbx)
 			if !me.Equal(args.Host) {
 				query.WriteString(` AND (p.isPublic=1 OR p.id IN (SELECT u2.project FROM users u2 WHERE u2.host<>? AND u2.isActive=1 AND u2.id=?))`)
 				queryArgs = append(queryArgs, args.Host, me)
 			}
 		}
 	}
-	if !me.Exists(tlbx) {
+	if !me.AuthedExists(tlbx) {
 		query.WriteString(` AND p.isPublic=1`)
 	}
 	if idsLen > 0 {

@@ -57,7 +57,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*vitem.Create)
 				args.Type.Validate()
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				switch args.Type {
 				case vitem.TypeTime:
 					app.ReturnIf(args.Inc == 0 || args.Inc > timeValueMax, http.StatusBadRequest, "time inc must be between 1 and 1440")
@@ -145,7 +145,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*vitem.Update)
 				args.Type.Validate()
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				if args.Inc == nil &&
 					args.Note == nil {
 					// nothing to update
@@ -242,7 +242,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*vitem.Delete)
 				args.Type.Validate()
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)

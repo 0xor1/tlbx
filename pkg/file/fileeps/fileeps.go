@@ -56,7 +56,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*app.UpStream)
 				defer args.Content.Close()
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				innerArgs := args.Args.(*file.CreateArgs)
 				app.BadReqIf(innerArgs.Host.IsZero() || innerArgs.Project.IsZero() || innerArgs.Task.IsZero(), "Content-Args header must be set")
 				app.ReturnIf(args.Size > maxFileSize, http.StatusBadRequest, "max file size is %d", maxFileSize)
@@ -261,7 +261,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*file.Delete)
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
 				tx := srv.Data().Begin()
 				defer tx.Rollback()

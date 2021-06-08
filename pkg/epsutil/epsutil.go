@@ -82,10 +82,10 @@ func MustHaveAccess(tlbx app.Tlbx, tx sql.Tx, host, project ID, user *ID, role c
 }
 
 func IMustHaveAccess(tlbx app.Tlbx, tx sql.Tx, host, project ID, role cnsts.Role) {
-	iExist := me.Exists(tlbx)
+	iExist := me.AuthedExists(tlbx)
 	var mePtr *ID
 	if iExist {
-		meID := me.Get(tlbx)
+		meID := me.AuthedGet(tlbx)
 		mePtr = &meID
 	}
 	MustHaveAccess(tlbx, tx, host, project, mePtr, role)
@@ -120,7 +120,7 @@ func StorePrefix(host ID, projectAndOrTask ...ID) string {
 func LogActivity(tlbx app.Tlbx, tx sql.Tx, host, project, task, item ID, itemType cnsts.Type, action cnsts.Action, itemName *string, extraInfo interface{}, fcmExtraInfo interface{}, ancestors IDs) {
 	// ancestors ids are the ancestors effected by the associated change
 	PanicIf(itemType == cnsts.TypeTask && !task.Equal(item), "item type is task but item and task ids are different")
-	me := me.Get(tlbx)
+	me := me.AuthedGet(tlbx)
 	var ei *string
 	var eiStr string
 	if extraInfo != nil {

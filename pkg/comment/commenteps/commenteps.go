@@ -42,7 +42,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*comment.Create)
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				args.Body = StrTrimWS(args.Body)
 				validate.Str("body", args.Body, tlbx, bodyMinLen, bodyMaxLen)
 				tx := service.Get(tlbx).Data().Begin()
@@ -87,7 +87,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*comment.Update)
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				args.Body = StrTrimWS(args.Body)
 				validate.Str("body", args.Body, tlbx, bodyMinLen, bodyMaxLen)
 				tx := service.Get(tlbx).Data().Begin()
@@ -127,7 +127,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*comment.Delete)
-				me := me.Get(tlbx)
+				me := me.AuthedGet(tlbx)
 				tx := service.Get(tlbx).Data().Begin()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)

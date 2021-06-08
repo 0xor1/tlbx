@@ -32,7 +32,7 @@ func main() {
 		c.Version = config.Version
 		c.Log = config.Log
 		c.Endpoints = app.JoinEps(
-			usereps.NewMe(
+			usereps.New(
 				config.App.FromEmail,
 				config.App.ActivateFmtLink,
 				config.App.ConfirmChangeEmailFmtLink,
