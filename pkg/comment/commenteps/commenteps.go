@@ -45,7 +45,7 @@ var (
 				me := me.AuthedGet(tlbx)
 				args.Body = StrTrimWS(args.Body)
 				validate.Str("body", args.Body, tlbx, bodyMinLen, bodyMaxLen)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleWriter)
 				epsutil.TaskMustExist(tx, args.Host, args.Project, args.Task)
@@ -90,7 +90,7 @@ var (
 				me := me.AuthedGet(tlbx)
 				args.Body = StrTrimWS(args.Body)
 				validate.Str("body", args.Body, tlbx, bodyMinLen, bodyMaxLen)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
@@ -128,7 +128,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*comment.Delete)
 				me := me.AuthedGet(tlbx)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
@@ -172,7 +172,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*comment.Get)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginRead()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)

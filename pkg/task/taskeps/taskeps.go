@@ -58,7 +58,7 @@ var (
 				args.Description = StrTrimWS(args.Description)
 				validate.Str("description", args.Description, tlbx, 0, descriptionMaxLen)
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleWriter)
 				t := &task.Task{
@@ -180,7 +180,7 @@ var (
 					// nothing to update
 					return nil
 				}
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
 				if args.ID.Equal(args.Project) {
 					app.ReturnIf(!me.Equal(args.Host), http.StatusForbidden, "only the host may edit the project root node")
@@ -458,7 +458,7 @@ var (
 				app.BadReqIf(args.ID.Equal(args.Project), "use project delete endpoint to delete a project node")
 				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "you don't have permission to delete a task")
@@ -546,7 +546,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.Get)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginRead()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				t := GetOne(tx, args.Host, args.Project, args.ID)
@@ -582,7 +582,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.GetAncestors)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginRead()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)
@@ -634,7 +634,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.GetChildren)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginRead()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)
@@ -692,7 +692,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*task.GetTree)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginRead()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				t := GetOne(tx, args.Host, args.Project, args.ID)

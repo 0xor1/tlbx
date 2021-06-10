@@ -94,7 +94,7 @@ var (
 				row := srv.User().QueryRow(`SELECT id, handle, alias, hasAvatar FROM users WHERE id=?`, me)
 				PanicOn(row.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
 
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				_, err := tx.Exec(`INSERT INTO projectLocks (host, id) VALUES (?, ?)`, p.Host, p.ID)
 				PanicOn(err)
@@ -286,7 +286,7 @@ var (
 					}
 				}
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				for i, p := range ps {
 					_, err := tx.Exec(`UPDATE projects SET name=?, currencyCode=?, hoursPerDay=?, daysPerWeek=?, startOn=?, endOn=?, isArchived=?, isPublic=? WHERE host=? AND id=?`, p.Name, p.CurrencyCode, p.HoursPerDay, p.DaysPerWeek, p.StartOn, p.EndOn, p.IsArchived, p.IsPublic, me, p.ID)
@@ -330,7 +330,7 @@ var (
 				inID := sql.InCondition(true, "id", len(args))
 				inProject := sql.InCondition(true, "project", len(args))
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				_, err := tx.Exec(Strf(`DELETE FROM projectLocks WHERE host=? %s`, inID), queryArgs...)
 				PanicOn(err)
@@ -386,7 +386,7 @@ var (
 				}
 				app.BadReqIf(lenUsers > 100, "can not add more than 100 users to a project at a time")
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleAdmin)
 
@@ -398,7 +398,7 @@ var (
 					}
 				}
 				// get userTx and lock all user rows, to ensure they are not changed whilst inserting into data db
-				userTx := srv.User().Begin()
+				userTx := srv.User().BeginWrite()
 				defer userTx.Rollback()
 				users := make([]*project.User, 0, lenUsers)
 				PanicOn(userTx.Query(func(rows isql.Rows) {
@@ -524,7 +524,7 @@ var (
 				}
 				app.BadReqIf(lenUsers > 100, "can not set more than 100 user roles in a project at a time")
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleAdmin)
 				for _, u := range args.Users {
@@ -568,7 +568,7 @@ var (
 				}
 				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				if !(len(args.Users) == 1 &&
 					me.Equal(args.Users[0]) &&
@@ -641,7 +641,7 @@ var (
 				args := a.(*project.GetActivities)
 				args.Limit = sql.Limit100(args.Limit)
 				app.BadReqIf(args.OccuredAfter != nil && args.OccuredBefore != nil, "only one of occurredBefore or occurredAfter may be used")
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginRead()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				query := bytes.NewBufferString(`SELECT occurredOn, user, task, item, itemType, taskDeleted, itemDeleted, action, taskName, itemName, extraInfo FROM activities WHERE host=? AND project=?`)
@@ -734,7 +734,7 @@ var (
 
 func OnDelete(tlbx app.Tlbx, me ID) {
 	srv := service.Get(tlbx)
-	tx := srv.Data().Begin()
+	tx := srv.Data().BeginWrite()
 	defer tx.Rollback()
 	_, err := tx.Exec(`DELETE FROM projectLocks WHERE host=?`, me)
 	PanicOn(err)
@@ -760,7 +760,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 
 func OnSetSocials(tlbx app.Tlbx, user *user.User) error {
 	srv := service.Get(tlbx)
-	tx := srv.Data().Begin()
+	tx := srv.Data().BeginWrite()
 	defer tx.Rollback()
 	_, err := tx.Exec(`UPDATE users SET handle=?, alias=?, hasAvatar=? WHERE id=?`, user.Handle, user.Alias, user.HasAvatar, user.ID)
 	PanicOn(err)
@@ -770,7 +770,7 @@ func OnSetSocials(tlbx app.Tlbx, user *user.User) error {
 
 func ValidateFCMTopic(tlbx app.Tlbx, topic IDs) (sqlh.Tx, error) {
 	app.BadReqIf(len(topic) != 2, "fcm topic must be 2 ids, host then project")
-	tx := service.Get(tlbx).Data().Begin()
+	tx := service.Get(tlbx).Data().BeginRead()
 	epsutil.IMustHaveAccess(tlbx, tx, topic[0], topic[1], cnsts.RoleReader)
 	return tx, nil
 }
@@ -942,7 +942,7 @@ func getLatestPublicProjects(tlbx app.Tlbx) *project.GetRes {
 func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
 	app.BadReqIf(args.HandlePrefix != nil && StrLen(*args.HandlePrefix) >= 15, "handlePrefix must be < 15 chars long")
-	tx := service.Get(tlbx).Data().Begin()
+	tx := service.Get(tlbx).Data().BeginRead()
 	defer tx.Rollback()
 	epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 	limit := sql.Limit100(args.Limit)

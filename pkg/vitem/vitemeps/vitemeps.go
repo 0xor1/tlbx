@@ -69,7 +69,7 @@ var (
 				}
 				args.Note = StrTrimWS(args.Note)
 				validate.Str("note", args.Note, tlbx, 0, noteMaxLen)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleWriter)
 				epsutil.MustLockProject(tx, args.Host, args.Project)
@@ -164,7 +164,7 @@ var (
 					args.Note.V = StrTrimWS(args.Note.V)
 					validate.Str("note", args.Note.V, tlbx, 0, noteMaxLen)
 				}
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
@@ -243,7 +243,7 @@ var (
 				args := a.(*vitem.Delete)
 				args.Type.Validate()
 				me := me.AuthedGet(tlbx)
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
@@ -308,7 +308,7 @@ var (
 						args.CreatedOnMax != nil &&
 						args.CreatedOnMin.After(*args.CreatedOnMax),
 					"createdOnMin must be before createdOnMax")
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginRead()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)

@@ -63,7 +63,7 @@ var (
 				args.Name = StrTrimWS(args.Name)
 				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, innerArgs.Host, innerArgs.Project, cnsts.RoleWriter)
 				p := projecteps.GetOne(tlbx, innerArgs.Host, innerArgs.Project)
@@ -130,7 +130,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*file.GetContent)
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginRead()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				f := getOne(tx, args.Host, args.Project, args.Task, args.ID)
@@ -183,7 +183,7 @@ var (
 						args.CreatedOnMax != nil &&
 						args.CreatedOnMin.After(*args.CreatedOnMax),
 					"createdOnMin must be before createdOnMax")
-				tx := service.Get(tlbx).Data().Begin()
+				tx := service.Get(tlbx).Data().BeginRead()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
 				args.Limit = sqlh.Limit100(args.Limit)
@@ -263,7 +263,7 @@ var (
 				args := a.(*file.Delete)
 				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				role := epsutil.MustGetRole(tlbx, tx, args.Host, args.Project, me)
 				app.ReturnIf(role == cnsts.RoleReader, http.StatusForbidden, "")
