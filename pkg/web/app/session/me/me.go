@@ -54,16 +54,20 @@ func (s *ses) UnmarshalBinary(data []byte) error {
 func Get(tlbx app.Tlbx) Session {
 	s := session.Get(tlbx)
 	ses := &ses{}
-	if !s.Exists() {
-		// if session doesnt exist create a new unauthed one
-		ses.isAuthed = false
-		ses.id = tlbx.NewID()
-		bs, err := ses.MarshalBinary()
-		PanicOn(err)
-		s.Set(bs)
-	} else {
-		PanicOn(ses.UnmarshalBinary(s.Get()))
+	if s.Exists() {
+		err := ses.UnmarshalBinary(s.Get())
+		if err == nil {
+			// if the struct doesnt unmarshal nicely then just wipe the session
+			return ses
+		}
+		tlbx.Log().Warning("error unmarshalling session struct: %s", err.Error())
 	}
+	// if session doesnt exist create a new unauthed one
+	ses.isAuthed = false
+	ses.id = tlbx.NewID()
+	bs, err := ses.MarshalBinary()
+	PanicOn(err)
+	s.Set(bs)
 	return ses
 }
 
