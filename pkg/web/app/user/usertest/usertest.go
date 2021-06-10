@@ -28,7 +28,7 @@ func Everything(t *testing.T) {
 		func(tlbx app.Tlbx, id ID) {},
 		usereps.NopOnSetSocials,
 		func(t app.Tlbx, i IDs) (sql.Tx, error) {
-			tx := service.Get(t).Pwd().Begin()
+			tx := service.Get(t).Data().BeginWrite()
 			return tx, nil
 		},
 		true)

@@ -114,7 +114,7 @@ func New(
 				if enableFCM {
 					fcmEnabled = ptr.Bool(false)
 				}
-				usrtx := srv.User().Begin()
+				usrtx := srv.User().BeginWrite()
 				defer usrtx.Rollback()
 				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, fcmEnabled, Now(), time.Time{}, activateCode)
 				if err != nil {
@@ -122,7 +122,7 @@ func New(
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
 					PanicOn(err)
 				}
-				pwdtx := srv.Pwd().Begin()
+				pwdtx := srv.Pwd().BeginWrite()
 				defer pwdtx.Rollback()
 				setPwd(tlbx, pwdtx, id, args.Pwd)
 				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), activateCode), args.Handle)
@@ -151,7 +151,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.ResendActivateLink)
 				srv := service.Get(tlbx)
-				tx := srv.User().Begin()
+				tx := srv.User().BeginRead()
 				defer tx.Rollback()
 				fullUser := getUser(tx, &args.Email, nil)
 				tx.Commit()
@@ -183,7 +183,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.Activate)
 				srv := service.Get(tlbx)
-				tx := srv.User().Begin()
+				tx := srv.User().BeginWrite()
 				defer tx.Rollback()
 				user := getUser(tx, &args.Email, nil)
 				app.BadReqIf(*user.ActivateCode != args.Code, "")
@@ -222,7 +222,7 @@ func New(
 				srv := service.Get(tlbx)
 				me := me.AuthedGet(tlbx)
 				changeEmailCode := crypt.UrlSafeString(250)
-				tx := srv.User().Begin()
+				tx := srv.User().BeginWrite()
 				defer tx.Rollback()
 				existingUser := getUser(tx, &args.NewEmail, nil)
 				app.BadReqIf(existingUser != nil, "email already registered")
@@ -253,7 +253,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, _ interface{}) interface{} {
 				srv := service.Get(tlbx)
 				me := me.AuthedGet(tlbx)
-				tx := srv.User().Begin()
+				tx := srv.User().BeginRead()
 				defer tx.Rollback()
 				fullUser := getUser(tx, nil, &me)
 				tx.Commit()
@@ -282,7 +282,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.ConfirmChangeEmail)
 				srv := service.Get(tlbx)
-				tx := srv.User().Begin()
+				tx := srv.User().BeginWrite()
 				defer tx.Rollback()
 				user := getUser(tx, nil, &args.Me)
 				app.BadReqIf(*user.ChangeEmailCode != args.Code, "")
@@ -314,7 +314,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.ResetPwd)
 				srv := service.Get(tlbx)
-				tx := srv.User().Begin()
+				tx := srv.User().BeginWrite()
 				defer tx.Rollback()
 				user := getUser(tx, &args.Email, nil)
 				if user != nil {
@@ -325,7 +325,7 @@ func New(
 					}
 					user.LastPwdResetOn = &now
 					updateUser(tx, user)
-					pwdtx := srv.Pwd().Begin()
+					pwdtx := srv.Pwd().BeginWrite()
 					defer pwdtx.Rollback()
 					newPwd := `$aA1` + crypt.UrlSafeString(12)
 					setPwd(tlbx, pwdtx, user.ID, newPwd)
@@ -358,10 +358,10 @@ func New(
 				args := a.(*user.SetPwd)
 				srv := service.Get(tlbx)
 				me := me.AuthedGet(tlbx)
-				pwd := getPwd(srv, me)
-				app.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.OldPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
-				pwdtx := srv.Pwd().Begin()
+				pwdtx := srv.Pwd().BeginWrite()
 				defer pwdtx.Rollback()
+				pwd := getPwd(pwdtx, me)
+				app.BadReqIf(!bytes.Equal(crypt.ScryptKey([]byte(args.OldPwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen), pwd.Pwd), "current pwd does not match")
 				setPwd(tlbx, pwdtx, me, args.NewPwd)
 				pwdtx.Commit()
 				return nil
@@ -388,26 +388,23 @@ func New(
 				args := a.(*user.Delete)
 				srv := service.Get(tlbx)
 				m := me.AuthedGet(tlbx)
-				pwd := getPwd(srv, m)
+				pwdtx := srv.Pwd().BeginWrite()
+				defer pwdtx.Rollback()
+				pwd := getPwd(pwdtx, m)
 				app.BadReqIf(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)), "incorrect pwd")
-				tx := srv.User().Begin()
+				tx := srv.User().BeginWrite()
 				defer tx.Rollback()
+				// jin and fcm tokens tables are cleared by foreign key cascade
 				_, err := tx.Exec(`DELETE FROM users WHERE id=?`, m)
 				PanicOn(err)
-				_, err = tx.Exec(`DELETE FROM jin WHERE user=?`, m)
-				PanicOn(err)
-				_, err = tx.Exec(`DELETE FROM fcmTokens WHERE user=?`, m)
-				PanicOn(err)
-				pwdTx := srv.Pwd().Begin()
-				defer pwdTx.Rollback()
-				_, err = pwdTx.Exec(`DELETE FROM pwds WHERE id=?`, m)
+				_, err = pwdtx.Exec(`DELETE FROM pwds WHERE id=?`, m)
 				PanicOn(err)
 				if onDelete != nil {
 					onDelete(tlbx, m)
 				}
 				me.Del(tlbx)
 				tx.Commit()
-				pwdTx.Commit()
+				pwdtx.Commit()
 				return nil
 			},
 		},
@@ -447,20 +444,20 @@ func New(
 				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
 				validate.Str("pwd", args.Pwd, tlbx, pwdMinLen, pwdMaxLen, pwdRegexs...)
 				srv := service.Get(tlbx)
-				tx := srv.User().Begin()
+				tx := srv.User().BeginRead()
 				defer tx.Rollback()
 				user := getUser(tx, &args.Email, nil)
 				emailOrPwdMismatch(user == nil)
-				pwd := getPwd(srv, user.ID)
+				pwdtx := srv.Pwd().BeginWrite()
+				defer pwdtx.Rollback()
+				pwd := getPwd(pwdtx, user.ID)
 				emailOrPwdMismatch(!bytes.Equal(pwd.Pwd, crypt.ScryptKey([]byte(args.Pwd), pwd.Salt, pwd.N, pwd.R, pwd.P, scryptKeyLen)))
 				// if encryption params have changed re encrypt on successful login
 				if len(pwd.Salt) != scryptSaltLen || len(pwd.Pwd) != scryptKeyLen || pwd.N != scryptN || pwd.R != scryptR || pwd.P != scryptP {
-					pwdtx := srv.Pwd().Begin()
-					defer pwdtx.Rollback()
 					setPwd(tlbx, pwdtx, user.ID, args.Pwd)
-					pwdtx.Commit()
 				}
 				tx.Commit()
+				pwdtx.Commit()
 				me.AuthedSet(tlbx, user.ID)
 				return &user.Me
 			},
@@ -485,7 +482,7 @@ func New(
 					m := me.AuthedGet(tlbx)
 					srv := service.Get(tlbx)
 					tokens := make([]string, 0, 5)
-					tx := srv.User().Begin()
+					tx := srv.User().BeginWrite()
 					defer tx.Rollback()
 					tx.Query(func(rows isql.Rows) {
 						for rows.Next() {
@@ -533,7 +530,7 @@ func New(
 					return nil
 				}
 				me := me.AuthedGet(tlbx)
-				tx := service.Get(tlbx).User().Begin()
+				tx := service.Get(tlbx).User().BeginRead()
 				defer tx.Rollback()
 				user := getUser(tx, nil, &me)
 				tx.Commit()
@@ -671,7 +668,7 @@ func New(
 					validate.Str("handle", args.Handle, tlbx, handleMinLen, handleMaxLen, handleRegex)
 					srv := service.Get(tlbx)
 					me := me.AuthedGet(tlbx)
-					tx := srv.User().Begin()
+					tx := srv.User().BeginWrite()
 					defer tx.Rollback()
 					user := getUser(tx, nil, &me)
 					user.Handle = &args.Handle
@@ -706,7 +703,7 @@ func New(
 					}
 					srv := service.Get(tlbx)
 					me := me.AuthedGet(tlbx)
-					tx := srv.User().Begin()
+					tx := srv.User().BeginWrite()
 					defer tx.Rollback()
 					user := getUser(tx, nil, &me)
 					user.Alias = args.Alias
@@ -737,7 +734,7 @@ func New(
 					defer args.Content.Close()
 					me := me.AuthedGet(tlbx)
 					srv := service.Get(tlbx)
-					tx := srv.User().Begin()
+					tx := srv.User().BeginWrite()
 					defer tx.Rollback()
 					user := getUser(tx, nil, &me)
 					content, err := ioutil.ReadAll(args.Content)
@@ -837,7 +834,7 @@ func New(
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.SetFCMEnabled)
 					me := me.AuthedGet(tlbx)
-					tx := service.Get(tlbx).User().Begin()
+					tx := service.Get(tlbx).User().BeginWrite()
 					defer tx.Rollback()
 					u := getUser(tx, nil, &me)
 					if *u.FcmEnabled == args.Val {
@@ -895,7 +892,7 @@ func New(
 						client = ptr.ID(tlbx.NewID())
 					}
 					me := me.AuthedGet(tlbx)
-					tx := service.Get(tlbx).User().Begin()
+					tx := service.Get(tlbx).User().BeginWrite()
 					defer tx.Rollback()
 					u := getUser(tx, nil, &me)
 					app.BadReqIf(u.FcmEnabled == nil || !*u.FcmEnabled, "fcm not enabled for user, please enable first then register for topics")
@@ -944,7 +941,7 @@ func New(
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.UnregisterFromFCM)
 					me := me.AuthedGet(tlbx)
-					tx := service.Get(tlbx).User().Begin()
+					tx := service.Get(tlbx).User().BeginWrite()
 					defer tx.Rollback()
 					_, err := tx.Exec(`DELETE FROM fcmTokens WHERE user=? AND client=?`, me, args.Client)
 					PanicOn(err)
@@ -1046,8 +1043,8 @@ type pwd struct {
 	P    int
 }
 
-func getPwd(srv service.Layer, id ID) *pwd {
-	row := srv.Pwd().QueryRow(`SELECT id, salt, pwd, n, r, p FROM pwds WHERE id=?`, id)
+func getPwd(pwdtx sql.Tx, id ID) *pwd {
+	row := pwdtx.QueryRow(`SELECT id, salt, pwd, n, r, p FROM pwds WHERE id=?`, id)
 	res := &pwd{}
 	err := row.Scan(&res.ID, &res.Salt, &res.Pwd, &res.N, &res.R, &res.P)
 	if err == isql.ErrNoRows {

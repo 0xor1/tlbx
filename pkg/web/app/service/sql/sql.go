@@ -24,7 +24,8 @@ func Get(tlbx app.Tlbx, name string) Client {
 
 type Client interface {
 	Base() isql.ReplicaSet
-	Begin() Tx
+	BeginRead() Tx
+	BeginWrite() Tx
 	ClientCore
 }
 
@@ -44,10 +45,12 @@ type tx struct {
 	tx        isql.Tx
 	tlbx      app.Tlbx
 	sqlClient *client
+	readOnly  bool
 	done      bool
 }
 
 func (t *tx) Exec(query string, args ...interface{}) (res sql.Result, err error) {
+	PanicIf(t.readOnly, "can't perform exec write query on a read only transaction")
 	t.sqlClient.do(func(q string) { res, err = t.tx.ExecContext(t.tlbx.Ctx(), q, args...) }, query)
 	return
 }
@@ -95,16 +98,36 @@ func (c *client) Base() isql.ReplicaSet {
 	return c.sql
 }
 
-func (c *client) Begin() Tx {
+func (c *client) BeginRead() Tx {
 	var t isql.Tx
 	var err error
 	c.do(func(s string) {
-		t, err = c.sql.Primary().Begin()
-	}, "START TRANSACTION")
+		t, err = c.sql.Primary().BeginTx(c.tlbx.Ctx(), &sql.TxOptions{
+			ReadOnly: true,
+		})
+	}, "START TRANSACTION (READONLY)")
 	PanicOn(err)
 	return &tx{
 		tx:        t,
 		tlbx:      c.tlbx,
+		readOnly:  true,
+		sqlClient: c,
+	}
+}
+
+func (c *client) BeginWrite() Tx {
+	var t isql.Tx
+	var err error
+	c.do(func(s string) {
+		t, err = c.sql.Primary().BeginTx(c.tlbx.Ctx(), &sql.TxOptions{
+			ReadOnly: false,
+		})
+	}, "START TRANSACTION (WRITE)")
+	PanicOn(err)
+	return &tx{
+		tx:        t,
+		tlbx:      c.tlbx,
+		readOnly:  false,
 		sqlClient: c,
 	}
 }

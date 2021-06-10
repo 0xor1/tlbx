@@ -156,11 +156,10 @@ var (
 				queryArgs := make([]interface{}, 0, idsLen+1)
 				queryArgs = append(queryArgs, me)
 				queryArgs = append(queryArgs, args.IDs.ToIs()...)
-				tx := srv.Data().Begin()
+				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
+				// items deleted on foreign key cascade
 				_, err := tx.Exec(`DELETE FROM lists WHERE user=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
-				PanicOn(err)
-				_, err = tx.Exec(`DELETE FROM items WHERE user=?`+sql.InCondition(true, "list", idsLen), queryArgs...)
 				PanicOn(err)
 				tx.Commit()
 				return nil
@@ -180,11 +179,10 @@ var (
 
 func OnDelete(tlbx app.Tlbx, me ID) {
 	srv := service.Get(tlbx)
-	tx := srv.Data().Begin()
+	tx := srv.Data().BeginWrite()
 	defer tx.Rollback()
+	// items deleted on foreign key cascade
 	_, err := tx.Exec(`DELETE FROM lists WHERE user=?`, me)
-	PanicOn(err)
-	_, err = tx.Exec(`DELETE FROM items WHERE user=?`, me)
 	PanicOn(err)
 	tx.Commit()
 }

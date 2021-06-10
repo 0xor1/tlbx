@@ -29,7 +29,8 @@ CREATE TABLE items (
     completedOn DATETIME(3) NOT NULL, -- not null, use go zero time for null
     PRIMARY KEY createdOn (user, list, completedOn, createdOn),
     UNIQUE INDEX name (user, list, completedOn, name, createdOn),
-    UNIQUE INDEX id (user, list, id)
+    UNIQUE INDEX id (user, list, id),
+    FOREIGN KEY (user, list) REFERENCES lists (user, id) ON DELETE CASCADE
 );
 
 DROP USER IF EXISTS 'todo_data'@'%';
