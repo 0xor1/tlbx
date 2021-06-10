@@ -1730,7 +1730,7 @@ div.root {
       th,
       td {
         &.light {
-          background: #555;
+          background: #333;
         }
       }
     }
