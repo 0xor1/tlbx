@@ -86,7 +86,7 @@ const routes = [
     component: task
   },
   {
-    path: '/host/:host/project/:project/tree/:task',
+    path: '/host/:host/project/:project/tree',
     name: 'tree',
     component: tree
   },

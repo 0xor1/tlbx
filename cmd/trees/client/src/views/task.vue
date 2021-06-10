@@ -24,7 +24,7 @@
           src="@/assets/tree.svg"
           @click.stop.prevent="
             $u.rtr.goto(
-              `/host/${$u.rtr.host()}/project/${$u.rtr.project()}/tree/${$u.rtr.task()}`
+              `/host/${$u.rtr.host()}/project/${$u.rtr.project()}/tree`
             )
           "
         />
