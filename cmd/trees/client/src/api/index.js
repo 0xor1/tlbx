@@ -568,6 +568,10 @@ function newApi(isMDoApi) {
       getChildren(args) {
         // host, project, id, after, limit
         return doReq('/task/getChildren', args)
+      },
+      getTree(args) {
+        // host, project, id
+        return doReq('/task/getTree', args)
       }
     },
     vitem: {

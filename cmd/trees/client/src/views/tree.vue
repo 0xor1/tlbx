@@ -5,20 +5,22 @@
     </div>
     <div v-else-if="loading" class="loading">loading...</div>
     <div v-else class="content">
-      <div class="tree"></div>
+      <node
+        :project="project"
+        :id="project.id"
+        :tasks="tasks"
+        :showFullSubTree="false"
+      ></node>
     </div>
-    <a
-      href="https://github.com/0xor1/tlbx/blob/develop/cmd/trees/client/src/views/tree.vue#L3"
-      >TODO</a
-    >
   </div>
 </template>
 
 <script>
 import notfound from "../components/notfound";
+import node from "../components/node";
 export default {
   name: "tree",
-  components: { notfound },
+  components: { notfound, node },
   computed: {},
   data: function () {
     return this.initState();
@@ -74,4 +76,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+@import "../style.scss";
+div.root {
+  > .content {
+  }
+}
 </style>
