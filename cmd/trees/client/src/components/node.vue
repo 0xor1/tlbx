@@ -1,26 +1,27 @@
 <template>
   <div class="root">
     <div class="this-node">
-      <div class="name">{{ task.name }}</div>
-      <div>
+      <div class="name">
+        <a
+          :href="`/#/host/${project.host}/project/${project.id}/task/${task.id}`"
+          >{{ task.name }}</a
+        >
+      </div>
+      <div v-if="task.childN > 0">
         childn
         <a href="" @click.stop.prevent="showHideChildren()"
-          ><span v-if="task.childN > 0" class="small"
-            >({{ showChildren ? "-" : "+" }})</span
-          >
+          ><span class="small">({{ showChildren ? "-" : "+" }})</span>
           {{ task.childN }}</a
         >
       </div>
-      <div>
+      <div v-if="task.descN > 0">
         descn
         <a
           v-if="task.descN <= 1000"
           href=""
           @click.stop.prevent="showHideFullSubTree()"
         >
-          <span v-if="task.descN > 0" class="small"
-            >({{ myShowFullSubTree ? "-" : "+" }})</span
-          >
+          <span class="small">({{ myShowFullSubTree ? "-" : "+" }})</span>
           {{ task.descN }}
         </a>
         <a v-else>{{ task.descN }}</a>
@@ -228,6 +229,11 @@ div.root {
   display: inline-flex;
   flex-direction: column;
   @include border();
+  border-radius: 0.5pc;
+  .name {
+    font-size: 1.4pc;
+    font-weight: bold;
+  }
   > .children {
     margin-top: 10px;
     display: inline-flex;
