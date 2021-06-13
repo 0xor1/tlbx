@@ -2,29 +2,100 @@
   <div class="root">
     <div class="this-node">
       <div class="name">
-        <a
+        <span
+          v-if="task.descN > 0"
+          :title="task.isParallel ? 'parallel' : 'sequential'"
+          :class="{ 'parallel-indicator': true, parallel: task.isParallel }"
+          class="mr large"
+          >{{ task.isParallel ? "&#8649;" : "&#8699;" }}</span
+        ><a
           :href="`/#/host/${project.host}/project/${project.id}/task/${task.id}`"
           >{{ task.name }}</a
         >
       </div>
-      <div v-if="task.childN > 0">
-        childn
-        <a href="" @click.stop.prevent="showHideChildren()"
-          ><span class="small">({{ showChildren ? "-" : "+" }})</span>
-          {{ task.childN }}</a
-        >
+      <div v-if="$root.show.time" class="time">
+        <img
+          title="time"
+          class="icon small mr mt"
+          src="@/assets/sand-clock.svg"
+        />
+        <span title="minimum time" class="time-min">{{
+          $u.fmt.time(
+            task.timeEst + task.timeSubMin,
+            project.hoursPerDay,
+            project.daysPerWeek
+          )
+        }}</span>
+        /
+        <span title="estimated time" class="time-est">{{
+          $u.fmt.time(
+            task.timeEst + task.timeSubEst,
+            project.hoursPerDay,
+            project.daysPerWeek
+          )
+        }}</span>
+        /
+        <span title="incurred time" class="time-inc">{{
+          $u.fmt.time(
+            task.timeInc + task.timeSubInc,
+            project.hoursPerDay,
+            project.daysPerWeek
+          )
+        }}</span>
+      </div>
+      <div v-if="$root.show.cost" class="cost">
+        <img
+          title="cost"
+          class="icon small mr mt"
+          src="@/assets/calculator.svg"
+        />
+        <span title="estimated cost" class="cost-est">{{
+          $u.fmt.currencySymbol(project.currencyCode) +
+          $u.fmt.cost(task.costEst + task.costSubEst)
+        }}</span>
+        /
+        <span title="incurred cost" class="cost-inc">{{
+          $u.fmt.currencySymbol(project.currencyCode) +
+          $u.fmt.cost(task.costInc + task.costSubInc)
+        }}</span>
+      </div>
+      <div v-if="$root.show.file" class="file">
+        <img title="file" class="icon small mr mt" src="@/assets/file.svg" />
+        <span title="used space" class="file-used">{{
+          $u.fmt.bytes(task.fileSize + task.fileSubSize)
+        }}</span>
+        /
+        <span title="file count" class="file-n">{{
+          task.fileN + task.fileSubN
+        }}</span>
       </div>
       <div v-if="task.descN > 0">
-        descn
-        <a
-          v-if="task.descN <= 1000"
+        <img
+          title="sub tasks"
+          class="icon small mr mt"
+          src="@/assets/hierarchy.svg"
+        />
+        <span
+          title="children"
+          class="blue clk"
           href=""
+          @click.stop.prevent="showHideChildren()"
+          ><span class="dark-blue small">({{ showChildren ? "-" : "+" }})</span>
+          {{ task.childN }}</span
+        >
+        /
+        <span
+          title="descendants"
+          class="blue clk"
+          v-if="task.descN <= 1000"
           @click.stop.prevent="showHideFullSubTree()"
         >
-          <span class="small">({{ myShowFullSubTree ? "-" : "+" }})</span>
+          <span class="dark-blue small"
+            >({{ myShowFullSubTree ? "-" : "+" }})</span
+          >
           {{ task.descN }}
-        </a>
-        <a v-else>{{ task.descN }}</a>
+        </span>
+        <span v-else title="descendants" class="blue">{{ task.descN }}</span>
       </div>
     </div>
     <div
@@ -220,19 +291,63 @@ export default {
 * {
   white-space: nowrap;
 }
+.clk {
+  cursor: pointer;
+}
+.icon.small {
+  height: 1.5pc;
+  width: 1.5pc;
+}
+.blue {
+  color: #22a0dd;
+}
+.dark-blue {
+  color: #1160aa;
+}
 .small {
-  color: $borderColor;
   font-size: 0.8pc;
 }
+.mr {
+  margin-right: 0.5pc;
+}
+.mt {
+  margin-top: 0.5pc;
+}
+.parallel-indicator {
+  color: orange;
+  &.parallel {
+    color: green;
+  }
+}
+.time-min {
+  color: #31ff38;
+}
+.time-est {
+  color: #ff9100;
+}
+.time-inc {
+  color: #ffe138;
+}
 div.root {
-  padding: 10px;
+  margin-right: 1pc;
+  padding: 1pc 0 1pc 1pc;
   display: inline-flex;
   flex-direction: column;
   @include border();
-  border-radius: 0.5pc;
-  .name {
-    font-size: 1.4pc;
-    font-weight: bold;
+  border-radius: 0.2pc;
+  .this-node {
+    padding-right: 0.5pc;
+    .name {
+      a {
+        font-size: 1.4pc;
+        font-weight: bold;
+      }
+      span {
+        font-size: 2pc;
+        line-height: 50%;
+        display: inline-block;
+      }
+    }
   }
   > .children {
     margin-top: 10px;
