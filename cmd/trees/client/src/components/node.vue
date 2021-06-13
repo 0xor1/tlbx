@@ -1,21 +1,28 @@
 <template>
   <div class="root">
     <div class="this-node">
-      <div>Name: {{ task.name }}</div>
+      <div class="name">{{ task.name }}</div>
       <div>
-        childN
-        <a href="" @click.stop.prevent="showHideChildren()">{{
-          task.childN
-        }}</a>
+        childn
+        <a href="" @click.stop.prevent="showHideChildren()"
+          ><span v-if="task.childN > 0" class="small"
+            >({{ showChildren ? "-" : "+" }})</span
+          >
+          {{ task.childN }}</a
+        >
       </div>
       <div>
-        descN
+        descn
         <a
           v-if="task.descN <= 1000"
           href=""
           @click.stop.prevent="showHideFullSubTree()"
-          >{{ task.descN }}</a
         >
+          <span v-if="task.descN > 0" class="small"
+            >({{ myShowFullSubTree ? "-" : "+" }})</span
+          >
+          {{ task.descN }}
+        </a>
         <a v-else>{{ task.descN }}</a>
       </div>
     </div>
@@ -53,6 +60,10 @@ export default {
       return this.tasks[this.id];
     },
     children() {
+      // we simply reference this.showChildren here
+      // to force this computed 'children' to be re-evalutated
+      // when this.showChildren is changed.
+      this.showChildren;
       let children = [];
       if (this.task.firstChild == null) {
         return children;
@@ -87,26 +98,48 @@ export default {
         // check tasks to see if I already have them
         let children = this.children;
         if (!(children.length == this.task.childN || children.length >= 100)) {
-          this.$api.task
-            .getChildren({
-              host: this.project.host,
-              project: this.project.id,
-              id: this.id,
-            })
-            .then((tasks) => {
-              tasks.set.forEach((task) => {
-                this.tasks[task.id] = task;
+          let fut = null;
+          if (this.task.childN <= 1000) {
+            fut = this.$api.task
+              .getTree({
+                host: this.project.host,
+                project: this.project.id,
+                id: this.id,
+              })
+              .then((tasksMap) => {
+                for (const [key, value] of Object.entries(tasksMap)) {
+                  this.tasks[key] = value;
+                }
               });
-            })
-            .finally(() => {
-              this.showChildren = true;
-            });
+          } else {
+            fut = this.$api.task
+              .getChildren({
+                host: this.project.host,
+                project: this.project.id,
+                id: this.id,
+              })
+              .then((tasks) => {
+                tasks.set.forEach((task) => {
+                  this.tasks[task.id] = task;
+                });
+              });
+          }
+          fut.finally(() => {
+            this.showChildren = true;
+            if (this.task.childN == this.task.descN) {
+              this.myShowFullSubTree = true;
+            }
+          });
         } else {
           this.showChildren = true;
+          if (this.task.childN == this.task.descN) {
+            this.myShowFullSubTree = true;
+          }
           return;
         }
       }
       this.showChildren = false;
+      this.myShowFullSubTree = false;
     },
     showHideFullSubTree() {
       if (this.task.descN == 0 || this.task.descN > 1000) {
@@ -132,9 +165,13 @@ export default {
               this.myShowFullSubTree = true;
             });
         } else {
-          this.showChildren = true;
-          this.myShowFullSubTree = true;
-          return;
+          // this settimeout is used to to force vue to re render the full sub tree
+          // incase the children were already shown, they must be hidden then re shown
+          // to make sure the are initialised with :showFullSubTree="true"
+          setTimeout(() => {
+            this.showChildren = true;
+            this.myShowFullSubTree = true;
+          }, 0);
         }
       }
       this.showChildren = false;
@@ -169,17 +206,34 @@ export default {
   mounted() {
     this.init();
   },
-  watch: {
-    $route() {
-      this.init();
-    },
-  },
+  // watch: {
+  //   $route() {
+  //     this.init();
+  //   },
+  // },
 };
 </script>
 
 <style scoped lang="scss">
+@import "../style.scss";
+* {
+  white-space: nowrap;
+}
+.small {
+  color: $borderColor;
+  font-size: 0.8pc;
+}
 div.root {
+  padding: 10px;
+  display: inline-flex;
+  flex-direction: column;
+  @include border();
   > .children {
+    margin-top: 10px;
+    display: inline-flex;
+    &.parallel {
+      flex-direction: column;
+    }
   }
 }
 </style>
