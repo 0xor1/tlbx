@@ -97,6 +97,10 @@
         </span>
         <span v-else title="descendants" class="blue">{{ task.descN }}</span>
       </div>
+      <div v-else>
+        <div class="icon small mr mt"></div>
+        <span class="mt">&zwnj;</span>
+      </div>
     </div>
     <div
       v-if="showChildren"
@@ -295,6 +299,7 @@ export default {
   cursor: pointer;
 }
 .icon.small {
+  display: inline-block;
   height: 1.5pc;
   width: 1.5pc;
 }
@@ -329,20 +334,23 @@ export default {
   color: #ffe138;
 }
 div.root {
-  &:hover{
+  &.highlight {
+    background: #222;
+  }
+  &:hover {
     background: #222;
   }
   display: inline-flex;
   flex-direction: column;
   flex-wrap: nowrap;
-  @include border();
-  border-radius: 0.2pc;
   .this-node {
+    @include border();
+    border-radius: 0.2pc;
     background: transparent;
     * {
       background: transparent;
     }
-    padding: 1pc;
+    padding: 0.5pc;
     .name {
       a {
         font-size: 1.4pc;
@@ -363,6 +371,9 @@ div.root {
     //   align-items: stretch;
     //   flex-direction: column;
     // }
+    .this-node {
+      height: 100%;
+    }
   }
 }
 </style>
