@@ -329,14 +329,20 @@ export default {
   color: #ffe138;
 }
 div.root {
-  margin-right: 1pc;
-  padding: 1pc 0 1pc 1pc;
+  &:hover{
+    background: #222;
+  }
   display: inline-flex;
   flex-direction: column;
+  flex-wrap: nowrap;
   @include border();
   border-radius: 0.2pc;
   .this-node {
-    padding-right: 0.5pc;
+    background: transparent;
+    * {
+      background: transparent;
+    }
+    padding: 1pc;
     .name {
       a {
         font-size: 1.4pc;
@@ -350,11 +356,13 @@ div.root {
     }
   }
   > .children {
-    margin-top: 10px;
     display: inline-flex;
-    &.parallel {
-      flex-direction: column;
-    }
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    // &.parallel {
+    //   align-items: stretch;
+    //   flex-direction: column;
+    // }
   }
 }
 </style>
