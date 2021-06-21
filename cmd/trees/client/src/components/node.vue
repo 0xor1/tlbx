@@ -1,7 +1,7 @@
 <template>
-  <div class="root">
-    <div class="this-node">
-      <div class="name">
+  <div class="root fx-c fx-start">
+    <div class="this-node fx-c" v-if="tasks[id] != null">
+      <span class="name">
         <span
           v-if="task.descN > 0"
           :title="task.isParallel ? 'parallel' : 'sequential'"
@@ -12,7 +12,7 @@
           :href="`/#/host/${project.host}/project/${project.id}/task/${task.id}`"
           >{{ task.name }}</a
         >
-      </div>
+      </span>
       <div v-if="$root.show.time" class="time">
         <img
           title="time"
@@ -102,19 +102,42 @@
         <span class="mt">&zwnj;</span>
       </div>
     </div>
-    <div
-      v-if="showChildren"
-      :class="{ parallel: task.isParallel }"
-      class="children"
-    >
-      <node
-        v-for="child in children"
-        :key="child.id"
-        :project="project"
-        :id="child.id"
-        :tasks="tasks"
-        :showFullSubTree="myShowFullSubTree"
-      ></node>
+    <div class="this-node" v-else>
+      <button @click.stop.prevent="loadMeAndMore(id)">
+        load next siblings
+      </button>
+    </div>
+    <div v-if="showChildren && children.length > 0" class="fx-c">
+      <div class="bb-stem"></div>
+      <div
+        class="children"
+        :class="{
+          'fx-c': task.isParallel,
+          parallel: task.isParallel,
+          'fx-r': !task.isParallel,
+        }"
+      >
+        <div
+          class="child-bb-container"
+          v-for="child in children"
+          :key="child.id"
+        >
+          <div class="bb-container">
+            <div class="bb-bridge"></div>
+            <div class="bb-prev"></div>
+            <div class="bb-next" :class="{ show: child.nextSib != null }"></div>
+          </div>
+          <div class="child-container">
+            <div class="bb-padding"></div>
+            <node
+              :project="project"
+              :id="child.id"
+              :tasks="tasks"
+              :showFullSubTree="myShowFullSubTree"
+            ></node>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -292,6 +315,7 @@ export default {
 
 <style scoped lang="scss">
 @import "../style.scss";
+$spacer: 1pc;
 * {
   white-space: nowrap;
 }
@@ -333,16 +357,91 @@ export default {
 .time-inc {
   color: #ffe138;
 }
-div.root {
-  &.highlight {
-    background: #222;
-  }
-  &:hover {
-    background: #222;
-  }
+.fx-c {
   display: inline-flex;
   flex-direction: column;
-  flex-wrap: nowrap;
+}
+.fx-r {
+  display: inline-flex;
+  flex-direction: row;
+}
+.fx-start {
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+.bb-stem {
+  height: $spacer;
+  width: $spacer;
+  border-right: 1px solid white;
+}
+.children {
+  padding-left: $spacer;
+  > .child-bb-container {
+    display: inline-flex;
+    flex-direction: column;
+    > .bb-container {
+      display: inline-flex;
+      flex-direction: row;
+      > .bb-bridge {
+        width: $spacer;
+        height: $spacer;
+        border-top: 1px solid $color;
+      }
+      > .bb-prev {
+        width: $spacer;
+        border-top: 1px solid $color;
+        border-right: 1px solid $color;
+      }
+      > .bb-next {
+        flex-grow: 1;
+        &.show {
+          border-top: 1px solid $color;
+        }
+      }
+    }
+    > .child-container {
+      display: inline-flex;
+      flex-direction: row;
+      > .bb-padding {
+        width: $spacer;
+      }
+    }
+  }
+  &.parallel {
+    > .child-bb-container {
+      flex-direction: row;
+      > .bb-container {
+        flex-direction: column;
+        > .bb-bridge {
+          border-top: none;
+          border-left: 1px solid $color;
+        }
+        > .bb-prev {
+          height: $spacer;
+          border-top: none;
+          border-right: none;
+          border-left: 1px solid $color;
+          border-bottom: 1px solid $color;
+        }
+        > .bb-next {
+          flex-grow: 1;
+          border-top: none;
+          &.show {
+            border-left: 1px solid $color;
+          }
+        }
+      }
+      > .child-container {
+        flex-direction: column;
+        > .bb-padding {
+          height: $spacer;
+        }
+      }
+    }
+  }
+}
+
+div.root {
   .this-node {
     @include border();
     border-radius: 0.2pc;
@@ -361,18 +460,6 @@ div.root {
         line-height: 50%;
         display: inline-block;
       }
-    }
-  }
-  > .children {
-    display: inline-flex;
-    flex-wrap: nowrap;
-    align-items: flex-start;
-    // &.parallel {
-    //   align-items: stretch;
-    //   flex-direction: column;
-    // }
-    .this-node {
-      height: 100%;
     }
   }
 }
