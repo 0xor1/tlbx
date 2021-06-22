@@ -112,8 +112,8 @@
       <div
         class="children"
         :class="{
-          'fx-c': task.isParallel,
-          parallel: task.isParallel,
+          //'fx-c': task.isParallel,
+          //parallel: task.isParallel,
           'fx-r': !task.isParallel,
         }"
       >
@@ -407,38 +407,38 @@ $spacer: 1pc;
       }
     }
   }
-  &.parallel {
-    > .child-bb-container {
-      flex-direction: row;
-      > .bb-container {
-        flex-direction: column;
-        > .bb-bridge {
-          border-top: none;
-          border-left: 1px solid $color;
-        }
-        > .bb-prev {
-          height: $spacer;
-          border-top: none;
-          border-right: none;
-          border-left: 1px solid $color;
-          border-bottom: 1px solid $color;
-        }
-        > .bb-next {
-          flex-grow: 1;
-          border-top: none;
-          &.show {
-            border-left: 1px solid $color;
-          }
-        }
-      }
-      > .child-container {
-        flex-direction: column;
-        > .bb-padding {
-          height: $spacer;
-        }
-      }
-    }
-  }
+  // &.parallel {
+  //   > .child-bb-container {
+  //     flex-direction: row;
+  //     > .bb-container {
+  //       flex-direction: column;
+  //       > .bb-bridge {
+  //         border-top: none;
+  //         border-left: 1px solid $color;
+  //       }
+  //       > .bb-prev {
+  //         height: $spacer;
+  //         border-top: none;
+  //         border-right: none;
+  //         border-left: 1px solid $color;
+  //         border-bottom: 1px solid $color;
+  //       }
+  //       > .bb-next {
+  //         flex-grow: 1;
+  //         border-top: none;
+  //         &.show {
+  //           border-left: 1px solid $color;
+  //         }
+  //       }
+  //     }
+  //     > .child-container {
+  //       flex-direction: column;
+  //       > .bb-padding {
+  //         height: $spacer;
+  //       }
+  //     }
+  //   }
+  // }
 }
 
 div.root {
