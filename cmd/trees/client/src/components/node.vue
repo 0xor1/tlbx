@@ -19,14 +19,14 @@
           class="icon small mr mt"
           src="@/assets/sand-clock.svg"
         />
-        <span title="minimum time" class="time-min">{{
+        <span title="minimum time" class="time-min" v-if="task.childN > 0">{{
           $u.fmt.time(
             task.timeEst + task.timeSubMin,
             project.hoursPerDay,
             project.daysPerWeek
           )
         }}</span>
-        /
+        <span v-if="task.childN > 0"> / </span>
         <span title="estimated time" class="time-est">{{
           $u.fmt.time(
             task.timeEst + task.timeSubEst,
@@ -59,7 +59,7 @@
           $u.fmt.cost(task.costInc + task.costSubInc)
         }}</span>
       </div>
-      <div v-if="$root.show.file" class="file">
+      <div v-if="$root.show.file && project.fileLimit > 0" class="file">
         <img title="file" class="icon small mr mt" src="@/assets/file.svg" />
         <span title="used space" class="file-used">{{
           $u.fmt.bytes(task.fileSize + task.fileSubSize)
@@ -97,10 +97,6 @@
         </span>
         <span v-else title="descendants" class="blue">{{ task.descN }}</span>
       </div>
-      <div v-else>
-        <div class="icon small mr mt"></div>
-        <span class="mt">&zwnj;</span>
-      </div>
     </div>
     <div class="this-node" v-else>
       <button @click.stop.prevent="loadMeAndMore(id)">
@@ -123,12 +119,15 @@
           :key="child.id"
         >
           <div class="bb-container">
-            <div class="bb-bridge"></div>
-            <div class="bb-prev"></div>
+            <div class="bb-bridge" v-if="task.firstChild !== child.id"></div>
+            <div
+              class="bb-prev"
+              :class="{ show: task.firstChild !== child.id }"
+            ></div>
             <div class="bb-next" :class="{ show: child.nextSib != null }"></div>
           </div>
           <div class="child-container">
-            <div class="bb-padding"></div>
+            <div class="bb-padding" v-if="task.firstChild !== child.id"></div>
             <node
               :project="project"
               :id="child.id"
@@ -324,8 +323,8 @@ $spacer: 1pc;
 }
 .icon.small {
   display: inline-block;
-  height: 1.5pc;
-  width: 1.5pc;
+  height: 1pc;
+  width: 1pc;
 }
 .blue {
   color: #22a0dd;
@@ -375,21 +374,23 @@ $spacer: 1pc;
   border-right: 1px solid white;
 }
 .children {
-  padding-left: $spacer;
+  //padding-left: $spacer;
   > .child-bb-container {
     display: inline-flex;
     flex-direction: column;
     > .bb-container {
       display: inline-flex;
       flex-direction: row;
+      height: $spacer;
       > .bb-bridge {
         width: $spacer;
-        height: $spacer;
         border-top: 1px solid $color;
       }
       > .bb-prev {
         width: $spacer;
-        border-top: 1px solid $color;
+        &.show {
+          border-top: 1px solid $color;
+        }
         border-right: 1px solid $color;
       }
       > .bb-next {
@@ -452,8 +453,7 @@ div.root {
     padding: 0.5pc;
     .name {
       a {
-        font-size: 1.4pc;
-        font-weight: bold;
+        text-decoration: none;
       }
       span {
         font-size: 2pc;
