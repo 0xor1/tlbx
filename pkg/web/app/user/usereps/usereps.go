@@ -1,5 +1,8 @@
 package usereps
 
+//go:generate go get -u github.com/valyala/quicktemplate/qtc
+//go:generate qtc -file=usereps.sql
+
 import (
 	"bytes"
 	"io/ioutil"
@@ -45,7 +48,10 @@ func New(
 	fromEmail,
 	activateFmtLink,
 	confirmChangeEmailFmtLink string,
-	onActivate func(app.Tlbx, *user.User),
+	appDataDefault func() interface{},
+	appDataExample func() interface{},
+	appDataValidate func(interface{}),
+	onActivate func(app.Tlbx, *user.User, interface{}),
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User) error,
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
@@ -53,6 +59,11 @@ func New(
 ) []*app.Endpoint {
 	enableSocials := onSetSocials != nil
 	enableFCM := validateFcmTopic != nil
+	PanicIf((appDataDefault != nil && appDataExample == nil) ||
+		(appDataDefault == nil && appDataExample != nil) ||
+		(appDataDefault != nil && appDataValidate == nil) ||
+		(appDataDefault == nil && appDataValidate != nil),
+		"if one of appDataDefault or appDataExample or appDataValidate is not nil, all must be not nil")
 	eps := []*app.Endpoint{
 		{
 			Description:  "register a new account (requires email link)",
@@ -66,6 +77,9 @@ func New(
 					d.Handle = ptr.String("")
 					d.Alias = ptr.String("")
 				}
+				if appDataDefault != nil {
+					d.AppData = appDataDefault()
+				}
 				return d
 			},
 			GetExampleArgs: func() interface{} {
@@ -76,6 +90,9 @@ func New(
 				if enableSocials {
 					ex.Handle = ptr.String("bloe_joggs")
 					ex.Alias = ptr.String("Joe Bloggs")
+				}
+				if appDataExample != nil {
+					ex.AppData = appDataExample()
 				}
 				return ex
 			},
@@ -120,6 +137,16 @@ func New(
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
+					PanicOn(err)
+				}
+				app.BadReqIf((appDataDefault == nil && args.AppData != nil) ||
+					(appDataDefault != nil && args.AppData == nil), "missing appData value")
+				if args.AppData != nil {
+					appDataValidate(args.AppData)
+					// if app requires init ctx data store it in jin
+					qryArgs := sqlh.NewArgs(0)
+					qry := qryJinInsert(qryArgs, id, args.AppData)
+					_, err = usrtx.Exec(qry, qryArgs.Is()...)
 					PanicOn(err)
 				}
 				pwdtx := srv.Pwd().BeginWrite()
@@ -187,13 +214,19 @@ func New(
 				defer tx.Rollback()
 				user := getUser(tx, &args.Email, nil)
 				app.BadReqIf(*user.ActivateCode != args.Code, "")
+				var appData interface{}
+				if appDataDefault != nil {
+					appData = appDataDefault()
+					getJin(tx, user.ID, &appData)
+				}
 				now := Now()
 				user.ActivatedOn = now
 				user.ActivateCode = nil
 				updateUser(tx, user)
 				if onActivate != nil {
-					onActivate(tlbx, &user.User)
+					onActivate(tlbx, &user.User, appData)
 				}
+				delJin(tx, user.ID)
 				tx.Commit()
 				return nil
 			},
@@ -561,11 +594,16 @@ func New(
 					args := a.(*user.SetJin)
 					me := me.AuthedGet(tlbx)
 					srv := service.Get(tlbx)
+					qryArgs := sqlh.NewArgs(0)
+					var qry string
 					if args.Val == nil {
-						_, err := srv.User().Exec(`DELETE FROM jin WHERE user=?`, me)
+						qry = qryJinDelete(qryArgs, me)
+						_, err := srv.User().Exec(qry, qryArgs.Is()...)
 						PanicOn(err)
 					} else {
-						_, err := srv.User().Exec(`INSERT INTO jin (user, val) VALUES (?, ?) ON DUPLICATE KEY UPDATE val=VALUES(val)`, me, args.Val)
+						// if app requires init ctx data store it in jin
+						qry := qryJinInsert(qryArgs, me, args.Val)
+						_, err := srv.User().Exec(qry, qryArgs.Is()...)
 						PanicOn(err)
 					}
 					return nil
@@ -590,7 +628,10 @@ func New(
 					me := me.AuthedGet(tlbx)
 					srv := service.Get(tlbx)
 					res := &json.Json{}
-					sqlh.PanicIfIsntNoRows(srv.User().QueryRow(`SELECT val FROM jin WHERE user=?`, me).Scan(&res))
+					tx := srv.User().BeginRead()
+					defer tx.Rollback()
+					getJin(tx, me, res)
+					tx.Commit()
 					return res
 				},
 			})
@@ -1059,5 +1100,27 @@ func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd string) {
 	salt := crypt.Bytes(scryptSaltLen)
 	pwdBs := crypt.ScryptKey([]byte(pwd), salt, scryptN, scryptR, scryptP, scryptKeyLen)
 	_, err := pwdtx.Exec(`INSERT INTO pwds (id, salt, pwd, n, r, p) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE salt=VALUE(salt), pwd=VALUE(pwd), n=VALUE(n), r=VALUE(r), p=VALUE(p)`, id, salt, pwdBs, scryptN, scryptR, scryptP)
+	PanicOn(err)
+}
+
+func getJin(tx sql.Tx, me ID, dst interface{}) {
+	qryArgs := sqlh.NewArgs(0)
+	qry := qryJinSelect(qryArgs, me)
+	row := tx.QueryRow(qry, qryArgs.Is()...)
+	var err error
+	if js, ok := dst.(*json.Json); ok {
+		err = row.Scan(js)
+	} else {
+		bs := []byte{}
+		err = row.Scan(&bs)
+		json.MustUnmarshal(bs, &dst)
+	}
+	sqlh.PanicIfIsntNoRows(err)
+}
+
+func delJin(tx sql.Tx, me ID) {
+	qryArgs := sqlh.NewArgs(0)
+	qry := qryJinDelete(qryArgs, me)
+	_, err := tx.Exec(qry, qryArgs.Is()...)
 	PanicOn(err)
 }

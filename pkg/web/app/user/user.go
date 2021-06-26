@@ -9,10 +9,11 @@ import (
 )
 
 type Register struct {
-	Alias  *string `json:"alias,omitempty"`
-	Handle *string `json:"handle,omitempty"`
-	Email  string  `json:"email"`
-	Pwd    string  `json:"pwd"`
+	Alias   *string     `json:"alias,omitempty"`
+	Handle  *string     `json:"handle,omitempty"`
+	Email   string      `json:"email"`
+	Pwd     string      `json:"pwd"`
+	AppData interface{} `json:"appData"`
 }
 
 func (_ *Register) Path() string {

@@ -34,7 +34,8 @@ type Rig interface {
 	// root http server handler
 	RootHandler() http.HandlerFunc
 	// unique
-	Unique() string
+	Unique() int
+	UniqueStr() string
 	// http
 	NewClient() *app.Client
 	// log
@@ -86,30 +87,35 @@ func (u *testUser) Pwd() string {
 }
 
 type rig struct {
-	rootHandler http.HandlerFunc
-	unique      string
-	ali         *testUser
-	bob         *testUser
-	cat         *testUser
-	dan         *testUser
-	log         log.Log
-	rateLimit   iredis.Pool
-	cache       iredis.Pool
-	user        isql.ReplicaSet
-	pwd         isql.ReplicaSet
-	data        isql.ReplicaSet
-	email       email.Client
-	store       store.Client
-	fcm         fcm.Client
-	useAuth     bool
+	rootHandler     http.HandlerFunc
+	unique          int
+	preRegisterHook func(Rig, *user.Register)
+	ali             *testUser
+	bob             *testUser
+	cat             *testUser
+	dan             *testUser
+	log             log.Log
+	rateLimit       iredis.Pool
+	cache           iredis.Pool
+	user            isql.ReplicaSet
+	pwd             isql.ReplicaSet
+	data            isql.ReplicaSet
+	email           email.Client
+	store           store.Client
+	fcm             fcm.Client
+	useAuth         bool
 }
 
 func (r *rig) RootHandler() http.HandlerFunc {
 	return r.rootHandler
 }
 
-func (r *rig) Unique() string {
+func (r *rig) Unique() int {
 	return r.unique
+}
+
+func (r *rig) UniqueStr() string {
+	return Strf("%d", r.unique)
 }
 
 func (r *rig) Log() log.Log {
@@ -187,6 +193,10 @@ func NewNoRig(
 		nil,
 		nil,
 		nil,
+		nil,
+		nil,
+		nil,
+		nil,
 		false,
 		ratelimit.NoMware,
 		buckets...)
@@ -195,7 +205,11 @@ func NewNoRig(
 func NewMeRig(
 	config *config.Config,
 	eps []*app.Endpoint,
-	onActivate func(app.Tlbx, *user.User),
+	preRegisterHook func(Rig, *user.Register),
+	appDataDefault func() interface{},
+	appDataExample func() interface{},
+	appDataValidate func(interface{}),
+	onActivate func(app.Tlbx, *user.User, interface{}),
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User) error,
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
@@ -206,6 +220,10 @@ func NewMeRig(
 		config,
 		eps,
 		true,
+		preRegisterHook,
+		appDataDefault,
+		appDataExample,
+		appDataValidate,
 		onActivate,
 		onDelete,
 		onSetSocials,
@@ -219,7 +237,11 @@ func NewRig(
 	config *config.Config,
 	eps []*app.Endpoint,
 	useUsers bool,
-	onActivate func(app.Tlbx, *user.User),
+	preRegisterHook func(Rig, *user.Register),
+	appDataDefault func() interface{},
+	appDataExample func() interface{},
+	appDataValidate func(interface{}),
+	onActivate func(app.Tlbx, *user.User, interface{}),
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User) error,
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
@@ -228,17 +250,18 @@ func NewRig(
 	buckets ...string,
 ) Rig {
 	r := &rig{
-		unique:    Strf("%d", os.Getpid()),
-		log:       config.Log,
-		rateLimit: config.Redis.RateLimit,
-		cache:     config.Redis.Cache,
-		email:     config.Email,
-		store:     config.Store,
-		fcm:       config.FCM,
-		user:      config.SQL.User,
-		pwd:       config.SQL.Pwd,
-		data:      config.SQL.Data,
-		useAuth:   useUsers,
+		unique:          os.Getpid(),
+		preRegisterHook: preRegisterHook,
+		log:             config.Log,
+		rateLimit:       config.Redis.RateLimit,
+		cache:           config.Redis.Cache,
+		email:           config.Email,
+		store:           config.Store,
+		fcm:             config.FCM,
+		user:            config.SQL.User,
+		pwd:             config.SQL.Pwd,
+		data:            config.SQL.Data,
+		useAuth:         useUsers,
 	}
 
 	for _, bucket := range buckets {
@@ -253,6 +276,9 @@ func NewRig(
 				config.App.FromEmail,
 				config.App.ActivateFmtLink,
 				config.App.ConfirmChangeEmailFmtLink,
+				appDataDefault,
+				appDataExample,
+				appDataValidate,
 				onActivate,
 				onDelete,
 				onSetSocials,
@@ -304,15 +330,19 @@ func (r *rig) CleanUp() {
 }
 
 func (r *rig) createUser(handleSuffix, emailSuffix, pwd string) *testUser {
-	email := Strf("%s%s%s", handleSuffix, emailSuffix, r.unique)
+	email := Strf("%s%s%d", handleSuffix, emailSuffix, r.unique)
 	c := r.NewClient()
 	if r.useAuth {
-		(&user.Register{
-			Handle: ptr.String(Strf("%s%s", handleSuffix, r.unique)),
+		reg := &user.Register{
+			Handle: ptr.String(Strf("%s%d", handleSuffix, r.unique)),
 			Alias:  ptr.String(handleSuffix),
 			Email:  email,
 			Pwd:    pwd,
-		}).MustDo(c)
+		}
+		if r.preRegisterHook != nil {
+			r.preRegisterHook(r, reg)
+		}
+		reg.MustDo(c)
 
 		var code string
 		row := r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
