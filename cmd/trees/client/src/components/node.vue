@@ -192,7 +192,10 @@ export default {
       this.$u.copyProps(this.initState(), this);
       if (this.id === this.$u.rtr.task()) {
         this.$nextTick(() => {
-          this.$refs.scrollhandle.scrollIntoView({ behavior: "smooth" });
+          this.$refs.scrollhandle.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          });
         });
       }
       if (this.initExpandPath[this.id] != null && !this.showChildren) {
