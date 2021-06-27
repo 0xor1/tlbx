@@ -23,6 +23,8 @@ func Everything(t *testing.T) {
 		config.Get(),
 		projecteps.Eps,
 		nil,
+		nil,
+		nil,
 		projecteps.OnDelete,
 		projecteps.OnSetSocials,
 		projecteps.ValidateFCMTopic,
@@ -167,7 +169,7 @@ func Everything(t *testing.T) {
 
 	// trigger OnSetSocials code
 	(&user.SetHandle{
-		Handle: "ali_" + r.Unique(),
+		Handle: "ali_" + r.UniqueStr(),
 	}).MustDo(ac)
 
 	// make empty update

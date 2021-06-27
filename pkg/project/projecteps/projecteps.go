@@ -758,14 +758,13 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	tx.Commit()
 }
 
-func OnSetSocials(tlbx app.Tlbx, user *user.User) error {
+func OnSetSocials(tlbx app.Tlbx, user *user.User) {
 	srv := service.Get(tlbx)
 	tx := srv.Data().BeginWrite()
 	defer tx.Rollback()
 	_, err := tx.Exec(`UPDATE users SET handle=?, alias=?, hasAvatar=? WHERE id=?`, user.Handle, user.Alias, user.HasAvatar, user.ID)
 	PanicOn(err)
 	tx.Commit()
-	return nil
 }
 
 func ValidateFCMTopic(tlbx app.Tlbx, topic IDs) (sqlh.Tx, error) {

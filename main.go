@@ -37,6 +37,7 @@ func main() {
 				config.App.ActivateFmtLink,
 				config.App.ConfirmChangeEmailFmtLink,
 				nil,
+				nil,
 				projecteps.OnDelete,
 				projecteps.OnSetSocials,
 				projecteps.ValidateFCMTopic,
