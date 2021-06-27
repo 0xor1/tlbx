@@ -36,7 +36,8 @@ func Mware(configs ...func(*Config)) func(app.Tlbx) {
 	store.Options.SameSite = c.SameSite
 	return func(tlbx app.Tlbx) {
 		gorilla, err := store.Get(tlbx.Req(), c.Name)
-		PanicOn(err)
+		tlbx.Log().ErrorOn(err)
+		PanicIf(gorilla == nil, "nil gorilla session object")
 		s := &session{
 			tlbx:    tlbx,
 			gorilla: gorilla,
