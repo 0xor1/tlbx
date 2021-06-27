@@ -40,30 +40,27 @@ const (
 	AvatarPrefix = ""
 )
 
-var NopOnSetSocials = func(_ app.Tlbx, _ *user.User) error {
-	return nil
+var NopOnSetSocials = func(_ app.Tlbx, _ *user.User) {}
+
+type AppData interface {
+	Default() interface{}
+	Example() interface{}
+	Validate(app.Tlbx, interface{})
 }
 
 func New(
 	fromEmail,
 	activateFmtLink,
 	confirmChangeEmailFmtLink string,
-	appDataDefault func() interface{},
-	appDataExample func() interface{},
-	appDataValidate func(interface{}),
+	appData AppData,
 	onActivate func(app.Tlbx, *user.User, interface{}),
 	onDelete func(app.Tlbx, ID),
-	onSetSocials func(app.Tlbx, *user.User) error,
+	onSetSocials func(app.Tlbx, *user.User),
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
 	enableJin bool,
 ) []*app.Endpoint {
 	enableSocials := onSetSocials != nil
 	enableFCM := validateFcmTopic != nil
-	PanicIf((appDataDefault != nil && appDataExample == nil) ||
-		(appDataDefault == nil && appDataExample != nil) ||
-		(appDataDefault != nil && appDataValidate == nil) ||
-		(appDataDefault == nil && appDataValidate != nil),
-		"if one of appDataDefault or appDataExample or appDataValidate is not nil, all must be not nil")
 	eps := []*app.Endpoint{
 		{
 			Description:  "register a new account (requires email link)",
@@ -77,8 +74,8 @@ func New(
 					d.Handle = ptr.String("")
 					d.Alias = ptr.String("")
 				}
-				if appDataDefault != nil {
-					d.AppData = appDataDefault()
+				if appData != nil {
+					d.AppData = appData.Default()
 				}
 				return d
 			},
@@ -91,8 +88,8 @@ func New(
 					ex.Handle = ptr.String("bloe_joggs")
 					ex.Alias = ptr.String("Joe Bloggs")
 				}
-				if appDataExample != nil {
-					ex.AppData = appDataExample()
+				if appData != nil {
+					ex.AppData = appData.Example()
 				}
 				return ex
 			},
@@ -139,10 +136,10 @@ func New(
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
 					PanicOn(err)
 				}
-				app.BadReqIf((appDataDefault == nil && args.AppData != nil) ||
-					(appDataDefault != nil && args.AppData == nil), "missing appData value")
+				app.BadReqIf((appData == nil && args.AppData != nil) ||
+					(appData != nil && args.AppData == nil), "missing appData value")
 				if args.AppData != nil {
-					appDataValidate(args.AppData)
+					appData.Validate(tlbx, args.AppData)
 					// if app requires init ctx data store it in jin
 					qryArgs := sqlh.NewArgs(0)
 					qry := qryJinInsert(qryArgs, id, args.AppData)
@@ -214,17 +211,17 @@ func New(
 				defer tx.Rollback()
 				user := getUser(tx, &args.Email, nil)
 				app.BadReqIf(*user.ActivateCode != args.Code, "")
-				var appData interface{}
-				if appDataDefault != nil {
-					appData = appDataDefault()
-					getJin(tx, user.ID, &appData)
+				var ad interface{}
+				if appData != nil {
+					ad = appData.Default()
+					getJin(tx, user.ID, &ad)
 				}
 				now := Now()
 				user.ActivatedOn = now
 				user.ActivateCode = nil
 				updateUser(tx, user)
 				if onActivate != nil {
-					onActivate(tlbx, &user.User, appData)
+					onActivate(tlbx, &user.User, ad)
 				}
 				delJin(tx, user.ID)
 				tx.Commit()
@@ -715,7 +712,7 @@ func New(
 					user.Handle = &args.Handle
 					updateUser(tx, user)
 					if onSetSocials != nil {
-						PanicOn(onSetSocials(tlbx, &user.User))
+						onSetSocials(tlbx, &user.User)
 					}
 					tx.Commit()
 					return nil
@@ -750,7 +747,7 @@ func New(
 					user.Alias = args.Alias
 					updateUser(tx, user)
 					if onSetSocials != nil {
-						PanicOn(onSetSocials(tlbx, &user.User))
+						onSetSocials(tlbx, &user.User)
 					}
 					tx.Commit()
 					return nil
@@ -811,7 +808,7 @@ func New(
 					if *user.HasAvatar != nowHasAvatar {
 						user.HasAvatar = ptr.Bool(nowHasAvatar)
 						if onSetSocials != nil {
-							PanicOn(onSetSocials(tlbx, &user.User))
+							onSetSocials(tlbx, &user.User)
 						}
 					}
 					updateUser(tx, user)

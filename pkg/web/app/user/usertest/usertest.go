@@ -25,6 +25,23 @@ type appData struct {
 	Bar string `json:"bar"`
 }
 
+func (*appData) Default() interface{} {
+	return &appData{}
+}
+
+func (*appData) Example() interface{} {
+	return &appData{
+		Foo: 1,
+		Bar: "yolo",
+	}
+}
+
+func (*appData) Validate(_ app.Tlbx, ad interface{}) {
+	appData := ad.(*appData)
+	app.BadReqIf(appData.Foo == 0, "appData.foo must be > 0")
+	app.BadReqIf(appData.Bar == "", "appData.bar must be none empty string")
+}
+
 func Everything(t *testing.T) {
 	r := test.NewMeRig(
 		config.GetProcessed(config.GetBase()),
@@ -35,20 +52,7 @@ func Everything(t *testing.T) {
 				Bar: *reg.Alias,
 			}
 		},
-		func() interface{} {
-			return &appData{}
-		},
-		func() interface{} {
-			return &appData{
-				Foo: 1,
-				Bar: "yolo",
-			}
-		},
-		func(ad interface{}) {
-			appData := ad.(*appData)
-			app.BadReqIf(appData.Foo == 0, "appData.foo must be > 0")
-			app.BadReqIf(appData.Bar == "", "appData.bar must be none empty string")
-		},
+		&appData{},
 		func(tlbx app.Tlbx, user *user.User, ad interface{}) {
 			appData := ad.(*appData)
 			app.BadReqIf(appData.Foo == 0, "appData.foo must be > 0")

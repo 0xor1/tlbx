@@ -24,8 +24,6 @@ func Everything(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		nil,
-		nil,
 		listeps.OnDelete,
 		usereps.NopOnSetSocials,
 		nil,

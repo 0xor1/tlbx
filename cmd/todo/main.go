@@ -39,8 +39,6 @@ func main() {
 						config.App.ConfirmChangeEmailFmtLink,
 						nil,
 						nil,
-						nil,
-						nil,
 						listeps.OnDelete,
 						nil,
 						nil,
