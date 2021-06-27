@@ -97,6 +97,7 @@
         </span>
         <span v-else title="descendants" class="blue">{{ task.descN }}</span>
       </div>
+      <div ref="scrollhandle"></div>
     </div>
     <div class="this-node" v-else>
       <button @click.stop.prevent="loadMeAndMore(id)">
@@ -133,6 +134,7 @@
               :id="child.id"
               :tasks="tasks"
               :showFullSubTree="myShowFullSubTree"
+              :initExpandPath="initExpandPath"
             ></node>
           </div>
         </div>
@@ -149,6 +151,7 @@ export default {
     id: String,
     tasks: Object,
     showFullSubTree: Boolean,
+    initExpandPath: Object,
   },
   data: function () {
     return this.initState();
@@ -187,6 +190,14 @@ export default {
     },
     init() {
       this.$u.copyProps(this.initState(), this);
+      if (this.id === this.$u.rtr.task()) {
+        this.$nextTick(() => {
+          this.$refs.scrollhandle.scrollIntoView({ behavior: "smooth" });
+        });
+      }
+      if (this.initExpandPath[this.id] != null && !this.showChildren) {
+        this.showHideChildren();
+      }
     },
     showHideChildren() {
       if (this.task.childN == 0) {

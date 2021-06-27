@@ -10,6 +10,7 @@
         :id="project.id"
         :tasks="tasks"
         :showFullSubTree="false"
+        :initExpandPath="initExpandPath"
       ></node>
     </div>
   </div>
@@ -34,6 +35,7 @@ export default {
         pMe: null,
         project: null,
         tasks: {},
+        initExpandPath: {},
       };
     },
     init() {
@@ -53,11 +55,36 @@ export default {
               this.pMe = ctx.pMe;
               this.project = ctx.project;
               this.tasks[this.project.id] = this.project;
+              let taskId = this.$u.rtr.task();
+              if (taskId != this.project.id) {
+                return this.loadNextAncestorBatch(taskId);
+              }
             })
             .finally(() => {
               this.loading = false;
             });
         });
+    },
+    loadNextAncestorBatch(id) {
+      return this.$api.task
+        .getAncestors({
+          host: this.$u.rtr.host(),
+          project: this.$u.rtr.project(),
+          id: id,
+          limit: 100,
+        })
+        .then((res) => {
+          res.set.forEach((t, i, a) => {
+            this.tasks[t.id] = t;
+            this.initExpandPath[t.id] = t;
+            if (i == a.length - 1 && t.id !== this.project.id) {
+              return this.loadNextAncestorBatch(t.id);
+            }
+          });
+        });
+    },
+    fcmHandler(event) {
+      console.log(event);
     },
   },
   mounted() {
