@@ -157,9 +157,6 @@ export default {
     return this.initState();
   },
   computed: {
-    task() {
-      return this.tasks[this.id];
-    },
     children() {
       // we simply reference this.showChildren here
       // to force this computed 'children' to be re-evalutated
@@ -184,6 +181,7 @@ export default {
   methods: {
     initState() {
       return {
+        task: this.tasks[this.id],
         showChildren: this.showFullSubTree,
         myShowFullSubTree: this.showFullSubTree,
       };
@@ -200,6 +198,16 @@ export default {
       }
       if (this.initExpandPath[this.id] != null && !this.showChildren) {
         this.showHideChildren();
+      }
+      if (this.task.id == this.$u.rtr.task()) {
+        // if expanded down to target node, delete all keys in initExpandPath
+        // so that collapsing and expanding ancestor nodes doesnt keep auto exapnding
+        // all the way down to this task again.
+        setTimeout(() => {
+          Object.keys(this.initExpandPath).forEach((key) => {
+            delete this.initExpandPath[key];
+          });
+        }, 20);
       }
     },
     showHideChildren() {
