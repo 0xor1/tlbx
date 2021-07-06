@@ -35,6 +35,7 @@ func main() {
 			usereps.New(
 				config.App.FromEmail,
 				config.App.ActivateFmtLink,
+				config.App.LoginLinkFmtLink,
 				config.App.ConfirmChangeEmailFmtLink,
 				nil,
 				nil,
