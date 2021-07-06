@@ -173,6 +173,15 @@ func Everything(t *testing.T) {
 		PanicOn(err)
 	}()
 
+	(&user.SendLoginLinkEmail{Email: email}).MustDo(c)
+	row = r.User().Primary().QueryRow(`SELECT loginLinkCode FROM users WHERE id=?`, id)
+	loginLinkCode := ""
+	PanicOn(row.Scan(&loginLinkCode))
+	id = (&user.LoginLinkLogin{
+		Me:   id,
+		Code: loginLinkCode,
+	}).MustDo(c).ID
+
 	(&user.ChangeEmail{
 		NewEmail: Strf("change@test.localhost%d", r.Unique()),
 	}).MustDo(c)

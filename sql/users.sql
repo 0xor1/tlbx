@@ -18,6 +18,8 @@ CREATE TABLE users (
 	activateCode VARCHAR(250) NULL,
 	changeEmailCode VARCHAR(250) NULL,
 	lastPwdResetOn DATETIME(3) NULL,
+    loginLinkCodeCreatedOn DATETIME(3) NULL,
+    loginLinkCode VARCHAR(250) NULL,
     PRIMARY KEY email (email),
     UNIQUE INDEX id (id),
     INDEX(activatedOn, registeredOn),

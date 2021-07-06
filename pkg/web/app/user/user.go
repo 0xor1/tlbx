@@ -231,6 +231,43 @@ func (a *Login) MustDo(c *app.Client) *Me {
 	return res
 }
 
+type SendLoginLinkEmail struct {
+	Email string `json:"email"`
+}
+
+func (_ *SendLoginLinkEmail) Path() string {
+	return "/user/sendLoginLinkEmail"
+}
+
+func (a *SendLoginLinkEmail) Do(c *app.Client) error {
+	return app.Call(c, a.Path(), a, nil)
+}
+
+func (a *SendLoginLinkEmail) MustDo(c *app.Client) {
+	PanicOn(a.Do(c))
+}
+
+type LoginLinkLogin struct {
+	Me   ID     `json:"me"`
+	Code string `json:"code"`
+}
+
+func (_ *LoginLinkLogin) Path() string {
+	return "/user/loginLinkLogin"
+}
+
+func (a *LoginLinkLogin) Do(c *app.Client) (*Me, error) {
+	res := &Me{}
+	err := app.Call(c, a.Path(), a, &res)
+	return res, err
+}
+
+func (a *LoginLinkLogin) MustDo(c *app.Client) *Me {
+	res, err := a.Do(c)
+	PanicOn(err)
+	return res
+}
+
 type Logout struct{}
 
 func (_ *Logout) Path() string {

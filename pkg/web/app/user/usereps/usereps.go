@@ -51,6 +51,7 @@ type AppData interface {
 func New(
 	fromEmail,
 	activateFmtLink,
+	loginLinkFmtLink,
 	confirmChangeEmailFmtLink string,
 	appData AppData,
 	onActivate func(app.Tlbx, *user.User, interface{}),
@@ -488,6 +489,86 @@ func New(
 				}
 				tx.Commit()
 				pwdtx.Commit()
+				me.AuthedSet(tlbx, user.ID)
+				return &user.Me
+			},
+		},
+		{
+			Description:  "send login link email",
+			Path:         (&user.SendLoginLinkEmail{}).Path(),
+			Timeout:      1000,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &user.SendLoginLinkEmail{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &user.SendLoginLinkEmail{
+					Email: "joe@bloggs.example",
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				return nil
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*user.SendLoginLinkEmail)
+				validate.Str("email", args.Email, tlbx, 0, emailMaxLen, emailRegex)
+				srv := service.Get(tlbx)
+				tx := srv.User().BeginWrite()
+				defer tx.Rollback()
+				user := getUser(tx, &args.Email, nil)
+				app.BadReqIf(user == nil, "unknown email")
+				app.BadReqIf(user.LoginLinkCodeCreatedOn != nil && user.LoginLinkCodeCreatedOn.After(Now().Add(-8*time.Minute)), "An unused login link code still exists")
+				user.LoginLinkCodeCreatedOn = ptr.Time(NowMilli())
+				user.LoginLinkCode = ptr.String(crypt.UrlSafeString(250))
+				updateUser(tx, user)
+				sendLoginLinkEmail(srv, user.Email, fromEmail, Strf(loginLinkFmtLink, user.ID, user.LoginLinkCode), user.Handle)
+				tx.Commit()
+				return nil
+			},
+		},
+		{
+			Description:  "login link login",
+			Path:         (&user.LoginLinkLogin{}).Path(),
+			Timeout:      1000,
+			MaxBodyBytes: app.KB,
+			IsPrivate:    false,
+			GetDefaultArgs: func() interface{} {
+				return &user.LoginLinkLogin{}
+			},
+			GetExampleArgs: func() interface{} {
+				return &user.LoginLinkLogin{
+					Me:   app.ExampleID(),
+					Code: "123abc",
+				}
+			},
+			GetExampleResponse: func() interface{} {
+				ex := &user.Me{}
+				ex.ID = app.ExampleID()
+				if enableSocials {
+					ex.Handle = ptr.String("bloe_joggs")
+					ex.Alias = ptr.String("Joe Bloggs")
+					ex.HasAvatar = ptr.Bool(true)
+				}
+				if enableFCM {
+					ex.FcmEnabled = ptr.Bool(true)
+				}
+				return ex
+			},
+			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
+				args := a.(*user.LoginLinkLogin)
+				srv := service.Get(tlbx)
+				tx := srv.User().BeginWrite()
+				defer tx.Rollback()
+				user := getUser(tx, nil, &args.Me)
+				app.BadReqIf(user == nil, "unknown user")
+				app.BadReqIf(user.LoginLinkCodeCreatedOn == nil ||
+					user.LoginLinkCodeCreatedOn.Before(Now().Add(-10*time.Minute)) ||
+					*user.LoginLinkCode != args.Code, "login code invalid (only valid for 10 minutes from time of creation)")
+				user.LoginLinkCodeCreatedOn = nil
+				user.LoginLinkCode = nil
+				updateUser(tx, user)
+				tx.Commit()
 				me.AuthedSet(tlbx, user.ID)
 				return &user.Me
 			},
@@ -1019,10 +1100,20 @@ func sendActivateEmail(srv service.Layer, sendTo, from, link string, handle *str
 	html := `<p>Thank you for registering.</p><p>Click this link to activate your account:</p><p><a href="` + link + `">Activate</a></p><p>If you didn't register for this account you can simply ignore this email.</p>`
 	txt := "Thank you for registering.\nClick this link to activate your account:\n\n" + link + "\n\nIf you didn't register for this account you can simply ignore this email."
 	if handle != nil {
-		html = Strf("Hi %s,\n\n", *handle) + html
-		txt = Strf("Hi %s,\n\n", *handle) + txt
+		html = Strf("Hi %s,\n\n%s", *handle, html)
+		txt = Strf("Hi %s,\n\n%s", *handle, txt)
 	}
 	srv.Email().MustSend([]string{sendTo}, from, "Activate", html, txt)
+}
+
+func sendLoginLinkEmail(srv service.Layer, sendTo, from, link string, handle *string) {
+	html := `<p>Here is the login link you requested.</p><p>Click this link to login to your account:</p><p><a href="` + link + `">Login</a></p><p>If you didn't request this link you can simply ignore this email.</p>`
+	txt := "Here is the login link you requested.\nClick this link to login to your account:\n\n" + link + "\n\nIf you didn't request this link you can simply ignore this email."
+	if handle != nil {
+		html = Strf("Hi %s,\n\n%s", *handle, html)
+		txt = Strf("Hi %s,\n\n%s", *handle, txt)
+	}
+	srv.Email().MustSend([]string{sendTo}, from, "Login Link", html, txt)
 }
 
 func sendConfirmChangeEmailEmail(srv service.Layer, sendTo, from, link string) {
@@ -1037,18 +1128,20 @@ func sendResetPwdEmail(srv service.Layer, sendTo, from, newPwd string) {
 
 type fullUser struct {
 	user.Me
-	Email           string
-	RegisteredOn    time.Time
-	ActivatedOn     time.Time
-	NewEmail        *string
-	ActivateCode    *string
-	ChangeEmailCode *string
-	LastPwdResetOn  *time.Time
+	Email                  string
+	RegisteredOn           time.Time
+	ActivatedOn            time.Time
+	NewEmail               *string
+	ActivateCode           *string
+	ChangeEmailCode        *string
+	LastPwdResetOn         *time.Time
+	LoginLinkCodeCreatedOn *time.Time
+	LoginLinkCode          *string
 }
 
 func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 	PanicIf(email == nil && id == nil, "one of email or id must not be nil")
-	query := `SELECT id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn FROM users WHERE `
+	query := `SELECT id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn, loginLinkCodeCreatedOn, loginLinkCode FROM users WHERE `
 	var arg interface{}
 	if email != nil {
 		query += `email=?`
@@ -1059,7 +1152,7 @@ func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 	}
 	row := tx.QueryRow(query, arg)
 	res := &fullUser{}
-	err := row.Scan(&res.ID, &res.Email, &res.Handle, &res.Alias, &res.HasAvatar, &res.FcmEnabled, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn)
+	err := row.Scan(&res.ID, &res.Email, &res.Handle, &res.Alias, &res.HasAvatar, &res.FcmEnabled, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn, &res.LoginLinkCodeCreatedOn, &res.LoginLinkCode)
 	if err == isql.ErrNoRows {
 		return nil
 	}
@@ -1068,7 +1161,7 @@ func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 }
 
 func updateUser(tx sql.Tx, user *fullUser) {
-	_, err := tx.Exec(`UPDATE users SET email=?, handle=?, alias=?, hasAvatar=?, fcmEnabled=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=? WHERE id=?`, user.Email, user.Handle, user.Alias, user.HasAvatar, user.FcmEnabled, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.ID)
+	_, err := tx.Exec(`UPDATE users SET email=?, handle=?, alias=?, hasAvatar=?, fcmEnabled=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=?, loginLinkCodeCreatedOn=?, loginLinkCode=? WHERE id=?`, user.Email, user.Handle, user.Alias, user.HasAvatar, user.FcmEnabled, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.LoginLinkCodeCreatedOn, user.LoginLinkCode, user.ID)
 	PanicOn(err)
 }
 

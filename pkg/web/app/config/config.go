@@ -41,6 +41,7 @@ type Config struct {
 	App struct {
 		FromEmail                 string
 		ActivateFmtLink           string
+		LoginLinkFmtLink          string
 		ConfirmChangeEmailFmtLink string
 	}
 	Redis struct {
@@ -77,6 +78,7 @@ func GetBase(file ...string) *config.Config {
 	})
 	c.SetDefault("app.fromEmail", "test@test.localhost")
 	c.SetDefault("app.activateFmtLink", "http://localhost:8081/#/activate?email=%s&code=%s")
+	c.SetDefault("app.loginLinkFmtLink", "http://localhost:8081/#/loginlinklogin?me=%s&code=%s")
 	c.SetDefault("app.confirmChangeEmailFmtLink", "http://localhost:8081/#/confirmChangeEmail?me=%s&code=%s")
 	c.SetDefault("redis.rateLimit", "localhost:6379")
 	c.SetDefault("redis.cache", "localhost:6379")
@@ -134,6 +136,7 @@ func GetProcessed(c *config.Config) *Config {
 
 	res.App.FromEmail = c.GetString("app.fromEmail")
 	res.App.ActivateFmtLink = c.GetString("app.activateFmtLink")
+	res.App.LoginLinkFmtLink = c.GetString("app.loginLinkFmtLink")
 	res.App.ConfirmChangeEmailFmtLink = c.GetString("app.confirmChangeEmailFmtLink")
 
 	res.Redis.RateLimit = iredis.CreatePool(c.GetString("redis.rateLimit"))

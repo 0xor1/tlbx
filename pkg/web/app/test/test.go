@@ -267,6 +267,7 @@ func NewRig(
 			usereps.New(
 				config.App.FromEmail,
 				config.App.ActivateFmtLink,
+				config.App.LoginLinkFmtLink,
 				config.App.ConfirmChangeEmailFmtLink,
 				appData,
 				onActivate,
