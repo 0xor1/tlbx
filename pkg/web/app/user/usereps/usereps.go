@@ -522,7 +522,7 @@ func New(
 				user.LoginLinkCodeCreatedOn = ptr.Time(NowMilli())
 				user.LoginLinkCode = ptr.String(crypt.UrlSafeString(250))
 				updateUser(tx, user)
-				sendLoginLinkEmail(srv, user.Email, fromEmail, Strf(loginLinkFmtLink, user.ID, user.LoginLinkCode), user.Handle)
+				sendLoginLinkEmail(srv, user.Email, fromEmail, Strf(loginLinkFmtLink, user.ID, *user.LoginLinkCode), user.Handle)
 				tx.Commit()
 				return nil
 			},

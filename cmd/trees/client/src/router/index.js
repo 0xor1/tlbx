@@ -4,11 +4,13 @@ import activate from '../views/activate.vue'
 import confirmChangeEmail from '../views/confirmChangeEmail.vue'
 import register from '../views/register.vue'
 import login from '../views/login.vue'
+import loginLinkLogin from '../views/loginLinkLogin.vue'
 import resetPwd from '../views/resetPwd.vue'
 import projects from '../views/projects.vue'
 import projectUser from '../views/projectUser.vue'
 import projectUsers from '../views/projectUsers.vue'
 import publicProjects from '../views/publicProjects.vue'
+import sendLoginLinkEmail from '../views/sendLoginLinkEmail.vue'
 import task from '../views/task.vue'
 import tree from '../views/tree.vue'
 import apiDocs from '../views/apiDocs.vue'
@@ -52,6 +54,18 @@ const routes = [
     path: '/login',
     name: 'login',
     component: login,
+    beforeEnter: authedCheck
+  },
+  {
+    path: '/loginLinkLogin',
+    name: 'loginLinkLogin',
+    component: loginLinkLogin,
+    beforeEnter: authedCheck
+  },
+  {
+    path: '/sendLoginLinkEmail',
+    name: 'sendLoginLinkEmail',
+    component: sendLoginLinkEmail,
     beforeEnter: authedCheck
   },
   {

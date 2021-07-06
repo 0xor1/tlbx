@@ -19,6 +19,7 @@
     <span v-if="pwdErr.length > 0" class="err">{{ pwdErr }}</span>
     <button @click="login">login</button>
     <a href="/#/register">register</a>
+    <span><a href="/#/sendLoginLinkEmail">send login link</a></span>
     <span class="small"><a href="/#/resetPwd">forgot pwd?</a></span>
   </div>
 </template>

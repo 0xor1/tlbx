@@ -312,6 +312,18 @@ function newApi(isMDoApi) {
           return res
         })
       },
+      sendLoginLinkEmail(email) {
+        return doReq('/user/sendLoginLinkEmail', { email })
+      },
+      loginLinkLogin(me, code) {
+        return doReq('/user/loginLinkLogin', { me, code }).then((res) => {
+          notAuthed = false
+          memCache.me = res
+          memCache[res.id] = res
+          fcmEnabled = res.fcmEnabled
+          return res
+        })
+      },
       logout() {
         memCache = {}
         return doReq('/user/logout').then(() => {
