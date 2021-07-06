@@ -1107,8 +1107,8 @@ func sendActivateEmail(srv service.Layer, sendTo, from, link string, handle *str
 }
 
 func sendLoginLinkEmail(srv service.Layer, sendTo, from, link string, handle *string) {
-	html := `<p>Here is the login link you requested.</p><p>Click this link to login to your account:</p><p><a href="` + link + `">Login</a></p><p>If you didn't request this link you can simply ignore this email.</p>`
-	txt := "Here is the login link you requested.\nClick this link to login to your account:\n\n" + link + "\n\nIf you didn't request this link you can simply ignore this email."
+	html := `<p>Here is the login link you requested.</p><p>Click this link to login to your account:</p><p><a href="` + link + `">Login</a></p><p>This link will only be valid for 10 minutes.</p><p>If you didn't request this link you can simply ignore this email.</p>`
+	txt := "Here is the login link you requested.\nClick this link to login to your account:\n\n" + link + "\n\nThis link will only be valid for 10 minutes.\n\nIf you didn't request this link you can simply ignore this email."
 	if handle != nil {
 		html = Strf("Hi %s,\n\n%s", *handle, html)
 		txt = Strf("Hi %s,\n\n%s", *handle, txt)
