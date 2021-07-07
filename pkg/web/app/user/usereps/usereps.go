@@ -39,6 +39,13 @@ const (
 	AvatarPrefix = ""
 )
 
+func reqScheme(tlbx app.Tlbx) string {
+	if tlbx.Req().TLS == nil {
+		return "http"
+	}
+	return "https"
+}
+
 var NopOnSetSocials = func(_ app.Tlbx, _ *user.User) {}
 
 type AppData interface {
@@ -149,7 +156,7 @@ func New(
 				pwdtx := srv.Pwd().BeginWrite()
 				defer pwdtx.Rollback()
 				setPwd(tlbx, pwdtx, id, args.Pwd)
-				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, id, activateCode), args.Handle)
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, reqScheme(tlbx), tlbx.Req().Host, id, activateCode), args.Handle)
 				usrtx.Commit()
 				pwdtx.Commit()
 				return nil
@@ -182,7 +189,7 @@ func New(
 				if fullUser == nil || fullUser.ActivateCode == nil {
 					return nil
 				}
-				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, fullUser.ID, *fullUser.ActivateCode), fullUser.Handle)
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, reqScheme(tlbx), tlbx.Req().Host, fullUser.ID, *fullUser.ActivateCode), fullUser.Handle)
 				return nil
 			},
 		},
@@ -261,7 +268,7 @@ func New(
 				fullUser.ChangeEmailCode = &changeEmailCode
 				updateUser(tx, fullUser)
 				tx.Commit()
-				sendConfirmChangeEmailEmail(srv, args.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, me, changeEmailCode))
+				sendConfirmChangeEmailEmail(srv, args.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, reqScheme(tlbx), tlbx.Req().Host, me, changeEmailCode))
 				return nil
 			},
 		},
@@ -287,7 +294,7 @@ func New(
 				defer tx.Rollback()
 				fullUser := getUser(tx, nil, &me)
 				tx.Commit()
-				sendConfirmChangeEmailEmail(srv, *fullUser.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, me, *fullUser.ChangeEmailCode))
+				sendConfirmChangeEmailEmail(srv, *fullUser.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, reqScheme(tlbx), tlbx.Req().Host, me, *fullUser.ChangeEmailCode))
 				return nil
 			},
 		},
@@ -521,8 +528,7 @@ func New(
 				user.LoginLinkCodeCreatedOn = ptr.Time(NowMilli())
 				user.LoginLinkCode = ptr.String(crypt.UrlSafeString(250))
 				updateUser(tx, user)
-				tlbx.Log().Debug("fmt: %s scheme: %s host: %s", loginLinkFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host)
-				sendLoginLinkEmail(srv, user.Email, fromEmail, Strf(loginLinkFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, user.ID, *user.LoginLinkCode), user.Handle)
+				sendLoginLinkEmail(srv, user.Email, fromEmail, Strf(loginLinkFmtLink, reqScheme(tlbx), tlbx.Req().Host, user.ID, *user.LoginLinkCode), user.Handle)
 				tx.Commit()
 				return nil
 			},
