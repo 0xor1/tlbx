@@ -45,8 +45,8 @@ func (a *ResendActivateLink) MustDo(c *app.Client) {
 }
 
 type Activate struct {
-	Email string `json:"email"`
-	Code  string `json:"code"`
+	Me   ID     `json:"me"`
+	Code string `json:"code"`
 }
 
 func (_ *Activate) Path() string {

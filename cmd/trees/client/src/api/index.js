@@ -267,8 +267,8 @@ function newApi(isMDoApi) {
       resendActivateLink(email) {
         return doReq('/user/resendActivateLink', { email })
       },
-      activate(email, code) {
-        return doReq('/user/activate', { email, code })
+      activate(me, code) {
+        return doReq('/user/activate', { me, code })
       },
       changeEmail(newEmail) {
         return doReq('/user/changeEmail', { newEmail })

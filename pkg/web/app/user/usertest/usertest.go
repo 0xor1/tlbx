@@ -146,13 +146,14 @@ func Everything(t *testing.T) {
 		Email: email,
 	}).MustDo(c)
 
+	var myID ID
 	var code string
-	row := r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
-	PanicOn(row.Scan(&code))
+	row := r.User().Primary().QueryRow(`SELECT id, activateCode FROM users WHERE email=?`, email)
+	PanicOn(row.Scan(&myID, &code))
 
 	(&user.Activate{
-		Email: email,
-		Code:  code,
+		Me:   myID,
+		Code: code,
 	}).MustDo(c)
 
 	// check return ealry path
@@ -291,12 +292,12 @@ func Everything(t *testing.T) {
 		},
 	}).MustDo(c)
 
-	row = r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
-	PanicOn(row.Scan(&code))
+	row = r.User().Primary().QueryRow(`SELECT id, activateCode FROM users WHERE email=?`, email)
+	PanicOn(row.Scan(&myID, &code))
 
 	(&user.Activate{
-		Email: email,
-		Code:  code,
+		Me:   myID,
+		Code: code,
 	}).MustDo(c)
 
 	id = (&user.Login{

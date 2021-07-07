@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -150,7 +149,7 @@ func New(
 				pwdtx := srv.Pwd().BeginWrite()
 				defer pwdtx.Rollback()
 				setPwd(tlbx, pwdtx, id, args.Pwd)
-				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), activateCode), args.Handle)
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, id, activateCode), args.Handle)
 				usrtx.Commit()
 				pwdtx.Commit()
 				return nil
@@ -183,7 +182,7 @@ func New(
 				if fullUser == nil || fullUser.ActivateCode == nil {
 					return nil
 				}
-				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, url.QueryEscape(args.Email), *fullUser.ActivateCode), fullUser.Handle)
+				sendActivateEmail(srv, args.Email, fromEmail, Strf(activateFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, fullUser.ID, *fullUser.ActivateCode), fullUser.Handle)
 				return nil
 			},
 		},
@@ -198,8 +197,8 @@ func New(
 			},
 			GetExampleArgs: func() interface{} {
 				return &user.Activate{
-					Email: "joe@bloggs.example",
-					Code:  "123abc",
+					Me:   app.ExampleID(),
+					Code: "123abc",
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -210,7 +209,7 @@ func New(
 				srv := service.Get(tlbx)
 				tx := srv.User().BeginWrite()
 				defer tx.Rollback()
-				user := getUser(tx, &args.Email, nil)
+				user := getUser(tx, nil, &args.Me)
 				app.BadReqIf(*user.ActivateCode != args.Code, "")
 				var ad interface{}
 				if appData != nil {
@@ -262,7 +261,7 @@ func New(
 				fullUser.ChangeEmailCode = &changeEmailCode
 				updateUser(tx, fullUser)
 				tx.Commit()
-				sendConfirmChangeEmailEmail(srv, args.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, me, changeEmailCode))
+				sendConfirmChangeEmailEmail(srv, args.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, me, changeEmailCode))
 				return nil
 			},
 		},
@@ -288,7 +287,7 @@ func New(
 				defer tx.Rollback()
 				fullUser := getUser(tx, nil, &me)
 				tx.Commit()
-				sendConfirmChangeEmailEmail(srv, *fullUser.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, me, *fullUser.ChangeEmailCode))
+				sendConfirmChangeEmailEmail(srv, *fullUser.NewEmail, fromEmail, Strf(confirmChangeEmailFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, me, *fullUser.ChangeEmailCode))
 				return nil
 			},
 		},
@@ -522,7 +521,7 @@ func New(
 				user.LoginLinkCodeCreatedOn = ptr.Time(NowMilli())
 				user.LoginLinkCode = ptr.String(crypt.UrlSafeString(250))
 				updateUser(tx, user)
-				sendLoginLinkEmail(srv, user.Email, fromEmail, Strf(loginLinkFmtLink, user.ID, *user.LoginLinkCode), user.Handle)
+				sendLoginLinkEmail(srv, user.Email, fromEmail, Strf(loginLinkFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, user.ID, *user.LoginLinkCode), user.Handle)
 				tx.Commit()
 				return nil
 			},

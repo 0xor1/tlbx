@@ -5,16 +5,16 @@
 </template>
 
 <script>
-  export default {
-    name: 'activate',
-    data: function() {
-      let query = this.$router.currentRoute.query
-      this.$api.user.activate(query.email, query.code).then(()=>{
-        this.$u.rtr.goHome()
-      })
-      return {}
-    }
-  }
+export default {
+  name: "activate",
+  data: function () {
+    let query = this.$router.currentRoute.query;
+    this.$api.user.activate(query.me, query.code).then(() => {
+      this.$u.rtr.goHome();
+    });
+    return {};
+  },
+};
 </script>
 
 <style scoped lang="scss">

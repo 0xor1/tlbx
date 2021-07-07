@@ -335,13 +335,14 @@ func (r *rig) createUser(handleSuffix, emailSuffix, pwd string) *testUser {
 		}
 		reg.MustDo(c)
 
+		var me ID
 		var code string
-		row := r.User().Primary().QueryRow(`SELECT activateCode FROM users WHERE email=?`, email)
-		PanicOn(row.Scan(&code))
+		row := r.User().Primary().QueryRow(`SELECT id, activateCode FROM users WHERE email=?`, email)
+		PanicOn(row.Scan(&me, &code))
 
 		(&user.Activate{
-			Email: email,
-			Code:  code,
+			Me:   me,
+			Code: code,
 		}).MustDo(c)
 
 		id := (&user.Login{
