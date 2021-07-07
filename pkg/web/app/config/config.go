@@ -78,7 +78,7 @@ func GetBase(file ...string) *config.Config {
 	})
 	c.SetDefault("app.fromEmail", "test@test.localhost")
 	c.SetDefault("app.activateFmtLink", "%s://%s/#/activate?me=%s&code=%s")
-	c.SetDefault("app.loginLinkFmtLink", "%s://%s/#/loginlinklogin?me=%s&code=%s")
+	c.SetDefault("app.loginLinkFmtLink", "%s://%s/#/loginLinkLogin?me=%s&code=%s")
 	c.SetDefault("app.confirmChangeEmailFmtLink", "%s://%s/#/confirmChangeEmail?me=%s&code=%s")
 	c.SetDefault("redis.rateLimit", "localhost:6379")
 	c.SetDefault("redis.cache", "localhost:6379")
