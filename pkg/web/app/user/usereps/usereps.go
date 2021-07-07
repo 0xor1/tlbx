@@ -521,6 +521,7 @@ func New(
 				user.LoginLinkCodeCreatedOn = ptr.Time(NowMilli())
 				user.LoginLinkCode = ptr.String(crypt.UrlSafeString(250))
 				updateUser(tx, user)
+				tlbx.Log().Debug("fmt: %s scheme: %s host: %s", loginLinkFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host)
 				sendLoginLinkEmail(srv, user.Email, fromEmail, Strf(loginLinkFmtLink, tlbx.Req().URL.Scheme, tlbx.Req().URL.Host, user.ID, *user.LoginLinkCode), user.Handle)
 				tx.Commit()
 				return nil
