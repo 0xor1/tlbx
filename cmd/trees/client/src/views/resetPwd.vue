@@ -3,6 +3,7 @@
     <h1>reset pwd</h1>
     <input
       ref="email"
+      autocomplete="email"
       v-model="email"
       placeholder="email"
       @blur="validate"

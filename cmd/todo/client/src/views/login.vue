@@ -1,9 +1,9 @@
 <template>
   <div class="root">
     <h1>login</h1>
-    <input v-model="email" placeholder="email" @blur="validate" @keydown.enter="login">
+    <input v-model="email" autocomplete="email" placeholder="email" @blur="validate" @keydown.enter="login">
     <span v-if="!emailIsValid" class="err">email is not valid</span>
-    <input v-model="pwd" placeholder="pwd" type="password" @blur="validate" @keydown.enter="login">
+    <input v-model="pwd" autocomplete="password" placeholder="pwd" type="password" @blur="validate" @keydown.enter="login">
     <span v-if="pwdErr.length > 0" class="err">{{pwdErr}}</span>
     <button @click="login">login</button>
     <a href="/#/register">register</a>

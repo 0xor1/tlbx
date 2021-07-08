@@ -5,9 +5,9 @@
     <span v-if="aliasErr.length > 0" class="err">{{aliasErr}}</span>
     <input v-model="handle" placeholder="handle" @blur="validate" @keydown.enter="register">
     <span v-if="handleErr.length > 0" class="err">{{handleErr}}</span>
-    <input v-model="email" placeholder="email" @blur="validate" @keydown.enter="register">
+    <input v-model="email" autocomplete="email" placeholder="email" @blur="validate" @keydown.enter="register">
     <span v-if="!emailIsValid" class="err">email is not valid</span>
-    <input v-model="pwd" placeholder="pwd" type="password" @blur="validate" @keydown.enter="register">
+    <input v-model="pwd" autocomplete="password" placeholder="pwd" type="password" @blur="validate" @keydown.enter="register">
     <span v-if="pwdErr.length > 0" class="err">{{pwdErr}}</span>
     <button @click="register">register</button>
     <a href="/#/login">login</a>

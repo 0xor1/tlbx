@@ -4,6 +4,7 @@
     <input
       ref="email"
       v-model="email"
+      autocomplete="email"
       placeholder="email"
       @blur="validate"
       @keydown.enter="login"
@@ -11,6 +12,7 @@
     <span v-if="!emailIsValid" class="err">email is not valid</span>
     <input
       v-model="pwd"
+      autocomplete="password"
       placeholder="pwd"
       type="password"
       @blur="validate"
