@@ -1,6 +1,8 @@
 games
 =====
 
+[Live app](https://blockers.nodice.gg)
+
 A web app for turn based multiplayer games.
 
 ## run

@@ -30,3 +30,7 @@ tlbx is predominantly for making web apps that follow a similar pattern, to run 
 app in one terminal screen so you can see everything going on in one place, if you prefer you can simply run the
 commands in the `./bin/run` script manually. If you do install tmux, to kill the development services tmux
 cmd `Ctrl+b &` then `y` to confirm will kill everything.
+
+* [todo](https://github.com/0xor1/tlbx/tree/develop/cmd/todo) - typical todo list demo app, the most simple/minimal demo fo tlbx framework
+* [games](https://github.com/0xor1/tlbx/tree/develop/cmd/games) - a multiplayer turn based game site
+* [trees](https://github.com/0xor1/tlbx/tree/develop/cmd/trees) - a project management app where tasks are stored in a tree structure
