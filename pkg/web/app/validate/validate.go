@@ -7,7 +7,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
 
-func Str(name, str string, tlbx app.Tlbx, minLen, maxLen int, regexs ...*regexp.Regexp) {
+func Str(tlbx app.Tlbx, name, str string, minLen, maxLen int, regexs ...*regexp.Regexp) {
 	app.BadReqIf(minLen > 0 && core.StrLen(str) < minLen, "%s does not satisfy min len %d", name, minLen)
 	app.BadReqIf(maxLen > 0 && core.StrLen(str) > maxLen, "%s does not satisfy max len %d", name, maxLen)
 	for _, re := range regexs {

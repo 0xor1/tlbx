@@ -39,7 +39,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*item.Create)
-				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
+				validate.Str(tlbx, "name", args.Name, nameMinLen, nameMaxLen)
 				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
 				res := &item.Item{
@@ -121,7 +121,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*item.Update)
 				if args.Name != nil {
-					validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
+					validate.Str(tlbx, "name", args.Name.V, nameMinLen, nameMaxLen)
 				}
 				me := me.AuthedGet(tlbx)
 				getSetRes := getSet(tlbx, &item.Get{

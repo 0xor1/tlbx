@@ -37,7 +37,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*list.Create)
-				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
+				validate.Str(tlbx, "name", args.Name, nameMinLen, nameMaxLen)
 				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
 				res := &list.List{
@@ -114,7 +114,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*list.Update)
-				validate.Str("name", args.Name.V, tlbx, nameMinLen, nameMaxLen)
+				validate.Str(tlbx, "name", args.Name.V, nameMinLen, nameMaxLen)
 				getSetRes := getSet(tlbx, &list.Get{
 					IDs: IDs{args.ID},
 				})
