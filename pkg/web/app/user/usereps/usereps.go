@@ -110,13 +110,13 @@ func New(
 						strings.ReplaceAll(
 							StrLower(
 								StrTrimWS(*args.Handle)), " ", "_"))
-					validate.Str(tlbx, "handle", *args.Handle, handleMinLen, handleMaxLen, handleRegex)
+					validate.Str("handle", *args.Handle, handleMinLen, handleMaxLen, handleRegex)
 				}
 				if args.Alias != nil {
 					args.Alias = ptr.String(StrTrimWS(*args.Alias))
-					validate.Str(tlbx, "alias", *args.Alias, 0, aliasMaxLen)
+					validate.Str("alias", *args.Alias, 0, aliasMaxLen)
 				}
-				validate.Str(tlbx, "email", args.Email, 0, emailMaxLen, emailRegex)
+				validate.Str("email", args.Email, 0, emailMaxLen, emailRegex)
 				activateCode := crypt.UrlSafeString(250)
 				id := me.Get(tlbx).ID()
 				srv := service.Get(tlbx)
@@ -248,7 +248,7 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.ChangeEmail)
 				args.NewEmail = StrTrimWS(args.NewEmail)
-				validate.Str(tlbx, "email", args.NewEmail, 0, emailMaxLen, emailRegex)
+				validate.Str("email", args.NewEmail, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
 				me := me.AuthedGet(tlbx)
 				changeEmailCode := crypt.UrlSafeString(250)
@@ -471,8 +471,8 @@ func New(
 					app.ReturnIf(condition, http.StatusNotFound, "email and/or pwd are not valid")
 				}
 				args := a.(*user.Login)
-				validate.Str(tlbx, "email", args.Email, 0, emailMaxLen, emailRegex)
-				validate.Str(tlbx, "pwd", args.Pwd, pwdMinLen, pwdMaxLen, pwdRegexs...)
+				validate.Str("email", args.Email, 0, emailMaxLen, emailRegex)
+				validate.Str("pwd", args.Pwd, pwdMinLen, pwdMaxLen, pwdRegexs...)
 				srv := service.Get(tlbx)
 				tx := srv.User().BeginRead()
 				defer tx.Rollback()
@@ -511,7 +511,7 @@ func New(
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.SendLoginLinkEmail)
-				validate.Str(tlbx, "email", args.Email, 0, emailMaxLen, emailRegex)
+				validate.Str("email", args.Email, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
 				tx := srv.User().BeginWrite()
 				defer tx.Rollback()
@@ -744,7 +744,7 @@ func New(
 					if len(args.Users) == 0 {
 						return nil
 					}
-					validate.MaxIDs(tlbx, "users", args.Users, 1000)
+					validate.MaxIDs("users", args.Users, 1000)
 					srv := service.Get(tlbx)
 					query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar FROM users WHERE id IN(?`)
 					queryArgs := make([]interface{}, 0, len(args.Users))
@@ -783,7 +783,7 @@ func New(
 				},
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.SetHandle)
-					validate.Str(tlbx, "handle", args.Handle, handleMinLen, handleMaxLen, handleRegex)
+					validate.Str("handle", args.Handle, handleMinLen, handleMaxLen, handleRegex)
 					srv := service.Get(tlbx)
 					me := me.AuthedGet(tlbx)
 					tx := srv.User().BeginWrite()
@@ -817,7 +817,7 @@ func New(
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.SetAlias)
 					if args.Alias != nil {
-						validate.Str(tlbx, "alias", *args.Alias, 0, aliasMaxLen)
+						validate.Str("alias", *args.Alias, 0, aliasMaxLen)
 					}
 					srv := service.Get(tlbx)
 					me := me.AuthedGet(tlbx)
@@ -1185,7 +1185,7 @@ func getPwd(pwdtx sql.Tx, id ID) *pwd {
 }
 
 func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd string) {
-	validate.Str(tlbx, "pwd", pwd, pwdMinLen, pwdMaxLen, pwdRegexs...)
+	validate.Str("pwd", pwd, pwdMinLen, pwdMaxLen, pwdRegexs...)
 	salt := crypt.Bytes(scryptSaltLen)
 	pwdBs := crypt.ScryptKey([]byte(pwd), salt, scryptN, scryptR, scryptP, scryptKeyLen)
 	_, err := pwdtx.Exec(`INSERT INTO pwds (id, salt, pwd, n, r, p) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE salt=VALUE(salt), pwd=VALUE(pwd), n=VALUE(n), r=VALUE(r), p=VALUE(p)`, id, salt, pwdBs, scryptN, scryptR, scryptP)

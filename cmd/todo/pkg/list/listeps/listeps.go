@@ -37,7 +37,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*list.Create)
-				validate.Str(tlbx, "name", args.Name, nameMinLen, nameMaxLen)
+				validate.Str("name", args.Name, nameMinLen, nameMaxLen)
 				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
 				res := &list.List{
@@ -114,7 +114,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*list.Update)
-				validate.Str(tlbx, "name", args.Name.V, nameMinLen, nameMaxLen)
+				validate.Str("name", args.Name.V, nameMinLen, nameMaxLen)
 				getSetRes := getSet(tlbx, &list.Get{
 					IDs: IDs{args.ID},
 				})
@@ -150,7 +150,7 @@ var (
 				if idsLen == 0 {
 					return nil
 				}
-				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+				validate.MaxIDs("ids", args.IDs, 100)
 				me := me.AuthedGet(tlbx)
 				srv := service.Get(tlbx)
 				queryArgs := make([]interface{}, 0, idsLen+1)
@@ -188,7 +188,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 }
 
 func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
-	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+	validate.MaxIDs("ids", args.IDs, 100)
 	app.BadReqIf(
 		args.CreatedOnMin != nil &&
 			args.CreatedOnMax != nil &&
