@@ -54,9 +54,9 @@ var (
 				args := a.(*task.Create)
 				me := me.AuthedGet(tlbx)
 				args.Name = StrTrimWS(args.Name)
-				validate.Str(tlbx, "name", args.Name, nameMinLen, nameMaxLen)
+				validate.Str("name", args.Name, nameMinLen, nameMaxLen)
 				args.Description = StrTrimWS(args.Description)
-				validate.Str(tlbx, "description", args.Description, 0, descriptionMaxLen)
+				validate.Str("description", args.Description, 0, descriptionMaxLen)
 				srv := service.Get(tlbx)
 				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
@@ -305,14 +305,14 @@ var (
 				// at this point all the moving has been done
 				if args.Name != nil && t.Name != args.Name.V {
 					args.Name.V = StrTrimWS(args.Name.V)
-					validate.Str(tlbx, "name", args.Name.V, nameMinLen, nameMaxLen)
+					validate.Str("name", args.Name.V, nameMinLen, nameMaxLen)
 					t.Name = args.Name.V
 					simpleUpdateRequired = true
 					nameUpdated = true
 				}
 				if args.Description != nil && args.Description.V != t.Description {
 					args.Description.V = StrTrimWS(args.Description.V)
-					validate.Str(tlbx, "description", args.Description.V, 0, descriptionMaxLen)
+					validate.Str("description", args.Description.V, 0, descriptionMaxLen)
 					t.Description = args.Description.V
 					simpleUpdateRequired = true
 				}

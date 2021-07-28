@@ -68,7 +68,7 @@ var (
 					// 	app.BadReqIf(true, "unknown type value %s", args.Type)
 				}
 				args.Note = StrTrimWS(args.Note)
-				validate.Str(tlbx, "note", args.Note, 0, noteMaxLen)
+				validate.Str("note", args.Note, 0, noteMaxLen)
 				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleWriter)
@@ -162,7 +162,7 @@ var (
 				}
 				if args.Note != nil {
 					args.Note.V = StrTrimWS(args.Note.V)
-					validate.Str(tlbx, "note", args.Note.V, 0, noteMaxLen)
+					validate.Str("note", args.Note.V, 0, noteMaxLen)
 				}
 				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
@@ -302,7 +302,7 @@ var (
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*vitem.Get)
 				args.Type.Validate()
-				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+				validate.MaxIDs("ids", args.IDs, 100)
 				app.BadReqIf(
 					args.CreatedOnMin != nil &&
 						args.CreatedOnMax != nil &&

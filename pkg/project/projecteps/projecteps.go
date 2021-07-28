@@ -58,7 +58,7 @@ var (
 				args := a.(*project.Create)
 				me := me.AuthedGet(tlbx)
 				args.Name = StrTrimWS(args.Name)
-				validate.Str(tlbx, "name", args.Name, nameMinLen, nameMaxLen)
+				validate.Str("name", args.Name, nameMinLen, nameMaxLen)
 				if args.CurrencyCode == "" {
 					args.CurrencyCode = "USD"
 				}
@@ -247,7 +247,7 @@ var (
 					// validate name
 					if a.Name != nil {
 						a.Name.V = StrTrimWS(a.Name.V)
-						validate.Str(tlbx, "name", a.Name.V, nameMinLen, nameMaxLen)
+						validate.Str("name", a.Name.V, nameMinLen, nameMaxLen)
 						p.Name = a.Name.V
 						namesSet[i] = true
 					}
@@ -783,7 +783,7 @@ func GetOne(tlbx app.Tlbx, host, id ID) *project.Project {
 }
 
 func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
-	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+	validate.MaxIDs("ids", args.IDs, 100)
 	app.BadReqIf(
 		args.CreatedOnMin != nil &&
 			args.CreatedOnMax != nil &&
@@ -939,7 +939,7 @@ func getLatestPublicProjects(tlbx app.Tlbx) *project.GetRes {
 }
 
 func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
-	validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+	validate.MaxIDs("ids", args.IDs, 100)
 	app.BadReqIf(args.HandlePrefix != nil && StrLen(*args.HandlePrefix) >= 15, "handlePrefix must be < 15 chars long")
 	tx := service.Get(tlbx).Data().BeginRead()
 	defer tx.Rollback()

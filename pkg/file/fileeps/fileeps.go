@@ -61,7 +61,7 @@ var (
 				app.BadReqIf(innerArgs.Host.IsZero() || innerArgs.Project.IsZero() || innerArgs.Task.IsZero(), "Content-Args header must be set")
 				app.ReturnIf(args.Size > maxFileSize, http.StatusBadRequest, "max file size is %d", maxFileSize)
 				args.Name = StrTrimWS(args.Name)
-				validate.Str(tlbx, "name", args.Name, nameMinLen, nameMaxLen)
+				validate.Str("name", args.Name, nameMinLen, nameMaxLen)
 				srv := service.Get(tlbx)
 				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
@@ -177,7 +177,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*file.Get)
-				validate.MaxIDs(tlbx, "ids", args.IDs, 100)
+				validate.MaxIDs("ids", args.IDs, 100)
 				app.BadReqIf(
 					args.CreatedOnMin != nil &&
 						args.CreatedOnMax != nil &&
