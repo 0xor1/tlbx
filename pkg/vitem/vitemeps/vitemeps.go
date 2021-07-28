@@ -68,7 +68,7 @@ var (
 					// 	app.BadReqIf(true, "unknown type value %s", args.Type)
 				}
 				args.Note = StrTrimWS(args.Note)
-				validate.Str("note", args.Note, tlbx, 0, noteMaxLen)
+				validate.Str(tlbx, "note", args.Note, 0, noteMaxLen)
 				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()
 				epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleWriter)
@@ -162,7 +162,7 @@ var (
 				}
 				if args.Note != nil {
 					args.Note.V = StrTrimWS(args.Note.V)
-					validate.Str("note", args.Note.V, tlbx, 0, noteMaxLen)
+					validate.Str(tlbx, "note", args.Note.V, 0, noteMaxLen)
 				}
 				tx := service.Get(tlbx).Data().BeginWrite()
 				defer tx.Rollback()

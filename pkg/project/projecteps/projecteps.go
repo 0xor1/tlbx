@@ -58,7 +58,7 @@ var (
 				args := a.(*project.Create)
 				me := me.AuthedGet(tlbx)
 				args.Name = StrTrimWS(args.Name)
-				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
+				validate.Str(tlbx, "name", args.Name, nameMinLen, nameMaxLen)
 				if args.CurrencyCode == "" {
 					args.CurrencyCode = "USD"
 				}
@@ -247,7 +247,7 @@ var (
 					// validate name
 					if a.Name != nil {
 						a.Name.V = StrTrimWS(a.Name.V)
-						validate.Str("name", a.Name.V, tlbx, nameMinLen, nameMaxLen)
+						validate.Str(tlbx, "name", a.Name.V, nameMinLen, nameMaxLen)
 						p.Name = a.Name.V
 						namesSet[i] = true
 					}

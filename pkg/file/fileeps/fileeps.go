@@ -61,7 +61,7 @@ var (
 				app.BadReqIf(innerArgs.Host.IsZero() || innerArgs.Project.IsZero() || innerArgs.Task.IsZero(), "Content-Args header must be set")
 				app.ReturnIf(args.Size > maxFileSize, http.StatusBadRequest, "max file size is %d", maxFileSize)
 				args.Name = StrTrimWS(args.Name)
-				validate.Str("name", args.Name, tlbx, nameMinLen, nameMaxLen)
+				validate.Str(tlbx, "name", args.Name, nameMinLen, nameMaxLen)
 				srv := service.Get(tlbx)
 				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
