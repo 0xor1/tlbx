@@ -3,7 +3,7 @@ package taskeps_test
 import (
 	"testing"
 
-	test "github.com/0xor1/trees/pkg/task/tasktest"
+	test "github.com/0xor1/tlbx/cmd/trees/pkg/task/tasktest"
 )
 
 func TestEverything(t *testing.T) {

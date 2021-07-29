@@ -6,6 +6,7 @@ import (
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/comment"
+	"github.com/0xor1/tlbx/cmd/trees/pkg/epsutil"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
@@ -15,7 +16,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
-	"github.com/0xor1/trees/pkg/epsutil"
 )
 
 var (
