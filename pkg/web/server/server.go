@@ -20,7 +20,7 @@ type Config struct {
 	UseHttps              bool
 	AppBindTo             string
 	CertBindTo            string
-	HostWhitelist         []string
+	HostPolicy            autocert.HostPolicy
 	CertReadTimeout       time.Duration
 	CertReadHeaderTimeout time.Duration
 	CertWriteTimeout      time.Duration
@@ -82,7 +82,7 @@ func config(configs ...func(c *Config)) *Config {
 		UseHttps:              false,
 		AppBindTo:             ":8080",
 		CertBindTo:            ":http",
-		HostWhitelist:         nil,
+		HostPolicy:            autocert.HostWhitelist(),
 		CertReadTimeout:       50 * time.Millisecond,
 		CertReadHeaderTimeout: 50 * time.Millisecond,
 		CertWriteTimeout:      50 * time.Millisecond,
@@ -102,7 +102,7 @@ func certManager(c *Config) *autocert.Manager {
 	return &autocert.Manager{
 		Cache:      c.CertCache,
 		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(c.HostWhitelist...),
+		HostPolicy: c.HostPolicy,
 	}
 }
 

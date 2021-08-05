@@ -31,6 +31,7 @@ type Config struct {
 		AppBindTo               string
 		StaticDir               string
 		ContentSecurityPolicies []string
+		StaticHostWhiteList     []string
 		RateLimit               int
 		Session                 struct {
 			Secure     bool
@@ -65,6 +66,7 @@ func GetBase(file ...string) *config.Config {
 	c.SetDefault("web.staticDir", "client/dist")
 	c.SetDefault("web.appBindTo", ":8080")
 	c.SetDefault("web.contentSecurityPolicies", []string{})
+	c.SetDefault("web.staticHostWhiteList", []string{})
 	c.SetDefault("web.rateLimit", 300)
 	// session cookie store
 	c.SetDefault("web.session.secure", true)
@@ -119,6 +121,7 @@ func GetProcessed(c *config.Config) *Config {
 	res.Web.AppBindTo = c.GetString("web.appBindTo")
 	res.Web.StaticDir = c.GetString("web.staticDir")
 	res.Web.ContentSecurityPolicies = c.GetStringSlice("web.contentSecurityPolicies")
+	res.Web.StaticHostWhiteList = c.GetStringSlice("web.staticHostWhiteList")
 	res.Web.RateLimit = c.GetInt("web.rateLimit")
 	res.Web.Session.Secure = c.GetBool("web.session.secure")
 	authKey64s := c.GetStringSlice("web.session.authKey64s")
