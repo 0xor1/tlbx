@@ -12,7 +12,7 @@ var (
 )
 
 type Error interface {
-	Error() string
+	error
 	String() string
 	Message() string
 	StackTrace() string

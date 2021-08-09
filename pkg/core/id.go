@@ -2,7 +2,6 @@ package core
 
 import (
 	"database/sql/driver"
-	"fmt"
 	"io"
 	"math/rand"
 	"sync"
@@ -122,7 +121,7 @@ func (id *ID) UnmarshalBinary(data []byte) error {
 	}
 	*id = ID(*ulid)
 	if id.IsZero() {
-		return zeroIDErr
+		return zeroIDErr()
 	}
 	return nil
 }
@@ -143,7 +142,7 @@ func (id *ID) UnmarshalText(data []byte) error {
 	}
 	*id = ID(*ulid)
 	if id.IsZero() {
-		return zeroIDErr
+		return zeroIDErr()
 	}
 	return nil
 }
@@ -156,14 +155,14 @@ func (id *ID) Scan(src interface{}) error {
 	}
 	*id = ID(*ulid)
 	if id.IsZero() {
-		return zeroIDErr
+		return zeroIDErr()
 	}
 	return nil
 }
 
 func (id ID) Value() (driver.Value, error) {
 	if id.IsZero() {
-		return nil, zeroIDErr
+		return nil, zeroIDErr()
 	}
 	return ulid.ULID(id).Value()
 }
@@ -227,14 +226,15 @@ func IDsMerge(idss ...IDs) IDs {
 
 }
 
-// use fmt.Errorf as no stack trace here.
-var zeroIDErr = fmt.Errorf("zero id detected")
+func zeroIDErr() Error {
+	return ToError("zero id detected")
+}
 
 func PanicIfZeroID(id ID) {
 	// I cant think of a good reason why a nil value would ever
 	// be the right thing to pass to an endpoint, it always means
 	// the users has forgotten to pass a value.
 	if id.IsZero() {
-		PanicOn(zeroIDErr)
+		PanicOn(zeroIDErr())
 	}
 }

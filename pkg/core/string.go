@@ -1,9 +1,13 @@
 package core
 
 import (
+	"database/sql/driver"
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/oklog/ulid/v2"
 )
 
 func StrEllipsis(s string, max uint) string {
@@ -83,4 +87,98 @@ func Printf(f string, args ...interface{}) {
 
 func Println(args ...interface{}) {
 	fmt.Println(args...)
+}
+
+var strKeyValidRegex = regexp.MustCompile(`^[a-z0-9_]{1,255}$`)
+var strKeyWhiteSpace = regexp.MustCompile(`\s+`)
+var strKeyInvalidChar = regexp.MustCompile(`[^a-z0-9_]+`)
+
+func StrKeyMustConvert(s string) StrKey {
+	if strKeyValidRegex.MatchString(string(s)) {
+		return StrKey(s)
+	}
+	// replace all ws chars with a single ws
+	s = strKeyWhiteSpace.ReplaceAllString(s, ` `)
+	// trim ws
+	s = StrTrimWS(s)
+	// replace all ws with _
+	s = strKeyWhiteSpace.ReplaceAllString(s, `_`)
+	// remove all invalid chars
+	s = strKeyInvalidChar.ReplaceAllString(s, ``)
+	PanicIf(len(s) == 0, "resulting str key empty")
+	if len(s) > 255 {
+		s = s[:256]
+	}
+	return StrKey(s)
+}
+
+// string keys are user defined ids
+type StrKey string
+
+func (s StrKey) MarshalBinary() ([]byte, error) {
+	if !strKeyValidRegex.MatchString(string(s)) {
+		return nil, invalidStrKeyErr(string(s))
+	}
+	return []byte(s), nil
+}
+
+func (s StrKey) MarshalBinaryTo(dst []byte) error {
+	if !strKeyValidRegex.MatchString(string(s)) {
+		return invalidStrKeyErr(string(s))
+	}
+	if len(s) > len(dst) {
+		return ulid.ErrBufferSize
+	}
+	copy(dst, s)
+	return nil
+}
+
+func (s *StrKey) UnmarshalBinary(data []byte) error {
+	if !strKeyValidRegex.Match(data) {
+		return invalidStrKeyErr(string(data))
+	}
+	*s = StrKey(data)
+	return nil
+}
+
+func (s StrKey) MarshalText() ([]byte, error) {
+	return s.MarshalBinary()
+}
+
+func (s StrKey) MarshalTextTo(dst []byte) error {
+	return s.MarshalBinaryTo(dst)
+}
+
+func (s *StrKey) UnmarshalText(data []byte) error {
+	return s.UnmarshalBinary(data)
+}
+
+func (s *StrKey) Scan(src interface{}) error {
+	switch x := src.(type) {
+	case string:
+		if !strKeyValidRegex.MatchString(x) {
+			return invalidStrKeyErr(string(x))
+		}
+		*s = StrKey(x)
+	case []byte:
+		if !strKeyValidRegex.Match(x) {
+			return invalidStrKeyErr(string(x))
+		}
+		*s = StrKey(x)
+	default:
+		return ulid.ErrScanValue
+	}
+	return nil
+}
+
+func (s StrKey) Value() (driver.Value, error) {
+	if !strKeyValidRegex.MatchString(string(s)) {
+		return nil, invalidStrKeyErr(string(s))
+	}
+	return s.MarshalBinary()
+}
+
+// use fmt.Errorf as no stack trace here.
+func invalidStrKeyErr(s string) Error {
+	return Err("invalid str key detected: %q", s).(Error)
 }

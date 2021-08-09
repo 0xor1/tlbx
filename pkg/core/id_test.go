@@ -87,15 +87,15 @@ func Test_zeroIDErrs(t *testing.T) {
 	bs, err := id.MarshalText()
 	a.Nil(err)
 	err = id.UnmarshalText(bs)
-	a.Equal(zeroIDErr, err)
+	a.Equal(zeroIDErr().Message(), err.(Error).Message())
 	bs, err = id.MarshalBinary()
 	a.Nil(err)
 	err = id.UnmarshalBinary(bs)
-	a.Equal(zeroIDErr, err)
+	a.Equal(zeroIDErr().Message(), err.(Error).Message())
 	err = id.Scan(bs)
-	a.Equal(zeroIDErr, err)
+	a.Equal(zeroIDErr().Message(), err.(Error).Message())
 	_, err = id.Value()
-	a.Equal(zeroIDErr, err)
+	a.Equal(zeroIDErr().Message(), err.(Error).Message())
 }
 
 func Test_IDsStrJoin(t *testing.T) {
@@ -131,6 +131,6 @@ func Test_PanicIfZeroID(t *testing.T) {
 	Do(func() {
 		PanicIfZeroID(ID{})
 	}, func(r interface{}) {
-		a.Equal(r.(Error).Value(), zeroIDErr)
+		a.Equal(r.(Error).Message(), zeroIDErr().Message())
 	})
 }

@@ -100,3 +100,42 @@ func TestPrintFuncs(t *testing.T) {
 	Printf("a")
 	Println("a")
 }
+
+func TestStrKey(t *testing.T) {
+	a := assert.New(t)
+	v := "0123456789_abcdefghijklmnopqrstuvwxyz"
+	k := StrKey("")
+
+	bs, err := k.MarshalText()
+	a.NotNil(err)
+	a.Nil(bs)
+
+	err = k.MarshalTextTo([]byte{})
+	a.NotNil(err)
+	k = StrKey(v)
+
+	bs, err = k.MarshalText()
+	a.Nil(err)
+	a.Equal(v, string(bs))
+	a.Nil(k.MarshalTextTo(bs))
+	a.Nil(err)
+	a.Equal(v, string(bs))
+
+	newK := StrKey("")
+	err = newK.UnmarshalText(bs)
+	a.Nil(err)
+	a.Equal(v, string(newK))
+
+	k = StrKeyMustConvert("   8  9  {}@#:asd   8 d  +){")
+	a.Equal("8_9_asd_8_d_", string(k))
+	k = StrKeyMustConvert(string(k))
+	a.Equal("8_9_asd_8_d_", string(k))
+
+	sqlV, err := k.Value()
+	a.Nil(err)
+	a.NotNil(sqlV)
+
+	a.Nil(k.Scan(sqlV))
+	a.Equal("8_9_asd_8_d_", string(k))
+
+}
