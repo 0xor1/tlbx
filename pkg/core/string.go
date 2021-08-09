@@ -103,6 +103,8 @@ func StrKeyMustConvert(s string) StrKey {
 	s = StrTrimWS(s)
 	// replace all ws with _
 	s = strKeyWhiteSpace.ReplaceAllString(s, `_`)
+	// lower all chars
+	s = StrLower(s)
 	// remove all invalid chars
 	s = strKeyInvalidChar.ReplaceAllString(s, ``)
 	PanicIf(len(s) == 0, "resulting str key empty")
