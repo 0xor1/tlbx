@@ -89,7 +89,7 @@ func Println(args ...interface{}) {
 	fmt.Println(args...)
 }
 
-var strKeyValidRegex = regexp.MustCompile(`^[a-z0-9_]{1,255}$`)
+var strKeyValidRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9_]{0,253}[a-z0-9]?$`)
 var strKeyWhiteSpace = regexp.MustCompile(`\s+`)
 var strKeyInvalidChar = regexp.MustCompile(`[^a-z0-9_]+`)
 
@@ -97,16 +97,14 @@ func StrKeyMustConvert(s string) StrKey {
 	if strKeyValidRegex.MatchString(string(s)) {
 		return StrKey(s)
 	}
-	// replace all ws chars with a single ws
-	s = strKeyWhiteSpace.ReplaceAllString(s, ` `)
-	// trim ws
-	s = StrTrimWS(s)
-	// replace all ws with _
+	// replace all ws chars with a single _
 	s = strKeyWhiteSpace.ReplaceAllString(s, `_`)
-	// lower all chars
-	s = StrLower(s)
 	// remove all invalid chars
 	s = strKeyInvalidChar.ReplaceAllString(s, ``)
+	// trim any leading or trailing underscores
+	s = StrTrim(s, `_`)
+	// lower all chars
+	s = StrLower(s)
 	PanicIf(len(s) == 0, "resulting str key empty")
 	if len(s) > 255 {
 		s = s[:256]

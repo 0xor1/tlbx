@@ -127,15 +127,15 @@ func TestStrKey(t *testing.T) {
 	a.Equal(v, string(newK))
 
 	k = StrKeyMustConvert("   8  9  {}@#:asd   8 d  +){")
-	a.Equal("8_9_asd_8_d_", string(k))
+	a.Equal("8_9_asd_8_d", string(k))
 	k = StrKeyMustConvert(string(k))
-	a.Equal("8_9_asd_8_d_", string(k))
+	a.Equal("8_9_asd_8_d", string(k))
 
 	sqlV, err := k.Value()
 	a.Nil(err)
 	a.NotNil(sqlV)
 
 	a.Nil(k.Scan(sqlV))
-	a.Equal("8_9_asd_8_d_", string(k))
+	a.Equal("8_9_asd_8_d", string(k))
 
 }
