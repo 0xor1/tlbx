@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 )
@@ -105,6 +106,10 @@ func MustParseID(id string) ID {
 	return i
 }
 
+func (id ID) Time() time.Time {
+	return ulid.Time(ulid.ULID(id).Time())
+}
+
 func (id ID) MarshalBinary() ([]byte, error) {
 	return ulid.ULID(id).MarshalBinary()
 }
@@ -116,6 +121,7 @@ func (id ID) MarshalBinaryTo(dst []byte) error {
 func (id *ID) UnmarshalBinary(data []byte) error {
 	ulid := &ulid.ULID{}
 	e := ulid.UnmarshalBinary(data)
+	ulid.Time()
 	if e != nil {
 		return e
 	}

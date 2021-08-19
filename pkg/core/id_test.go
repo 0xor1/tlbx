@@ -51,6 +51,7 @@ func Test_ID(t *testing.T) {
 
 	id2 = gen.MustNew()
 	a.False(id1.Equal(id2))
+	a.InDelta(NowMilli().Unix(), id2.Time().Unix(), 1)
 
 	str1, err := id2.MarshalText()
 	a.Nil(err)
