@@ -221,7 +221,6 @@ func IDsMerge(idss ...IDs) IDs {
 	for _, ids := range idss {
 		for _, id := range ids {
 			str := id.String()
-			Println(str)
 			if !mergeMap[str] {
 				mergeMap[str] = true
 				merge = append(merge, id)
