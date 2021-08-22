@@ -193,6 +193,10 @@ func (s StrKey) Value() (driver.Value, error) {
 	return s.MarshalBinary()
 }
 
+func (s *StrKey) String() string {
+	return string(*s)
+}
+
 func invalidStrKeyErr(s string) Error {
 	return Err("invalid str key detected: %q", s).(Error)
 }
