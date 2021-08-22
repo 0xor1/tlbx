@@ -90,17 +90,20 @@ func Println(args ...interface{}) {
 }
 
 var strKeyValidRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9_]{0,253}[a-z0-9]?$`)
-var strKeyWhiteSpace = regexp.MustCompile(`\s+`)
+var strKeyWhiteSpaceOrUnderscores = regexp.MustCompile(`[\s_]+`)
 var strKeyInvalidChar = regexp.MustCompile(`[^a-z0-9_]+`)
 
 func StrKeyMustConvert(s string) StrKey {
 	if strKeyValidRegex.MatchString(string(s)) {
 		return StrKey(s)
 	}
-	// replace all ws chars with a single _
-	s = strKeyWhiteSpace.ReplaceAllString(s, `_`)
+	// replace all ws or underscore chars with a single _
+	s = strKeyWhiteSpaceOrUnderscores.ReplaceAllString(s, `_`)
 	// remove all invalid chars
 	s = strKeyInvalidChar.ReplaceAllString(s, ``)
+	// replace all ws or underscore chars with a single _ again incase the
+	// removal of invalid chars created any double underscores
+	s = strKeyWhiteSpaceOrUnderscores.ReplaceAllString(s, `_`)
 	// trim any leading or trailing underscores
 	s = StrTrim(s, `_`)
 	// lower all chars
