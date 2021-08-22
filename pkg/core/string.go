@@ -181,7 +181,6 @@ func (s StrKey) Value() (driver.Value, error) {
 	return s.MarshalBinary()
 }
 
-// use fmt.Errorf as no stack trace here.
 func invalidStrKeyErr(s string) Error {
 	return Err("invalid str key detected: %q", s).(Error)
 }
