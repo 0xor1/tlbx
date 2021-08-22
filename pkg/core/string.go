@@ -60,6 +60,18 @@ func StrLen(s string) int {
 	return utf8.RuneCountInString(s)
 }
 
+func StrHasPrefix(s, prefix string) bool {
+	return strings.HasPrefix(s, prefix)
+}
+
+func StrHasSuffix(s, suffix string) bool {
+	return strings.HasSuffix(s, suffix)
+}
+
+func StrContains(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
+
 func Err(f string, args ...interface{}) error {
 	// return Error for stacktrace
 	return ToError(fmt.Errorf(f, args...))
