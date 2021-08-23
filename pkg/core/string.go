@@ -101,10 +101,8 @@ func Println(args ...interface{}) {
 	fmt.Println(args...)
 }
 
-const strKeyMinLen = 1
-const strKeyMaxLen = 255
-
-var strKeyValidRegex = regexp.MustCompile(`^[a-z0-9]+(_?[a-z0-9]+)*$`)
+var strKeyValidRegex = regexp.MustCompile(`^[a-z0-9][_a-z0-9]{0,253}[a-z0-9]?$`)
+var strKeyValidDoubleUnderscoreRegex = regexp.MustCompile(`__`)
 var strKeyWhiteSpaceOrUnderscores = regexp.MustCompile(`[\s_]+`)
 var strKeyInvalidChar = regexp.MustCompile(`[^a-z0-9_]+`)
 
@@ -121,28 +119,29 @@ func StrKeyMustConvert(s string) StrKey {
 	// trim any leading or trailing underscores
 	s = StrTrim(s, `_`)
 	PanicIf(len(s) == 0, "empty str key")
-	if len(s) > strKeyMaxLen {
+	if len(s) > 255 {
 		s = s[:256]
 	}
 	return StrKey(s)
+}
+
+func isValidStrKey(s string) bool {
+	return strKeyValidRegex.MatchString(s) &&
+		!strKeyValidDoubleUnderscoreRegex.MatchString(s)
 }
 
 // string keys are user defined ids
 type StrKey string
 
 func (s StrKey) MarshalBinary() ([]byte, error) {
-	if !strKeyValidRegex.MatchString(string(s)) ||
-		len(string(s)) < strKeyMinLen ||
-		len(string(s)) > strKeyMaxLen {
+	if !isValidStrKey(string(s)) {
 		return nil, invalidStrKeyErr(string(s))
 	}
 	return []byte(s), nil
 }
 
 func (s StrKey) MarshalBinaryTo(dst []byte) error {
-	if !strKeyValidRegex.MatchString(string(s)) ||
-		len(string(s)) < strKeyMinLen ||
-		len(string(s)) > strKeyMaxLen {
+	if !isValidStrKey(string(s)) {
 		return invalidStrKeyErr(string(s))
 	}
 	if len(s) > len(dst) {
@@ -153,9 +152,7 @@ func (s StrKey) MarshalBinaryTo(dst []byte) error {
 }
 
 func (s *StrKey) UnmarshalBinary(data []byte) error {
-	if !strKeyValidRegex.Match(data) ||
-		len(data) < strKeyMinLen ||
-		len(data) > strKeyMaxLen {
+	if !isValidStrKey(string(data)) {
 		return invalidStrKeyErr(string(data))
 	}
 	*s = StrKey(data)
@@ -177,16 +174,12 @@ func (s *StrKey) UnmarshalText(data []byte) error {
 func (s *StrKey) Scan(src interface{}) error {
 	switch x := src.(type) {
 	case string:
-		if !strKeyValidRegex.MatchString(x) ||
-			len(x) < strKeyMinLen ||
-			len(x) > strKeyMaxLen {
+		if !isValidStrKey(x) {
 			return invalidStrKeyErr(string(x))
 		}
 		*s = StrKey(x)
 	case []byte:
-		if !strKeyValidRegex.Match(x) ||
-			len(x) < strKeyMinLen ||
-			len(x) > strKeyMaxLen {
+		if !isValidStrKey(string(x)) {
 			return invalidStrKeyErr(string(x))
 		}
 		*s = StrKey(x)
@@ -198,9 +191,7 @@ func (s *StrKey) Scan(src interface{}) error {
 
 func (s StrKey) Value() (driver.Value, error) {
 	str := string(s)
-	if !strKeyValidRegex.MatchString(str) ||
-		len(str) < strKeyMinLen ||
-		len(str) > strKeyMaxLen {
+	if !isValidStrKey(str) {
 		return nil, invalidStrKeyErr(str)
 	}
 	return s.MarshalBinary()
