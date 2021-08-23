@@ -109,6 +109,8 @@ func StrKeyMustConvert(s string) StrKey {
 	if strKeyValidRegex.MatchString(string(s)) {
 		return StrKey(s)
 	}
+	// lower all chars
+	s = StrLower(s)
 	// replace all ws or underscore chars with a single _
 	s = strKeyWhiteSpaceOrUnderscores.ReplaceAllString(s, `_`)
 	// remove all invalid chars
@@ -118,8 +120,6 @@ func StrKeyMustConvert(s string) StrKey {
 	s = strKeyWhiteSpaceOrUnderscores.ReplaceAllString(s, `_`)
 	// trim any leading or trailing underscores
 	s = StrTrim(s, `_`)
-	// lower all chars
-	s = StrLower(s)
 	PanicIf(len(s) == 0, "resulting str key empty")
 	if len(s) > 255 {
 		s = s[:256]
