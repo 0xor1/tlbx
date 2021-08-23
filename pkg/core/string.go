@@ -134,16 +134,10 @@ func isValidStrKey(s string) bool {
 type StrKey string
 
 func (s StrKey) MarshalBinary() ([]byte, error) {
-	if !isValidStrKey(string(s)) {
-		return nil, invalidStrKeyErr(string(s))
-	}
 	return []byte(s), nil
 }
 
 func (s StrKey) MarshalBinaryTo(dst []byte) error {
-	if !isValidStrKey(string(s)) {
-		return invalidStrKeyErr(string(s))
-	}
 	if len(s) > len(dst) {
 		return ulid.ErrBufferSize
 	}

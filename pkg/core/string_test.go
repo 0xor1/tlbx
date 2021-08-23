@@ -104,17 +104,9 @@ func TestPrintFuncs(t *testing.T) {
 func TestStrKey(t *testing.T) {
 	a := assert.New(t)
 	v := "0123456789_abcdefghijklmnopqrstuvwxyz"
-	k := StrKey("")
+	k := StrKey(v)
 
 	bs, err := k.MarshalText()
-	a.NotNil(err)
-	a.Nil(bs)
-
-	err = k.MarshalTextTo([]byte{})
-	a.NotNil(err)
-	k = StrKey(v)
-
-	bs, err = k.MarshalText()
 	a.Nil(err)
 	a.Equal(v, string(bs))
 	a.Nil(k.MarshalTextTo(bs))
