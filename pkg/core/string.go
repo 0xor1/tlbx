@@ -130,6 +130,16 @@ func isValidStrKey(s string) bool {
 		!strKeyValidDoubleUnderscoreRegex.MatchString(s)
 }
 
+type StrKeys []StrKey
+
+func (s StrKeys) ToIs() []interface{} {
+	res := make([]interface{}, len(s))
+	for i, k := range s {
+		res[i] = k
+	}
+	return res
+}
+
 // string keys are user defined ids
 type StrKey string
 
