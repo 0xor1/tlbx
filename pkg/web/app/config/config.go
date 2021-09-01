@@ -11,9 +11,9 @@ import (
 	"github.com/0xor1/tlbx/pkg/email"
 	"github.com/0xor1/tlbx/pkg/fcm"
 	"github.com/0xor1/tlbx/pkg/iredis"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/log"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/store"
 	sp "github.com/SparkPost/gosparkpost"
 	"github.com/aws/aws-sdk-go/aws"
@@ -50,9 +50,9 @@ type Config struct {
 		Cache     iredis.Pool
 	}
 	SQL struct {
-		User isql.ReplicaSet
-		Pwd  isql.ReplicaSet
-		Data isql.ReplicaSet
+		User sqlh.ReplicaSet
+		Pwd  sqlh.ReplicaSet
+		Data sqlh.ReplicaSet
 	}
 	Email email.Client
 	Store store.Client
@@ -150,19 +150,19 @@ func GetProcessed(c *config.Config) *Config {
 	sqlMaxOpenConns := c.GetInt("sql.maxOpenConns")
 
 	var err error
-	res.SQL.User, err = isql.NewReplicaSet(c.GetString("sql.user.primary"), c.GetStringSlice("sql.user.slaves")...)
+	res.SQL.User, err = sqlh.NewReplicaSet(c.GetString("sql.user.primary"), c.GetStringSlice("sql.user.slaves")...)
 	PanicOn(err)
 	res.SQL.User.SetConnMaxLifetime(sqlMaxLifetime)
 	res.SQL.User.SetMaxIdleConns(sqlMaxIdleConns)
 	res.SQL.User.SetMaxOpenConns(sqlMaxOpenConns)
 
-	res.SQL.Pwd, err = isql.NewReplicaSet(c.GetString("sql.pwd.primary"), c.GetStringSlice("sql.pwd.slaves")...)
+	res.SQL.Pwd, err = sqlh.NewReplicaSet(c.GetString("sql.pwd.primary"), c.GetStringSlice("sql.pwd.slaves")...)
 	PanicOn(err)
 	res.SQL.Pwd.SetConnMaxLifetime(sqlMaxLifetime)
 	res.SQL.Pwd.SetMaxIdleConns(sqlMaxIdleConns)
 	res.SQL.Pwd.SetMaxOpenConns(sqlMaxOpenConns)
 
-	res.SQL.Data, err = isql.NewReplicaSet(c.GetString("sql.data.primary"), c.GetStringSlice("sql.data.slaves")...)
+	res.SQL.Data, err = sqlh.NewReplicaSet(c.GetString("sql.data.primary"), c.GetStringSlice("sql.data.slaves")...)
 	PanicOn(err)
 	res.SQL.Data.SetConnMaxLifetime(sqlMaxLifetime)
 	res.SQL.Data.SetMaxIdleConns(sqlMaxIdleConns)

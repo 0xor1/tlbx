@@ -1,5 +1,8 @@
 package fcm
 
+//go:generate go get -u github.com/valyala/quicktemplate/qtc
+//go:generate qtc -file=fcm.sql
+
 import (
 	"context"
 	"time"
@@ -7,7 +10,6 @@ import (
 	"firebase.google.com/go/messaging"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/fcm"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 )
@@ -74,13 +76,7 @@ func (c *client) do(do func(), action string) {
 func (c *client) AsyncSend(topic IDs, data map[string]string, timeout time.Duration) {
 	app.BadReqIf(len(topic) == 0 || len(topic) > 5, "topic must be 1-5 ids long")
 	tokens := make([]string, 0, 20)
-	sql.Get(c.tlbx, c.userSqlName).Query(func(rows isql.Rows) {
-		for rows.Next() {
-			token := ""
-			PanicOn(rows.Scan(&token))
-			tokens = append(tokens, token)
-		}
-	}, `SELECT DISTINCT f.token FROM fcmTokens f JOIN users u ON f.user=u.id WHERE topic=? AND u.fcmEnabled=1`, topic.StrJoin("_"))
+	sql.Get(c.tlbx, c.userSqlName).GetN(&tokens, qryGetTokens(), topic.StrJoin("_"))
 	c.RawAsyncSend("data", tokens, data, timeout)
 }
 

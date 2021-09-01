@@ -10,9 +10,9 @@ import (
 	"github.com/0xor1/tlbx/pkg/email"
 	"github.com/0xor1/tlbx/pkg/fcm"
 	"github.com/0xor1/tlbx/pkg/iredis"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/log"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/config"
@@ -47,9 +47,9 @@ type Rig interface {
 	Dan() User
 	// services
 	Cache() iredis.Pool
-	User() isql.ReplicaSet
-	Pwd() isql.ReplicaSet
-	Data() isql.ReplicaSet
+	User() sqlh.ReplicaSet
+	Pwd() sqlh.ReplicaSet
+	Data() sqlh.ReplicaSet
 	Email() email.Client
 	Store() store.Client
 	// cleanup
@@ -97,9 +97,9 @@ type rig struct {
 	log             log.Log
 	rateLimit       iredis.Pool
 	cache           iredis.Pool
-	user            isql.ReplicaSet
-	pwd             isql.ReplicaSet
-	data            isql.ReplicaSet
+	user            sqlh.ReplicaSet
+	pwd             sqlh.ReplicaSet
+	data            sqlh.ReplicaSet
 	email           email.Client
 	store           store.Client
 	fcm             fcm.Client
@@ -146,15 +146,15 @@ func (r *rig) Cache() iredis.Pool {
 	return r.cache
 }
 
-func (r *rig) User() isql.ReplicaSet {
+func (r *rig) User() sqlh.ReplicaSet {
 	return r.user
 }
 
-func (r *rig) Pwd() isql.ReplicaSet {
+func (r *rig) Pwd() sqlh.ReplicaSet {
 	return r.pwd
 }
 
-func (r *rig) Data() isql.ReplicaSet {
+func (r *rig) Data() sqlh.ReplicaSet {
 	return r.data
 }
 

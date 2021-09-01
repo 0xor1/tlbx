@@ -6,14 +6,14 @@ import (
 	"time"
 
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/json"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/gomodule/redigo/redis"
+	"github.com/jmoiron/sqlx"
 )
 
 const (
@@ -35,7 +35,7 @@ type Base struct {
 	UpdatedOn time.Time `json:"updatedOn"`
 	State     uint8     `json:"state"` // 0 not started, 1 started, 2 finished, 3 abandoned
 	MyID      *ID       `json:"myId,omitempty"`
-	Players   []ID      `json:"players"`
+	Players   IDs       `json:"players"`
 	Turn      uint32    `json:"turn"`
 }
 
@@ -196,7 +196,7 @@ func read(tlbx app.Tlbx, tx sql.Tx, forUpdate bool, gameType string, game ID, up
 	gotType := ""
 	if len(serialized) == 0 {
 		query := `SELECT type, serialized FROM games WHERE id=?`
-		var row isql.Row
+		var row *sqlx.Row
 		if forUpdate {
 			query += ` FOR UPDATE`
 			row = tx.QueryRow(query, game)
@@ -246,7 +246,7 @@ func getUsersActiveGame(tlbx app.Tlbx, tx sql.Tx, forUpdate bool, gameType strin
 	buf := make([]byte, 0, 5*app.KB)
 	me := me.Get(tlbx).ID()
 	query := `SELECT g.type, g.serialized FROM games g INNER JOIN players p ON p.game=g.id WHERE p.id=? AND g.isActive=1`
-	var row isql.Row
+	var row *sqlx.Row
 	if forUpdate {
 		query += ` FOR UPDATE`
 		row = tx.QueryRow(query, me)
@@ -254,10 +254,7 @@ func getUsersActiveGame(tlbx app.Tlbx, tx sql.Tx, forUpdate bool, gameType strin
 		row = service.Get(tlbx).Data().QueryRow(query, me)
 	}
 	gotType := ""
-	err := row.Scan(&gotType, &buf)
-	if err != nil && err != isql.ErrNoRows {
-		PanicOn(err)
-	}
+	sqlh.PanicIfIsntNoRows(row.Scan(&gotType, &buf))
 	// if we dont care what type we want
 	// and it's not for update, ignore
 	// the type check. This is only for

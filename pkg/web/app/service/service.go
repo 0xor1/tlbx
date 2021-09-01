@@ -4,7 +4,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/email"
 	"github.com/0xor1/tlbx/pkg/fcm"
 	"github.com/0xor1/tlbx/pkg/iredis"
-	"github.com/0xor1/tlbx/pkg/isql"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	emailmw "github.com/0xor1/tlbx/pkg/web/app/service/email"
@@ -34,7 +34,7 @@ type Layer interface {
 	FCM() fcmmw.Client
 }
 
-func Mware(pool iredis.Pool, user, pwd, data isql.ReplicaSet, email email.Client, store store.Client, fcm fcm.Client) func(app.Tlbx) {
+func Mware(pool iredis.Pool, user, pwd, data sqlh.ReplicaSet, email email.Client, store store.Client, fcm fcm.Client) func(app.Tlbx) {
 	mwares := []func(app.Tlbx){
 		redis.Mware(cache, pool),
 		sql.Mware(sqlUser, user),

@@ -12,16 +12,16 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
-	sqlh "github.com/0xor1/tlbx/pkg/web/app/service/sql"
+	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	"github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
+	"github.com/jmoiron/sqlx"
 )
 
 var (
@@ -327,8 +327,8 @@ var (
 				app.BadReqIf(len(args) > 100, "can not delete more than 100 projects at a time")
 				me := me.AuthedGet(tlbx)
 				queryArgs := append([]interface{}{me}, IDs(args).ToIs()...)
-				inID := sql.InCondition(true, "id", len(args))
-				inProject := sql.InCondition(true, "project", len(args))
+				inID := sqlh.InCondition(true, "id", len(args))
+				inProject := sqlh.InCondition(true, "project", len(args))
 				srv := service.Get(tlbx)
 				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
@@ -401,14 +401,14 @@ var (
 				userTx := srv.User().BeginWrite()
 				defer userTx.Rollback()
 				users := make([]*project.User, 0, lenUsers)
-				PanicOn(userTx.Query(func(rows isql.Rows) {
+				PanicOn(userTx.Query(func(rows *sqlx.Rows) {
 					for rows.Next() {
 						u := &project.User{}
 						PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
 						u.IsActive = true
 						users = append(users, u)
 					}
-				}, Strf(`SELECT id, handle, alias, hasAvatar FROM users WHERE 1=1 %s %s FOR UPDATE`, sql.InCondition(true, `id`, lenUsers), sql.OrderByField(`id`, lenUsers)), ids...))
+				}, Strf(`SELECT id, handle, alias, hasAvatar FROM users WHERE 1=1 %s %s FOR UPDATE`, sqlh.InCondition(true, `id`, lenUsers), sqlh.OrderByField(`id`, lenUsers)), ids...))
 
 				app.BadReqIf(len(users) != lenUsers, "users specified: %d, users found: %d", lenUsers, len(users))
 
@@ -583,9 +583,9 @@ var (
 					app.BadReqIf(u.Equal(args.Host), "can not remove host from project")
 					queryArgs = append(queryArgs, u)
 				}
-				_, err := tx.Exec(Strf(`UPDATE users SET isActive=0 WHERE host=? AND project=? %s`, sql.InCondition(true, `id`, len(args.Users))), queryArgs...)
+				_, err := tx.Exec(Strf(`UPDATE users SET isActive=0 WHERE host=? AND project=? %s`, sqlh.InCondition(true, `id`, len(args.Users))), queryArgs...)
 				PanicOn(err)
-				_, err = srv.User().Exec(Strf(`DELETE FROM fcmTokens WHERE 1=1 %s`, sql.InCondition(true, `user`, len(args.Users))), args.Users.ToIs()...)
+				_, err = srv.User().Exec(Strf(`DELETE FROM fcmTokens WHERE 1=1 %s`, sqlh.InCondition(true, `user`, len(args.Users))), args.Users.ToIs()...)
 				PanicOn(err)
 				for _, u := range args.Users {
 					epsutil.LogActivity(tlbx, tx, args.Host, args.Project, args.Project, u, cnsts.TypeUser, cnsts.ActionDeleted, nil, nil, nil, nil)
@@ -639,7 +639,7 @@ var (
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*project.GetActivities)
-				args.Limit = sql.Limit100(args.Limit)
+				args.Limit = sqlh.Limit100(args.Limit)
 				app.BadReqIf(args.OccuredAfter != nil && args.OccuredBefore != nil, "only one of occurredBefore or occurredAfter may be used")
 				tx := service.Get(tlbx).Data().BeginRead()
 				defer tx.Rollback()
@@ -668,11 +668,11 @@ var (
 					query.WriteString(` AND occurredOn<?`)
 					queryArgs = append(queryArgs, *args.OccuredBefore)
 				}
-				query.WriteString(sql.OrderLimit100(`occurredOn`, asc, args.Limit))
+				query.WriteString(sqlh.OrderLimit100(`occurredOn`, asc, args.Limit))
 				res := &project.GetActivitiesRes{
 					Set: make([]*project.Activity, 0, args.Limit),
 				}
-				PanicOn(tx.Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows *sqlx.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(res.Set)+1 == iLimit {
@@ -767,7 +767,7 @@ func OnSetSocials(tlbx app.Tlbx, user *user.User) {
 	tx.Commit()
 }
 
-func ValidateFCMTopic(tlbx app.Tlbx, topic IDs) (sqlh.Tx, error) {
+func ValidateFCMTopic(tlbx app.Tlbx, topic IDs) (sql.Tx, error) {
 	app.BadReqIf(len(topic) != 2, "fcm topic must be 2 ids, host then project")
 	tx := service.Get(tlbx).Data().BeginRead()
 	epsutil.IMustHaveAccess(tlbx, tx, topic[0], topic[1], cnsts.RoleReader)
@@ -809,7 +809,7 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			args.EndOnMax != nil &&
 			args.StartOnMax.After(*args.EndOnMax),
 		"startOnMax must be before endOnMax")
-	args.Limit = sql.Limit100(args.Limit)
+	args.Limit = sqlh.Limit100(args.Limit)
 	srv := service.Get(tlbx)
 	res := &project.GetRes{
 		Set: make([]*project.Project, 0, args.Limit),
@@ -849,8 +849,8 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 		query.WriteString(` AND p.isPublic=1`)
 	}
 	if idsLen > 0 {
-		query.WriteString(sql.InCondition(true, `p.id`, idsLen))
-		query.WriteString(sql.OrderByField(`p.id`, idsLen))
+		query.WriteString(sqlh.InCondition(true, `p.id`, idsLen))
+		query.WriteString(sqlh.OrderByField(`p.id`, idsLen))
 		Is := args.IDs.ToIs()
 		queryArgs = append(queryArgs, Is...)
 		queryArgs = append(queryArgs, Is...)
@@ -892,10 +892,10 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 			queryArgs = append(queryArgs, *args.EndOnMax)
 		}
 		if args.After != nil {
-			query.WriteString(Strf(` AND p.%s %s= (SELECT p.%s FROM projects p WHERE p.host=? AND p.id=?) AND p.id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
+			query.WriteString(Strf(` AND p.%s %s= (SELECT p.%s FROM projects p WHERE p.host=? AND p.id=?) AND p.id <> ?`, args.Sort, sqlh.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, args.Host, *args.After, *args.After)
 			if args.Sort != cnsts.SortCreatedOn {
-				query.WriteString(Strf(` AND p.createdOn %s (SELECT p.createdOn FROM projects p WHERE p.host=? AND p.id=?)`, sql.GtLtSymbol(*args.Asc)))
+				query.WriteString(Strf(` AND p.createdOn %s (SELECT p.createdOn FROM projects p WHERE p.host=? AND p.id=?)`, sqlh.GtLtSymbol(*args.Asc)))
 				queryArgs = append(queryArgs, args.Host, *args.After)
 			}
 		}
@@ -903,9 +903,9 @@ func getSet(tlbx app.Tlbx, args *project.Get) *project.GetRes {
 		if args.Sort != cnsts.SortCreatedOn {
 			createdOnSecondarySort = ", p.createdOn, p.id"
 		}
-		query.WriteString(sql.OrderLimit100("p."+string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
+		query.WriteString(sqlh.OrderLimit100("p."+string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
 	}
-	PanicOn(srv.Data().Query(func(rows isql.Rows) {
+	PanicOn(srv.Data().Query(func(rows *sqlx.Rows) {
 		iLimit := int(args.Limit)
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
@@ -928,7 +928,7 @@ func getLatestPublicProjects(tlbx app.Tlbx) *project.GetRes {
 	}
 	query := bytes.NewBufferString(projects_select_columns)
 	query.WriteString(` p.isPublic=1 ORDER BY p.createdOn DESC`)
-	PanicOn(srv.Data().Query(func(rows isql.Rows) {
+	PanicOn(srv.Data().Query(func(rows *sqlx.Rows) {
 		for rows.Next() {
 			p := &project.Project{}
 			PanicOn(rows.Scan(&p.Host, &p.ID, &p.IsArchived, &p.Name, &p.CreatedOn, &p.CurrencyCode, &p.HoursPerDay, &p.DaysPerWeek, &p.StartOn, &p.EndOn, &p.IsPublic, &p.FileLimit, &p.Parent, &p.FirstChild, &p.NextSib, &p.User, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedOn, &p.TimeEst, &p.TimeInc, &p.TimeSubMin, &p.TimeSubEst, &p.TimeSubInc, &p.CostEst, &p.CostInc, &p.CostSubEst, &p.CostSubInc, &p.FileN, &p.FileSize, &p.FileSubN, &p.FileSubSize, &p.ChildN, &p.DescN, &p.IsParallel))
@@ -944,7 +944,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	tx := service.Get(tlbx).Data().BeginRead()
 	defer tx.Rollback()
 	epsutil.IMustHaveAccess(tlbx, tx, args.Host, args.Project, cnsts.RoleReader)
-	limit := sql.Limit100(args.Limit)
+	limit := sqlh.Limit100(args.Limit)
 	res := &project.GetUsersRes{
 		Set: make([]*project.User, 0, limit),
 	}
@@ -959,7 +959,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	idsLen := len(args.IDs)
 	Is := args.IDs.ToIs()
 	if idsLen > 0 {
-		query.WriteString(sql.InCondition(true, `u.id`, idsLen))
+		query.WriteString(sqlh.InCondition(true, `u.id`, idsLen))
 		queryArgs = append(queryArgs, Is...)
 	} else {
 		query.WriteString(` AND u.isActive=1`)
@@ -981,7 +981,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	query.WriteString(`) SELECT u.id, u.handle, u.alias, u.hasAvatar, u.isActive, u.role, t.timeEst, vi.timeInc, t.costEst, vi.costInc, f.fileN, f.fileSize, t.taskN FROM users u JOIN (SELECT s.id AS id, COALESCE(SUM(t.timeEst), 0) AS timeEst, COALESCE(SUM(t.costEst), 0) AS costEst, COALESCE(COUNT(t.id), 0) AS taskN FROM selector s LEFT JOIN tasks t ON (t.host=s.host AND t.project=s.project AND t.user=s.id) GROUP BY s.id) t ON t.id = u.id JOIN (SELECT  s.id AS id, COALESCE(SUM(CASE vi.type WHEN 'time' THEN vi.inc ELSE 0 END), 0) AS timeInc, COALESCE(SUM(CASE vi.type WHEN 'cost' THEN vi.inc ELSE 0 END), 0) AS costInc FROM selector s LEFT JOIN vitems vi ON (vi.host=s.host AND vi.project=s.project AND vi.createdBy=s.id) GROUP BY s.id) vi ON vi.id = u.id JOIN (SELECT s.id AS id, COALESCE(COUNT(f.id), 0) AS fileN, COALESCE(SUM(f.size), 0) AS fileSize FROM selector s LEFT JOIN files f ON (f.host=s.host AND f.project=s.project AND f.createdBy=s.id) GROUP BY s.id) f ON f.id = u.id JOIN selector s ON u.host=s.host AND u.project=s.project AND u.id = s.id`)
 
 	if idsLen > 0 {
-		query.WriteString(sql.OrderByField(`u.id`, idsLen))
+		query.WriteString(sqlh.OrderByField(`u.id`, idsLen))
 		queryArgs = append(queryArgs, Is...)
 	} else {
 		query.WriteString(` ORDER BY (u.id=?) DESC, role ASC, handle ASC`)
@@ -989,7 +989,7 @@ func getUsers(tlbx app.Tlbx, args *project.GetUsers) *project.GetUsersRes {
 	}
 	Println(query.String())
 	Println(queryArgs...)
-	PanicOn(tx.Query(func(rows isql.Rows) {
+	PanicOn(tx.Query(func(rows *sqlx.Rows) {
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == int(limit) {
 				res.More = true

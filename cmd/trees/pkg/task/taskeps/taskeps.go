@@ -10,14 +10,14 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/task"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
+	"github.com/jmoiron/sqlx"
 )
 
 var (
@@ -478,7 +478,7 @@ var (
 				}
 				tasksWithFiles := make(IDs, 0, t.DescN+1)
 				tasksToDelete := make(IDs, 0, t.DescN+1)
-				tx.Query(func(rows isql.Rows) {
+				tx.Query(func(rows *sqlx.Rows) {
 					for rows.Next() {
 						i := ID{}
 						hasFiles := false
@@ -590,7 +590,7 @@ var (
 					Set:  make([]*task.Task, 0, args.Limit),
 					More: false,
 				}
-				PanicOn(tx.Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows *sqlx.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(res.Set)+1 == iLimit {
@@ -653,7 +653,7 @@ var (
 					queryArgs = append(queryArgs, *args.After)
 				}
 				queryArgs = append(queryArgs, args.Host, args.Project, args.Host, args.Project, args.Limit)
-				PanicOn(tx.Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows *sqlx.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(res.Set)+1 == iLimit {
@@ -704,7 +704,7 @@ var (
 				if t.DescN > 0 {
 					queryArgs := make([]interface{}, 0, 10)
 					queryArgs = append(queryArgs, args.Host, args.Project, args.ID, args.Host, args.Project, args.Host, args.Project)
-					PanicOn(tx.Query(func(rows isql.Rows) {
+					PanicOn(tx.Query(func(rows *sqlx.Rows) {
 						for rows.Next() {
 							t, err := Scan(rows)
 							PanicOn(err)
@@ -764,7 +764,7 @@ func getPrevSib(tx sql.Tx, host, project, nextSib ID) *task.Task {
 	return t
 }
 
-func Scan(r isql.Row) (*task.Task, error) {
+func Scan(r sqlh.Row) (*task.Task, error) {
 	t := &task.Task{}
 	err := r.Scan(
 		&t.ID,

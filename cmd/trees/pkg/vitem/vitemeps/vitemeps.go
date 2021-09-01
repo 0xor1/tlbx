@@ -12,14 +12,14 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/vitem"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
+	"github.com/jmoiron/sqlx"
 )
 
 type extraInfo struct {
@@ -348,7 +348,7 @@ var (
 					}
 					qry.WriteString(sqlh.OrderLimit100(`createdOn`, *args.Asc, args.Limit))
 				}
-				PanicOn(tx.Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows *sqlx.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
@@ -450,7 +450,7 @@ func getOne(tx sql.Tx, host, project, task, id ID, typ vitem.Type) *vitem.Vitem 
 	return t
 }
 
-func Scan(r isql.Row) (*vitem.Vitem, error) {
+func Scan(r sqlh.Row) (*vitem.Vitem, error) {
 	t := &vitem.Vitem{}
 	err := r.Scan(
 		&t.Task,

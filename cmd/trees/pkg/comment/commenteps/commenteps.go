@@ -8,14 +8,14 @@ import (
 	"github.com/0xor1/tlbx/cmd/trees/pkg/comment"
 	"github.com/0xor1/tlbx/cmd/trees/pkg/epsutil"
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
+	"github.com/jmoiron/sqlx"
 )
 
 var (
@@ -192,7 +192,7 @@ var (
 					qryArgs = append(qryArgs, args.Host, args.Project, *args.After, *args.After)
 				}
 				qry.WriteString(sqlh.OrderLimit100(`createdOn`, false, args.Limit))
-				PanicOn(tx.Query(func(rows isql.Rows) {
+				PanicOn(tx.Query(func(rows *sqlx.Rows) {
 					iLimit := int(args.Limit)
 					for rows.Next() {
 						if len(res.Set)+1 == iLimit {
@@ -228,7 +228,7 @@ func getOne(tx sql.Tx, host, project, task, id ID) *comment.Comment {
 	return t
 }
 
-func Scan(r isql.Row) (*comment.Comment, error) {
+func Scan(r sqlh.Row) (*comment.Comment, error) {
 	t := &comment.Comment{}
 	err := r.Scan(
 		&t.Task,

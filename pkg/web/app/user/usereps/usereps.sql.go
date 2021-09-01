@@ -5,141 +5,113 @@
 package usereps
 
 //line usereps.sql:1
-import . "github.com/0xor1/tlbx/pkg/core"
-
-//line usereps.sql:2
-import "github.com/0xor1/tlbx/pkg/json"
-
-//line usereps.sql:3
-import sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
-
-//line usereps.sql:5
 import (
 	qtio422016 "io"
 
 	qt422016 "github.com/valyala/quicktemplate"
 )
 
-//line usereps.sql:5
+//line usereps.sql:1
 var (
 	_ = qtio422016.Copy
 	_ = qt422016.AcquireByteBuffer
 )
 
-//line usereps.sql:5
-func streamqryJinInsert(qw422016 *qt422016.Writer, args *sqlh.Args, me ID, val interface{}) {
-//line usereps.sql:6
+//line usereps.sql:1
+func streamqryJinInsert(qw422016 *qt422016.Writer) {
+//line usereps.sql:2
 	qw422016.N().S(`INSERT INTO jin( user, val ) VALUES ( ?, ? ) ON DUPLICATE KEY UPDATE val=VALUES(val) `)
-//line usereps.sql:18
-	*args = *sqlh.NewArgs(2)
-	args.Append(
-		me,
-		json.MustMarshal(val),
-	)
-
-//line usereps.sql:24
+//line usereps.sql:14
 }
 
-//line usereps.sql:24
-func writeqryJinInsert(qq422016 qtio422016.Writer, args *sqlh.Args, me ID, val interface{}) {
-//line usereps.sql:24
+//line usereps.sql:14
+func writeqryJinInsert(qq422016 qtio422016.Writer) {
+//line usereps.sql:14
 	qw422016 := qt422016.AcquireWriter(qq422016)
-//line usereps.sql:24
-	streamqryJinInsert(qw422016, args, me, val)
-//line usereps.sql:24
+//line usereps.sql:14
+	streamqryJinInsert(qw422016)
+//line usereps.sql:14
 	qt422016.ReleaseWriter(qw422016)
-//line usereps.sql:24
+//line usereps.sql:14
 }
 
-//line usereps.sql:24
-func qryJinInsert(args *sqlh.Args, me ID, val interface{}) string {
-//line usereps.sql:24
+//line usereps.sql:14
+func qryJinInsert() string {
+//line usereps.sql:14
 	qb422016 := qt422016.AcquireByteBuffer()
-//line usereps.sql:24
-	writeqryJinInsert(qb422016, args, me, val)
-//line usereps.sql:24
+//line usereps.sql:14
+	writeqryJinInsert(qb422016)
+//line usereps.sql:14
 	qs422016 := string(qb422016.B)
-//line usereps.sql:24
+//line usereps.sql:14
 	qt422016.ReleaseByteBuffer(qb422016)
-//line usereps.sql:24
+//line usereps.sql:14
 	return qs422016
-//line usereps.sql:24
+//line usereps.sql:14
 }
 
-//line usereps.sql:26
-func streamqryJinSelect(qw422016 *qt422016.Writer, args *sqlh.Args, me ID) {
-//line usereps.sql:27
+//line usereps.sql:16
+func streamqryJinSelect(qw422016 *qt422016.Writer) {
+//line usereps.sql:17
 	qw422016.N().S(`SELECT val FROM jin WHERE user=? `)
-//line usereps.sql:32
-	*args = *sqlh.NewArgs(1)
-	args.AppendOne(
-		me,
-	)
-
-//line usereps.sql:37
+//line usereps.sql:22
 }
 
-//line usereps.sql:37
-func writeqryJinSelect(qq422016 qtio422016.Writer, args *sqlh.Args, me ID) {
-//line usereps.sql:37
+//line usereps.sql:22
+func writeqryJinSelect(qq422016 qtio422016.Writer) {
+//line usereps.sql:22
 	qw422016 := qt422016.AcquireWriter(qq422016)
-//line usereps.sql:37
-	streamqryJinSelect(qw422016, args, me)
-//line usereps.sql:37
+//line usereps.sql:22
+	streamqryJinSelect(qw422016)
+//line usereps.sql:22
 	qt422016.ReleaseWriter(qw422016)
-//line usereps.sql:37
+//line usereps.sql:22
 }
 
-//line usereps.sql:37
-func qryJinSelect(args *sqlh.Args, me ID) string {
-//line usereps.sql:37
+//line usereps.sql:22
+func qryJinSelect() string {
+//line usereps.sql:22
 	qb422016 := qt422016.AcquireByteBuffer()
-//line usereps.sql:37
-	writeqryJinSelect(qb422016, args, me)
-//line usereps.sql:37
+//line usereps.sql:22
+	writeqryJinSelect(qb422016)
+//line usereps.sql:22
 	qs422016 := string(qb422016.B)
-//line usereps.sql:37
+//line usereps.sql:22
 	qt422016.ReleaseByteBuffer(qb422016)
-//line usereps.sql:37
+//line usereps.sql:22
 	return qs422016
-//line usereps.sql:37
+//line usereps.sql:22
 }
 
-//line usereps.sql:39
-func streamqryJinDelete(qw422016 *qt422016.Writer, args *sqlh.Args, me ID) {
-//line usereps.sql:40
+//line usereps.sql:24
+func streamqryJinDelete(qw422016 *qt422016.Writer) {
+//line usereps.sql:25
 	qw422016.N().S(`Delete FROM jin WHERE user=? `)
-//line usereps.sql:44
-	*args = *sqlh.NewArgs(1)
-	args.AppendOne(
-		me,
-	)
-
-//line usereps.sql:49
+//line usereps.sql:29
 }
 
-//line usereps.sql:49
-func writeqryJinDelete(qq422016 qtio422016.Writer, args *sqlh.Args, me ID) {
-//line usereps.sql:49
+//line usereps.sql:29
+func writeqryJinDelete(qq422016 qtio422016.Writer) {
+//line usereps.sql:29
 	qw422016 := qt422016.AcquireWriter(qq422016)
-//line usereps.sql:49
-	streamqryJinDelete(qw422016, args, me)
-//line usereps.sql:49
+//line usereps.sql:29
+	streamqryJinDelete(qw422016)
+//line usereps.sql:29
 	qt422016.ReleaseWriter(qw422016)
-//line usereps.sql:49
+//line usereps.sql:29
 }
 
-//line usereps.sql:49
-func qryJinDelete(args *sqlh.Args, me ID) string {
-//line usereps.sql:49
+//line usereps.sql:29
+func qryJinDelete() string {
+//line usereps.sql:29
 	qb422016 := qt422016.AcquireByteBuffer()
-//line usereps.sql:49
-	writeqryJinDelete(qb422016, args, me)
-//line usereps.sql:49
+//line usereps.sql:29
+	writeqryJinDelete(qb422016)
+//line usereps.sql:29
 	qs422016 := string(qb422016.B)
-//line usereps.sql:49
+//line usereps.sql:29
 	qt422016.ReleaseByteBuffer(qb422016)
-//line usereps.sql:49
+//line usereps.sql:29
 	return qs422016
-//line usereps.sql:49
+//line usereps.sql:29
 }

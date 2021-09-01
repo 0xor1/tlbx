@@ -6,13 +6,13 @@ import (
 
 	"github.com/0xor1/tlbx/cmd/trees/pkg/cnsts"
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/json"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
+	"github.com/jmoiron/sqlx"
 )
 
 func SetAncestralChainAggregateValuesFromTask(tx sql.Tx, host, project, task ID) IDs {
@@ -35,7 +35,7 @@ func setAncestralChainAggregateValuesFrom(tx sql.Tx, host, project, task ID, par
 		qryArgs = append(qryArgs, host, project, task)
 	}
 	ancestorChain := make(IDs, 0, 20)
-	PanicOn(tx.Query(func(rows isql.Rows) {
+	PanicOn(tx.Query(func(rows *sqlx.Rows) {
 		for rows.Next() {
 			i := ID{}
 			PanicOn(rows.Scan(&i))

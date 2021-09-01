@@ -8,13 +8,13 @@ import (
 	"github.com/0xor1/tlbx/cmd/todo/pkg/item"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	"github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
+	"github.com/jmoiron/sqlx"
 )
 
 var (
@@ -200,7 +200,7 @@ var (
 				queryArgs = append(queryArgs, args.IDs.ToIs()...)
 				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
-				_, err := srv.Data().Exec(`DELETE FROM items WHERE user=? AND list=?`+sql.InCondition(true, "id", idsLen), queryArgs...)
+				_, err := srv.Data().Exec(`DELETE FROM items WHERE user=? AND list=?`+sqlh.InCondition(true, "id", idsLen), queryArgs...)
 				PanicOn(err)
 				_, err = srv.Data().Exec(`UPDATE lists SET todoItemCount = (SELECT COUNT(id) FROM items WHERE user=? AND list=? AND completedOn=?), completedItemCount = (SELECT COUNT(id) FROM items WHERE user=? AND list=? AND completedOn<>?) WHERE user=? AND id=?`, me, args.List, time.Time{}, me, args.List, time.Time{}, me, args.List)
 				PanicOn(err)
@@ -225,7 +225,7 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 			args.CreatedOnMax != nil &&
 			args.CreatedOnMin.After(*args.CreatedOnMax),
 		"createdOnMin must be before createdOnMax")
-	args.Limit = sql.Limit100(args.Limit)
+	args.Limit = sqlh.Limit100(args.Limit)
 	me := me.AuthedGet(tlbx)
 	srv := service.Get(tlbx)
 	res := &item.GetRes{
@@ -236,8 +236,8 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 	queryArgs = append(queryArgs, me, args.List)
 	idsLen := len(args.IDs)
 	if idsLen > 0 {
-		query.WriteString(sql.InCondition(true, `id`, idsLen))
-		query.WriteString(sql.OrderByField(`id`, idsLen))
+		query.WriteString(sqlh.InCondition(true, `id`, idsLen))
+		query.WriteString(sqlh.OrderByField(`id`, idsLen))
 		queryArgs = append(queryArgs, args.IDs.ToIs()...)
 		queryArgs = append(queryArgs, args.IDs.ToIs()...)
 	} else {
@@ -268,10 +268,10 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 			queryArgs = append(queryArgs, *args.CreatedOnMax)
 		}
 		if args.After != nil {
-			query.WriteString(Strf(` AND %s %s= (SELECT %s FROM items WHERE user=? AND list=? AND id=?) AND id <> ?`, args.Sort, sql.GtLtSymbol(*args.Asc), args.Sort))
+			query.WriteString(Strf(` AND %s %s= (SELECT %s FROM items WHERE user=? AND list=? AND id=?) AND id <> ?`, args.Sort, sqlh.GtLtSymbol(*args.Asc), args.Sort))
 			queryArgs = append(queryArgs, me, args.List, *args.After, *args.After)
 			if args.Sort != item.SortCreatedOn {
-				query.WriteString(Strf(` AND createdOn %s (SELECT createdOn FROM items WHERE user=? AND list=? AND id=?)`, sql.GtLtSymbol(*args.Asc)))
+				query.WriteString(Strf(` AND createdOn %s (SELECT createdOn FROM items WHERE user=? AND list=? AND id=?)`, sqlh.GtLtSymbol(*args.Asc)))
 				queryArgs = append(queryArgs, me, args.List, *args.After)
 
 			}
@@ -281,9 +281,9 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 			createdOnSecondarySort = ", createdOn"
 		}
 
-		query.WriteString(sql.OrderLimit100(string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
+		query.WriteString(sqlh.OrderLimit100(string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
 	}
-	PanicOn(srv.Data().Query(func(rows isql.Rows) {
+	PanicOn(srv.Data().Query(func(rows *sqlx.Rows) {
 		iLimit := int(args.Limit)
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {

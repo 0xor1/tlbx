@@ -19,19 +19,19 @@ import (
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/crypt"
-	"github.com/0xor1/tlbx/pkg/isql"
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/ptr"
+	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/store"
 	"github.com/0xor1/tlbx/pkg/web/app"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	sqlh "github.com/0xor1/tlbx/pkg/web/app/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/disintegration/imaging"
 	"github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 )
 
 const (
@@ -141,9 +141,7 @@ func New(
 				if args.AppData != nil {
 					appData.Validate(tlbx, args.AppData)
 					// if app requires init ctx data store it in jin
-					qryArgs := sqlh.NewArgs(0)
-					qry := qryJinInsert(qryArgs, id, args.AppData)
-					_, err = usrtx.Exec(qry, qryArgs.Is()...)
+					_, err = usrtx.Exec(qryJinInsert(), id, json.MustMarshal(args.AppData))
 					PanicOn(err)
 				}
 				pwdtx := srv.Pwd().BeginWrite()
@@ -223,7 +221,7 @@ func New(
 				if onActivate != nil {
 					onActivate(tlbx, &user.User, ad)
 				}
-				delJin(tx, user.ID)
+				tx.MustExec(qryJinDelete(), user.ID)
 				tx.Commit()
 				return nil
 			},
@@ -594,7 +592,7 @@ func New(
 					tokens := make([]string, 0, 5)
 					tx := srv.User().BeginWrite()
 					defer tx.Rollback()
-					tx.Query(func(rows isql.Rows) {
+					tx.Query(func(rows *sqlx.Rows) {
 						for rows.Next() {
 							token := ""
 							PanicOn(rows.Scan(&token))
@@ -671,17 +669,11 @@ func New(
 					args := a.(*user.SetJin)
 					me := me.AuthedGet(tlbx)
 					srv := service.Get(tlbx)
-					qryArgs := sqlh.NewArgs(0)
-					var qry string
 					if args.Val == nil {
-						qry = qryJinDelete(qryArgs, me)
-						_, err := srv.User().Exec(qry, qryArgs.Is()...)
-						PanicOn(err)
+						srv.User().MustExec(qryJinDelete(), me)
 					} else {
 						// if app requires init ctx data store it in jin
-						qry := qryJinInsert(qryArgs, me, args.Val)
-						_, err := srv.User().Exec(qry, qryArgs.Is()...)
-						PanicOn(err)
+						srv.User().MustExec(qryJinInsert(), me, args.Val)
 					}
 					return nil
 				},
@@ -755,7 +747,7 @@ func New(
 					}
 					query.WriteString(`)`)
 					res := make([]*user.User, 0, len(args.Users))
-					PanicOn(srv.User().Query(func(rows isql.Rows) {
+					PanicOn(srv.User().Query(func(rows *sqlx.Rows) {
 						for rows.Next() {
 							u := &user.User{}
 							PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
@@ -962,7 +954,7 @@ func New(
 					u.FcmEnabled = &args.Val
 					updateUser(tx, u)
 					tokens := make([]string, 0, 5)
-					tx.Query(func(rows isql.Rows) {
+					tx.Query(func(rows *sqlx.Rows) {
 						for rows.Next() {
 							token := ""
 							PanicOn(rows.Scan(&token))
@@ -1152,7 +1144,7 @@ func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 	row := tx.QueryRow(query, arg)
 	res := &fullUser{}
 	err := row.Scan(&res.ID, &res.Email, &res.Handle, &res.Alias, &res.HasAvatar, &res.FcmEnabled, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn, &res.LoginLinkCodeCreatedOn, &res.LoginLinkCode)
-	if err == isql.ErrNoRows {
+	if sqlh.IsNoRows(err) {
 		return nil
 	}
 	PanicOn(err)
@@ -1177,7 +1169,7 @@ func getPwd(pwdtx sql.Tx, id ID) *pwd {
 	row := pwdtx.QueryRow(`SELECT id, salt, pwd, n, r, p FROM pwds WHERE id=?`, id)
 	res := &pwd{}
 	err := row.Scan(&res.ID, &res.Salt, &res.Pwd, &res.N, &res.R, &res.P)
-	if err == isql.ErrNoRows {
+	if sqlh.IsNoRows(err) {
 		return nil
 	}
 	PanicOn(err)
@@ -1193,9 +1185,7 @@ func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd string) {
 }
 
 func getJin(tx sql.Tx, me ID, dst interface{}) {
-	qryArgs := sqlh.NewArgs(0)
-	qry := qryJinSelect(qryArgs, me)
-	row := tx.QueryRow(qry, qryArgs.Is()...)
+	row := tx.QueryRow(qryJinSelect(), me)
 	var err error
 	if js, ok := dst.(*json.Json); ok {
 		err = row.Scan(js)
@@ -1205,11 +1195,4 @@ func getJin(tx sql.Tx, me ID, dst interface{}) {
 		json.MustUnmarshal(bs, &dst)
 	}
 	sqlh.PanicIfIsntNoRows(err)
-}
-
-func delJin(tx sql.Tx, me ID) {
-	qryArgs := sqlh.NewArgs(0)
-	qry := qryJinDelete(qryArgs, me)
-	_, err := tx.Exec(qry, qryArgs.Is()...)
-	PanicOn(err)
 }
