@@ -47,10 +47,9 @@ var (
 					TodoItemCount:      0,
 					CompletedItemCount: 0,
 				}
-				_, err := srv.Data().Exec(
+				srv.Data().MustExec(
 					`INSERT INTO lists (user, id, createdOn, name, todoItemCount, completedItemCount) VALUES (?, ?, ?, ?, ?, ?)`,
 					me, res.ID, res.CreatedOn, res.Name, res.TodoItemCount, res.CompletedItemCount)
-				PanicOn(err)
 				return res
 			},
 		},
@@ -122,8 +121,7 @@ var (
 				list := getSetRes.Set[0]
 				list.Name = args.Name.V
 				srv := service.Get(tlbx)
-				_, err := srv.Data().Exec(`UPDATE lists SET name=? WHERE user=? AND id=?`, list.Name, me.AuthedGet(tlbx), list.ID)
-				PanicOn(err)
+				srv.Data().MustExec(`UPDATE lists SET name=? WHERE user=? AND id=?`, list.Name, me.AuthedGet(tlbx), list.ID)
 				return list
 			},
 		},
@@ -159,8 +157,7 @@ var (
 				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				// items deleted on foreign key cascade
-				_, err := tx.Exec(`DELETE FROM lists WHERE user=?`+sqlh.InCondition(true, "id", idsLen), queryArgs...)
-				PanicOn(err)
+				tx.MustExec(`DELETE FROM lists WHERE user=?`+sqlh.InCondition(true, "id", idsLen), queryArgs...)
 				tx.Commit()
 				return nil
 			},
@@ -182,8 +179,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	tx := srv.Data().BeginWrite()
 	defer tx.Rollback()
 	// items deleted on foreign key cascade
-	_, err := tx.Exec(`DELETE FROM lists WHERE user=?`, me)
-	PanicOn(err)
+	tx.MustExec(`DELETE FROM lists WHERE user=?`, me)
 	tx.Commit()
 }
 
@@ -263,7 +259,7 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 
 		query.WriteString(sqlh.OrderLimit100(string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
 	}
-	PanicOn(srv.Data().Query(func(rows *sqlx.Rows) {
+	srv.Data().MustQuery(func(rows *sqlx.Rows) {
 		iLimit := int(args.Limit)
 		for rows.Next() {
 			if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
@@ -274,6 +270,6 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 			PanicOn(rows.Scan(&l.ID, &l.CreatedOn, &l.Name, &l.TodoItemCount, &l.CompletedItemCount))
 			res.Set = append(res.Set, l)
 		}
-	}, query.String(), queryArgs...))
+	}, query.String(), queryArgs...)
 	return res
 }
