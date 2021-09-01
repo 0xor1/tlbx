@@ -20,6 +20,24 @@ var (
 	ErrTxDone   = sql.ErrTxDone
 )
 
+func NewArgs(size int) *Args {
+	return &Args{
+		args: make([]interface{}, 0, size),
+	}
+}
+
+type Args struct {
+	args []interface{}
+}
+
+func (a *Args) Append(arg ...interface{}) {
+	a.args = append(a.args, arg...)
+}
+
+func (a *Args) Is() []interface{} {
+	return a.args
+}
+
 type Row interface {
 	Scan(dst ...interface{}) error
 }
