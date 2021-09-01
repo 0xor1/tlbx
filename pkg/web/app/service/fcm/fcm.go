@@ -1,7 +1,7 @@
 package fcm
 
 //go:generate go get -u github.com/valyala/quicktemplate/qtc
-//go:generate qtc -file=fcm.sql
+//go:generate qtc -file=fcm.sql -skipLineComments
 
 import (
 	"context"

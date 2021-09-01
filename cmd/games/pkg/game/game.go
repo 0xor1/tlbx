@@ -1,5 +1,8 @@
 package game
 
+//go:generate go get -u github.com/valyala/quicktemplate/qtc
+//go:generate qtc -file=game.sql -skipLineComments
+
 import (
 	"math/rand"
 	"sync"
@@ -98,8 +101,8 @@ func New(tlbx app.Tlbx, gameType string, game Game) {
 	b.ID = tlbx.NewID()
 	b.Players = []ID{id}
 	serialized := json.MustMarshal(game)
-	tx.Exec(`INSERT INTO games (id, type, updatedOn, isActive, serialized) VALUES (?, ?, ?, 1, ?)`, b.ID, gameType, b.UpdatedOn, serialized)
-	tx.Exec(`INSERT INTO players (id, game) VALUES (?, ?)`, id, b.ID)
+	tx.MustExec(qryGameInsert(), b.ID, gameType, b.UpdatedOn, serialized)
+	tx.MustExec(qryPlayerInsert(), id, b.ID)
 	tx.Commit()
 	cacheSerializedGame(tlbx, gameType, id, serialized)
 	b.setMyID(tlbx)
@@ -117,7 +120,7 @@ func Join(tlbx app.Tlbx, maxPlayers uint8, gameType string, game ID, dst Game) G
 	// assign new session id for a new game so no clashes with old finished games
 	newUserID := me.Get(tlbx).ID()
 	b.Players = append(b.Players, newUserID)
-	tx.Exec(`INSERT INTO players (id, game) VALUES (?, ?)`, newUserID, b.ID)
+	tx.MustExec(qryPlayerInsert(), newUserID, b.ID)
 	update(tlbx, tx, gameType, g)
 	tx.Commit()
 	b.setMyID(tlbx)
@@ -195,13 +198,11 @@ func read(tlbx app.Tlbx, tx sql.Tx, forUpdate bool, gameType string, game ID, up
 	}
 	gotType := ""
 	if len(serialized) == 0 {
-		query := `SELECT type, serialized FROM games WHERE id=?`
 		var row *sqlx.Row
 		if forUpdate {
-			query += ` FOR UPDATE`
-			row = tx.QueryRow(query, game)
+			row = tx.QueryRow(qryGameGet(forUpdate), game)
 		} else {
-			row = service.Get(tlbx).Data().QueryRow(query, game)
+			row = service.Get(tlbx).Data().QueryRow(qryGameGet(forUpdate), game)
 		}
 		sqlh.ReturnNotFoundIfIsNoRows(row.Scan(&gotType, &serialized))
 	} else {
@@ -222,7 +223,7 @@ func update(tlbx app.Tlbx, tx sql.Tx, gameType string, game Game) {
 	base.UpdatedOn = NowMilli()
 	base.MyID = nil
 	serialized := json.MustMarshal(game)
-	tx.Exec(`UPDATE games Set updatedOn=?, isActive=?, serialized=? WHERE id=? AND type=?`, base.UpdatedOn, base.IsActive(), serialized, base.ID, gameType)
+	tx.Exec(qryGameUpdate(), base.UpdatedOn, base.IsActive(), serialized, base.ID, gameType)
 	cacheSerializedGame(tlbx, gameType, base.ID, serialized)
 }
 
@@ -234,7 +235,7 @@ func DeleteOutdated(exec func(query string, args ...interface{}), delay time.Dur
 		return
 	}
 	// relies on foreign key ON DELETE CASCADE to delete players rows
-	exec(`DELETE FROM games WHERE updatedOn<?`, NowMilli().Add(-1*expire))
+	exec(qryGameDeleteExpired(), NowMilli().Add(-1*expire))
 	lastDeleteOutdatedCalledOnMtx.Lock()
 	defer lastDeleteOutdatedCalledOnMtx.Unlock()
 	lastDeleteOutdatedCalledOn = Now()
@@ -245,13 +246,11 @@ func getUsersActiveGame(tlbx app.Tlbx, tx sql.Tx, forUpdate bool, gameType strin
 	PanicIf(!forUpdate && tx != nil, "tx must be nil if it is a not forUpdate get call")
 	buf := make([]byte, 0, 5*app.KB)
 	me := me.Get(tlbx).ID()
-	query := `SELECT g.type, g.serialized FROM games g INNER JOIN players p ON p.game=g.id WHERE p.id=? AND g.isActive=1`
 	var row *sqlx.Row
 	if forUpdate {
-		query += ` FOR UPDATE`
-		row = tx.QueryRow(query, me)
+		row = tx.QueryRow(qryGameGetActive(forUpdate), me)
 	} else {
-		row = service.Get(tlbx).Data().QueryRow(query, me)
+		row = service.Get(tlbx).Data().QueryRow(qryGameGetActive(forUpdate), me)
 	}
 	gotType := ""
 	sqlh.PanicIfIsntNoRows(row.Scan(&gotType, &buf))

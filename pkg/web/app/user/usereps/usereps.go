@@ -1,7 +1,7 @@
 package usereps
 
 //go:generate go get -u github.com/valyala/quicktemplate/qtc
-//go:generate qtc -file=usereps.sql
+//go:generate qtc -file=usereps.sql -skipLineComments
 
 import (
 	"bytes"
