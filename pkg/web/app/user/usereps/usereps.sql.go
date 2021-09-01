@@ -5,113 +5,594 @@
 package usereps
 
 //line usereps.sql:1
+import "github.com/0xor1/tlbx/pkg/sqlh"
+
+//line usereps.sql:3
 import (
 	qtio422016 "io"
 
 	qt422016 "github.com/valyala/quicktemplate"
 )
 
-//line usereps.sql:1
+//line usereps.sql:3
 var (
 	_ = qtio422016.Copy
 	_ = qt422016.AcquireByteBuffer
 )
 
-//line usereps.sql:1
-func streamqryJinInsert(qw422016 *qt422016.Writer) {
-//line usereps.sql:2
-	qw422016.N().S(`INSERT INTO jin( user, val ) VALUES ( ?, ? ) ON DUPLICATE KEY UPDATE val=VALUES(val) `)
-//line usereps.sql:14
-}
-
-//line usereps.sql:14
-func writeqryJinInsert(qq422016 qtio422016.Writer) {
-//line usereps.sql:14
-	qw422016 := qt422016.AcquireWriter(qq422016)
-//line usereps.sql:14
-	streamqryJinInsert(qw422016)
-//line usereps.sql:14
-	qt422016.ReleaseWriter(qw422016)
-//line usereps.sql:14
-}
-
-//line usereps.sql:14
-func qryJinInsert() string {
-//line usereps.sql:14
-	qb422016 := qt422016.AcquireByteBuffer()
-//line usereps.sql:14
-	writeqryJinInsert(qb422016)
-//line usereps.sql:14
-	qs422016 := string(qb422016.B)
-//line usereps.sql:14
-	qt422016.ReleaseByteBuffer(qb422016)
-//line usereps.sql:14
-	return qs422016
-//line usereps.sql:14
-}
-
-//line usereps.sql:16
-func streamqryJinSelect(qw422016 *qt422016.Writer) {
-//line usereps.sql:17
-	qw422016.N().S(`SELECT val FROM jin WHERE user=? `)
-//line usereps.sql:22
-}
-
-//line usereps.sql:22
-func writeqryJinSelect(qq422016 qtio422016.Writer) {
-//line usereps.sql:22
-	qw422016 := qt422016.AcquireWriter(qq422016)
-//line usereps.sql:22
-	streamqryJinSelect(qw422016)
-//line usereps.sql:22
-	qt422016.ReleaseWriter(qw422016)
-//line usereps.sql:22
-}
-
-//line usereps.sql:22
-func qryJinSelect() string {
-//line usereps.sql:22
-	qb422016 := qt422016.AcquireByteBuffer()
-//line usereps.sql:22
-	writeqryJinSelect(qb422016)
-//line usereps.sql:22
-	qs422016 := string(qb422016.B)
-//line usereps.sql:22
-	qt422016.ReleaseByteBuffer(qb422016)
-//line usereps.sql:22
-	return qs422016
-//line usereps.sql:22
-}
-
-//line usereps.sql:24
-func streamqryJinDelete(qw422016 *qt422016.Writer) {
+//line usereps.sql:3
+func streamqryUserFullGet(qw422016 *qt422016.Writer, byID bool) {
+//line usereps.sql:4
+	qw422016.N().S(`SELECT id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn, loginLinkCodeCreatedOn, loginLinkCode FROM users WHERE `)
+//line usereps.sql:21
+	if byID {
+//line usereps.sql:21
+		qw422016.N().S(`id `)
+//line usereps.sql:23
+	} else {
+//line usereps.sql:23
+		qw422016.N().S(`email `)
 //line usereps.sql:25
-	qw422016.N().S(`Delete FROM jin WHERE user=? `)
-//line usereps.sql:29
+	}
+//line usereps.sql:25
+	qw422016.N().S(`=? `)
+//line usereps.sql:28
 }
 
-//line usereps.sql:29
-func writeqryJinDelete(qq422016 qtio422016.Writer) {
-//line usereps.sql:29
+//line usereps.sql:28
+func writeqryUserFullGet(qq422016 qtio422016.Writer, byID bool) {
+//line usereps.sql:28
 	qw422016 := qt422016.AcquireWriter(qq422016)
-//line usereps.sql:29
-	streamqryJinDelete(qw422016)
-//line usereps.sql:29
+//line usereps.sql:28
+	streamqryUserFullGet(qw422016, byID)
+//line usereps.sql:28
 	qt422016.ReleaseWriter(qw422016)
-//line usereps.sql:29
+//line usereps.sql:28
 }
 
-//line usereps.sql:29
-func qryJinDelete() string {
-//line usereps.sql:29
+//line usereps.sql:28
+func qryUserFullGet(byID bool) string {
+//line usereps.sql:28
 	qb422016 := qt422016.AcquireByteBuffer()
-//line usereps.sql:29
-	writeqryJinDelete(qb422016)
-//line usereps.sql:29
+//line usereps.sql:28
+	writeqryUserFullGet(qb422016, byID)
+//line usereps.sql:28
 	qs422016 := string(qb422016.B)
-//line usereps.sql:29
+//line usereps.sql:28
 	qt422016.ReleaseByteBuffer(qb422016)
-//line usereps.sql:29
+//line usereps.sql:28
 	return qs422016
-//line usereps.sql:29
+//line usereps.sql:28
+}
+
+//line usereps.sql:30
+func streamqryUserUpdate(qw422016 *qt422016.Writer) {
+//line usereps.sql:31
+	qw422016.N().S(`UPDATE users SET email=?, handle=?, alias=?, hasAvatar=?, fcmEnabled=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=?, loginLinkCodeCreatedOn=?, loginLinkCode=? WHERE id=? `)
+//line usereps.sql:48
+}
+
+//line usereps.sql:48
+func writeqryUserUpdate(qq422016 qtio422016.Writer) {
+//line usereps.sql:48
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:48
+	streamqryUserUpdate(qw422016)
+//line usereps.sql:48
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:48
+}
+
+//line usereps.sql:48
+func qryUserUpdate() string {
+//line usereps.sql:48
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:48
+	writeqryUserUpdate(qb422016)
+//line usereps.sql:48
+	qs422016 := string(qb422016.B)
+//line usereps.sql:48
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:48
+	return qs422016
+//line usereps.sql:48
+}
+
+//line usereps.sql:50
+func streamqryUserInsert(qw422016 *qt422016.Writer) {
+//line usereps.sql:51
+	qw422016.N().S(`INSERT INTO users ( id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, activateCode ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? ) `)
+//line usereps.sql:74
+}
+
+//line usereps.sql:74
+func writeqryUserInsert(qq422016 qtio422016.Writer) {
+//line usereps.sql:74
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:74
+	streamqryUserInsert(qw422016)
+//line usereps.sql:74
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:74
+}
+
+//line usereps.sql:74
+func qryUserInsert() string {
+//line usereps.sql:74
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:74
+	writeqryUserInsert(qb422016)
+//line usereps.sql:74
+	qs422016 := string(qb422016.B)
+//line usereps.sql:74
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:74
+	return qs422016
+//line usereps.sql:74
+}
+
+//line usereps.sql:76
+func streamqryUserDelete(qw422016 *qt422016.Writer) {
+//line usereps.sql:77
+	qw422016.N().S(`DELETE FROM users WHERE id=? `)
+//line usereps.sql:81
+}
+
+//line usereps.sql:81
+func writeqryUserDelete(qq422016 qtio422016.Writer) {
+//line usereps.sql:81
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:81
+	streamqryUserDelete(qw422016)
+//line usereps.sql:81
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:81
+}
+
+//line usereps.sql:81
+func qryUserDelete() string {
+//line usereps.sql:81
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:81
+	writeqryUserDelete(qb422016)
+//line usereps.sql:81
+	qs422016 := string(qb422016.B)
+//line usereps.sql:81
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:81
+	return qs422016
+//line usereps.sql:81
+}
+
+//line usereps.sql:83
+func streamqryUsersGet(qw422016 *qt422016.Writer, n int) {
+//line usereps.sql:84
+	qw422016.N().S(`SELECT id, handle, alias, hasAvatar FROM users WHERE id IN (`)
+//line usereps.sql:90
+	qw422016.E().S(sqlh.PList(n))
+//line usereps.sql:90
+	qw422016.N().S(`) `)
+//line usereps.sql:92
+}
+
+//line usereps.sql:92
+func writeqryUsersGet(qq422016 qtio422016.Writer, n int) {
+//line usereps.sql:92
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:92
+	streamqryUsersGet(qw422016, n)
+//line usereps.sql:92
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:92
+}
+
+//line usereps.sql:92
+func qryUsersGet(n int) string {
+//line usereps.sql:92
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:92
+	writeqryUsersGet(qb422016, n)
+//line usereps.sql:92
+	qs422016 := string(qb422016.B)
+//line usereps.sql:92
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:92
+	return qs422016
+//line usereps.sql:92
+}
+
+//line usereps.sql:94
+func streamqryPwdDelete(qw422016 *qt422016.Writer) {
+//line usereps.sql:95
+	qw422016.N().S(`DELETE FROM pwds WHERE id=? `)
+//line usereps.sql:99
+}
+
+//line usereps.sql:99
+func writeqryPwdDelete(qq422016 qtio422016.Writer) {
+//line usereps.sql:99
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:99
+	streamqryPwdDelete(qw422016)
+//line usereps.sql:99
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:99
+}
+
+//line usereps.sql:99
+func qryPwdDelete() string {
+//line usereps.sql:99
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:99
+	writeqryPwdDelete(qb422016)
+//line usereps.sql:99
+	qs422016 := string(qb422016.B)
+//line usereps.sql:99
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:99
+	return qs422016
+//line usereps.sql:99
+}
+
+//line usereps.sql:101
+func streamqryPwdGet(qw422016 *qt422016.Writer) {
+//line usereps.sql:102
+	qw422016.N().S(`SELECT id, salt, pwd, n, r, p FROM pwds WHERE id=? `)
+//line usereps.sql:112
+}
+
+//line usereps.sql:112
+func writeqryPwdGet(qq422016 qtio422016.Writer) {
+//line usereps.sql:112
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:112
+	streamqryPwdGet(qw422016)
+//line usereps.sql:112
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:112
+}
+
+//line usereps.sql:112
+func qryPwdGet() string {
+//line usereps.sql:112
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:112
+	writeqryPwdGet(qb422016)
+//line usereps.sql:112
+	qs422016 := string(qb422016.B)
+//line usereps.sql:112
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:112
+	return qs422016
+//line usereps.sql:112
+}
+
+//line usereps.sql:114
+func streamqryPwdUpdate(qw422016 *qt422016.Writer) {
+//line usereps.sql:115
+	qw422016.N().S(`INSERT INTO pwds ( id, salt, pwd, n, r, p ) VALUES ( ?, ?, ?, ?, ?, ? ) ON DUPLICATE KEY UPDATE salt=VALUE(salt), pwd=VALUE(pwd), n=VALUE(n), r=VALUE(r), p=VALUE(p) `)
+//line usereps.sql:137
+}
+
+//line usereps.sql:137
+func writeqryPwdUpdate(qq422016 qtio422016.Writer) {
+//line usereps.sql:137
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:137
+	streamqryPwdUpdate(qw422016)
+//line usereps.sql:137
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:137
+}
+
+//line usereps.sql:137
+func qryPwdUpdate() string {
+//line usereps.sql:137
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:137
+	writeqryPwdUpdate(qb422016)
+//line usereps.sql:137
+	qs422016 := string(qb422016.B)
+//line usereps.sql:137
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:137
+	return qs422016
+//line usereps.sql:137
+}
+
+//line usereps.sql:139
+func streamqryFifthOldestTokenCreatedOn(qw422016 *qt422016.Writer) {
+//line usereps.sql:140
+	qw422016.N().S(`SELECT createdOn FROM fcmTokens WHERE user=? ORDER BY createdOn DESC LIMIT 4, 1 `)
+//line usereps.sql:147
+}
+
+//line usereps.sql:147
+func writeqryFifthOldestTokenCreatedOn(qq422016 qtio422016.Writer) {
+//line usereps.sql:147
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:147
+	streamqryFifthOldestTokenCreatedOn(qw422016)
+//line usereps.sql:147
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:147
+}
+
+//line usereps.sql:147
+func qryFifthOldestTokenCreatedOn() string {
+//line usereps.sql:147
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:147
+	writeqryFifthOldestTokenCreatedOn(qb422016)
+//line usereps.sql:147
+	qs422016 := string(qb422016.B)
+//line usereps.sql:147
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:147
+	return qs422016
+//line usereps.sql:147
+}
+
+//line usereps.sql:149
+func streamqryFCMTokensDeleteOldest(qw422016 *qt422016.Writer) {
+//line usereps.sql:150
+	qw422016.N().S(`DELETE FROM fcmTokens WHERE user=? AND createdOn<=? `)
+//line usereps.sql:155
+}
+
+//line usereps.sql:155
+func writeqryFCMTokensDeleteOldest(qq422016 qtio422016.Writer) {
+//line usereps.sql:155
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:155
+	streamqryFCMTokensDeleteOldest(qw422016)
+//line usereps.sql:155
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:155
+}
+
+//line usereps.sql:155
+func qryFCMTokensDeleteOldest() string {
+//line usereps.sql:155
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:155
+	writeqryFCMTokensDeleteOldest(qb422016)
+//line usereps.sql:155
+	qs422016 := string(qb422016.B)
+//line usereps.sql:155
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:155
+	return qs422016
+//line usereps.sql:155
+}
+
+//line usereps.sql:157
+func streamqryFCMTokenInsert(qw422016 *qt422016.Writer) {
+//line usereps.sql:158
+	qw422016.N().S(`INSERT INTO fcmTokens ( topic, token, user, client, createdOn ) VALUES ( ?, ?, ?, ?, ? ) ON DUPLICATE KEY UPDATE topic=VALUES(topic), token=VALUES(token), user=VALUES(user), client=VALUES(client), createdOn=VALUES(createdOn) `)
+//line usereps.sql:178
+}
+
+//line usereps.sql:178
+func writeqryFCMTokenInsert(qq422016 qtio422016.Writer) {
+//line usereps.sql:178
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:178
+	streamqryFCMTokenInsert(qw422016)
+//line usereps.sql:178
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:178
+}
+
+//line usereps.sql:178
+func qryFCMTokenInsert() string {
+//line usereps.sql:178
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:178
+	writeqryFCMTokenInsert(qb422016)
+//line usereps.sql:178
+	qs422016 := string(qb422016.B)
+//line usereps.sql:178
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:178
+	return qs422016
+//line usereps.sql:178
+}
+
+//line usereps.sql:180
+func streamqryDistinctFCMTokens(qw422016 *qt422016.Writer) {
+//line usereps.sql:181
+	qw422016.N().S(`SELECT DISTINCT token FROM fcmTokens WHERE user=? `)
+//line usereps.sql:186
+}
+
+//line usereps.sql:186
+func writeqryDistinctFCMTokens(qq422016 qtio422016.Writer) {
+//line usereps.sql:186
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:186
+	streamqryDistinctFCMTokens(qw422016)
+//line usereps.sql:186
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:186
+}
+
+//line usereps.sql:186
+func qryDistinctFCMTokens() string {
+//line usereps.sql:186
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:186
+	writeqryDistinctFCMTokens(qb422016)
+//line usereps.sql:186
+	qs422016 := string(qb422016.B)
+//line usereps.sql:186
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:186
+	return qs422016
+//line usereps.sql:186
+}
+
+//line usereps.sql:188
+func streamqryFCMTokensDelete(qw422016 *qt422016.Writer) {
+//line usereps.sql:189
+	qw422016.N().S(`DELETE FROM fcmTokens WHERE user=? `)
+//line usereps.sql:193
+}
+
+//line usereps.sql:193
+func writeqryFCMTokensDelete(qq422016 qtio422016.Writer) {
+//line usereps.sql:193
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:193
+	streamqryFCMTokensDelete(qw422016)
+//line usereps.sql:193
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:193
+}
+
+//line usereps.sql:193
+func qryFCMTokensDelete() string {
+//line usereps.sql:193
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:193
+	writeqryFCMTokensDelete(qb422016)
+//line usereps.sql:193
+	qs422016 := string(qb422016.B)
+//line usereps.sql:193
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:193
+	return qs422016
+//line usereps.sql:193
+}
+
+//line usereps.sql:195
+func streamqryFCMUnregister(qw422016 *qt422016.Writer) {
+//line usereps.sql:196
+	qw422016.N().S(`DELETE FROM fcmTokens WHERE user=? AND client=? `)
+//line usereps.sql:201
+}
+
+//line usereps.sql:201
+func writeqryFCMUnregister(qq422016 qtio422016.Writer) {
+//line usereps.sql:201
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:201
+	streamqryFCMUnregister(qw422016)
+//line usereps.sql:201
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:201
+}
+
+//line usereps.sql:201
+func qryFCMUnregister() string {
+//line usereps.sql:201
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:201
+	writeqryFCMUnregister(qb422016)
+//line usereps.sql:201
+	qs422016 := string(qb422016.B)
+//line usereps.sql:201
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:201
+	return qs422016
+//line usereps.sql:201
+}
+
+//line usereps.sql:203
+func streamqryJinInsert(qw422016 *qt422016.Writer) {
+//line usereps.sql:204
+	qw422016.N().S(`INSERT INTO jin( user, val ) VALUES ( ?, ? ) ON DUPLICATE KEY UPDATE val=VALUES(val) `)
+//line usereps.sql:216
+}
+
+//line usereps.sql:216
+func writeqryJinInsert(qq422016 qtio422016.Writer) {
+//line usereps.sql:216
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:216
+	streamqryJinInsert(qw422016)
+//line usereps.sql:216
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:216
+}
+
+//line usereps.sql:216
+func qryJinInsert() string {
+//line usereps.sql:216
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:216
+	writeqryJinInsert(qb422016)
+//line usereps.sql:216
+	qs422016 := string(qb422016.B)
+//line usereps.sql:216
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:216
+	return qs422016
+//line usereps.sql:216
+}
+
+//line usereps.sql:218
+func streamqryJinSelect(qw422016 *qt422016.Writer) {
+//line usereps.sql:219
+	qw422016.N().S(`SELECT val FROM jin WHERE user=? `)
+//line usereps.sql:224
+}
+
+//line usereps.sql:224
+func writeqryJinSelect(qq422016 qtio422016.Writer) {
+//line usereps.sql:224
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:224
+	streamqryJinSelect(qw422016)
+//line usereps.sql:224
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:224
+}
+
+//line usereps.sql:224
+func qryJinSelect() string {
+//line usereps.sql:224
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:224
+	writeqryJinSelect(qb422016)
+//line usereps.sql:224
+	qs422016 := string(qb422016.B)
+//line usereps.sql:224
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:224
+	return qs422016
+//line usereps.sql:224
+}
+
+//line usereps.sql:226
+func streamqryJinDelete(qw422016 *qt422016.Writer) {
+//line usereps.sql:227
+	qw422016.N().S(`Delete FROM jin WHERE user=? `)
+//line usereps.sql:231
+}
+
+//line usereps.sql:231
+func writeqryJinDelete(qq422016 qtio422016.Writer) {
+//line usereps.sql:231
+	qw422016 := qt422016.AcquireWriter(qq422016)
+//line usereps.sql:231
+	streamqryJinDelete(qw422016)
+//line usereps.sql:231
+	qt422016.ReleaseWriter(qw422016)
+//line usereps.sql:231
+}
+
+//line usereps.sql:231
+func qryJinDelete() string {
+//line usereps.sql:231
+	qb422016 := qt422016.AcquireByteBuffer()
+//line usereps.sql:231
+	writeqryJinDelete(qb422016)
+//line usereps.sql:231
+	qs422016 := string(qb422016.B)
+//line usereps.sql:231
+	qt422016.ReleaseByteBuffer(qb422016)
+//line usereps.sql:231
+	return qs422016
+//line usereps.sql:231
 }

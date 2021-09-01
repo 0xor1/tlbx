@@ -130,7 +130,7 @@ func New(
 				}
 				usrtx := srv.User().BeginWrite()
 				defer usrtx.Rollback()
-				_, err := usrtx.Exec("INSERT INTO users (id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, activateCode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", id, args.Email, args.Handle, args.Alias, hasAvatar, fcmEnabled, Now(), time.Time{}, activateCode)
+				_, err := usrtx.Exec(qryUserInsert(), id, args.Email, args.Handle, args.Alias, hasAvatar, fcmEnabled, Now(), time.Time{}, activateCode)
 				if err != nil {
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
@@ -141,8 +141,7 @@ func New(
 				if args.AppData != nil {
 					appData.Validate(tlbx, args.AppData)
 					// if app requires init ctx data store it in jin
-					_, err = usrtx.Exec(qryJinInsert(), id, json.MustMarshal(args.AppData))
-					PanicOn(err)
+					usrtx.MustExec(qryJinInsert(), id, json.MustMarshal(args.AppData))
 				}
 				pwdtx := srv.Pwd().BeginWrite()
 				defer pwdtx.Rollback()
@@ -423,10 +422,8 @@ func New(
 				tx := srv.User().BeginWrite()
 				defer tx.Rollback()
 				// jin and fcm tokens tables are cleared by foreign key cascade
-				_, err := tx.Exec(`DELETE FROM users WHERE id=?`, m)
-				PanicOn(err)
-				_, err = pwdtx.Exec(`DELETE FROM pwds WHERE id=?`, m)
-				PanicOn(err)
+				tx.MustExec(qryUserDelete(), m)
+				pwdtx.MustExec(qryPwdDelete(), m)
 				if onDelete != nil {
 					onDelete(tlbx, m)
 				}
@@ -592,15 +589,8 @@ func New(
 					tokens := make([]string, 0, 5)
 					tx := srv.User().BeginWrite()
 					defer tx.Rollback()
-					tx.Query(func(rows *sqlx.Rows) {
-						for rows.Next() {
-							token := ""
-							PanicOn(rows.Scan(&token))
-							tokens = append(tokens, token)
-						}
-					}, `SELECT DISTINCT token FROM fcmTokens WHERE user=?`, m)
-					_, err := tx.Exec(`DELETE FROM fcmTokens WHERE user=?`, m)
-					PanicOn(err)
+					tx.MustGetN(&tokens, qryDistinctFCMTokens(), m)
+					tx.MustExec(qryFCMTokensDelete(), m)
 					srv.FCM().RawAsyncSend("logout", tokens, map[string]string{}, 0)
 					tx.Commit()
 					me.Del(tlbx)
@@ -738,22 +728,14 @@ func New(
 					}
 					validate.MaxIDs("users", args.Users, 1000)
 					srv := service.Get(tlbx)
-					query := bytes.NewBufferString(`SELECT id, handle, alias, hasAvatar FROM users WHERE id IN(?`)
-					queryArgs := make([]interface{}, 0, len(args.Users))
-					queryArgs = append(queryArgs, args.Users[0])
-					for _, id := range args.Users[1:] {
-						query.WriteString(`,?`)
-						queryArgs = append(queryArgs, id)
-					}
-					query.WriteString(`)`)
 					res := make([]*user.User, 0, len(args.Users))
-					PanicOn(srv.User().Query(func(rows *sqlx.Rows) {
-						for rows.Next() {
+					srv.User().MustQuery(func(r *sqlx.Rows) {
+						for r.Next() {
 							u := &user.User{}
-							PanicOn(rows.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
+							PanicOn(r.Scan(&u.ID, &u.Handle, &u.Alias, &u.HasAvatar))
 							res = append(res, u)
 						}
-					}, query.String(), queryArgs...))
+					}, qryUsersGet(len(args.Users)), args.Users.ToIs()...)
 					return res
 				},
 			}, &app.Endpoint{
@@ -954,13 +936,7 @@ func New(
 					u.FcmEnabled = &args.Val
 					updateUser(tx, u)
 					tokens := make([]string, 0, 5)
-					tx.Query(func(rows *sqlx.Rows) {
-						for rows.Next() {
-							token := ""
-							PanicOn(rows.Scan(&token))
-							tokens = append(tokens, token)
-						}
-					}, `SELECT DISTINCT token FROM fcmTokens WHERE user=?`, me)
+					tx.MustGetN(&tokens, qryDistinctFCMTokens(), me)
 					tx.Commit()
 					if len(tokens) == 0 {
 						// no tokens to notify
@@ -1007,22 +983,20 @@ func New(
 					u := getUser(tx, nil, &me)
 					app.BadReqIf(u.FcmEnabled == nil || !*u.FcmEnabled, "fcm not enabled for user, please enable first then register for topics")
 					// this query is used to get a users 5th token createdOn value if they have one
-					row := tx.QueryRow(`SELECT createdOn FROM fcmTokens WHERE user=? ORDER BY createdOn DESC LIMIT 4, 1`, me)
+					row := tx.QueryRow(qryFifthOldestTokenCreatedOn(), me)
 					fifthYoungestTokenCreatedOn := time.Time{}
 					sqlh.PanicIfIsntNoRows(row.Scan(&fifthYoungestTokenCreatedOn))
 					if !fifthYoungestTokenCreatedOn.IsZero() {
 						// this user has 5 topics they're subscribed too already so delete the older ones
 						// to make room for this new one
-						_, err := tx.Exec(`DELETE FROM fcmTokens WHERE user=? AND createdOn<=?`, me, fifthYoungestTokenCreatedOn)
-						PanicOn(err)
+						tx.MustExec(qryFCMTokensDeleteOldest(), me, fifthYoungestTokenCreatedOn)
 					}
 					appTx, err := validateFcmTopic(tlbx, args.Topic)
 					if appTx != nil {
 						defer appTx.Rollback()
 					}
 					PanicOn(err)
-					_, err = tx.Exec(`INSERT INTO fcmTokens (topic, token, user, client, createdOn) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE topic=VALUES(topic), token=VALUES(token), user=VALUES(user), client=VALUES(client), createdOn=VALUES(createdOn)`, args.Topic.StrJoin("_"), args.Token, me, client, tlbx.Start())
-					PanicOn(err)
+					tx.MustExec(qryFCMTokenInsert(), args.Topic.StrJoin("_"), args.Token, me, client, tlbx.Start())
 					tx.Commit()
 					if appTx != nil {
 						appTx.Commit()
@@ -1051,11 +1025,7 @@ func New(
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.UnregisterFromFCM)
 					me := me.AuthedGet(tlbx)
-					tx := service.Get(tlbx).User().BeginWrite()
-					defer tx.Rollback()
-					_, err := tx.Exec(`DELETE FROM fcmTokens WHERE user=? AND client=?`, me, args.Client)
-					PanicOn(err)
-					tx.Commit()
+					service.Get(tlbx).User().MustExec(qryFCMUnregister(), me, args.Client)
 					return nil
 				},
 			})
@@ -1132,17 +1102,15 @@ type fullUser struct {
 
 func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 	PanicIf(email == nil && id == nil, "one of email or id must not be nil")
-	query := `SELECT id, email, handle, alias, hasAvatar, fcmEnabled, registeredOn, activatedOn, newEmail, activateCode, changeEmailCode, lastPwdResetOn, loginLinkCodeCreatedOn, loginLinkCode FROM users WHERE `
 	var arg interface{}
 	if email != nil {
-		query += `email=?`
 		arg = *email
 	} else {
-		query += `id=?`
 		arg = *id
 	}
-	row := tx.QueryRow(query, arg)
 	res := &fullUser{}
+	// Get1 doesnt work here because of 2 layers of embedded structs?
+	row := tx.QueryRow(qryUserFullGet(id != nil), arg)
 	err := row.Scan(&res.ID, &res.Email, &res.Handle, &res.Alias, &res.HasAvatar, &res.FcmEnabled, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn, &res.LoginLinkCodeCreatedOn, &res.LoginLinkCode)
 	if sqlh.IsNoRows(err) {
 		return nil
@@ -1152,8 +1120,7 @@ func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 }
 
 func updateUser(tx sql.Tx, user *fullUser) {
-	_, err := tx.Exec(`UPDATE users SET email=?, handle=?, alias=?, hasAvatar=?, fcmEnabled=?, registeredOn=?, activatedOn=?, newEmail=?, activateCode=?, changeEmailCode=?, lastPwdResetOn=?, loginLinkCodeCreatedOn=?, loginLinkCode=? WHERE id=?`, user.Email, user.Handle, user.Alias, user.HasAvatar, user.FcmEnabled, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.LoginLinkCodeCreatedOn, user.LoginLinkCode, user.ID)
-	PanicOn(err)
+	tx.MustExec(qryUserUpdate(), user.Email, user.Handle, user.Alias, user.HasAvatar, user.FcmEnabled, user.RegisteredOn, user.ActivatedOn, user.NewEmail, user.ActivateCode, user.ChangeEmailCode, user.LastPwdResetOn, user.LoginLinkCodeCreatedOn, user.LoginLinkCode, user.ID)
 }
 
 type pwd struct {
@@ -1166,9 +1133,8 @@ type pwd struct {
 }
 
 func getPwd(pwdtx sql.Tx, id ID) *pwd {
-	row := pwdtx.QueryRow(`SELECT id, salt, pwd, n, r, p FROM pwds WHERE id=?`, id)
 	res := &pwd{}
-	err := row.Scan(&res.ID, &res.Salt, &res.Pwd, &res.N, &res.R, &res.P)
+	err := pwdtx.Get1(res, qryPwdGet(), id)
 	if sqlh.IsNoRows(err) {
 		return nil
 	}
@@ -1180,7 +1146,7 @@ func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd string) {
 	validate.Str("pwd", pwd, pwdMinLen, pwdMaxLen, pwdRegexs...)
 	salt := crypt.Bytes(scryptSaltLen)
 	pwdBs := crypt.ScryptKey([]byte(pwd), salt, scryptN, scryptR, scryptP, scryptKeyLen)
-	_, err := pwdtx.Exec(`INSERT INTO pwds (id, salt, pwd, n, r, p) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE salt=VALUE(salt), pwd=VALUE(pwd), n=VALUE(n), r=VALUE(r), p=VALUE(p)`, id, salt, pwdBs, scryptN, scryptR, scryptP)
+	_, err := pwdtx.Exec(qryPwdUpdate(), id, salt, pwdBs, scryptN, scryptR, scryptP)
 	PanicOn(err)
 }
 

@@ -306,7 +306,7 @@ func (a *GetMe) MustDo(c *app.Client) *Me {
 }
 
 type Get struct {
-	Users []ID `json:"users"`
+	Users IDs `json:"users"`
 }
 
 func (_ *Get) Path() string {
