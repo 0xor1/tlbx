@@ -14,8 +14,12 @@ docker-compose -f docker/docker-compose.yml up -d
 
 go generate ./... && \
 go fmt ./... && \
-go test -p=$(nproc) -coverprofile=coverage.out ./... && \
-go tool cover -html=coverage.out && \
-rm coverage.out
+go test -p=$(nproc) -coverprofile=coverage.out ./...
+
+
+if [ "$1" != "gh-actions" ]; then 
+    go tool cover -html=coverage.out
+    rm coverage.out
+fi
 
 docker-compose -f docker/docker-compose.yml stop
