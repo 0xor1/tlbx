@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"math/rand"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/0xor1/sqlx"
@@ -213,7 +212,13 @@ func OrderByField(field string, setLen int) string {
 	return Strf(` ORDER BY FIELD (%s,%s)`, field, PList(setLen))
 }
 
-func PList(count int) string {
-	PanicIf(count < 1, `count must be >= 1`)
-	return `?` + strings.Repeat(`,?`, count-1)
+func PList(p int) string {
+	PanicIf(p < 1, `p must be >= 1`)
+	return `?` + StrRepeat(`,?`, p-1)
+}
+
+func NPList(n, p int) string {
+	PanicIf(n < 1 || p < 1, `n and p must be >= 1`)
+	base := `(?` + StrRepeat(`,?`, p-1) + `)`
+	return base + StrRepeat(`,`+base, n-1)
 }
