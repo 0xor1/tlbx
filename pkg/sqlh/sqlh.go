@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/0xor1/sqlx"
+	"github.com/0xor1/sqlx/reflectx"
 
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app"
@@ -77,7 +78,6 @@ func MustNewReplicaSet(driverName, primaryDataSourceName string, slaveDataSource
 }
 
 func open(dataSourceName string) (*sqlx.DB, error) {
-
 	db, err := sqlx.Open("mysql", dataSourceName)
 	if err != nil {
 		if db != nil {
@@ -85,6 +85,9 @@ func open(dataSourceName string) (*sqlx.DB, error) {
 		}
 		return nil, err
 	}
+	db.Mapper = reflectx.NewMapperTagColFunc("json", StrLower, func(s string) string {
+		return StrLower(StrReplace(s, ",omitempty", "", 1))
+	}, StrLower)
 	return db, nil
 }
 

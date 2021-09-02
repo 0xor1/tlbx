@@ -3,10 +3,10 @@ package sql
 import (
 	"database/sql"
 
+	"github.com/0xor1/sqlx"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
-	"github.com/jmoiron/sqlx"
 )
 
 type tlbxKey struct {

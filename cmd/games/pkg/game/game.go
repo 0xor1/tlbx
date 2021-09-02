@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/0xor1/sqlx"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/sqlh"
@@ -16,7 +17,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/gomodule/redigo/redis"
-	"github.com/jmoiron/sqlx"
 )
 
 const (

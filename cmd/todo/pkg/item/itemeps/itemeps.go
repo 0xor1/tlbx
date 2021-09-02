@@ -16,7 +16,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
-	"github.com/jmoiron/sqlx"
 )
 
 var (
@@ -224,21 +223,15 @@ func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
 		Set: make([]*item.Item, 0, args.Limit),
 	}
 	sqlArgs := &sqlh.Args{}
-	srv.Data().MustQuery(func(rows *sqlx.Rows) {
-		iLimit := int(args.Limit)
-		for rows.Next() {
-			if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
-				res.More = true
-				break
-			}
-			i := &item.Item{}
-			completedOn := time.Time{}
-			PanicOn(rows.Scan(&i.ID, &i.CreatedOn, &i.Name, &completedOn))
-			if !completedOn.IsZero() {
-				i.CompletedOn = &completedOn
-			}
-			res.Set = append(res.Set, i)
+	srv.Data().MustGetN(&res.Set, qryItemsGet(sqlArgs, me, args), sqlArgs.Is()...)
+	if len(args.IDs) == 0 && len(res.Set) == int(args.Limit) {
+		res.Set = res.Set[:len(res.Set)-1]
+		res.More = true
+	}
+	for _, i := range res.Set {
+		if i.CompletedOn.IsZero() {
+			i.CompletedOn = nil
 		}
-	}, qryItemsGet(sqlArgs, me, args), sqlArgs.Is()...)
+	}
 	return res
 }

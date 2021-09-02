@@ -17,6 +17,7 @@ import (
 	_ "image/jpeg"
 	"image/png"
 
+	"github.com/0xor1/sqlx"
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/crypt"
 	"github.com/0xor1/tlbx/pkg/json"
@@ -31,7 +32,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/disintegration/imaging"
 	"github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
 )
 
 const (
@@ -1109,9 +1109,7 @@ func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 		arg = *id
 	}
 	res := &fullUser{}
-	// Get1 doesnt work here because of 2 layers of embedded structs?
-	row := tx.QueryRow(qryUserFullGet(id != nil), arg)
-	err := row.Scan(&res.ID, &res.Email, &res.Handle, &res.Alias, &res.HasAvatar, &res.FcmEnabled, &res.RegisteredOn, &res.ActivatedOn, &res.NewEmail, &res.ActivateCode, &res.ChangeEmailCode, &res.LastPwdResetOn, &res.LoginLinkCodeCreatedOn, &res.LoginLinkCode)
+	err := tx.Get1(res, qryUserFullGet(id != nil), arg)
 	if sqlh.IsNoRows(err) {
 		return nil
 	}
@@ -1151,14 +1149,11 @@ func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd string) {
 }
 
 func getJin(tx sql.Tx, me ID, dst interface{}) {
-	row := tx.QueryRow(qryJinSelect(), me)
-	var err error
 	if js, ok := dst.(*json.Json); ok {
-		err = row.Scan(js)
+		sqlh.PanicIfIsntNoRows(tx.Get1(js, qryJinSelect(), me))
 	} else {
 		bs := []byte{}
-		err = row.Scan(&bs)
+		sqlh.PanicIfIsntNoRows(tx.Get1(&bs, qryJinSelect(), me))
 		json.MustUnmarshal(bs, &dst)
 	}
-	sqlh.PanicIfIsntNoRows(err)
 }
