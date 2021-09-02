@@ -1,4 +1,4 @@
-tlbx
+tlbx [![Coverage Status](https://coveralls.io/repos/github/0xor1/tlbx/badge.svg)](https://coveralls.io/github/0xor1/tlbx)
 ====
 
 ## fmt & test

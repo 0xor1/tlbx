@@ -1,6 +1,6 @@
 package game
 
-//go:generate go get -u github.com/valyala/quicktemplate/qtc
+//go:generate go install github.com/valyala/quicktemplate/qtc
 //go:generate qtc -file=game.sql -skipLineComments
 
 import (
