@@ -14,7 +14,7 @@ docker-compose -f docker/docker-compose.yml up -d
 
 go generate ./... && \
 go fmt ./... && \
-go test -p=$(nproc) -coverprofile=coverage.out ./...
+go test -p=$(nproc) -coverpkg=./... -coverprofile=coverage.out ./...
 
 
 if [ "$1" != "gh-actions" ]; then 
