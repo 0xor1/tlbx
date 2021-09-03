@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Everything(t *testing.T) {
+func TestEverything(t *testing.T) {
 	var (
 		tree task.GetTreeRes
 		pID  ID
