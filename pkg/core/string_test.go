@@ -101,33 +101,20 @@ func TestPrintFuncs(t *testing.T) {
 	Println("a")
 }
 
-func TestStrKey(t *testing.T) {
+func TestStrHasPrefix(t *testing.T) {
 	a := assert.New(t)
-	v := "0123456789_abcdefghijklmnopqrstuvwxyz"
-	k := StrKey(v)
+	a.True(StrHasPrefix("yolo", "yo"))
+	a.False(StrHasPrefix("yolo", "no"))
+}
 
-	bs, err := k.MarshalText()
-	a.Nil(err)
-	a.Equal(v, string(bs))
-	a.Nil(k.MarshalTextTo(bs))
-	a.Nil(err)
-	a.Equal(v, string(bs))
+func TestStrHasSuffix(t *testing.T) {
+	a := assert.New(t)
+	a.True(StrHasSuffix("yolo", "lo"))
+	a.False(StrHasSuffix("yolo", "no"))
+}
 
-	newK := StrKey("")
-	err = newK.UnmarshalText(bs)
-	a.Nil(err)
-	a.Equal(v, string(newK))
-
-	k = StrKeyMustConvert("   8  9  {}@#:asd   8 d  +){")
-	a.Equal("8_9_asd_8_d", string(k))
-	k = StrKeyMustConvert(string(k))
-	a.Equal("8_9_asd_8_d", string(k))
-
-	sqlV, err := k.Value()
-	a.Nil(err)
-	a.NotNil(sqlV)
-
-	a.Nil(k.Scan(sqlV))
-	a.Equal("8_9_asd_8_d", string(k))
-
+func TestStrContains(t *testing.T) {
+	a := assert.New(t)
+	a.True(StrContains("yolo", "lo"))
+	a.False(StrContains("yolo", "no"))
 }

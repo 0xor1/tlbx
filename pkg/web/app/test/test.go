@@ -20,6 +20,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
+	"github.com/0xor1/tlbx/pkg/web/app/str"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 )
@@ -59,15 +60,15 @@ type Rig interface {
 type User interface {
 	Client() *app.Client
 	ID() ID
-	Email() string
-	Pwd() string
+	Email() str.Email
+	Pwd() str.Pwd
 }
 
 type testUser struct {
 	client *app.Client
 	id     ID
-	email  string
-	pwd    string
+	email  str.Email
+	pwd    str.Pwd
 }
 
 func (u *testUser) Client() *app.Client {
@@ -78,11 +79,11 @@ func (u *testUser) ID() ID {
 	return u.id
 }
 
-func (u *testUser) Email() string {
+func (u *testUser) Email() str.Email {
 	return u.email
 }
 
-func (u *testUser) Pwd() string {
+func (u *testUser) Pwd() str.Pwd {
 	return u.pwd
 }
 
@@ -296,10 +297,10 @@ func NewRig(
 
 	// sleep to ensure r.rootHandler has been passed to rig struct
 	time.Sleep(100 * time.Millisecond)
-	r.ali = r.createUser("ali", emailSuffix, pwd)
-	r.bob = r.createUser("bob", emailSuffix, pwd)
-	r.cat = r.createUser("cat", emailSuffix, pwd)
-	r.dan = r.createUser("dan", emailSuffix, pwd)
+	r.ali = r.createUser("ali", emailSuffix, str.ToPwd(pwd))
+	r.bob = r.createUser("bob", emailSuffix, str.ToPwd(pwd))
+	r.cat = r.createUser("cat", emailSuffix, str.ToPwd(pwd))
+	r.dan = r.createUser("dan", emailSuffix, str.ToPwd(pwd))
 	return r
 }
 
@@ -320,8 +321,8 @@ func (r *rig) CleanUp() {
 	}
 }
 
-func (r *rig) createUser(handleSuffix, emailSuffix, pwd string) *testUser {
-	email := Strf("%s%s%d", handleSuffix, emailSuffix, r.unique)
+func (r *rig) createUser(handleSuffix, emailSuffix string, pwd str.Pwd) *testUser {
+	email := str.ToEmail(Strf("%s%s%d", handleSuffix, emailSuffix, r.unique))
 	c := r.NewClient()
 	if r.useAuth {
 		reg := &user.Register{

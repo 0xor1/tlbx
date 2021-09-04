@@ -15,6 +15,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/store"
+	"github.com/0xor1/tlbx/pkg/web/app/str"
 	sp "github.com/SparkPost/gosparkpost"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -40,7 +41,7 @@ type Config struct {
 		}
 	}
 	App struct {
-		FromEmail                 string
+		FromEmail                 str.Email
 		ActivateFmtLink           string
 		LoginLinkFmtLink          string
 		ConfirmChangeEmailFmtLink string
@@ -137,7 +138,7 @@ func GetProcessed(c *config.Config) *Config {
 		res.Web.Session.EncrKey32s = append(res.Web.Session.EncrKey32s, encrBytes)
 	}
 
-	res.App.FromEmail = c.GetString("app.fromEmail")
+	res.App.FromEmail = str.ToEmail(c.GetString("app.fromEmail"))
 	res.App.ActivateFmtLink = c.GetString("app.activateFmtLink")
 	res.App.LoginLinkFmtLink = c.GetString("app.loginLinkFmtLink")
 	res.App.ConfirmChangeEmailFmtLink = c.GetString("app.confirmChangeEmailFmtLink")

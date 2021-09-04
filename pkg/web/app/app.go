@@ -639,7 +639,12 @@ func getJsonArgs(tlbx *tlbx, args interface{}) {
 		d := json.NewDecoder(bytes.NewBuffer(argsBytes))
 		d.DisallowUnknownFields()
 		err := d.Decode(args)
-		BadReqIf(err != nil, "error unmarshalling json: %s", err)
+		if err != nil {
+			if e, ok := err.(Error); ok {
+				BadReqIf(err != nil, "error unmarshalling json: %s", e.Message())
+			}
+			BadReqIf(err != nil, "error unmarshalling json: %s", err)
+		}
 	}
 }
 
