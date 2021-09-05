@@ -157,7 +157,7 @@ var (
 				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				// items deleted on foreign key cascade
-				tx.MustExec(`DELETE FROM lists WHERE user=?`+sqlh.InCondition(true, "id", idsLen), queryArgs...)
+				tx.MustExec(`DELETE FROM lists WHERE user=? AND id IN `+sqlh.NPList(1, idsLen), queryArgs...)
 				tx.Commit()
 				return nil
 			},

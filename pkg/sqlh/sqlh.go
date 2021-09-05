@@ -70,7 +70,7 @@ func NewReplicaSet(primaryDataSourceName string, slaveDataSourceNames ...string)
 	return rs, nil
 }
 
-func MustNewReplicaSet(driverName, primaryDataSourceName string, slaveDataSourceNames ...string) ReplicaSet {
+func MustNewReplicaSet(primaryDataSourceName string, slaveDataSourceNames ...string) ReplicaSet {
 	rs, err := NewReplicaSet(primaryDataSourceName, slaveDataSourceNames...)
 	PanicOn(err)
 	return rs
@@ -219,6 +219,6 @@ func PList(p int) string {
 
 func NPList(n, p int) string {
 	PanicIf(n < 1 || p < 1, `n and p must be >= 1`)
-	base := `(?` + StrRepeat(`,?`, p-1) + `)`
+	base := `(` + PList(p) + `)`
 	return base + StrRepeat(`,`+base, n-1)
 }
