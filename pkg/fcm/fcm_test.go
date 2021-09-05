@@ -6,22 +6,31 @@ import (
 
 	firebase "firebase.google.com/go"
 	"firebase.google.com/go/messaging"
-	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/fcm"
-	"github.com/stretchr/testify/assert"
+	"github.com/0xor1/tlbx/pkg/log"
 	"google.golang.org/api/option"
 )
 
 func TestClient(t *testing.T) {
-	a := assert.New(t)
 	opt := option.WithoutAuthentication()
-	app, _ := firebase.NewApp(context.Background(), nil, opt)
+	app, _ := firebase.NewApp(context.Background(), &firebase.Config{ProjectID: "123"}, opt)
 	msgr, _ := app.Messaging(context.Background())
 	c := fcm.NewClient(msgr)
-	defer Recover(func(i interface{}) {
-		// TODO try to test better, this is just failing before attempting to send
-		a.Contains(i.(Error).Message(), "runtime error:")
+	ts := make([]string, 501)
+	for i := range ts {
+		ts[i] = "a"
+	}
+	c.MustSend(context.Background(), &messaging.MulticastMessage{
+		Tokens: ts,
+		Data: map[string]string{
+			"yolo": "nolo",
+		},
 	})
+}
+
+func TestNopClient(t *testing.T) {
+	l := log.New()
+	c := fcm.NewNopClient(l)
 	c.MustSend(context.Background(), &messaging.MulticastMessage{
 		Tokens: []string{"asd"},
 		Data: map[string]string{
