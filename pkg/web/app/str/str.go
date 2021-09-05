@@ -46,6 +46,14 @@ func (s Keys) ToIs() []interface{} {
 	return res
 }
 
+type KeyField struct {
+	V Key `json:"v"`
+}
+
+type KeyPtrField struct {
+	V *Key `json:"v"`
+}
+
 // keys are user defined ids
 type Key string
 
@@ -132,6 +140,14 @@ func ToShort(s string) Short {
 	return sh
 }
 
+type ShortField struct {
+	V Short `json:"v"`
+}
+
+type ShortPtrField struct {
+	V *Short `json:"v"`
+}
+
 type Short string
 
 func isValidShort(s string) bool {
@@ -212,6 +228,14 @@ func ToLong(s string) Long {
 	return l
 }
 
+type LongField struct {
+	V Long `json:"v"`
+}
+
+type LongPtrField struct {
+	V *Long `json:"v"`
+}
+
 type Long string
 
 func (s Long) MarshalBinary() ([]byte, error) {
@@ -273,6 +297,14 @@ func ToEmail(s string) Email {
 	e := Email("")
 	PanicOn(e.UnmarshalBinary([]byte(s)))
 	return e
+}
+
+type EmailField struct {
+	V Email `json:"v"`
+}
+
+type EmailPtrField struct {
+	V *Email `json:"v"`
 }
 
 type Email string
@@ -364,6 +396,14 @@ func ToPwd(s string) Pwd {
 	p := Pwd("")
 	PanicOn(p.UnmarshalBinary([]byte(s)))
 	return p
+}
+
+type PwdField struct {
+	V Pwd `json:"v"`
+}
+
+type PwdPtrField struct {
+	V *Pwd `json:"v"`
 }
 
 type Pwd string
