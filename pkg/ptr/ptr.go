@@ -10,6 +10,13 @@ func ID(v core.ID) *core.ID {
 	return &v
 }
 
+func IDOr(v *core.ID, or core.ID) core.ID {
+	if v == nil {
+		return or
+	}
+	return *v
+}
+
 func Bool(v bool) *bool {
 	return &v
 }
