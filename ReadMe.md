@@ -3,17 +3,16 @@ tlbx [![Coverage Status](https://coveralls.io/repos/github/0xor1/tlbx/badge.svg)
 
 ## fmt & test
 
-to gen, fmt and test everything.
 ```
 ./bin/pre
 ```
+to gen, fmt and test everything.
 
-to clear out all docker containers and rebuild before gen, fmt and test.
-(useful if you have a sql schema change and want to recreate your sql db containers).
 ```
 ./bin/pre nuke
 ```
-
+to clear out all docker containers and rebuild before gen, fmt and test.
+(useful if you have a sql schema change and want to recreate your sql db containers).
 
 ## structure
 
