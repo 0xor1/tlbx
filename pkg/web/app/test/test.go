@@ -306,24 +306,20 @@ func NewRig(
 
 func (r *rig) CleanUp() {
 	if r.useAuth {
-		(&user.Delete{
-			Pwd: r.Ali().Pwd(),
-		}).MustDo(r.Ali().Client())
-		(&user.Delete{
-			Pwd: r.Bob().Pwd(),
-		}).MustDo(r.Bob().Client())
-		(&user.Delete{
-			Pwd: r.Cat().Pwd(),
-		}).MustDo(r.Cat().Client())
-		(&user.Delete{
-			Pwd: r.Dan().Pwd(),
-		}).MustDo(r.Dan().Client())
+		for _, u := range r.users {
+			(&user.Delete{
+				Pwd: u.Pwd(),
+			}).MustDo(u.Client())
+		}
 	}
 }
 
 func (r *rig) CreateUser(handlePrefix string) User {
+	_, exists := r.users[handlePrefix]
+	PanicIf(exists, "%s test user handle prefix already used")
 	email := str.ToEmail(Strf("%s%s%d", handlePrefix, emailSuffix, r.unique))
 	c := r.NewClient()
+	var tu *testUser
 	if r.useAuth {
 		reg := &user.Register{
 			Handle: ptr.String(Strf("%s%d", handlePrefix, r.unique)),
@@ -351,14 +347,15 @@ func (r *rig) CreateUser(handlePrefix string) User {
 			Pwd:   pwd,
 		}).MustDo(c).ID
 
-		r.users[handlePrefix] = &testUser{
+		tu = &testUser{
 			client: c,
 			id:     id,
 			email:  email,
 			pwd:    pwd,
 		}
 	} else {
-		r.users[handlePrefix] = &testUser{client: c}
+		tu = &testUser{client: c}
 	}
+	r.users[handlePrefix] = tu
 	return r.users[handlePrefix]
 }
