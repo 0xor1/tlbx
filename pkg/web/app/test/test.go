@@ -53,6 +53,7 @@ type Rig interface {
 	Data() sqlh.ReplicaSet
 	Email() email.Client
 	Store() store.Client
+	CreateUser(handleSuffix, emailSuffix string, pwd str.Pwd) User
 	// cleanup
 	CleanUp()
 }
@@ -297,10 +298,10 @@ func NewRig(
 
 	// sleep to ensure r.rootHandler has been passed to rig struct
 	time.Sleep(100 * time.Millisecond)
-	r.ali = r.createUser("ali", emailSuffix, str.ToPwd(pwd))
-	r.bob = r.createUser("bob", emailSuffix, str.ToPwd(pwd))
-	r.cat = r.createUser("cat", emailSuffix, str.ToPwd(pwd))
-	r.dan = r.createUser("dan", emailSuffix, str.ToPwd(pwd))
+	r.ali = r.CreateUser("ali", emailSuffix, str.ToPwd(pwd)).(*testUser)
+	r.bob = r.CreateUser("bob", emailSuffix, str.ToPwd(pwd)).(*testUser)
+	r.cat = r.CreateUser("cat", emailSuffix, str.ToPwd(pwd)).(*testUser)
+	r.dan = r.CreateUser("dan", emailSuffix, str.ToPwd(pwd)).(*testUser)
 	return r
 }
 
@@ -321,7 +322,7 @@ func (r *rig) CleanUp() {
 	}
 }
 
-func (r *rig) createUser(handleSuffix, emailSuffix string, pwd str.Pwd) *testUser {
+func (r *rig) CreateUser(handleSuffix, emailSuffix string, pwd str.Pwd) User {
 	email := str.ToEmail(Strf("%s%s%d", handleSuffix, emailSuffix, r.unique))
 	c := r.NewClient()
 	if r.useAuth {
