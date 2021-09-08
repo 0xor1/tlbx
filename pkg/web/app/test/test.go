@@ -53,7 +53,7 @@ type Rig interface {
 	Data() sqlh.ReplicaSet
 	Email() email.Client
 	Store() store.Client
-	CreateUser(handleSuffix, emailSuffix string, pwd str.Pwd) User
+	CreateUser(handlePrefix string) User
 	// cleanup
 	CleanUp()
 }
@@ -92,10 +92,7 @@ type rig struct {
 	rootHandler     http.HandlerFunc
 	unique          int
 	preRegisterHook func(Rig, *user.Register)
-	ali             *testUser
-	bob             *testUser
-	cat             *testUser
-	dan             *testUser
+	users           map[string]*testUser
 	log             log.Log
 	rateLimit       iredis.Pool
 	cache           iredis.Pool
@@ -125,19 +122,19 @@ func (r *rig) Log() log.Log {
 }
 
 func (r *rig) Ali() User {
-	return r.ali
+	return r.users["ali"]
 }
 
 func (r *rig) Bob() User {
-	return r.bob
+	return r.users["bob"]
 }
 
 func (r *rig) Cat() User {
-	return r.cat
+	return r.users["cat"]
 }
 
 func (r *rig) Dan() User {
-	return r.dan
+	return r.users["dan"]
 }
 
 func (r *rig) RateLimit() iredis.Pool {
@@ -296,12 +293,14 @@ func NewRig(
 		})
 	}, r.log.ErrorOn)
 
+	r.users = map[string]*testUser{}
+
 	// sleep to ensure r.rootHandler has been passed to rig struct
 	time.Sleep(100 * time.Millisecond)
-	r.ali = r.CreateUser("ali", emailSuffix, str.ToPwd(pwd)).(*testUser)
-	r.bob = r.CreateUser("bob", emailSuffix, str.ToPwd(pwd)).(*testUser)
-	r.cat = r.CreateUser("cat", emailSuffix, str.ToPwd(pwd)).(*testUser)
-	r.dan = r.CreateUser("dan", emailSuffix, str.ToPwd(pwd)).(*testUser)
+	r.CreateUser("ali")
+	r.CreateUser("bob")
+	r.CreateUser("cat")
+	r.CreateUser("dan")
 	return r
 }
 
@@ -322,13 +321,13 @@ func (r *rig) CleanUp() {
 	}
 }
 
-func (r *rig) CreateUser(handleSuffix, emailSuffix string, pwd str.Pwd) User {
-	email := str.ToEmail(Strf("%s%s%d", handleSuffix, emailSuffix, r.unique))
+func (r *rig) CreateUser(handlePrefix string) User {
+	email := str.ToEmail(Strf("%s%s%d", handlePrefix, emailSuffix, r.unique))
 	c := r.NewClient()
 	if r.useAuth {
 		reg := &user.Register{
-			Handle: ptr.String(Strf("%s%d", handleSuffix, r.unique)),
-			Alias:  ptr.String(handleSuffix),
+			Handle: ptr.String(Strf("%s%d", handlePrefix, r.unique)),
+			Alias:  ptr.String(handlePrefix),
 			Email:  email,
 			Pwd:    pwd,
 		}
@@ -352,12 +351,14 @@ func (r *rig) CreateUser(handleSuffix, emailSuffix string, pwd str.Pwd) User {
 			Pwd:   pwd,
 		}).MustDo(c).ID
 
-		return &testUser{
+		r.users[handlePrefix] = &testUser{
 			client: c,
 			id:     id,
 			email:  email,
 			pwd:    pwd,
 		}
+	} else {
+		r.users[handlePrefix] = &testUser{client: c}
 	}
-	return &testUser{client: c}
+	return r.users[handlePrefix]
 }
