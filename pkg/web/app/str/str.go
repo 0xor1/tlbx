@@ -46,14 +46,6 @@ func (s Keys) ToIs() []interface{} {
 	return res
 }
 
-type KeyField struct {
-	V Key `json:"v"`
-}
-
-type KeyPtrField struct {
-	V *Key `json:"v"`
-}
-
 // keys are user defined ids
 type Key string
 
@@ -140,14 +132,6 @@ func ToShort(s string) Short {
 	return sh
 }
 
-type ShortField struct {
-	V Short `json:"v"`
-}
-
-type ShortPtrField struct {
-	V *Short `json:"v"`
-}
-
 type Short string
 
 func isValidShort(s string) bool {
@@ -226,14 +210,6 @@ func ToLong(s string) Long {
 	l := Long("")
 	PanicOn(l.UnmarshalBinary([]byte(s)))
 	return l
-}
-
-type LongField struct {
-	V Long `json:"v"`
-}
-
-type LongPtrField struct {
-	V *Long `json:"v"`
 }
 
 type Long string

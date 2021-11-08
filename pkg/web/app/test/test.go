@@ -316,7 +316,7 @@ func (r *rig) CleanUp() {
 
 func (r *rig) CreateUser(handlePrefix string) User {
 	_, exists := r.users[handlePrefix]
-	PanicIf(exists, "%s test user handle prefix already used")
+	PanicIf(exists, "%s test user handle prefix already used", handlePrefix)
 	email := str.ToEmail(Strf("%s%s%d", handlePrefix, emailSuffix, r.unique))
 	c := r.NewClient()
 	var tu *testUser

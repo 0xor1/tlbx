@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"io"
 	"io/ioutil"
@@ -185,12 +186,12 @@ func Run(configs ...func(*Config)) {
 		defer func() {
 			if e := ToError(recover()); e != nil {
 				if err, ok := e.Value().(*ErrMsg); ok {
-					writeJson(tlbx.resp, err.Status, err.Msg)
+					writeJson(tlbx, err.Status, err.Msg)
 				} else if redirect, ok := e.Value().(*redirect); ok {
 					http.Redirect(tlbx.resp, tlbx.req, redirect.url, redirect.status)
 				} else {
 					tlbx.log.ErrorOn(e)
-					writeJson(tlbx.resp, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+					writeJson(tlbx, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 				}
 			}
 		}()
@@ -291,9 +292,9 @@ func Run(configs ...func(*Config)) {
 				_, err = io.Copy(tlbx.resp, s.Content)
 				PanicOn(err)
 			} else if resBs, ok := res.([]byte); ok {
-				writeJsonRaw(tlbx.resp, http.StatusOK, resBs)
+				writeJsonRaw(tlbx, http.StatusOK, resBs)
 			} else {
-				writeJsonOk(tlbx.resp, res)
+				writeJsonOk(tlbx, res)
 			}
 			cancel()
 		}
@@ -509,19 +510,28 @@ func (e *ErrMsg) Error() string {
 	return Strf("status: %d, message: %s", e.Status, e.Msg)
 }
 
-func writeJsonOk(w http.ResponseWriter, body interface{}) {
-	writeJson(w, http.StatusOK, body)
+func writeJsonOk(tlbx *tlbx, body interface{}) {
+	writeJson(tlbx, http.StatusOK, body)
 }
 
-func writeJson(w http.ResponseWriter, status int, body interface{}) {
-	writeJsonRaw(w, status, json.MustMarshal(body))
+func writeJson(tlbx *tlbx, status int, body interface{}) {
+	writeJsonRaw(tlbx, status, json.MustMarshal(body))
 }
 
-func writeJsonRaw(w http.ResponseWriter, status int, body []byte) {
-	w.Header().Set("Content-Type", json.ContentType)
-	w.WriteHeader(status)
-	_, err := w.Write(body)
-	PanicOn(err)
+func writeJsonRaw(tlbx *tlbx, status int, body []byte) {
+	tlbx.resp.Header().Set("Content-Type", json.ContentType)
+	if !tlbx.isSubMDo && StrContains(tlbx.req.Header.Get("Accept-Encoding"), "gzip") {
+		tlbx.resp.Header().Set("Content-Encoding", "gzip")
+		tlbx.resp.WriteHeader(status)
+		gz := gzip.NewWriter(tlbx.resp)
+		_, err := gz.Write(body)
+		PanicOn(err)
+		PanicOn(gz.Close())
+	} else {
+		tlbx.resp.WriteHeader(status)
+		_, err := tlbx.resp.Write(body)
+		PanicOn(err)
+	}
 }
 
 func isSubMDo(r *http.Request) bool {
@@ -740,6 +750,14 @@ type Client struct {
 	baseHref string
 	http     httpClient
 	cookies  map[string]string
+}
+
+func (c *Client) Cookies() map[string]string {
+	res := map[string]string{}
+	for k, v := range c.cookies {
+		res[k] = v
+	}
+	return res
 }
 
 func NewClient(baseHref string, optClient ...httpClient) *Client {
