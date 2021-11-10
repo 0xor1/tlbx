@@ -22,9 +22,6 @@ func TestEverything(t *testing.T) {
 	r := test.NewMeRig(
 		config.Get(),
 		projecteps.Eps,
-		nil,
-		nil,
-		nil,
 		projecteps.OnDelete,
 		projecteps.OnSetSocials,
 		projecteps.ValidateFCMTopic,

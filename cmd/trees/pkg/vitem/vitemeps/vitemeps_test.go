@@ -34,9 +34,6 @@ func TestEverything(t *testing.T) {
 	r := test.NewMeRig(
 		config.Get(),
 		append(append(projecteps.Eps, taskeps.Eps...), vitemeps.Eps...),
-		nil,
-		nil,
-		nil,
 		projecteps.OnDelete,
 		projecteps.OnSetSocials,
 		projecteps.ValidateFCMTopic,

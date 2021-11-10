@@ -38,8 +38,6 @@ func main() {
 						config.App.ActivateFmtLink,
 						config.App.LoginLinkFmtLink,
 						config.App.ConfirmChangeEmailFmtLink,
-						nil,
-						nil,
 						listeps.OnDelete,
 						nil,
 						nil,

@@ -42,19 +42,11 @@ const (
 
 var NopOnSetSocials = func(_ app.Tlbx, _ *user.User) {}
 
-type AppData interface {
-	Default() interface{}
-	Example() interface{}
-	Validate(app.Tlbx, interface{})
-}
-
 func New(
 	fromEmail str.Email,
 	activateFmtLink,
 	loginLinkFmtLink,
 	confirmChangeEmailFmtLink string,
-	appData AppData,
-	onActivate func(app.Tlbx, *user.User, interface{}),
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User),
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
@@ -75,9 +67,6 @@ func New(
 					d.Handle = ptr.String("")
 					d.Alias = ptr.String("")
 				}
-				if appData != nil {
-					d.AppData = appData.Default()
-				}
 				return d
 			},
 			GetExampleArgs: func() interface{} {
@@ -88,9 +77,6 @@ func New(
 				if enableSocials {
 					ex.Handle = ptr.String("bloe_joggs")
 					ex.Alias = ptr.String("Joe Bloggs")
-				}
-				if appData != nil {
-					ex.AppData = appData.Example()
 				}
 				return ex
 			},
@@ -134,13 +120,6 @@ func New(
 					mySqlErr, ok := err.(*mysql.MySQLError)
 					app.BadReqIf(ok && mySqlErr.Number == 1062, "email or handle already registered")
 					PanicOn(err)
-				}
-				app.BadReqIf((appData == nil && args.AppData != nil) ||
-					(appData != nil && args.AppData == nil), "missing appData value")
-				if args.AppData != nil {
-					appData.Validate(tlbx, args.AppData)
-					// if app requires init ctx data store it in jin
-					usrtx.MustExec(qryJinInsert(), id, json.MustMarshal(args.AppData))
 				}
 				pwdtx := srv.Pwd().BeginWrite()
 				defer pwdtx.Rollback()
@@ -207,18 +186,10 @@ func New(
 				defer tx.Rollback()
 				user := getUser(tx, nil, &args.Me)
 				app.BadReqIf(*user.ActivateCode != args.Code, "")
-				var ad interface{}
-				if appData != nil {
-					ad = appData.Default()
-					getJin(tx, user.ID, &ad)
-				}
 				now := Now()
 				user.ActivatedOn = now
 				user.ActivateCode = nil
 				updateUser(tx, user)
-				if onActivate != nil {
-					onActivate(tlbx, &user.User, ad)
-				}
 				tx.MustExec(qryJinDelete(), user.ID)
 				tx.Commit()
 				return nil

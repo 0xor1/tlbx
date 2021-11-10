@@ -89,20 +89,19 @@ func (u *testUser) Pwd() str.Pwd {
 }
 
 type rig struct {
-	rootHandler     http.HandlerFunc
-	unique          int
-	preRegisterHook func(Rig, *user.Register)
-	users           map[string]*testUser
-	log             log.Log
-	rateLimit       iredis.Pool
-	cache           iredis.Pool
-	user            sqlh.ReplicaSet
-	pwd             sqlh.ReplicaSet
-	data            sqlh.ReplicaSet
-	email           email.Client
-	store           store.Client
-	fcm             fcm.Client
-	useAuth         bool
+	rootHandler http.HandlerFunc
+	unique      int
+	users       map[string]*testUser
+	log         log.Log
+	rateLimit   iredis.Pool
+	cache       iredis.Pool
+	user        sqlh.ReplicaSet
+	pwd         sqlh.ReplicaSet
+	data        sqlh.ReplicaSet
+	email       email.Client
+	store       store.Client
+	fcm         fcm.Client
+	useAuth     bool
 }
 
 func (r *rig) RootHandler() http.HandlerFunc {
@@ -191,9 +190,6 @@ func NewNoRig(
 		nil,
 		nil,
 		nil,
-		nil,
-		nil,
-		nil,
 		false,
 		ratelimit.NoMware,
 		buckets...)
@@ -202,9 +198,6 @@ func NewNoRig(
 func NewMeRig(
 	config *config.Config,
 	eps []*app.Endpoint,
-	preRegisterHook func(Rig, *user.Register),
-	appData usereps.AppData,
-	onActivate func(app.Tlbx, *user.User, interface{}),
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User),
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
@@ -215,9 +208,6 @@ func NewMeRig(
 		config,
 		eps,
 		true,
-		preRegisterHook,
-		appData,
-		onActivate,
 		onDelete,
 		onSetSocials,
 		validateFcmTopic,
@@ -230,9 +220,6 @@ func NewRig(
 	config *config.Config,
 	eps []*app.Endpoint,
 	useUsers bool,
-	preRegisterHook func(Rig, *user.Register),
-	appData usereps.AppData,
-	onActivate func(app.Tlbx, *user.User, interface{}),
 	onDelete func(app.Tlbx, ID),
 	onSetSocials func(app.Tlbx, *user.User),
 	validateFcmTopic func(app.Tlbx, IDs) (sql.Tx, error),
@@ -241,18 +228,17 @@ func NewRig(
 	buckets ...string,
 ) Rig {
 	r := &rig{
-		unique:          os.Getpid(),
-		preRegisterHook: preRegisterHook,
-		log:             config.Log,
-		rateLimit:       config.Redis.RateLimit,
-		cache:           config.Redis.Cache,
-		email:           config.Email,
-		store:           config.Store,
-		fcm:             config.FCM,
-		user:            config.SQL.User,
-		pwd:             config.SQL.Pwd,
-		data:            config.SQL.Data,
-		useAuth:         useUsers,
+		unique:    os.Getpid(),
+		log:       config.Log,
+		rateLimit: config.Redis.RateLimit,
+		cache:     config.Redis.Cache,
+		email:     config.Email,
+		store:     config.Store,
+		fcm:       config.FCM,
+		user:      config.SQL.User,
+		pwd:       config.SQL.Pwd,
+		data:      config.SQL.Data,
+		useAuth:   useUsers,
 	}
 
 	for _, bucket := range buckets {
@@ -268,8 +254,6 @@ func NewRig(
 				config.App.ActivateFmtLink,
 				config.App.LoginLinkFmtLink,
 				config.App.ConfirmChangeEmailFmtLink,
-				appData,
-				onActivate,
 				onDelete,
 				onSetSocials,
 				validateFcmTopic,
@@ -326,9 +310,6 @@ func (r *rig) CreateUser(handlePrefix string) User {
 			Alias:  ptr.String(handlePrefix),
 			Email:  email,
 			Pwd:    pwd,
-		}
-		if r.preRegisterHook != nil {
-			r.preRegisterHook(r, reg)
 		}
 		reg.MustDo(c)
 

@@ -21,9 +21,6 @@ func TestEverything(t *testing.T) {
 	r := test.NewMeRig(
 		config.Get(),
 		listeps.Eps,
-		nil,
-		nil,
-		nil,
 		listeps.OnDelete,
 		usereps.NopOnSetSocials,
 		nil,

@@ -21,44 +21,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type appData struct {
-	Foo int    `json:"foo"`
-	Bar string `json:"bar"`
-}
-
-func (*appData) Default() interface{} {
-	return &appData{}
-}
-
-func (*appData) Example() interface{} {
-	return &appData{
-		Foo: 1,
-		Bar: "yolo",
-	}
-}
-
-func (*appData) Validate(_ app.Tlbx, ad interface{}) {
-	appData := ad.(*appData)
-	app.BadReqIf(appData.Foo == 0, "appData.foo must be > 0")
-	app.BadReqIf(appData.Bar == "", "appData.bar must be none empty string")
-}
-
 func Everything(t *testing.T) {
 	r := test.NewMeRig(
 		config.GetProcessed(config.GetBase()),
 		nil,
-		func(r test.Rig, reg *user.Register) {
-			reg.AppData = &appData{
-				Foo: r.Unique(),
-				Bar: *reg.Alias,
-			}
-		},
-		&appData{},
-		func(tlbx app.Tlbx, user *user.User, ad interface{}) {
-			appData := ad.(*appData)
-			app.BadReqIf(appData.Foo == 0, "appData.foo must be > 0")
-			app.BadReqIf(appData.Bar == "", "appData.bar must be none empty string")
-		},
 		func(tlbx app.Tlbx, id ID) {},
 		usereps.NopOnSetSocials,
 		func(t app.Tlbx, i IDs) (sql.Tx, error) {
@@ -75,60 +41,15 @@ func Everything(t *testing.T) {
 	email := str.ToEmail("test@test.localhost%s" + r.UniqueStr())
 	pwd := str.ToPwd("1aA$_t;3")
 
-	err := (&user.Register{
-		Handle: ptr.String(handle),
-		Alias:  ptr.String(alias),
-		Email:  email,
-		Pwd:    pwd,
-	}).Do(c)
-	a.Equal(&app.ErrMsg{Status: 400, Msg: "missing appData value"}, err)
-
-	err = (&user.Register{
-		Handle: ptr.String(handle),
-		Alias:  ptr.String(alias),
-		Email:  email,
-		Pwd:    pwd,
-		AppData: struct {
-			Baz string `json:"baz"`
-		}{
-			Baz: "yolo",
-		},
-	}).Do(c)
-	a.Equal(&app.ErrMsg{Status: 400, Msg: `error unmarshalling json: json: unknown field "baz"`}, err)
-
-	err = (&user.Register{
-		Handle:  ptr.String(handle),
-		Alias:   ptr.String(alias),
-		Email:   email,
-		Pwd:     pwd,
-		AppData: &appData{},
-	}).Do(c)
-	a.Equal(&app.ErrMsg{Status: 400, Msg: `appData.foo must be > 0`}, err)
-
-	err = (&user.Register{
-		Handle: ptr.String(handle),
-		Alias:  ptr.String(alias),
-		Email:  email,
-		Pwd:    pwd,
-		AppData: &appData{
-			Foo: 1,
-		},
-	}).Do(c)
-	a.Equal(&app.ErrMsg{Status: 400, Msg: `appData.bar must be none empty string`}, err)
-
 	(&user.Register{
 		Handle: ptr.String(handle),
 		Alias:  ptr.String(alias),
 		Email:  email,
 		Pwd:    pwd,
-		AppData: &appData{
-			Foo: 1,
-			Bar: "yolo",
-		},
 	}).MustDo(c)
 
 	// check existing email err
-	err = (&user.Register{
+	err := (&user.Register{
 		Handle: ptr.String("not_used"),
 		Email:  email,
 		Pwd:    pwd,
@@ -287,10 +208,6 @@ func Everything(t *testing.T) {
 		Handle: ptr.String(handle),
 		Email:  email,
 		Pwd:    pwd,
-		AppData: &appData{
-			Foo: 1,
-			Bar: "yolo",
-		},
 	}).MustDo(c)
 
 	row = r.User().Primary().QueryRow(`SELECT id, activateCode FROM users WHERE email=?`, email)
