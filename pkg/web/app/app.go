@@ -801,6 +801,7 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 		})
 	}
 	req.Header.Set("X-Client", "tlbx-go-client")
+	req.Header.Set("Accept-Encoding", "gzip")
 
 	httpRes, err := c.http.Do(req)
 	if err != nil {
@@ -822,7 +823,15 @@ func Call(c *Client, path string, args interface{}, res interface{}) error {
 		return nil
 	}
 	defer httpRes.Body.Close()
-	bs, err := ioutil.ReadAll(httpRes.Body)
+	var reader io.Reader
+	reader = httpRes.Body
+	if httpRes.Header.Get("Content-Encoding") == "gzip" {
+		reader, err = gzip.NewReader(reader)
+		if err != nil {
+			return ToError(err)
+		}
+	}
+	bs, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return ToError(err)
 	}
