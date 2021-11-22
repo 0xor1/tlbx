@@ -23,7 +23,7 @@ jobs:
       run: ./bin/pre gh-actions
       
     - name: Send coverage
-      uses: shogo82148/actions-goveralls@v1
+      uses: shogo82148/actions-goveralls@v1.4.7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-profile: coverage.out
