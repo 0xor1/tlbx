@@ -24,7 +24,6 @@ jobs:
       
     - name: Send coverage
       uses: shogo82148/actions-goveralls@v1
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-profile: coverage.out
