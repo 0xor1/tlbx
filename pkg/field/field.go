@@ -135,26 +135,26 @@ type Float64Ptr struct {
 	V *float64 `json:"v"`
 }
 
-type KeyField struct {
+type StrKey struct {
 	V str.Key `json:"v"`
 }
 
-type KeyPtrField struct {
+type StrKeyPtr struct {
 	V *str.Key `json:"v"`
 }
 
-type ShortField struct {
+type StrShort struct {
 	V str.Short `json:"v"`
 }
 
-type ShortPtrField struct {
+type StrShortPtr struct {
 	V *str.Short `json:"v"`
 }
 
-type LongField struct {
+type StrLong struct {
 	V str.Long `json:"v"`
 }
 
-type LongPtrField struct {
+type StrLongPtr struct {
 	V *str.Long `json:"v"`
 }
