@@ -63,6 +63,11 @@ func TestKey(t *testing.T) {
 	k = str.Key("")
 	_, err = k.Value()
 	a.Contains(err.Error(), `invalid str key detected: ""`)
+
+	defer Recover(func(i interface{}) {
+		a.Contains(i.(Error).Error(), `key must not be a ulid string detected`)
+	})
+	str.ToKey(NewIDGen().MustNew().String())
 }
 
 func TestShort(t *testing.T) {

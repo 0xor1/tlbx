@@ -13,11 +13,17 @@ var (
 	keyValidDoubleUnderscoreRegex = regexp.MustCompile(`__`)
 	keyWhiteSpaceOrUnderscores    = regexp.MustCompile(`[\s_]+`)
 	keyInvalidChar                = regexp.MustCompile(`[^a-z0-9_]+`)
+	errUlidString                 = errors.New("key must not be a ulid string detected")
 	errBufferSize                 = errors.New("bad buffer size when marshaling")
 	errScanValue                  = errors.New("source value must be a string or byte slice")
 )
 
 func ToKey(s string) Key {
+	if _, err := ParseID(s); err == nil {
+		// not allowed to be a ulid string
+		PanicOn(errUlidString)
+	}
+
 	// lower all chars
 	s = StrLower(s)
 	// replace all ws or underscore chars with a single _
