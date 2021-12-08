@@ -17,7 +17,7 @@ var (
 	errScanValue                  = errors.New("source value must be a string or byte slice")
 )
 
-func ConvertToKey(s string) Key {
+func ToKey(s string) Key {
 	// lower all chars
 	s = StrLower(s)
 	// replace all ws or underscore chars with a single _

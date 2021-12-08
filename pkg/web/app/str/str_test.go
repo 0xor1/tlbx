@@ -25,9 +25,9 @@ func TestKey(t *testing.T) {
 	a.Nil(err)
 	a.Equal(v, string(newK))
 
-	k = str.ConvertToKey("   8  9  {}@#:asd   8 d  +){")
+	k = str.ToKey("   8  9  {}@#:asd   8 d  +){")
 	a.Equal("8_9_asd_8_d", string(k))
-	k = str.ConvertToKey(string(k))
+	k = str.ToKey(string(k))
 	a.Equal("8_9_asd_8_d", string(k))
 
 	sqlV, err := k.Value()
@@ -39,7 +39,7 @@ func TestKey(t *testing.T) {
 	a.Equal("8_9_asd_8_d", k.String())
 
 	tooLongKey := StrRepeat("1", 300)
-	k = str.ConvertToKey(tooLongKey)
+	k = str.ToKey(tooLongKey)
 	a.Len(k, 255)
 
 	ks := str.Keys{k}
