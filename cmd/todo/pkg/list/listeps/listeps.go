@@ -11,6 +11,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/filter"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
@@ -61,9 +62,7 @@ var (
 			IsPrivate:    false,
 			GetDefaultArgs: func() interface{} {
 				return &list.Get{
-					Sort:  list.SortCreatedOn,
-					Asc:   ptr.Bool(true),
-					Limit: 100,
+					Base: FilterDefs(),
 				}
 			},
 			GetExampleArgs: func() interface{} {
@@ -75,10 +74,12 @@ var (
 					TodoItemCountMax:      ptr.Int(5),
 					CompletedItemCountMin: ptr.Int(3),
 					CompletedItemCountMax: ptr.Int(4),
-					After:                 ptr.ID(app.ExampleID()),
-					Sort:                  list.SortName,
-					Asc:                   ptr.Bool(true),
-					Limit:                 50,
+					Base: filter.Base{
+						After: ptr.ID(app.ExampleID()),
+						Sort:  list.SortName,
+						Asc:   ptr.Bool(true),
+						Limit: 50,
+					},
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -115,7 +116,9 @@ var (
 				args := a.(*list.Update)
 				validate.Str("name", args.Name.V, nameMinLen, nameMaxLen)
 				getSetRes := getSet(tlbx, &list.Get{
-					IDs: IDs{args.ID},
+					Base: filter.Base{
+						IDs: IDs{args.ID},
+					},
 				})
 				app.ReturnIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				list := getSetRes.Set[0]
@@ -184,7 +187,6 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 }
 
 func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
-	validate.MaxIDs("ids", args.IDs, 100)
 	app.BadReqIf(
 		args.CreatedOnMin != nil &&
 			args.CreatedOnMax != nil &&
@@ -272,4 +274,13 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 		}
 	}, query.String(), queryArgs...)
 	return res
+}
+
+func FilterDefs() filter.Base {
+	return filter.DefsAsc100(
+		list.SortCreatedOn,
+		list.SortName,
+		list.SortTodoItemCount,
+		list.SortCompletedItemCount,
+	)
 }

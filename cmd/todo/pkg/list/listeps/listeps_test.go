@@ -11,6 +11,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/filter"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/stretchr/testify/assert"
@@ -55,7 +56,9 @@ func TestEverything(t *testing.T) {
 	a.False(getSet.More)
 
 	getSet = (&list.Get{
-		IDs: IDs{testList2.ID, testList1.ID},
+		Base: filter.Base{
+			IDs: IDs{testList2.ID, testList1.ID},
+		},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList2, getSet.Set[0])
 	a.Equal(testList1, getSet.Set[1])
@@ -69,8 +72,10 @@ func TestEverything(t *testing.T) {
 		TodoItemCountMax:      ptr.Int(1),
 		CompletedItemCountMin: ptr.Int(0),
 		CompletedItemCountMax: ptr.Int(1),
-		Asc:                   ptr.Bool(false),
-		Limit:                 2,
+		Base: filter.Base{
+			Asc:   ptr.Bool(false),
+			Limit: 2,
+		},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList2, getSet.Set[0])
 	a.Equal(testList1, getSet.Set[1])
@@ -84,10 +89,12 @@ func TestEverything(t *testing.T) {
 		TodoItemCountMax:      ptr.Int(1),
 		CompletedItemCountMin: ptr.Int(0),
 		CompletedItemCountMax: ptr.Int(1),
-		After:                 ptr.ID(testList1.ID),
-		Sort:                  list.SortTodoItemCount,
-		Asc:                   ptr.Bool(true),
-		Limit:                 2,
+		Base: filter.Base{
+			After: ptr.ID(testList1.ID),
+			Sort:  list.SortTodoItemCount,
+			Asc:   ptr.Bool(true),
+			Limit: 2,
+		},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList2, getSet.Set[0])
 	a.False(getSet.More)
@@ -100,8 +107,10 @@ func TestEverything(t *testing.T) {
 		TodoItemCountMax:      ptr.Int(1),
 		CompletedItemCountMin: ptr.Int(0),
 		CompletedItemCountMax: ptr.Int(1),
-		Asc:                   ptr.Bool(true),
-		Limit:                 1,
+		Base: filter.Base{
+			Asc:   ptr.Bool(true),
+			Limit: 1,
+		},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testList1, getSet.Set[0])
 	a.True(getSet.More)
