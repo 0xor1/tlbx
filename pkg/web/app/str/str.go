@@ -6,10 +6,11 @@ import (
 	"regexp"
 
 	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/web/app/validate"
 )
 
 var (
-	keyValidRegex                 = regexp.MustCompile(`^[a-z0-9][_a-z0-9]{0,253}[a-z0-9]?$`)
+	keyValidRegex                 = regexp.MustCompile(`^[a-z][_a-z0-9]{0,48}[a-z0-9]?$`)
 	keyValidDoubleUnderscoreRegex = regexp.MustCompile(`__`)
 	keyWhiteSpaceOrUnderscores    = regexp.MustCompile(`[\s_]+`)
 	keyInvalidChar                = regexp.MustCompile(`[^a-z0-9_]+`)
@@ -36,8 +37,8 @@ func ToKey(s string) Key {
 	// trim any leading or trailing underscores
 	s = StrTrim(s, `_`)
 	PanicIf(len(s) == 0, "empty str key")
-	if len(s) > 255 {
-		s = s[:255]
+	if len(s) > 50 {
+		s = s[:50]
 	}
 	return Key(s)
 }
@@ -52,7 +53,7 @@ func (s Keys) ToIs() []interface{} {
 	return res
 }
 
-// keys are user defined ids
+// keys are user defined ids, max chars 50
 type Key string
 
 func isValidKey(s string) bool {
@@ -132,23 +133,19 @@ var (
 	shortValidRegex = regexp.MustCompile(`\A\S.{0,253}\S?\z`)
 )
 
-func ToShort(s string) Short {
-	sh := Short("")
+func ToShort(s string) String {
+	sh := String("")
 	PanicOn(sh.UnmarshalBinary([]byte(s)))
 	return sh
 }
 
-type Short string
+type String string
 
-func isValidShort(s string) bool {
-	return s == "" || shortValidRegex.MatchString(s)
-}
-
-func (s Short) MarshalBinary() ([]byte, error) {
+func (s String) MarshalBinary() ([]byte, error) {
 	return []byte(s), nil
 }
 
-func (s Short) MarshalBinaryTo(dst []byte) error {
+func (s String) MarshalBinaryTo(dst []byte) error {
 	if len(s) > len(dst) {
 		return errBufferSize
 	}
@@ -156,119 +153,47 @@ func (s Short) MarshalBinaryTo(dst []byte) error {
 	return nil
 }
 
-func (s *Short) UnmarshalBinary(data []byte) error {
+func (s *String) UnmarshalBinary(data []byte) error {
 	d := string(data)
 	d = StrTrimWS(d)
-	if !isValidShort(d) {
-		return invalidShortErr(d)
-	}
-	*s = Short(d)
+	*s = String(d)
 	return nil
 }
 
-func (s Short) MarshalText() ([]byte, error) {
+func (s String) MarshalText() ([]byte, error) {
 	return s.MarshalBinary()
 }
 
-func (s Short) MarshalTextTo(dst []byte) error {
+func (s String) MarshalTextTo(dst []byte) error {
 	return s.MarshalBinaryTo(dst)
 }
 
-func (s *Short) UnmarshalText(data []byte) error {
+func (s *String) UnmarshalText(data []byte) error {
 	return s.UnmarshalBinary(data)
 }
 
-func (s *Short) Scan(src interface{}) error {
+func (s *String) Scan(src interface{}) error {
 	switch x := src.(type) {
 	case string:
-		if !isValidShort(x) {
-			return invalidShortErr(x)
-		}
-		*s = Short(x)
+		*s = String(x)
 	case []byte:
-		if !isValidShort(string(x)) {
-			return invalidShortErr(string(x))
-		}
-		*s = Short(x)
+		*s = String(x)
 	default:
 		return errScanValue
 	}
 	return nil
 }
 
-func (s Short) Value() (driver.Value, error) {
-	str := string(s)
-	if !isValidShort(str) {
-		return nil, invalidShortErr(str)
-	}
+func (s String) Value() (driver.Value, error) {
 	return s.MarshalBinary()
 }
 
-func (s *Short) String() string {
+func (s *String) String() string {
 	return string(*s)
 }
 
-func invalidShortErr(s string) Error {
-	return Err("invalid short string detected: %q", s).(Error)
-}
-
-func ToLong(s string) Long {
-	l := Long("")
-	PanicOn(l.UnmarshalBinary([]byte(s)))
-	return l
-}
-
-type Long string
-
-func (s Long) MarshalBinary() ([]byte, error) {
-	return []byte(s), nil
-}
-
-func (s Long) MarshalBinaryTo(dst []byte) error {
-	if len(s) > len(dst) {
-		return errBufferSize
-	}
-	copy(dst, s)
-	return nil
-}
-
-func (s *Long) UnmarshalBinary(data []byte) error {
-	d := string(data)
-	d = StrTrimWS(d)
-	*s = Long(d)
-	return nil
-}
-
-func (s Long) MarshalText() ([]byte, error) {
-	return s.MarshalBinary()
-}
-
-func (s Long) MarshalTextTo(dst []byte) error {
-	return s.MarshalBinaryTo(dst)
-}
-
-func (s *Long) UnmarshalText(data []byte) error {
-	return s.UnmarshalBinary(data)
-}
-
-func (s *Long) Scan(src interface{}) error {
-	switch x := src.(type) {
-	case string:
-		*s = Long(x)
-	case []byte:
-		*s = Long(x)
-	default:
-		return errScanValue
-	}
-	return nil
-}
-
-func (s Long) Value() (driver.Value, error) {
-	return s.MarshalBinary()
-}
-
-func (s *Long) String() string {
-	return string(*s)
+func (s *String) MustBeValid(name string, min, max int, regexs ...*regexp.Regexp) {
+	validate.Str(name, s.String(), min, max, regexs...)
 }
 
 var (
@@ -279,14 +204,6 @@ func ToEmail(s string) Email {
 	e := Email("")
 	PanicOn(e.UnmarshalBinary([]byte(s)))
 	return e
-}
-
-type EmailField struct {
-	V Email `json:"v"`
-}
-
-type EmailPtrField struct {
-	V *Email `json:"v"`
 }
 
 type Email string
@@ -378,14 +295,6 @@ func ToPwd(s string) Pwd {
 	p := Pwd("")
 	PanicOn(p.UnmarshalBinary([]byte(s)))
 	return p
-}
-
-type PwdField struct {
-	V Pwd `json:"v"`
-}
-
-type PwdPtrField struct {
-	V *Pwd `json:"v"`
 }
 
 type Pwd string

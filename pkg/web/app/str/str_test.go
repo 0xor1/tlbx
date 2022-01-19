@@ -10,7 +10,7 @@ import (
 
 func TestKey(t *testing.T) {
 	a := assert.New(t)
-	v := "0123456789_abcdefghijklmnopqrstuvwxyz"
+	v := "abcdefghijklmnopqrstuvwxyz_0123456789"
 	k := str.Key(v)
 
 	bs, err := k.MarshalText()
@@ -25,10 +25,10 @@ func TestKey(t *testing.T) {
 	a.Nil(err)
 	a.Equal(v, string(newK))
 
-	k = str.ToKey("   8  9  {}@#:asd   8 d  +){")
-	a.Equal("8_9_asd_8_d", string(k))
+	k = str.ToKey(" f   8  9  {}@#:asd   8 d  +){")
+	a.Equal("f_8_9_asd_8_d", string(k))
 	k = str.ToKey(string(k))
-	a.Equal("8_9_asd_8_d", string(k))
+	a.Equal("f_8_9_asd_8_d", string(k))
 
 	sqlV, err := k.Value()
 	a.Nil(err)
@@ -36,11 +36,11 @@ func TestKey(t *testing.T) {
 
 	a.Nil(k.Scan(sqlV))
 	a.Nil(k.Scan(string(sqlV.([]byte))))
-	a.Equal("8_9_asd_8_d", k.String())
+	a.Equal("f_8_9_asd_8_d", k.String())
 
-	tooLongKey := StrRepeat("1", 300)
+	tooLongKey := StrRepeat("f", 101)
 	k = str.ToKey(tooLongKey)
-	a.Len(k, 255)
+	a.Len(k, 50)
 
 	ks := str.Keys{k}
 	a.Len(ks.ToIs(), 1)
@@ -83,15 +83,15 @@ func TestShort(t *testing.T) {
 	a.Nil(err)
 	a.Equal(v, string(bs))
 
-	newK := str.Short("")
+	newK := str.String("")
 	err = newK.UnmarshalText(bs)
 	a.Nil(err)
 	a.Equal(v, string(newK))
 
-	ss := str.Short(tooLong)
+	ss := str.String(tooLong)
 	sqlV, err := ss.Value()
-	a.NotNil(err)
-	a.Nil(sqlV)
+	a.Nil(err)
+	a.NotNil(sqlV)
 
 	sqlV, err = k.Value()
 	a.Nil(err)
@@ -100,50 +100,6 @@ func TestShort(t *testing.T) {
 	a.Nil(k.Scan(sqlV))
 	a.Nil(k.Scan(string(sqlV.([]byte))))
 	a.Equal("hi no", k.String())
-
-	err = k.UnmarshalBinary([]byte(tooLong))
-	a.Contains(err.Error(), Strf("invalid short string detected: %q", tooLong))
-
-	err = k.MarshalBinaryTo([]byte{})
-	a.EqualError(err, "bad buffer size when marshaling")
-
-	err = k.Scan([]byte(tooLong))
-	a.Contains(err.Error(), Strf(`invalid short string detected: %q`, tooLong))
-
-	err = k.Scan(tooLong)
-	a.Contains(err.Error(), Strf(`invalid short string detected: %q`, tooLong))
-
-	err = k.Scan(1)
-	a.EqualError(err, `source value must be a string or byte slice`)
-}
-
-func TestLong(t *testing.T) {
-	a := assert.New(t)
-	v := "hi no"
-	k := str.ToLong(v)
-
-	bs, err := k.MarshalText()
-	a.Nil(err)
-	a.Equal(v, string(bs))
-	a.Nil(k.MarshalTextTo(bs))
-	a.Nil(err)
-	a.Equal(v, string(bs))
-
-	newK := str.Long("")
-	err = newK.UnmarshalText(bs)
-	a.Nil(err)
-	a.Equal(v, string(newK))
-
-	sqlV, err := k.Value()
-	a.Nil(err)
-	a.NotNil(sqlV)
-
-	a.Nil(k.Scan(sqlV))
-	a.Nil(k.Scan(string(sqlV.([]byte))))
-	a.Equal("hi no", k.String())
-
-	err = k.MarshalBinaryTo([]byte{})
-	a.EqualError(err, "bad buffer size when marshaling")
 
 	err = k.Scan(1)
 	a.EqualError(err, `source value must be a string or byte slice`)

@@ -142,19 +142,25 @@ type StrKey struct {
 type StrKeyPtr struct {
 	V *str.Key `json:"v"`
 }
-
-type StrShort struct {
-	V str.Short `json:"v"`
+type StrString struct {
+	V str.String `json:"v"`
 }
 
-type StrShortPtr struct {
-	V *str.Short `json:"v"`
+type StrStringPtr struct {
+	V *str.String `json:"v"`
+}
+type StrEmail struct {
+	V str.Email `json:"v"`
 }
 
-type StrLong struct {
-	V str.Long `json:"v"`
+type StrEmailPtr struct {
+	V *str.Email `json:"v"`
 }
 
-type StrLongPtr struct {
-	V *str.Long `json:"v"`
+type StrPwd struct {
+	V str.Pwd `json:"v"`
+}
+
+type StrPwdPtr struct {
+	V *str.Pwd `json:"v"`
 }
