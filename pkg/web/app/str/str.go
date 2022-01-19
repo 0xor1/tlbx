@@ -43,6 +43,11 @@ func ToKey(s string) Key {
 	return Key(s)
 }
 
+func ToKeyPtr(s string) *Key {
+	k := ToKey(s)
+	return &k
+}
+
 type Keys []Key
 
 func (s Keys) ToIs() []interface{} {
@@ -137,6 +142,12 @@ func ToStr(s string) Str {
 	sh := Str("")
 	core.PanicOn(sh.UnmarshalBinary([]byte(s)))
 	return sh
+}
+
+func ToStrPtr(s string) *Str {
+	sh := Str("")
+	core.PanicOn(sh.UnmarshalBinary([]byte(s)))
+	return &sh
 }
 
 type Str string
