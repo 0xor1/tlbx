@@ -58,7 +58,7 @@ func (b *Base) mustBeValid() {
 	if b.Sort == "" && len(b.ValidSorts) > 0 {
 		// no sort specified, use default sort
 		b.Sort = b.ValidSorts[0]
-	} else {
+	} else if b.Sort != "" && len(b.ValidSorts) > 0 {
 		matchFound := false
 		lowSort := StrLower(b.Sort)
 		for _, s := range b.ValidSorts {
