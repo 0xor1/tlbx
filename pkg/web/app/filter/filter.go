@@ -21,7 +21,6 @@ type Base struct {
 	Sort       string   `json:"sort,omitempty"`
 	Asc        *bool    `json:"asc,omitempty"`
 	Limit      uint16   `json:"limit,omitempty"`
-	MaxIDs     uint16   `json:"-"`
 	MaxLimit   uint16   `json:"-"`
 	ValidSorts []string `json:"-"`
 }
@@ -44,7 +43,6 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 		Sort:       rjs.Sort,
 		Asc:        rjs.Asc,
 		Limit:      rjs.Limit,
-		MaxIDs:     b.MaxIDs,
 		MaxLimit:   b.MaxLimit,
 		ValidSorts: b.ValidSorts,
 	}
@@ -53,12 +51,14 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 }
 
 func (b *Base) mustBeValid() {
-	app.BadReqIf(len(b.IDs) > int(b.MaxIDs), "%d ids supplied, max ids %d", len(b.IDs), b.MaxIDs)
+	app.BadReqIf(len(b.IDs) > int(b.MaxLimit), "%d ids supplied, max limit %d", len(b.IDs), b.MaxLimit)
 	app.BadReqIf(b.Limit > b.MaxLimit, "limit of %d is larger than max limit %d", b.Limit, b.MaxLimit)
-	if b.Sort == "" && len(b.ValidSorts) > 0 {
+	if len(b.ValidSorts) == 0 {
+		b.Sort = ""
+	} else if b.Sort == "" {
 		// no sort specified, use default sort
 		b.Sort = b.ValidSorts[0]
-	} else if b.Sort != "" && len(b.ValidSorts) > 0 {
+	} else {
 		matchFound := false
 		lowSort := StrLower(b.Sort)
 		for _, s := range b.ValidSorts {
@@ -75,17 +75,20 @@ func (b *Base) mustBeValid() {
 	}
 }
 
-func Defs(asc bool, limit, maxIDs, maxLimit uint16, validSorts ...string) Base {
+func Defs(asc bool, limit, maxLimit uint16, validSorts ...string) Base {
+	sort := ""
+	if len(validSorts) > 0 {
+		sort = validSorts[0]
+	}
 	return Base{
-		Sort:       validSorts[0],
+		Sort:       sort,
 		Asc:        ptr.Bool(asc),
 		Limit:      limit,
-		MaxIDs:     maxIDs,
 		MaxLimit:   maxLimit,
 		ValidSorts: validSorts,
 	}
 }
 
 func DefsAsc100(validSorts ...string) Base {
-	return Defs(true, 100, 100, 100, validSorts...)
+	return Defs(true, 100, 100, validSorts...)
 }
