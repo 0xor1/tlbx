@@ -135,32 +135,32 @@ type Float64Ptr struct {
 	V *float64 `json:"v"`
 }
 
-type StrKey struct {
+type Key struct {
 	V str.Key `json:"v"`
 }
 
-type StrKeyPtr struct {
+type KeyPtr struct {
 	V *str.Key `json:"v"`
 }
-type StrString struct {
-	V str.String `json:"v"`
+type Str struct {
+	V str.Str `json:"v"`
 }
 
-type StrStringPtr struct {
-	V *str.String `json:"v"`
+type StrPtr struct {
+	V *str.Str `json:"v"`
 }
-type StrEmail struct {
+type Email struct {
 	V str.Email `json:"v"`
 }
 
-type StrEmailPtr struct {
+type EmailPtr struct {
 	V *str.Email `json:"v"`
 }
 
-type StrPwd struct {
+type Pwd struct {
 	V str.Pwd `json:"v"`
 }
 
-type StrPwdPtr struct {
+type PwdPtr struct {
 	V *str.Pwd `json:"v"`
 }

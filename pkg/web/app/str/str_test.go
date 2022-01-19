@@ -74,7 +74,7 @@ func TestShort(t *testing.T) {
 	a := assert.New(t)
 	tooLong := StrRepeat("1", 300)
 	v := "hi no"
-	k := str.ToShort(v)
+	k := str.ToStr(v)
 
 	bs, err := k.MarshalText()
 	a.Nil(err)
@@ -83,12 +83,12 @@ func TestShort(t *testing.T) {
 	a.Nil(err)
 	a.Equal(v, string(bs))
 
-	newK := str.String("")
+	newK := str.Str("")
 	err = newK.UnmarshalText(bs)
 	a.Nil(err)
 	a.Equal(v, string(newK))
 
-	ss := str.String(tooLong)
+	ss := str.Str(tooLong)
 	sqlV, err := ss.Value()
 	a.Nil(err)
 	a.NotNil(sqlV)

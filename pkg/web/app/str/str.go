@@ -5,7 +5,7 @@ import (
 	"errors"
 	"regexp"
 
-	. "github.com/0xor1/tlbx/pkg/core"
+	"github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 )
 
@@ -20,13 +20,13 @@ var (
 )
 
 func ToKey(s string) Key {
-	if _, err := ParseID(s); err == nil {
+	if _, err := core.ParseID(s); err == nil {
 		// not allowed to be a ulid string
-		PanicOn(errUlidString)
+		core.PanicOn(errUlidString)
 	}
 
 	// lower all chars
-	s = StrLower(s)
+	s = core.StrLower(s)
 	// replace all ws or underscore chars with a single _
 	s = keyWhiteSpaceOrUnderscores.ReplaceAllString(s, `_`)
 	// remove all invalid chars
@@ -35,8 +35,8 @@ func ToKey(s string) Key {
 	// removal of invalid chars created any double underscores
 	s = keyWhiteSpaceOrUnderscores.ReplaceAllString(s, `_`)
 	// trim any leading or trailing underscores
-	s = StrTrim(s, `_`)
-	PanicIf(len(s) == 0, "empty str key")
+	s = core.StrTrim(s, `_`)
+	core.PanicIf(len(s) == 0, "empty str key")
 	if len(s) > 50 {
 		s = s[:50]
 	}
@@ -75,7 +75,7 @@ func (s Key) MarshalBinaryTo(dst []byte) error {
 
 func (s *Key) UnmarshalBinary(data []byte) error {
 	d := string(data)
-	d = StrTrimWS(d)
+	d = core.StrTrimWS(d)
 	if !isValidKey(d) {
 		return invalidStrKeyErr(d)
 	}
@@ -125,27 +125,27 @@ func (s *Key) String() string {
 	return string(*s)
 }
 
-func invalidStrKeyErr(s string) Error {
-	return Err("invalid str key detected: %q", s).(Error)
+func invalidStrKeyErr(s string) core.Error {
+	return core.Err("invalid str key detected: %q", s).(core.Error)
 }
 
 var (
 	shortValidRegex = regexp.MustCompile(`\A\S.{0,253}\S?\z`)
 )
 
-func ToShort(s string) String {
-	sh := String("")
-	PanicOn(sh.UnmarshalBinary([]byte(s)))
+func ToStr(s string) Str {
+	sh := Str("")
+	core.PanicOn(sh.UnmarshalBinary([]byte(s)))
 	return sh
 }
 
-type String string
+type Str string
 
-func (s String) MarshalBinary() ([]byte, error) {
+func (s Str) MarshalBinary() ([]byte, error) {
 	return []byte(s), nil
 }
 
-func (s String) MarshalBinaryTo(dst []byte) error {
+func (s Str) MarshalBinaryTo(dst []byte) error {
 	if len(s) > len(dst) {
 		return errBufferSize
 	}
@@ -153,46 +153,46 @@ func (s String) MarshalBinaryTo(dst []byte) error {
 	return nil
 }
 
-func (s *String) UnmarshalBinary(data []byte) error {
+func (s *Str) UnmarshalBinary(data []byte) error {
 	d := string(data)
-	d = StrTrimWS(d)
-	*s = String(d)
+	d = core.StrTrimWS(d)
+	*s = Str(d)
 	return nil
 }
 
-func (s String) MarshalText() ([]byte, error) {
+func (s Str) MarshalText() ([]byte, error) {
 	return s.MarshalBinary()
 }
 
-func (s String) MarshalTextTo(dst []byte) error {
+func (s Str) MarshalTextTo(dst []byte) error {
 	return s.MarshalBinaryTo(dst)
 }
 
-func (s *String) UnmarshalText(data []byte) error {
+func (s *Str) UnmarshalText(data []byte) error {
 	return s.UnmarshalBinary(data)
 }
 
-func (s *String) Scan(src interface{}) error {
+func (s *Str) Scan(src interface{}) error {
 	switch x := src.(type) {
 	case string:
-		*s = String(x)
+		*s = Str(x)
 	case []byte:
-		*s = String(x)
+		*s = Str(x)
 	default:
 		return errScanValue
 	}
 	return nil
 }
 
-func (s String) Value() (driver.Value, error) {
+func (s Str) Value() (driver.Value, error) {
 	return s.MarshalBinary()
 }
 
-func (s *String) String() string {
+func (s *Str) String() string {
 	return string(*s)
 }
 
-func (s *String) MustBeValid(name string, min, max int, regexs ...*regexp.Regexp) {
+func (s *Str) MustBeValid(name string, min, max int, regexs ...*regexp.Regexp) {
 	validate.Str(name, s.String(), min, max, regexs...)
 }
 
@@ -202,7 +202,7 @@ var (
 
 func ToEmail(s string) Email {
 	e := Email("")
-	PanicOn(e.UnmarshalBinary([]byte(s)))
+	core.PanicOn(e.UnmarshalBinary([]byte(s)))
 	return e
 }
 
@@ -226,7 +226,7 @@ func (s Email) MarshalBinaryTo(dst []byte) error {
 
 func (s *Email) UnmarshalBinary(data []byte) error {
 	d := string(data)
-	d = StrTrimWS(d)
+	d = core.StrTrimWS(d)
 	if !isValidEmail(d) {
 		return invalidEmailErr(d)
 	}
@@ -276,8 +276,8 @@ func (s *Email) String() string {
 	return string(*s)
 }
 
-func invalidEmailErr(s string) Error {
-	return Err("invalid email detected: %q", s).(Error)
+func invalidEmailErr(s string) core.Error {
+	return core.Err("invalid email detected: %q", s).(core.Error)
 }
 
 var (
@@ -293,14 +293,14 @@ var (
 
 func ToPwd(s string) Pwd {
 	p := Pwd("")
-	PanicOn(p.UnmarshalBinary([]byte(s)))
+	core.PanicOn(p.UnmarshalBinary([]byte(s)))
 	return p
 }
 
 type Pwd string
 
 func isValidPwd(s string) bool {
-	l := StrLen(s)
+	l := core.StrLen(s)
 	if l < pwdMinLen || l > pwdMaxLen {
 		return false
 	}
@@ -326,7 +326,7 @@ func (s Pwd) MarshalBinaryTo(dst []byte) error {
 
 func (s *Pwd) UnmarshalBinary(data []byte) error {
 	d := string(data)
-	d = StrTrimWS(d)
+	d = core.StrTrimWS(d)
 	if !isValidPwd(d) {
 		return invalidPwdErr(d)
 	}
@@ -376,6 +376,6 @@ func (s *Pwd) String() string {
 	return string(*s)
 }
 
-func invalidPwdErr(s string) Error {
-	return Err("invalid pwd detected: %q", s).(Error)
+func invalidPwdErr(s string) core.Error {
+	return core.Err("invalid pwd detected: %q", s).(core.Error)
 }
