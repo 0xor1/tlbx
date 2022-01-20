@@ -13,6 +13,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/sqlh"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/filter"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
@@ -65,9 +66,7 @@ var (
 			GetDefaultArgs: func() interface{} {
 				return &item.Get{
 					Completed: ptr.Bool(false),
-					Sort:      item.SortCreatedOn,
-					Asc:       ptr.Bool(true),
-					Limit:     100,
+					Base:      filter.DefsAsc100(item.SortCreatedOn, item.SortCompletedOn, item.SortName),
 				}
 			},
 			GetExampleArgs: func() interface{} {
@@ -79,10 +78,12 @@ var (
 					Completed:      ptr.Bool(true),
 					CompletedOnMin: ptr.Time(app.ExampleTime()),
 					CompletedOnMax: ptr.Time(app.ExampleTime()),
-					After:          ptr.ID(app.ExampleID()),
-					Sort:           item.SortName,
-					Asc:            ptr.Bool(true),
-					Limit:          50,
+					Base: filter.Base{
+						After: ptr.ID(app.ExampleID()),
+						Sort:  item.SortName,
+						Asc:   ptr.Bool(true),
+						Limit: 50,
+					},
 				}
 			},
 			GetExampleResponse: func() interface{} {
@@ -125,7 +126,9 @@ var (
 				me := me.AuthedGet(tlbx)
 				getSetRes := getSet(tlbx, &item.Get{
 					List: args.List,
-					IDs:  IDs{args.ID},
+					Base: filter.Base{
+						IDs: IDs{args.ID},
+					},
 				})
 				app.ReturnIf(len(getSetRes.Set) == 0, http.StatusNotFound, "no list with that id")
 				item := getSetRes.Set[0]
@@ -210,21 +213,21 @@ var (
 )
 
 func getSet(tlbx app.Tlbx, args *item.Get) *item.GetRes {
-	validate.MaxIDs("ids", args.IDs, 100)
+	validate.MaxIDs("ids", args.Base.IDs, 100)
 	app.BadReqIf(
 		args.CreatedOnMin != nil &&
 			args.CreatedOnMax != nil &&
 			args.CreatedOnMin.After(*args.CreatedOnMax),
 		"createdOnMin must be before createdOnMax")
-	args.Limit = sqlh.Limit100(args.Limit)
+	args.Base.Limit = sqlh.Limit100(args.Base.Limit)
 	me := me.AuthedGet(tlbx)
 	srv := service.Get(tlbx)
 	res := &item.GetRes{
-		Set: make([]*item.Item, 0, args.Limit),
+		Set: make([]*item.Item, 0, args.Base.Limit),
 	}
 	sqlArgs := &sqlh.Args{}
 	srv.Data().MustGetN(&res.Set, qryItemsGet(sqlArgs, me, args), sqlArgs.Is()...)
-	if len(args.IDs) == 0 && len(res.Set) == int(args.Limit) {
+	if len(args.Base.IDs) == 0 && len(res.Set) == int(args.Base.Limit) {
 		res.Set = res.Set[:len(res.Set)-1]
 		res.More = true
 	}

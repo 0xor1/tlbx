@@ -95,19 +95,19 @@ FROM items
 WHERE user=?
 AND list=?
 {%- code 
-    if len(args.IDs) > 0 {
-        *sqlArgs = *sqlh.NewArgs((len(args.IDs)*2) + 3)
+    if len(args.Base.IDs) > 0 {
+        *sqlArgs = *sqlh.NewArgs((len(args.Base.IDs)*2) + 3)
     } else {
         *sqlArgs = *sqlh.NewArgs(20)
     }
     sqlArgs.Append(me)
     sqlArgs.Append(args.List)
 -%}
-{%- if len(args.IDs) > 0 -%}
-    AND id IN ({%s sqlh.PList(len(args.IDs)) %})
-    ORDER BY FIELD (id,{%s sqlh.PList(len(args.IDs)) %})
+{%- if len(args.Base.IDs) > 0 -%}
+    AND id IN ({%s sqlh.PList(len(args.Base.IDs)) %})
+    ORDER BY FIELD (id,{%s sqlh.PList(len(args.Base.IDs)) %})
     {%- code 
-        is := args.IDs.ToIs()
+        is := args.Base.IDs.ToIs()
         sqlArgs.Append(is...)
         sqlArgs.Append(is...)
     -%}
@@ -151,23 +151,23 @@ AND list=?
             sqlArgs.Append(*args.CreatedOnMax)
         -%}
     {%- endif -%}
-    {%- if args.After != nil -%}
-        AND {%s string(args.Sort) %} {%s= sqlh.GtLtSymbol(*args.Asc) %}= (SELECT {%s string(args.Sort) %} FROM items WHERE user=? AND list=? AND id=?) AND id <> ?
+    {%- if args.Base.After != nil -%}
+        AND {%s string(args.Base.Sort) %} {%s= sqlh.GtLtSymbol(*args.Base.Asc) %}= (SELECT {%s string(args.Base.Sort) %} FROM items WHERE user=? AND list=? AND id=?) AND id <> ?
         {%- code 
-            sqlArgs.Append(me, args.List, *args.After, *args.After)
+            sqlArgs.Append(me, args.List, *args.Base.After, *args.Base.After)
         -%}
-        {%- if args.Sort != item.SortCreatedOn -%}
-            AND createdOn {%s= sqlh.GtLtSymbol(*args.Asc)%} (SELECT createdOn FROM items WHERE user=? AND list=? AND id=?)
+        {%- if args.Base.Sort != item.SortCreatedOn -%}
+            AND createdOn {%s= sqlh.GtLtSymbol(*args.Base.Asc)%} (SELECT createdOn FROM items WHERE user=? AND list=? AND id=?)
             {%- code 
-                sqlArgs.Append(me, args.List, *args.After)
+                sqlArgs.Append(me, args.List, *args.Base.After)
             -%}
         {%- endif -%}
     {%- endif -%}
-    ORDER BY {%s string(args.Sort) %}
-    {%- if args.Sort != item.SortCreatedOn -%}
+    ORDER BY {%s string(args.Base.Sort) %}
+    {%- if args.Base.Sort != item.SortCreatedOn -%}
         , createdOn
     {%- endif -%}
-    {%s sqlh.Asc(*args.Asc) %} LIMIT {%d int(sqlh.Limit100(args.Limit)) %}
+    {%s sqlh.Asc(*args.Base.Asc) %} LIMIT {%d int(sqlh.Limit100(args.Base.Limit)) %}
 {%- endif -%}
 {%- endcollapsespace -%}
 {%- endfunc -%}

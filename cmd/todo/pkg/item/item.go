@@ -6,14 +6,15 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/filter"
 )
 
 type sort string
 
 const (
-	SortName        sort = "name"
-	SortCreatedOn   sort = "createdOn"
-	SortCompletedOn sort = "completedOn"
+	SortName        = "name"
+	SortCreatedOn   = "createdOn"
+	SortCompletedOn = "completedOn"
 )
 
 type Item struct {
@@ -52,7 +53,9 @@ type One struct {
 func (a *One) Do(c *app.Client) (*Item, error) {
 	res, err := (&Get{
 		List: a.List,
-		IDs:  IDs{a.ID},
+		Base: filter.Base{
+			IDs: IDs{a.ID},
+		},
 	}).Do(c)
 	if res != nil && len(res.Set) == 1 {
 		return res.Set[0], err
@@ -67,18 +70,14 @@ func (a *One) MustDo(c *app.Client) *Item {
 }
 
 type Get struct {
-	List           ID         `json:"list"`
-	IDs            IDs        `json:"ids,omitempty"`
-	NamePrefix     *string    `json:"namePrefix,omitempty"`
-	CreatedOnMin   *time.Time `json:"createdOnMin,omitempty"`
-	CreatedOnMax   *time.Time `json:"createdOnMax,omitempty"`
-	Completed      *bool      `json:"completed,omitempty"`
-	CompletedOnMin *time.Time `json:"completedOnMin,omitempty"`
-	CompletedOnMax *time.Time `json:"completedOnMax,omitempty"`
-	After          *ID        `json:"after,omitempty"`
-	Sort           sort       `json:"sort,omitempty"`
-	Asc            *bool      `json:"asc,omitempty"`
-	Limit          uint16     `json:"limit,omitempty"`
+	List           ID          `json:"list"`
+	NamePrefix     *string     `json:"namePrefix,omitempty"`
+	CreatedOnMin   *time.Time  `json:"createdOnMin,omitempty"`
+	CreatedOnMax   *time.Time  `json:"createdOnMax,omitempty"`
+	Completed      *bool       `json:"completed,omitempty"`
+	CompletedOnMin *time.Time  `json:"completedOnMin,omitempty"`
+	CompletedOnMax *time.Time  `json:"completedOnMax,omitempty"`
+	Base           filter.Base `json:"base"`
 }
 
 type GetRes struct {

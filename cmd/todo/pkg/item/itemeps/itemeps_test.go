@@ -13,6 +13,7 @@ import (
 	"github.com/0xor1/tlbx/pkg/field"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
+	"github.com/0xor1/tlbx/pkg/web/app/filter"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 	"github.com/stretchr/testify/assert"
@@ -68,7 +69,9 @@ func TestEverything(t *testing.T) {
 
 	get = (&item.Get{
 		List: testList1.ID,
-		IDs:  IDs{testItem2.ID, testItem1.ID},
+		Base: filter.Base{
+			IDs: IDs{testItem2.ID, testItem1.ID},
+		},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem2, get.Set[0])
 	a.Equal(testItem1, get.Set[1])
@@ -79,8 +82,10 @@ func TestEverything(t *testing.T) {
 		NamePrefix:   ptr.String("Test i"),
 		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax: ptr.Time(Now()),
-		Asc:          ptr.Bool(false),
-		Limit:        2,
+		Base: filter.Base{
+			Asc:   ptr.Bool(false),
+			Limit: 2,
+		},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem2, get.Set[0])
 	a.Equal(testItem1, get.Set[1])
@@ -91,10 +96,12 @@ func TestEverything(t *testing.T) {
 		NamePrefix:   ptr.String("Test i"),
 		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax: ptr.Time(Now()),
-		After:        ptr.ID(testItem1.ID),
-		Sort:         item.SortName,
-		Asc:          ptr.Bool(true),
-		Limit:        2,
+		Base: filter.Base{
+			After: ptr.ID(testItem1.ID),
+			Sort:  item.SortName,
+			Asc:   ptr.Bool(true),
+			Limit: 2,
+		},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem2, get.Set[0])
 	a.False(get.More)
@@ -104,8 +111,10 @@ func TestEverything(t *testing.T) {
 		NamePrefix:   ptr.String("Test i"),
 		CreatedOnMin: ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax: ptr.Time(Now()),
-		Asc:          ptr.Bool(true),
-		Limit:        1,
+		Base: filter.Base{
+			Asc:   ptr.Bool(true),
+			Limit: 1,
+		},
 	}).MustDo(r.Ali().Client())
 	a.Equal(testItem1, get.Set[0])
 	a.True(get.More)

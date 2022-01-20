@@ -148,21 +148,21 @@ func qryListRecalculateCounts() string {
 
 func streamqryItemsGet(qw422016 *qt422016.Writer, sqlArgs *sqlh.Args, me ID, args *item.Get) {
 	qw422016.N().S(`SELECT id, createdOn, name, completedOn FROM items WHERE user=? AND list=? `)
-	if len(args.IDs) > 0 {
-		*sqlArgs = *sqlh.NewArgs((len(args.IDs) * 2) + 3)
+	if len(args.Base.IDs) > 0 {
+		*sqlArgs = *sqlh.NewArgs((len(args.Base.IDs) * 2) + 3)
 	} else {
 		*sqlArgs = *sqlh.NewArgs(20)
 	}
 	sqlArgs.Append(me)
 	sqlArgs.Append(args.List)
 
-	if len(args.IDs) > 0 {
+	if len(args.Base.IDs) > 0 {
 		qw422016.N().S(`AND id IN (`)
-		qw422016.E().S(sqlh.PList(len(args.IDs)))
+		qw422016.E().S(sqlh.PList(len(args.Base.IDs)))
 		qw422016.N().S(`) ORDER BY FIELD (id,`)
-		qw422016.E().S(sqlh.PList(len(args.IDs)))
+		qw422016.E().S(sqlh.PList(len(args.Base.IDs)))
 		qw422016.N().S(`) `)
-		is := args.IDs.ToIs()
+		is := args.Base.IDs.ToIs()
 		sqlArgs.Append(is...)
 		sqlArgs.Append(is...)
 
@@ -200,33 +200,33 @@ func streamqryItemsGet(qw422016 *qt422016.Writer, sqlArgs *sqlh.Args, me ID, arg
 			sqlArgs.Append(*args.CreatedOnMax)
 
 		}
-		if args.After != nil {
+		if args.Base.After != nil {
 			qw422016.N().S(`AND `)
-			qw422016.E().S(string(args.Sort))
+			qw422016.E().S(string(args.Base.Sort))
 			qw422016.N().S(` `)
-			qw422016.N().S(sqlh.GtLtSymbol(*args.Asc))
+			qw422016.N().S(sqlh.GtLtSymbol(*args.Base.Asc))
 			qw422016.N().S(`= (SELECT `)
-			qw422016.E().S(string(args.Sort))
+			qw422016.E().S(string(args.Base.Sort))
 			qw422016.N().S(` FROM items WHERE user=? AND list=? AND id=?) AND id <> ? `)
-			sqlArgs.Append(me, args.List, *args.After, *args.After)
+			sqlArgs.Append(me, args.List, *args.Base.After, *args.Base.After)
 
-			if args.Sort != item.SortCreatedOn {
+			if args.Base.Sort != item.SortCreatedOn {
 				qw422016.N().S(`AND createdOn `)
-				qw422016.N().S(sqlh.GtLtSymbol(*args.Asc))
+				qw422016.N().S(sqlh.GtLtSymbol(*args.Base.Asc))
 				qw422016.N().S(` (SELECT createdOn FROM items WHERE user=? AND list=? AND id=?) `)
-				sqlArgs.Append(me, args.List, *args.After)
+				sqlArgs.Append(me, args.List, *args.Base.After)
 
 			}
 		}
 		qw422016.N().S(`ORDER BY `)
-		qw422016.E().S(string(args.Sort))
+		qw422016.E().S(string(args.Base.Sort))
 		qw422016.N().S(` `)
-		if args.Sort != item.SortCreatedOn {
+		if args.Base.Sort != item.SortCreatedOn {
 			qw422016.N().S(`, createdOn `)
 		}
-		qw422016.E().S(sqlh.Asc(*args.Asc))
+		qw422016.E().S(sqlh.Asc(*args.Base.Asc))
 		qw422016.N().S(` LIMIT `)
-		qw422016.N().D(int(sqlh.Limit100(args.Limit)))
+		qw422016.N().D(int(sqlh.Limit100(args.Base.Limit)))
 		qw422016.N().S(` `)
 	}
 }
