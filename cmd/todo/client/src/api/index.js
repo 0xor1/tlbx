@@ -7,12 +7,12 @@ let newApi = (isMDoApi) => {
   let mDoSent = false
   let awaitingMDoList = []
   let doReq = (path, args) => {
-    path = '/api'+path
+    path = '/api' + path
     if (!isMDoApi || (isMDoApi && mDoSending && !mDoSent)) {
       return axios({
         method: 'put',
         url: path,
-        headers: {"X-Client": "tlbx-web-client"},
+        headers: { "X-Client": "tlbx-web-client" },
         data: args
       }).then((res) => {
         return res.data
@@ -102,7 +102,7 @@ let newApi = (isMDoApi) => {
           for (let i = 0, il = awaitingMDoList.length; i < il; i++) {
             awaitingMDoList[i].reject(error)
           }
-        }).finally(()=>{
+        }).finally(() => {
           mDoComplete = true
           mDoSending = false
           mDoSent = true
@@ -112,39 +112,39 @@ let newApi = (isMDoApi) => {
     },
     user: {
       register: (email, pwd) => {
-        return doReq('/user/register', {email, pwd})
+        return doReq('/user/register', { email, pwd })
       },
       resendActivateLink: (email) => {
-        return doReq('/user/resendActivateLink', {email})
+        return doReq('/user/resendActivateLink', { email })
       },
       activate: (me, code) => {
-        return doReq('/user/activate', {me, code})
+        return doReq('/user/activate', { me, code })
       },
       changeEmail: (newEmail) => {
-        return doReq('/user/changeEmail', {newEmail})
+        return doReq('/user/changeEmail', { newEmail })
       },
       resendChangeEmailLink: () => {
         return doReq('/user/resendChangeEmailLink')
       },
       confirmChangeEmail: (me, code) => {
-        return doReq('/user/confirmChangeEmail', {me, code})
+        return doReq('/user/confirmChangeEmail', { me, code })
       },
       resetPwd: (email) => {
-        return doReq('/user/resetPwd', {email})
+        return doReq('/user/resetPwd', { email })
       },
       setAlias: (alias) => {
-        return doReq('/user/setAlias', {alias}).then(()=>{
+        return doReq('/user/setAlias', { alias }).then(() => {
           memCache.me.alias = alias
         })
       },
       setPwd: (oldPwd, newPwd) => {
-        return doReq('/user/setPwd', {oldPwd, newPwd})
+        return doReq('/user/setPwd', { oldPwd, newPwd })
       },
       delete: (pwd) => {
-        return doReq('/user/delete', {pwd})
+        return doReq('/user/delete', { pwd })
       },
       login: (email, pwd) => {
-        return doReq('/user/login', {email, pwd}).then((res)=>{
+        return doReq('/user/login', { email, pwd }).then((res) => {
           memCache.me = res
           memCache[res.id] = res
           return res
@@ -169,7 +169,7 @@ let newApi = (isMDoApi) => {
       get: (ids) => {
         let toGet = []
         let found = []
-        ids.forEach((id)=>{
+        ids.forEach((id) => {
           if (memCache[id]) {
             found.push(memCache[id])
           } else {
@@ -182,9 +182,9 @@ let newApi = (isMDoApi) => {
             resolve(found)
           })
         }
-        return doReq('/user/get', {users: toGet}).then((res) => {
+        return doReq('/user/get', { users: toGet }).then((res) => {
           if (res != null) {
-            res.forEach((user)=>{
+            res.forEach((user) => {
               memCache[user.id] = user
             })
           }
@@ -194,10 +194,10 @@ let newApi = (isMDoApi) => {
     },
     list: {
       create: (name) => {
-        return doReq('/list/create', {name})
+        return doReq('/list/create', { name })
       },
       one: (id) => {
-        return doReq('/list/get', {ids: [id]}).then((res)=>{
+        return doReq('/list/get', { base: { ids: [id] } }).then((res) => {
           if (res.set.length === 1) {
             return res.set[0]
           }
@@ -208,18 +208,18 @@ let newApi = (isMDoApi) => {
         return doReq('/list/get', args)
       },
       update: (id, name) => {
-        return doReq('/list/update', {id, name: {v: name}})
+        return doReq('/list/update', { id, name: { v: name } })
       },
       delete: (ids) => {
-        return doReq('/list/delete', {ids})
+        return doReq('/list/delete', { ids })
       }
     },
     item: {
       create: (list, name) => {
-        return doReq('/item/create', {list, name})
+        return doReq('/item/create', { list, name })
       },
       one: (list, id) => {
-        return doReq('/item/get', {list, ids: [id]}).then((res)=>{
+        return doReq('/item/get', { list, base: { ids: [id] } }).then((res) => {
           if (res.set.length === 1) {
             return res.set[0]
           }
@@ -235,15 +235,15 @@ let newApi = (isMDoApi) => {
           id
         }
         if (name !== undefined) {
-          args.name = {v: name}
+          args.name = { v: name }
         }
         if (complete !== undefined) {
-          args.complete = {v: complete}
+          args.complete = { v: complete }
         }
         return doReq('/item/update', args)
       },
       delete: (list, ids) => {
-        return doReq('/item/delete', {list, ids})
+        return doReq('/item/delete', { list, ids })
       }
     }
   }
