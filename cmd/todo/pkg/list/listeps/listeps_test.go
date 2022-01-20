@@ -65,7 +65,7 @@ func TestEverything(t *testing.T) {
 	a.False(getSet.More)
 
 	getSet = (&list.Get{
-		NamePrefix:            ptr.String("Test l"),
+		NamePrefix:            ptr.String("Test p"),
 		CreatedOnMin:          ptr.Time(Now().Add(-5 * time.Second)),
 		CreatedOnMax:          ptr.Time(Now()),
 		TodoItemCountMin:      ptr.Int(0),
@@ -77,8 +77,7 @@ func TestEverything(t *testing.T) {
 			Limit: 2,
 		},
 	}).MustDo(r.Ali().Client())
-	a.Equal(testList2, getSet.Set[0])
-	a.Equal(testList1, getSet.Set[1])
+	a.Empty(getSet.Set)
 	a.False(getSet.More)
 
 	getSet = (&list.Get{

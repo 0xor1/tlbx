@@ -65,14 +65,14 @@ func (a *One) MustDo(c *app.Client) *List {
 }
 
 type Get struct {
-	NamePrefix            *string    `json:"namePrefix,omitempty"`
-	CreatedOnMin          *time.Time `json:"createdOnMin,omitempty"`
-	CreatedOnMax          *time.Time `json:"createdOnMax,omitempty"`
-	TodoItemCountMin      *int       `json:"todoItemCountMin,omitempty"`
-	TodoItemCountMax      *int       `json:"todoItemCountMax,omitempty"`
-	CompletedItemCountMin *int       `json:"completedItemCountMin,omitempty"`
-	CompletedItemCountMax *int       `json:"completedItemCountMax,omitempty"`
-	filter.Base
+	NamePrefix            *string     `json:"namePrefix,omitempty"`
+	CreatedOnMin          *time.Time  `json:"createdOnMin,omitempty"`
+	CreatedOnMax          *time.Time  `json:"createdOnMax,omitempty"`
+	TodoItemCountMin      *int        `json:"todoItemCountMin,omitempty"`
+	TodoItemCountMax      *int        `json:"todoItemCountMax,omitempty"`
+	CompletedItemCountMin *int        `json:"completedItemCountMin,omitempty"`
+	CompletedItemCountMax *int        `json:"completedItemCountMax,omitempty"`
+	Base                  filter.Base `json:"base"`
 }
 
 type GetRes struct {

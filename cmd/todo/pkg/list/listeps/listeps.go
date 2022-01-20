@@ -1,7 +1,9 @@
 package listeps
 
+//go:generate go install github.com/valyala/quicktemplate/qtc
+//go:generate qtc -file=listeps.sql -skipLineComments
+
 import (
-	"bytes"
 	"net/http"
 
 	"github.com/0xor1/sqlx"
@@ -48,8 +50,7 @@ var (
 					TodoItemCount:      0,
 					CompletedItemCount: 0,
 				}
-				srv.Data().MustExec(
-					`INSERT INTO lists (user, id, createdOn, name, todoItemCount, completedItemCount) VALUES (?, ?, ?, ?, ?, ?)`,
+				srv.Data().MustExec(qryListInsert(),
 					me, res.ID, res.CreatedOn, res.Name, res.TodoItemCount, res.CompletedItemCount)
 				return res
 			},
@@ -124,7 +125,7 @@ var (
 				list := getSetRes.Set[0]
 				list.Name = args.Name.V
 				srv := service.Get(tlbx)
-				srv.Data().MustExec(`UPDATE lists SET name=? WHERE user=? AND id=?`, list.Name, me.AuthedGet(tlbx), list.ID)
+				srv.Data().MustExec(qryListUpdate(), list.Name, me.AuthedGet(tlbx), list.ID)
 				return list
 			},
 		},
@@ -160,7 +161,7 @@ var (
 				tx := srv.Data().BeginWrite()
 				defer tx.Rollback()
 				// items deleted on foreign key cascade
-				tx.MustExec(`DELETE FROM lists WHERE user=? AND id IN `+sqlh.NPList(1, idsLen), queryArgs...)
+				tx.MustExec(qryListsDelete(idsLen), queryArgs...)
 				tx.Commit()
 				return nil
 			},
@@ -182,7 +183,7 @@ func OnDelete(tlbx app.Tlbx, me ID) {
 	tx := srv.Data().BeginWrite()
 	defer tx.Rollback()
 	// items deleted on foreign key cascade
-	tx.MustExec(`DELETE FROM lists WHERE user=?`, me)
+	tx.MustExec(qryOnDelete(), me)
 	tx.Commit()
 }
 
@@ -202,69 +203,17 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 			args.CompletedItemCountMax != nil &&
 			*args.CompletedItemCountMin > *args.CompletedItemCountMax,
 		"completedItemCountMin must not be greater than completedItemCountMax")
-	args.Limit = sqlh.Limit100(args.Limit)
+	args.Base.Limit = sqlh.Limit100(args.Base.Limit)
 	me := me.AuthedGet(tlbx)
 	srv := service.Get(tlbx)
 	res := &list.GetRes{
-		Set: make([]*list.List, 0, args.Limit),
+		Set: make([]*list.List, 0, args.Base.Limit),
 	}
-	query := bytes.NewBufferString(`SELECT id, createdOn, name, todoItemCount, completedItemCount FROM lists WHERE user=?`)
-	queryArgs := make([]interface{}, 0, 10)
-	queryArgs = append(queryArgs, me)
-	idsLen := len(args.IDs)
-	if idsLen > 0 {
-		query.WriteString(sqlh.InCondition(true, `id`, idsLen))
-		query.WriteString(sqlh.OrderByField(`id`, idsLen))
-		queryArgs = append(queryArgs, args.IDs.ToIs()...)
-		queryArgs = append(queryArgs, args.IDs.ToIs()...)
-	} else {
-		if ptr.StringOr(args.NamePrefix, "") != "" {
-			query.WriteString(` AND name LIKE ?`)
-			queryArgs = append(queryArgs, Strf(`%s%%`, *args.NamePrefix))
-		}
-		if args.CreatedOnMin != nil {
-			query.WriteString(` AND createdOn >= ?`)
-			queryArgs = append(queryArgs, *args.CreatedOnMin)
-		}
-		if args.CreatedOnMax != nil {
-			query.WriteString(` AND createdOn <= ?`)
-			queryArgs = append(queryArgs, *args.CreatedOnMax)
-		}
-		if args.TodoItemCountMin != nil {
-			query.WriteString(` AND todoItemCount >= ?`)
-			queryArgs = append(queryArgs, *args.TodoItemCountMin)
-		}
-		if args.TodoItemCountMax != nil {
-			query.WriteString(` AND todoItemCount <= ?`)
-			queryArgs = append(queryArgs, *args.TodoItemCountMax)
-		}
-		if args.CompletedItemCountMin != nil {
-			query.WriteString(` AND completedItemCount >= ?`)
-			queryArgs = append(queryArgs, *args.CompletedItemCountMin)
-		}
-		if args.CompletedItemCountMax != nil {
-			query.WriteString(` AND completedItemCount <= ?`)
-			queryArgs = append(queryArgs, *args.CompletedItemCountMax)
-		}
-		if args.After != nil {
-			query.WriteString(Strf(` AND %s %s= (SELECT %s FROM lists WHERE user=? AND id=?) AND id <> ?`, args.Sort, sqlh.GtLtSymbol(*args.Asc), args.Sort))
-			queryArgs = append(queryArgs, me, *args.After, *args.After)
-			if args.Sort != list.SortCreatedOn {
-				query.WriteString(Strf(` AND createdOn %s (SELECT createdOn FROM lists WHERE user=? AND id=?)`, sqlh.GtLtSymbol(*args.Asc)))
-				queryArgs = append(queryArgs, me, *args.After)
-			}
-		}
-		createdOnSecondarySort := ""
-		if args.Sort != list.SortCreatedOn {
-			createdOnSecondarySort = ", createdOn"
-		}
-
-		query.WriteString(sqlh.OrderLimit100(string(args.Sort)+createdOnSecondarySort, *args.Asc, args.Limit))
-	}
+	sqlArgs := sqlh.NewArgs(10)
 	srv.Data().MustQuery(func(rows *sqlx.Rows) {
-		iLimit := int(args.Limit)
+		iLimit := int(args.Base.Limit)
 		for rows.Next() {
-			if len(args.IDs) == 0 && len(res.Set)+1 == iLimit {
+			if len(args.Base.IDs) == 0 && len(res.Set)+1 == iLimit {
 				res.More = true
 				break
 			}
@@ -272,7 +221,7 @@ func getSet(tlbx app.Tlbx, args *list.Get) *list.GetRes {
 			PanicOn(rows.Scan(&l.ID, &l.CreatedOn, &l.Name, &l.TodoItemCount, &l.CompletedItemCount))
 			res.Set = append(res.Set, l)
 		}
-	}, query.String(), queryArgs...)
+	}, qryListsGet(sqlArgs, me, args), sqlArgs.Is()...)
 	return res
 }
 
