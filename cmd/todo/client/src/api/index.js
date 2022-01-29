@@ -197,7 +197,7 @@ let newApi = (isMDoApi) => {
         return doReq('/list/create', { name })
       },
       one: (id) => {
-        return doReq('/list/get', { base: { ids: [id] } }).then((res) => {
+        return doReq('/list/get', { ids: [id] } ).then((res) => {
           if (res.set.length === 1) {
             return res.set[0]
           }
@@ -219,7 +219,7 @@ let newApi = (isMDoApi) => {
         return doReq('/item/create', { list, name })
       },
       one: (list, id) => {
-        return doReq('/item/get', { list, base: { ids: [id] } }).then((res) => {
+        return doReq('/item/get', { list, ids: [id] }).then((res) => {
           if (res.set.length === 1) {
             return res.set[0]
           }

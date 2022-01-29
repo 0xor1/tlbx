@@ -118,9 +118,9 @@ export default {
         if (reset) {
           this.lists = [];
         }
-        let args = { base: {} };
+        let args = { };
         if (this.lists !== undefined && this.lists.length > 0) {
-          args.base.after = this.lists[this.lists.length - 1].id;
+          args.after = this.lists[this.lists.length - 1].id;
         }
         api.list
           .get(args)

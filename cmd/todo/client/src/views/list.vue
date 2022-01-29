@@ -137,7 +137,7 @@ export default {
         }
         let args = { list: listId, completed, base: {} };
         if (this.items !== undefined && this.items.length > 0) {
-          args.base.after = this.items[this.items.length - 1].id;
+          args.after = this.items[this.items.length - 1].id;
         }
         mapi.item
           .get(args)

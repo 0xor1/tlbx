@@ -31,6 +31,10 @@ const (
 	ApiPathPrefixSegment = ApiPathPrefix + "/"
 )
 
+type SelfValidator interface {
+	MustBeValid()
+}
+
 type Config struct {
 	Log                     log.Log
 	Version                 string
@@ -274,6 +278,10 @@ func Run(configs ...func(*Config)) {
 				}
 			} else {
 				getJsonArgs(tlbx, args)
+			}
+			// if args is a self validator, validate
+			if sv, ok := args.(SelfValidator); ok {
+				sv.MustBeValid()
 			}
 			// handle request
 			res := ep.Handler(tlbx, args)

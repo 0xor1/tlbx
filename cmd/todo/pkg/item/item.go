@@ -70,14 +70,14 @@ func (a *One) MustDo(c *app.Client) *Item {
 }
 
 type Get struct {
-	List           ID          `json:"list"`
-	NamePrefix     *string     `json:"namePrefix,omitempty"`
-	CreatedOnMin   *time.Time  `json:"createdOnMin,omitempty"`
-	CreatedOnMax   *time.Time  `json:"createdOnMax,omitempty"`
-	Completed      *bool       `json:"completed,omitempty"`
-	CompletedOnMin *time.Time  `json:"completedOnMin,omitempty"`
-	CompletedOnMax *time.Time  `json:"completedOnMax,omitempty"`
-	Base           filter.Base `json:"base"`
+	List           ID         `json:"list"`
+	NamePrefix     *string    `json:"namePrefix,omitempty"`
+	CreatedOnMin   *time.Time `json:"createdOnMin,omitempty"`
+	CreatedOnMax   *time.Time `json:"createdOnMax,omitempty"`
+	Completed      *bool      `json:"completed,omitempty"`
+	CompletedOnMin *time.Time `json:"completedOnMin,omitempty"`
+	CompletedOnMax *time.Time `json:"completedOnMax,omitempty"`
+	filter.Base
 }
 
 type GetRes struct {

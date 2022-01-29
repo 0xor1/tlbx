@@ -2,18 +2,9 @@ package filter
 
 import (
 	. "github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/ptr"
 	"github.com/0xor1/tlbx/pkg/web/app"
 )
-
-type rawJsonBase struct {
-	IDs   IDs    `json:"ids,omitempty"`
-	After *ID    `json:"after,omitempty"`
-	Sort  string `json:"sort,omitempty"`
-	Asc   *bool  `json:"asc,omitempty"`
-	Limit uint16 `json:"limit,omitempty"`
-}
 
 type Base struct {
 	IDs        IDs      `json:"ids,omitempty"`
@@ -25,32 +16,7 @@ type Base struct {
 	ValidSorts []string `json:"-"`
 }
 
-func (b *Base) UnmarshalJSON(data []byte) error {
-	rjs := &rawJsonBase{
-		IDs:   b.IDs,
-		After: b.After,
-		Sort:  b.Sort,
-		Asc:   b.Asc,
-		Limit: b.Limit,
-	}
-	err := json.Unmarshal(data, &rjs)
-	if err != nil {
-		return err
-	}
-	*b = Base{
-		IDs:        rjs.IDs,
-		After:      rjs.After,
-		Sort:       rjs.Sort,
-		Asc:        rjs.Asc,
-		Limit:      rjs.Limit,
-		MaxLimit:   b.MaxLimit,
-		ValidSorts: b.ValidSorts,
-	}
-	b.mustBeValid()
-	return nil
-}
-
-func (b *Base) mustBeValid() {
+func (b *Base) MustBeValid() {
 	app.BadReqIf(len(b.IDs) > int(b.MaxLimit), "%d ids supplied, max limit %d", len(b.IDs), b.MaxLimit)
 	app.BadReqIf(b.Limit > b.MaxLimit, "limit of %d is larger than max limit %d", b.Limit, b.MaxLimit)
 	if len(b.ValidSorts) == 0 {
