@@ -77,6 +77,16 @@ func TestEverything(t *testing.T) {
 	a.Equal(testItem1, get.Set[1])
 	a.False(get.More)
 
+	get, err := (&item.Get{
+		List: testList1.ID,
+		Base: filter.Base{
+			IDs:  IDs{testItem2.ID, testItem1.ID},
+			Sort: "fail",
+		},
+	}).Do(r.Ali().Client())
+	a.Nil(get)
+	a.NotNil(err)
+
 	get = (&item.Get{
 		List:         testList1.ID,
 		NamePrefix:   ptr.String("Test i"),

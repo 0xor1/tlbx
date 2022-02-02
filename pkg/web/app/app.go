@@ -32,7 +32,7 @@ const (
 )
 
 type SelfValidator interface {
-	MustBeValid()
+	MustBeValid(tlbx Tlbx)
 }
 
 type Config struct {
@@ -281,7 +281,7 @@ func Run(configs ...func(*Config)) {
 			}
 			// if args is a self validator, validate
 			if sv, ok := args.(SelfValidator); ok {
-				sv.MustBeValid()
+				sv.MustBeValid(tlbx)
 			}
 			// handle request
 			res := ep.Handler(tlbx, args)

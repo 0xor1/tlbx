@@ -11,6 +11,7 @@ import (
 
 var (
 	keyValidRegex                 = regexp.MustCompile(`^[a-z][_a-z0-9]{0,48}[a-z0-9]?$`)
+	digitPrefixRegex              = regexp.MustCompile(`^[0-9]+`)
 	keyValidDoubleUnderscoreRegex = regexp.MustCompile(`__`)
 	keyWhiteSpaceOrUnderscores    = regexp.MustCompile(`[\s_]+`)
 	keyInvalidChar                = regexp.MustCompile(`[^a-z0-9_]+`)
@@ -36,6 +37,8 @@ func ToKey(s string) Key {
 	s = keyWhiteSpaceOrUnderscores.ReplaceAllString(s, `_`)
 	// trim any leading or trailing underscores
 	s = core.StrTrim(s, `_`)
+	// cut digit prefix
+	s = digitPrefixRegex.ReplaceAllString(s, ``)
 	core.PanicIf(len(s) == 0, "empty str key")
 	if len(s) > 50 {
 		s = s[:50]

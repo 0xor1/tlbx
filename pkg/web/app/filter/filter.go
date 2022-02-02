@@ -16,7 +16,7 @@ type Base struct {
 	ValidSorts []string `json:"-"`
 }
 
-func (b *Base) MustBeValid() {
+func (b *Base) MustBeValid(tlbx app.Tlbx) {
 	app.BadReqIf(len(b.IDs) > int(b.MaxLimit), "%d ids supplied, max limit %d", len(b.IDs), b.MaxLimit)
 	app.BadReqIf(b.Limit > b.MaxLimit, "limit of %d is larger than max limit %d", b.Limit, b.MaxLimit)
 	if len(b.ValidSorts) == 0 {
