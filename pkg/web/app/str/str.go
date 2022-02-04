@@ -137,10 +137,6 @@ func invalidStrKeyErr(s string) core.Error {
 	return core.Err("invalid str key detected: %q", s).(core.Error)
 }
 
-var (
-	shortValidRegex = regexp.MustCompile(`\A\S.{0,253}\S?\z`)
-)
-
 func ToStr(s string) Str {
 	sh := Str("")
 	core.PanicOn(sh.UnmarshalBinary([]byte(s)))
