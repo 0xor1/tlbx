@@ -6,14 +6,13 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	"github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
-	"github.com/0xor1/tlbx/pkg/web/app/str"
 )
 
 type Register struct {
-	Alias  *string   `json:"alias,omitempty"`
-	Handle *string   `json:"handle,omitempty"`
-	Email  str.Email `json:"email"`
-	Pwd    str.Pwd   `json:"pwd"`
+	Alias  *string `json:"alias,omitempty"`
+	Handle *string `json:"handle,omitempty"`
+	Email  string  `json:"email"`
+	Pwd    string  `json:"pwd"`
 }
 
 func (_ *Register) Path() string {
@@ -29,7 +28,7 @@ func (a *Register) MustDo(c *app.Client) {
 }
 
 type ResendActivateLink struct {
-	Email str.Email `json:"email"`
+	Email string `json:"email"`
 }
 
 func (_ *ResendActivateLink) Path() string {
@@ -62,7 +61,7 @@ func (a *Activate) MustDo(c *app.Client) {
 }
 
 type ChangeEmail struct {
-	NewEmail str.Email `json:"newEmail"`
+	NewEmail string `json:"newEmail"`
 }
 
 func (_ *ChangeEmail) Path() string {
@@ -109,7 +108,7 @@ func (a *ConfirmChangeEmail) MustDo(c *app.Client) {
 }
 
 type ResetPwd struct {
-	Email str.Email `json:"email"`
+	Email string `json:"email"`
 }
 
 func (_ *ResetPwd) Path() string {
@@ -178,8 +177,8 @@ func (a *SetAvatar) MustDo(c *app.Client) {
 }
 
 type SetPwd struct {
-	OldPwd str.Pwd `json:"oldPwd"`
-	NewPwd str.Pwd `json:"newPwd"`
+	OldPwd string `json:"oldPwd"`
+	NewPwd string `json:"newPwd"`
 }
 
 func (_ *SetPwd) Path() string {
@@ -195,7 +194,7 @@ func (a *SetPwd) MustDo(c *app.Client) {
 }
 
 type Delete struct {
-	Pwd str.Pwd `json:"pwd"`
+	Pwd string `json:"pwd"`
 }
 
 func (_ *Delete) Path() string {
@@ -211,8 +210,8 @@ func (a *Delete) MustDo(c *app.Client) {
 }
 
 type Login struct {
-	Email str.Email `json:"email"`
-	Pwd   str.Pwd   `json:"pwd"`
+	Email string `json:"email"`
+	Pwd   string `json:"pwd"`
 }
 
 func (_ *Login) Path() string {
@@ -232,7 +231,7 @@ func (a *Login) MustDo(c *app.Client) *Me {
 }
 
 type SendLoginLinkEmail struct {
-	Email str.Email `json:"email"`
+	Email string `json:"email"`
 }
 
 func (_ *SendLoginLinkEmail) Path() string {

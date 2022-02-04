@@ -20,7 +20,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session"
-	"github.com/0xor1/tlbx/pkg/web/app/str"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
 )
@@ -61,15 +60,15 @@ type Rig interface {
 type User interface {
 	Client() *app.Client
 	ID() ID
-	Email() str.Email
-	Pwd() str.Pwd
+	Email() string
+	Pwd() string
 }
 
 type testUser struct {
 	client *app.Client
 	id     ID
-	email  str.Email
-	pwd    str.Pwd
+	email  string
+	pwd    string
 }
 
 func (u *testUser) Client() *app.Client {
@@ -80,11 +79,11 @@ func (u *testUser) ID() ID {
 	return u.id
 }
 
-func (u *testUser) Email() str.Email {
+func (u *testUser) Email() string {
 	return u.email
 }
 
-func (u *testUser) Pwd() str.Pwd {
+func (u *testUser) Pwd() string {
 	return u.pwd
 }
 
@@ -301,7 +300,7 @@ func (r *rig) CleanUp() {
 func (r *rig) CreateUser(handlePrefix string) User {
 	_, exists := r.users[handlePrefix]
 	PanicIf(exists, "%s test user handle prefix already used", handlePrefix)
-	email := str.ToEmail(Strf("%s%s%d", handlePrefix, emailSuffix, r.unique))
+	email := Strf("%s%s%d", handlePrefix, emailSuffix, r.unique)
 	c := r.NewClient()
 	var tu *testUser
 	if r.useAuth {

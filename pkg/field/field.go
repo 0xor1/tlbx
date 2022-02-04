@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/0xor1/tlbx/pkg/core"
-	"github.com/0xor1/tlbx/pkg/web/app/str"
 )
 
 type ID struct {
@@ -136,31 +135,9 @@ type Float64Ptr struct {
 }
 
 type Key struct {
-	V str.Key `json:"v"`
+	V core.Key `json:"v"`
 }
 
 type KeyPtr struct {
-	V *str.Key `json:"v"`
-}
-type Str struct {
-	V str.Str `json:"v"`
-}
-
-type StrPtr struct {
-	V *str.Str `json:"v"`
-}
-type Email struct {
-	V str.Email `json:"v"`
-}
-
-type EmailPtr struct {
-	V *str.Email `json:"v"`
-}
-
-type Pwd struct {
-	V str.Pwd `json:"v"`
-}
-
-type PwdPtr struct {
-	V *str.Pwd `json:"v"`
+	V *core.Key `json:"v"`
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/config"
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
-	"github.com/0xor1/tlbx/pkg/web/app/str"
 	"github.com/0xor1/tlbx/pkg/web/app/test"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/user/usereps"
@@ -38,8 +37,8 @@ func Everything(t *testing.T) {
 	c := r.NewClient()
 	handle := "test_" + r.UniqueStr()
 	alias := "test 😂 alias"
-	email := str.ToEmail("test@test.localhost%s" + r.UniqueStr())
-	pwd := str.ToPwd("1aA$_t;3")
+	email := "test@test.localhost%s" + r.UniqueStr()
+	pwd := "1aA$_t;3"
 
 	(&user.Register{
 		Handle: ptr.String(handle),
@@ -106,7 +105,7 @@ func Everything(t *testing.T) {
 	}).MustDo(c).ID
 
 	(&user.ChangeEmail{
-		NewEmail: str.ToEmail(Strf("change@test.localhost%d", r.Unique())),
+		NewEmail: Strf("change@test.localhost%d", r.Unique()),
 	}).MustDo(c)
 
 	(&user.ResendChangeEmailLink{}).MustDo(c)

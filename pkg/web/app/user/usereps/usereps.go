@@ -28,7 +28,6 @@ import (
 	"github.com/0xor1/tlbx/pkg/web/app/service"
 	"github.com/0xor1/tlbx/pkg/web/app/service/sql"
 	"github.com/0xor1/tlbx/pkg/web/app/session/me"
-	"github.com/0xor1/tlbx/pkg/web/app/str"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"github.com/0xor1/tlbx/pkg/web/app/validate"
 	"github.com/disintegration/imaging"
@@ -43,7 +42,7 @@ const (
 var NopOnSetSocials = func(_ app.Tlbx, _ *user.User) {}
 
 func New(
-	fromEmail str.Email,
+	fromEmail string,
 	activateFmtLink,
 	loginLinkFmtLink,
 	confirmChangeEmailFmtLink string,
@@ -86,6 +85,8 @@ func New(
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				app.BadReqIf(me.AuthedExists(tlbx), "already logged in")
 				args := a.(*user.Register)
+				args.Email = StrTrimWS(args.Email)
+				validate.Str("email", args.Email, 0, emailMaxLen, emailRegex)
 				if !enableSocials {
 					args.Handle = nil
 					args.Alias = nil
@@ -214,6 +215,8 @@ func New(
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.ChangeEmail)
+				args.NewEmail = StrTrimWS(args.NewEmail)
+				validate.Str("email", args.NewEmail, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
 				me := me.AuthedGet(tlbx)
 				changeEmailCode := crypt.UrlSafeString(250)
@@ -322,7 +325,7 @@ func New(
 					updateUser(tx, user)
 					pwdtx := srv.Pwd().BeginWrite()
 					defer pwdtx.Rollback()
-					newPwd := str.Pwd(`$aA1` + crypt.UrlSafeString(12))
+					newPwd := `$aA1` + crypt.UrlSafeString(12)
 					setPwd(tlbx, pwdtx, user.ID, newPwd)
 					sendResetPwdEmail(srv, args.Email, fromEmail, newPwd)
 					pwdtx.Commit()
@@ -434,6 +437,8 @@ func New(
 					app.ReturnIf(condition, http.StatusNotFound, "email and/or pwd are not valid")
 				}
 				args := a.(*user.Login)
+				validate.Str("email", args.Email, 0, emailMaxLen, emailRegex)
+				validate.Str("pwd", args.Pwd, pwdMinLen, pwdMaxLen, pwdRegexs...)
 				srv := service.Get(tlbx)
 				tx := srv.User().BeginRead()
 				defer tx.Rollback()
@@ -472,6 +477,7 @@ func New(
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				args := a.(*user.SendLoginLinkEmail)
+				validate.Str("email", args.Email, 0, emailMaxLen, emailRegex)
 				srv := service.Get(tlbx)
 				tx := srv.User().BeginWrite()
 				defer tx.Rollback()
@@ -799,7 +805,7 @@ func New(
 					args.Size = int64(len(content))
 					if args.Size > 0 {
 						if *user.HasAvatar {
-							srv.Store().MustDelete(AvatarBucket, store.Key(AvatarPrefix, me))
+							srv.Store().MustDelete(AvatarBucket, store.GenKey(AvatarPrefix, me))
 						}
 						avatar, _, err := image.Decode(bytes.NewBuffer(content))
 						PanicOn(err)
@@ -813,7 +819,7 @@ func New(
 						PanicOn(png.Encode(buff, avatar))
 						srv.Store().MustPut(
 							AvatarBucket,
-							store.Key(AvatarPrefix, me),
+							store.GenKey(AvatarPrefix, me),
 							args.Name,
 							"image/png",
 							int64(buff.Len()),
@@ -821,7 +827,7 @@ func New(
 							false,
 							bytes.NewReader(buff.Bytes()))
 					} else if *user.HasAvatar == true {
-						srv.Store().MustDelete(AvatarBucket, store.Key(AvatarPrefix, me))
+						srv.Store().MustDelete(AvatarBucket, store.GenKey(AvatarPrefix, me))
 					}
 					nowHasAvatar := args.Size > 0
 					if *user.HasAvatar != nowHasAvatar {
@@ -856,7 +862,7 @@ func New(
 				Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 					args := a.(*user.GetAvatar)
 					srv := service.Get(tlbx)
-					name, mimeType, size, content := srv.Store().MustGet(AvatarBucket, store.Key(AvatarPrefix, args.User))
+					name, mimeType, size, content := srv.Store().MustGet(AvatarBucket, store.GenKey(AvatarPrefix, args.User))
 					ds := &app.DownStream{}
 					ds.ID = args.User
 					ds.Name = name
@@ -999,10 +1005,20 @@ func New(
 }
 
 var (
-	handleRegex   = regexp.MustCompile(`\A[_a-z0-9]{1,20}\z`)
-	handleMinLen  = 1
-	handleMaxLen  = 20
-	aliasMaxLen   = 50
+	handleRegex  = regexp.MustCompile(`\A[_a-z0-9]{1,20}\z`)
+	handleMinLen = 1
+	handleMaxLen = 20
+	emailRegex   = regexp.MustCompile(`\A.+@.+\..+\z`)
+	emailMaxLen  = 250
+	aliasMaxLen  = 50
+	pwdRegexs    = []*regexp.Regexp{
+		regexp.MustCompile(`[0-9]`),
+		regexp.MustCompile(`[a-z]`),
+		regexp.MustCompile(`[A-Z]`),
+		regexp.MustCompile(`[\w]`),
+	}
+	pwdMinLen     = 8
+	pwdMaxLen     = 100
 	scryptN       = 32768
 	scryptR       = 8
 	scryptP       = 1
@@ -1012,42 +1028,42 @@ var (
 	exampleJin    = json.MustFromString(`{"v":1, "saveDir":"/my/save/dir", "startTab":"favourites"}`)
 )
 
-func sendActivateEmail(srv service.Layer, sendTo, from str.Email, link string, handle *string) {
+func sendActivateEmail(srv service.Layer, sendTo, from string, link string, handle *string) {
 	html := `<p>Thank you for registering.</p><p>Click this link to activate your account:</p><p><a href="` + link + `">Activate</a></p><p>If you didn't register for this account you can simply ignore this email.</p>`
 	txt := "Thank you for registering.\nClick this link to activate your account:\n\n" + link + "\n\nIf you didn't register for this account you can simply ignore this email."
 	if handle != nil {
 		html = Strf("Hi %s,\n\n%s", *handle, html)
 		txt = Strf("Hi %s,\n\n%s", *handle, txt)
 	}
-	srv.Email().MustSend([]string{sendTo.String()}, from.String(), "Activate", html, txt)
+	srv.Email().MustSend([]string{sendTo}, from, "Activate", html, txt)
 }
 
-func sendLoginLinkEmail(srv service.Layer, sendTo, from str.Email, link string, handle *string) {
+func sendLoginLinkEmail(srv service.Layer, sendTo, from string, link string, handle *string) {
 	html := `<p>Here is the login link you requested.</p><p>Click this link to login to your account:</p><p><a href="` + link + `">Login</a></p><p>This link will only be valid for 10 minutes.</p><p>If you didn't request this link you can simply ignore this email.</p>`
 	txt := "Here is the login link you requested.\nClick this link to login to your account:\n\n" + link + "\n\nThis link will only be valid for 10 minutes.\n\nIf you didn't request this link you can simply ignore this email."
 	if handle != nil {
 		html = Strf("Hi %s,\n\n%s", *handle, html)
 		txt = Strf("Hi %s,\n\n%s", *handle, txt)
 	}
-	srv.Email().MustSend([]string{sendTo.String()}, from.String(), "Login Link", html, txt)
+	srv.Email().MustSend([]string{sendTo}, from, "Login Link", html, txt)
 }
 
-func sendConfirmChangeEmailEmail(srv service.Layer, sendTo, from str.Email, link string) {
-	srv.Email().MustSend([]string{sendTo.String()}, from.String(), "Confirm change email",
+func sendConfirmChangeEmailEmail(srv service.Layer, sendTo, from string, link string) {
+	srv.Email().MustSend([]string{sendTo}, from, "Confirm change email",
 		`<p>Click this link to change the email associated with your account:</p><p><a href="`+link+`">Confirm change email</a></p>`,
 		"Confirm change email:\n\n"+link)
 }
 
-func sendResetPwdEmail(srv service.Layer, sendTo, from str.Email, newPwd str.Pwd) {
-	srv.Email().MustSend([]string{sendTo.String()}, from.String(), "Pwd Reset", `<p>New Pwd: `+newPwd.String()+`</p>`, `New Pwd: `+newPwd.String())
+func sendResetPwdEmail(srv service.Layer, sendTo, from string, newPwd string) {
+	srv.Email().MustSend([]string{sendTo}, from, "Pwd Reset", `<p>New Pwd: `+newPwd+`</p>`, `New Pwd: `+newPwd)
 }
 
 type fullUser struct {
 	user.Me
-	Email                  str.Email
+	Email                  string
 	RegisteredOn           time.Time
 	ActivatedOn            time.Time
-	NewEmail               *str.Email
+	NewEmail               *string
 	ActivateCode           *string
 	ChangeEmailCode        *string
 	LastPwdResetOn         *time.Time
@@ -1055,7 +1071,7 @@ type fullUser struct {
 	LoginLinkCode          *string
 }
 
-func getUser(tx sql.Tx, email *str.Email, id *ID) *fullUser {
+func getUser(tx sql.Tx, email *string, id *ID) *fullUser {
 	PanicIf(email == nil && id == nil, "one of email or id must not be nil")
 	var arg interface{}
 	if email != nil {
@@ -1095,7 +1111,8 @@ func getPwd(pwdtx sql.Tx, id ID) *pwd {
 	return res
 }
 
-func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd str.Pwd) {
+func setPwd(tlbx app.Tlbx, pwdtx sql.Tx, id ID, pwd string) {
+	validate.Str("pwd", pwd, pwdMinLen, pwdMaxLen, pwdRegexs...)
 	salt := crypt.Bytes(scryptSaltLen)
 	pwdBs := crypt.ScryptKey([]byte(pwd), salt, scryptN, scryptR, scryptP, scryptKeyLen)
 	_, err := pwdtx.Exec(qryPwdUpdate(), id, salt, pwdBs, scryptN, scryptR, scryptP)

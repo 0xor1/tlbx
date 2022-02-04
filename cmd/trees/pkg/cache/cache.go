@@ -25,15 +25,15 @@ func CleanupMware() func(app.Tlbx) {
 	}
 }
 
-type Key struct {
+type CKey struct {
 	isGet   bool
 	Key     string
 	Args    []interface{}
 	DlmKeys map[string]bool
 }
 
-func NewGet(key string, args ...interface{}) *Key {
-	return &Key{
+func NewGet(key string, args ...interface{}) *CKey {
+	return &CKey{
 		isGet:   true,
 		Key:     key,
 		Args:    args,
@@ -41,14 +41,14 @@ func NewGet(key string, args ...interface{}) *Key {
 	}
 }
 
-func NewSetDlms() *Key {
-	return &Key{
+func NewSetDlms() *CKey {
+	return &CKey{
 		isGet:   false,
 		DlmKeys: map[string]bool{},
 	}
 }
 
-func (k *Key) SortedDlmKeys() []string {
+func (k *CKey) SortedDlmKeys() []string {
 	sorted := make([]string, 0, len(k.DlmKeys))
 	for key := range k.DlmKeys {
 		idx := sort.SearchStrings(sorted, key)
@@ -63,32 +63,32 @@ func (k *Key) SortedDlmKeys() []string {
 	return sorted
 }
 
-func (k *Key) HostMaster(host ID) *Key {
+func (k *CKey) HostMaster(host ID) *CKey {
 	return k.setKey("h_m", host)
 }
 
-func (k *Key) Host(host ID) *Key {
+func (k *CKey) Host(host ID) *CKey {
 	if k.isGet {
 		k.HostMaster(host)
 	}
 	return k.setKey("h", host)
 }
 
-func (k *Key) HostProjectsSet(host ID) *Key {
+func (k *CKey) HostProjectsSet(host ID) *CKey {
 	if k.isGet {
 		k.HostMaster(host)
 	}
 	return k.setKey("hps", host)
 }
 
-func (k *Key) ProjectMaster(host, project ID) *Key {
+func (k *CKey) ProjectMaster(host, project ID) *CKey {
 	if k.isGet {
 		k.HostMaster(host)
 	}
 	return k.setKey("p_m", project)
 }
 
-func (k *Key) Project(host, project ID) *Key {
+func (k *CKey) Project(host, project ID) *CKey {
 	if k.isGet {
 		k.ProjectMaster(host, project)
 	} else {
@@ -97,21 +97,21 @@ func (k *Key) Project(host, project ID) *Key {
 	return k.setKey("p", project).setKey("t", project) //projects are also tasks
 }
 
-func (k *Key) ProjectActivities(host, project ID) *Key {
+func (k *CKey) ProjectActivities(host, project ID) *CKey {
 	if k.isGet {
 		k.ProjectMaster(host, project)
 	}
 	return k.setKey("pa", project)
 }
 
-func (k *Key) ProjectUsersSet(host, project ID) *Key {
+func (k *CKey) ProjectUsersSet(host, project ID) *CKey {
 	if k.isGet {
 		k.ProjectMaster(host, project)
 	}
 	return k.setKey("pus", project)
 }
 
-func (k *Key) ProjectUser(host, project, user ID) *Key {
+func (k *CKey) ProjectUser(host, project, user ID) *CKey {
 	if k.isGet {
 		k.ProjectMaster(host, project)
 	} else {
@@ -120,21 +120,21 @@ func (k *Key) ProjectUser(host, project, user ID) *Key {
 	return k.setKey("pu", user)
 }
 
-func (k *Key) ProjectUsers(host, project ID, users []ID) *Key {
+func (k *CKey) ProjectUsers(host, project ID, users []ID) *CKey {
 	for _, member := range users {
 		k.ProjectUser(host, project, member)
 	}
 	return k
 }
 
-func (k *Key) TaskChildrenSet(host, project, parent ID) *Key {
+func (k *CKey) TaskChildrenSet(host, project, parent ID) *CKey {
 	if k.isGet {
 		k.ProjectMaster(host, project)
 	}
 	return k.setKey("tcs", parent)
 }
 
-func (k *Key) Task(host, project, task ID) *Key {
+func (k *CKey) Task(host, project, task ID) *CKey {
 	if project.Equal(task) {
 		k.Project(host, project) //let project handle project nodes
 	} else {
@@ -146,7 +146,7 @@ func (k *Key) Task(host, project, task ID) *Key {
 	return k
 }
 
-func (k *Key) CombinedTaskAndTaskChildrenSets(host, project ID, tasks []ID) *Key {
+func (k *CKey) CombinedTaskAndTaskChildrenSets(host, project ID, tasks []ID) *CKey {
 	for _, task := range tasks {
 		k.Task(host, project, task)
 		k.setKey("tcs", task)
@@ -154,7 +154,7 @@ func (k *Key) CombinedTaskAndTaskChildrenSets(host, project ID, tasks []ID) *Key
 	return k
 }
 
-func (k *Key) ProjectTimeLogSet(host, project ID) *Key {
+func (k *CKey) ProjectTimeLogSet(host, project ID) *CKey {
 	if k.isGet {
 		k.ProjectMaster(host, project)
 	}
@@ -162,7 +162,7 @@ func (k *Key) ProjectTimeLogSet(host, project ID) *Key {
 	return k
 }
 
-func (k *Key) ProjectUserTimeLogSet(host, project, user ID) *Key {
+func (k *CKey) ProjectUserTimeLogSet(host, project, user ID) *CKey {
 	if k.isGet {
 		k.ProjectMaster(host, project)
 	} else {
@@ -172,7 +172,7 @@ func (k *Key) ProjectUserTimeLogSet(host, project, user ID) *Key {
 	return k
 }
 
-func (k *Key) TaskTimeLogSet(host, project, task ID, user *ID) *Key {
+func (k *CKey) TaskTimeLogSet(host, project, task ID, user *ID) *CKey {
 	if k.isGet {
 		k.ProjectMaster(host, project)
 		if user != nil {
@@ -186,7 +186,7 @@ func (k *Key) TaskTimeLogSet(host, project, task ID, user *ID) *Key {
 	return k
 }
 
-func (k *Key) TimeLog(host, project, timeLog ID, task, user *ID) *Key {
+func (k *CKey) TimeLog(host, project, timeLog ID, task, user *ID) *CKey {
 	if k.isGet {
 		k.ProjectMaster(host, project)
 		if task != nil {
@@ -200,7 +200,7 @@ func (k *Key) TimeLog(host, project, timeLog ID, task, user *ID) *Key {
 	return k
 }
 
-func (k *Key) setKey(typeKey string, id ...ID) *Key {
+func (k *CKey) setKey(typeKey string, id ...ID) *CKey {
 	var key string
 	switch {
 	case len(id) == 0:

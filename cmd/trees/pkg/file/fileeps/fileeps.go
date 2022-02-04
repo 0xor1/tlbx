@@ -77,11 +77,11 @@ var (
 					Type:      args.Type,
 					Name:      args.Name,
 				}
-				srv.Store().MustStreamUp(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size), false, true, 5*time.Minute, args.Content)
+				srv.Store().MustStreamUp(cnsts.FileBucket, store.GenKey("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID), f.Name, f.Type, int64(f.Size), false, true, 5*time.Minute, args.Content)
 				deleteFile := true
 				defer func() {
 					if deleteFile {
-						srv.Store().MustDelete(cnsts.FileBucket, store.Key("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID))
+						srv.Store().MustDelete(cnsts.FileBucket, store.GenKey("", innerArgs.Host, innerArgs.Project, innerArgs.Task, f.ID))
 					}
 				}()
 				// insert new file
@@ -143,7 +143,7 @@ var (
 				res.Name = f.Name
 				res.Size = int64(f.Size)
 				res.Type = f.Type
-				_, _, _, res.Content = srv.Store().MustGet(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
+				_, _, _, res.Content = srv.Store().MustGet(cnsts.FileBucket, store.GenKey("", args.Host, args.Project, args.Task, args.ID))
 				tlbx.Resp().Header().Set("Cache-Control", "private, max-age=31536000, immutable")
 				return res
 			},
@@ -283,7 +283,7 @@ var (
 					Type: f.Type,
 				}, nil, ancestors)
 				t := taskeps.GetOne(tx, args.Host, args.Project, args.Task)
-				srv.Store().MustDelete(cnsts.FileBucket, store.Key("", args.Host, args.Project, args.Task, args.ID))
+				srv.Store().MustDelete(cnsts.FileBucket, store.GenKey("", args.Host, args.Project, args.Task, args.ID))
 				tx.Commit()
 				return t
 			},

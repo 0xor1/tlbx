@@ -241,7 +241,7 @@ func (c *client) MustDeletePrefix(bucket, prefix string) {
 	PanicOn(c.DeletePrefix(bucket, prefix))
 }
 
-func Key(prefix string, root ID, ids ...ID) string {
+func GenKey(prefix string, root ID, ids ...ID) string {
 	var key *bytes.Buffer
 	if prefix != "" {
 		key = bytes.NewBufferString(prefix + "/" + root.String())

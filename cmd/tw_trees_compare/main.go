@@ -13,7 +13,6 @@ import (
 	. "github.com/0xor1/tlbx/pkg/core"
 	j "github.com/0xor1/tlbx/pkg/json"
 	"github.com/0xor1/tlbx/pkg/web/app"
-	"github.com/0xor1/tlbx/pkg/web/app/str"
 	"github.com/0xor1/tlbx/pkg/web/app/user"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -116,8 +115,8 @@ func runTW(inst, user, pwd, projectName string, treeK, treeH uint) {
 func runTrees(host, email, pwd, projectName string, treeK, treeH uint) {
 	c := app.NewClient(host)
 	me := (&user.Login{
-		Email: str.ToEmail(email),
-		Pwd:   str.ToPwd(pwd),
+		Email: email,
+		Pwd:   pwd,
 	}).MustDo(c)
 
 	Println("starting in Trees")
