@@ -67,10 +67,16 @@ func isValidKey(s string) bool {
 }
 
 func (s Key) MarshalBinary() ([]byte, error) {
+	if !isValidKey(s.String()) {
+		return nil, invalidStrKeyErr(s.String())
+	}
 	return []byte(s), nil
 }
 
 func (s Key) MarshalBinaryTo(dst []byte) error {
+	if !isValidKey(s.String()) {
+		return invalidStrKeyErr(s.String())
+	}
 	if len(s) > len(dst) {
 		return errBufferSize
 	}
