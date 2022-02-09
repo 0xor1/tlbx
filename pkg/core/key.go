@@ -137,5 +137,5 @@ func (s *Key) String() string {
 }
 
 func invalidStrKeyErr(s string) error {
-	return Err("invalid str key detected: %q", s)
+	return Err("invalid str key detected: %q must match regex: %s, and must not match regex: %s", s, keyValidRegex.String(), keyValidDoubleUnderscoreRegex.String())
 }
