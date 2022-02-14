@@ -36,7 +36,7 @@ func ToKey(s string) Key {
 	s = invalidPrefixRegex.ReplaceAllString(s, ``)
 	// trim any leading or trailing underscores
 	s = StrTrim(s, `_`)
-	PanicIf(len(s) == 0, "empty str key")
+	PanicIf(len(s) == 0, "empty key")
 	if len(s) > 50 {
 		s = s[:50]
 	}
@@ -46,6 +46,13 @@ func ToKey(s string) Key {
 func ToKeyPtr(s string) *Key {
 	k := ToKey(s)
 	return &k
+}
+
+func ParseKey(s string) Key {
+	if !isValidKey(s) {
+		PanicOn(invalidStrKeyErr(s))
+	}
+	return Key(s)
 }
 
 type Keys []Key
@@ -137,5 +144,5 @@ func (s *Key) String() string {
 }
 
 func invalidStrKeyErr(s string) error {
-	return Err("invalid str key detected: %q must match regex: %s, and must not match regex: %s", s, keyValidRegex.String(), keyValidDoubleUnderscoreRegex.String())
+	return Err("invalid key detected: %q must match regex: %s, and must not match regex: %s", s, keyValidRegex.String(), keyValidDoubleUnderscoreRegex.String())
 }

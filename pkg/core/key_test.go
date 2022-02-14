@@ -6,6 +6,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestParseKey(t *testing.T) {
+	a := assert.New(t)
+	defer Recover(func(i interface{}) {
+		a.Contains(i.(Error).Error(), `invalid key detected`)
+	})
+	ParseKey("yolo")
+	ParseKey("_yolo_")
+}
 func TestKey(t *testing.T) {
 	a := assert.New(t)
 	v := "abcdefghijklmnopqrstuvwxyz_0123456789"
@@ -47,20 +55,20 @@ func TestKey(t *testing.T) {
 	a.EqualError(err, "bad buffer size when marshaling")
 
 	err = k.UnmarshalBinary([]byte{})
-	a.Contains(err.Error(), `invalid str key detected: ""`)
+	a.Contains(err.Error(), `invalid key detected: ""`)
 
 	err = k.Scan([]byte{})
-	a.Contains(err.Error(), `invalid str key detected: ""`)
+	a.Contains(err.Error(), `invalid key detected: ""`)
 
 	err = k.Scan("")
-	a.Contains(err.Error(), `invalid str key detected: ""`)
+	a.Contains(err.Error(), `invalid key detected: ""`)
 
 	err = k.Scan(1)
 	a.EqualError(err, `source value must be a string or byte slice`)
 
 	k = Key("")
 	_, err = k.Value()
-	a.Contains(err.Error(), `invalid str key detected: ""`)
+	a.Contains(err.Error(), `invalid key detected: ""`)
 
 	defer Recover(func(i interface{}) {
 		a.Contains(i.(Error).Error(), `key must not be a ulid string detected`)
