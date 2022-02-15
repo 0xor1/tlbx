@@ -880,6 +880,87 @@ func Test_ID(t *testing.T) {
 	a.Nil(err)
 }
 
+func Test_IDs(t *testing.T) {
+	a := assert.New(t)
+
+	idGen := NewIDGen()
+	ids := IDs{idGen.MustNew()}
+	obj := &Json{ids}
+	a.Equal(ids, obj.MustIDs())
+	a.Equal(ids, obj.IDsOrDefault(ids))
+	a.Nil((&Json{}).IDsOrDefault(ids))
+	a.Equal(ids, (&Json{}).IDsOrDefault("a", ids))
+
+	_, err := obj.IDs("a")
+	a.NotNil(err)
+
+	a.Equal(ids, (&Json{[]string{ids[0].String()}}).MustIDs())
+	a.Equal(ids, (&Json{[]interface{}{ids[0].String()}}).MustIDs())
+	a.Equal(ids, (&Json{[]interface{}{ids[0]}}).MustIDs())
+	_, err = (&Json{[]interface{}{"not an id"}}).IDs()
+	a.NotNil(err)
+	_, err = (&Json{[]interface{}{123}}).IDs()
+	a.NotNil(err)
+	_, err = (&Json{123}).IDs()
+	a.NotNil(err)
+	_, err = (&Json{[]string{"yolo"}}).IDs()
+	a.NotNil(err)
+}
+
+func Test_Key(t *testing.T) {
+	a := assert.New(t)
+
+	k := MustToKey("yolo")
+	obj := &Json{k}
+	a.Equal(k, obj.MustKey())
+	a.Equal(k, obj.KeyOrDefault(k))
+	a.Equal(k, (&Json{}).KeyOrDefault(k))
+	a.Equal(k, (&Json{}).KeyOrDefault("yolo"))
+
+	k, err := obj.Key("a")
+	a.NotNil(err)
+
+	obj = &Json{true}
+	k, err = obj.Key()
+	a.Equal(invalidTypeErr, err)
+
+	k = MustToKey("nolo")
+	obj = &Json{k.String()}
+	k, err = obj.Key()
+	a.Nil(err)
+
+	k = MustToKey("bolo")
+	obj = MustFromString(Strf(`{"a": "%s"}`, k.String()))
+	k, err = obj.Key("a")
+	a.Nil(err)
+}
+
+func Test_Keys(t *testing.T) {
+	a := assert.New(t)
+
+	ks := Keys{"yolo"}
+	obj := &Json{ks}
+	a.Equal(ks, obj.MustKeys())
+	a.Equal(ks, obj.KeysOrDefault(ks))
+	a.Nil((&Json{}).KeysOrDefault(ks))
+	a.Equal(ks, (&Json{}).KeysOrDefault("a", ks))
+
+	_, err := obj.Keys("a")
+	a.NotNil(err)
+
+	a.Equal(ks, (&Json{[]string{ks[0].String()}}).MustKeys())
+	a.Equal(ks, (&Json{[]interface{}{ks[0].String()}}).MustKeys())
+	a.Equal(ks, (&Json{[]interface{}{ks[0]}}).MustKeys())
+	_, err = (&Json{[]interface{}{"not a key"}}).Keys()
+	a.NotNil(err)
+	_, err = (&Json{[]interface{}{123}}).Keys()
+	a.NotNil(err)
+	_, err = (&Json{123}).Keys()
+	a.NotNil(err)
+	_, err = (&Json{[]string{"_yolo_"}}).Keys()
+	a.NotNil(err)
+}
+
 func Test_String_Error(t *testing.T) {
 	a := assert.New(t)
 
