@@ -17,10 +17,10 @@ var (
 	errScanValue                  = errors.New("source value must be a string or byte slice")
 )
 
-func ToKey(s string) Key {
+func ToKey(s string) (Key, error) {
 	if _, err := ParseID(s); err == nil {
 		// not allowed to be a ulid string
-		PanicOn(errUlidString)
+		return "", errUlidString
 	}
 
 	// lower all chars
@@ -40,19 +40,37 @@ func ToKey(s string) Key {
 	if len(s) > 50 {
 		s = s[:50]
 	}
-	return Key(s)
+	return Key(s), nil
 }
 
-func ToKeyPtr(s string) *Key {
-	k := ToKey(s)
+func MustToKey(s string) Key {
+	k, err := ToKey(s)
+	PanicOn(err)
+	return k
+}
+
+func ToKeyPtr(s string) (*Key, error) {
+	k, err := ToKey(s)
+	return &k, err
+}
+
+func MustToKeyPtr(s string) *Key {
+	k, err := ToKey(s)
+	PanicOn(err)
 	return &k
 }
 
-func ParseKey(s string) Key {
+func ParseKey(s string) (Key, error) {
 	if !isValidKey(s) {
-		PanicOn(invalidStrKeyErr(s))
+		return "", invalidStrKeyErr(s)
 	}
-	return Key(s)
+	return Key(s), nil
+}
+
+func MustParseKey(s string) Key {
+	k, err := ParseKey(s)
+	PanicOn(err)
+	return k
 }
 
 type Keys []Key

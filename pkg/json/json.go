@@ -300,7 +300,14 @@ func (j *Json) Exists(path ...interface{}) bool {
 func (j *Json) Get(path ...interface{}) (*Json, error) {
 	tmp := j
 	for i, k := range path {
-		if key, ok := k.(string); ok {
+		key, isStr := k.(string)
+		if !isStr {
+			if keyKey, isKey := k.(Key); isKey {
+				key = keyKey.String()
+				isStr = true
+			}
+		}
+		if isStr {
 			if m, err := tmp.Map(); err == nil {
 				if val, ok := m[key]; ok {
 					tmp = &Json{val}
@@ -597,6 +604,159 @@ func (j *Json) IDOrDefault(pathThenDefault ...interface{}) ID {
 		return i
 	}
 	return def.(ID)
+}
+
+func (j *Json) IDs(path ...interface{}) (IDs, error) {
+	js, err := j.Get(path...)
+	if err != nil {
+		return nil, err
+	}
+
+	if js.data == nil {
+		return nil, nil
+	}
+
+	if data, ok := js.data.(IDs); ok {
+		return data, nil
+	}
+
+	if data, ok := js.data.([]string); ok {
+		ids := make(IDs, 0, len(data))
+		for _, item := range data {
+			i, err := ParseID(item)
+			if err != nil {
+				return nil, err
+			}
+			ids = append(ids, i)
+		}
+		return ids, nil
+	}
+
+	if data, ok := js.data.([]interface{}); ok {
+		ids := make(IDs, 0, len(data))
+		for _, item := range data {
+			if i, ok := item.(ID); ok {
+				ids = append(ids, i)
+			} else if str, ok := item.(string); ok {
+				i, err := ParseID(str)
+				if err != nil {
+					return nil, err
+				}
+				ids = append(ids, i)
+			} else {
+				return nil, invalidTypeErr
+			}
+		}
+		return ids, nil
+	}
+
+	return nil, invalidTypeErr
+}
+
+func (j *Json) MustIDs(path ...interface{}) IDs {
+	v, err := j.IDs(path...)
+	PanicOn(err)
+	return v
+}
+
+func (j *Json) IDsOrDefault(pathThenDefault ...interface{}) IDs {
+	path, def := mustSplitPathThenValue(pathThenDefault)
+	if a, err := j.IDs(path...); err == nil {
+		return a
+	}
+	return def.(IDs)
+}
+
+func (j *Json) Key(path ...interface{}) (Key, error) {
+	tmp, err := j.Get(path...)
+	if err != nil {
+		return "", err
+	}
+	if s, ok := tmp.data.(Key); ok {
+		return s, nil
+	}
+	if s, ok := tmp.data.(string); ok {
+		return ParseKey(s)
+	}
+	return "", invalidTypeErr
+}
+
+func (j *Json) MustKey(path ...interface{}) Key {
+	v, err := j.Key(path...)
+	PanicOn(err)
+	return v
+}
+
+func (j *Json) KeyOrDefault(pathThenDefault ...interface{}) Key {
+	path, def := mustSplitPathThenValue(pathThenDefault)
+	if s, err := j.Key(path...); err == nil {
+		return s
+	}
+	if key, isKey := def.(Key); isKey {
+		return key
+	}
+	return MustParseKey(def.(string))
+}
+
+func (j *Json) Keys(path ...interface{}) (Keys, error) {
+	js, err := j.Get(path...)
+	if err != nil {
+		return nil, err
+	}
+
+	if js.data == nil {
+		return nil, nil
+	}
+
+	if data, ok := js.data.(Keys); ok {
+		return data, nil
+	}
+
+	if data, ok := js.data.([]string); ok {
+		ks := make(Keys, 0, len(data))
+		for _, item := range data {
+			k, err := ParseKey(item)
+			if err != nil {
+				return nil, err
+			}
+			ks = append(ks, k)
+		}
+		return ks, nil
+	}
+
+	if data, ok := js.data.([]interface{}); ok {
+		ks := make(Keys, 0, len(data))
+		for _, item := range data {
+			if k, ok := item.(Key); ok {
+				ks = append(ks, k)
+			} else if str, ok := item.(string); ok {
+				k, err := ParseKey(str)
+				if err != nil {
+					return nil, err
+				}
+				ks = append(ks, k)
+			} else {
+				return nil, invalidTypeErr
+			}
+		}
+		return ks, nil
+	}
+
+	return nil, invalidTypeErr
+}
+
+func (j *Json) MustKeys(path ...interface{}) Keys {
+	v, err := j.Keys(path...)
+	PanicOn(err)
+	return v
+}
+
+func (j *Json) KeysOrDefault(pathThenDefault ...interface{}) Keys {
+	path, def := mustSplitPathThenValue(pathThenDefault)
+	if a, err := j.Keys(path...); err == nil {
+		return a
+	}
+	return def.(Keys)
 }
 
 func (j *Json) String(path ...interface{}) (string, error) {

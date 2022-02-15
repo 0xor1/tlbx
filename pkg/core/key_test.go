@@ -11,8 +11,8 @@ func TestParseKey(t *testing.T) {
 	defer Recover(func(i interface{}) {
 		a.Contains(i.(Error).Error(), `invalid key detected`)
 	})
-	ParseKey("yolo")
-	ParseKey("_yolo_")
+	MustParseKey("yolo")
+	MustParseKey("_yolo_")
 }
 func TestKey(t *testing.T) {
 	a := assert.New(t)
@@ -31,9 +31,9 @@ func TestKey(t *testing.T) {
 	a.Nil(err)
 	a.Equal(v, string(newK))
 
-	k = ToKey(" f   8  9  {}@#:asd   8 d  +){")
+	k = MustToKey(" f   8  9  {}@#:asd   8 d  +){")
 	a.Equal("f_8_9_asd_8_d", string(k))
-	k = ToKey(string(k))
+	k = MustToKey(string(k))
 	a.Equal("f_8_9_asd_8_d", string(k))
 
 	sqlV, err := k.Value()
@@ -45,7 +45,7 @@ func TestKey(t *testing.T) {
 	a.Equal("f_8_9_asd_8_d", k.String())
 
 	tooLongKey := StrRepeat("f", 101)
-	k = ToKey(tooLongKey)
+	k = MustToKey(tooLongKey)
 	a.Len(k, 50)
 
 	ks := Keys{k}
@@ -73,5 +73,5 @@ func TestKey(t *testing.T) {
 	defer Recover(func(i interface{}) {
 		a.Contains(i.(Error).Error(), `key must not be a ulid string detected`)
 	})
-	ToKey(NewIDGen().MustNew().String())
+	MustToKey(NewIDGen().MustNew().String())
 }

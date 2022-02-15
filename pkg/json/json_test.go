@@ -241,7 +241,7 @@ func Test_Get(t *testing.T) {
 	obj, err := FromString(`{"a":[{},{"b":[[],{},{"c":"got it!"}]}]}`)
 	a.Nil(err, "err is nil")
 
-	obj2, err := obj.Get("a", 1, "b", 2, "c")
+	obj2, err := obj.Get(MustParseKey("a"), 1, "b", 2, "c")
 	a.Nil(err, "err is nil")
 	obj2 = obj.MustGet("a", 1, "b", 2, "c")
 
