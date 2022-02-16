@@ -1087,7 +1087,7 @@ func getTypeInfo(t reflect.Type, ti *typeInfo) {
 		ti.Ptr = true
 		getTypeInfo(t.Elem(), ti)
 	case reflect.Array, reflect.Slice:
-		if t.Name() == "ID" || t.Name() == "string" {
+		if t.Name() == "ID" || t.Name() == "Key" || t.Name() == "string" {
 			ti.Type = StrLower(t.Name())
 		} else {
 			ti.Array = true
