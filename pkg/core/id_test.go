@@ -117,6 +117,8 @@ func Test_IDsValueAndScan(t *testing.T) {
 	a.Nil(scannedIDs.Scan(v))
 	a.Equal(ids, scannedIDs)
 	a.Len(scannedIDs, 2)
+	a.Nil(scannedIDs.Scan(nil))
+	a.Len(scannedIDs, 0)
 }
 
 func Test_IDsMerge(t *testing.T) {

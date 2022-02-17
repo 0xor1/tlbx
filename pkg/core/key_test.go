@@ -86,4 +86,6 @@ func Test_KeysValueAndScan(t *testing.T) {
 	a.Nil(scannedKs.Scan(v))
 	a.Equal(ks, scannedKs)
 	a.Len(scannedKs, 2)
+	a.Nil(scannedKs.Scan(nil))
+	a.Len(scannedKs, 0)
 }

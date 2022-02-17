@@ -244,6 +244,10 @@ func (ids IDs) Value() (driver.Value, error) {
 
 // useful for IDs columns or GROUP_CONCAT(id_col SEPARATOR '')
 func (ids *IDs) Scan(src interface{}) error {
+	if src == nil {
+		*ids = nil
+		return nil
+	}
 	bs, ok := src.([]byte)
 	if !ok {
 		return ToError(Strf("invalid sql scan type %t", src))

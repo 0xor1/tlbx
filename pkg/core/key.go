@@ -186,6 +186,10 @@ func (ks Keys) Value() (driver.Value, error) {
 
 // useful for Keys columns or GROUP_CONCAT(key_col)
 func (ks *Keys) Scan(src interface{}) error {
+	if src == nil {
+		*ks = nil
+		return nil
+	}
 	strs, ok := src.(string)
 	if !ok {
 		bs, ok := src.([]byte)
