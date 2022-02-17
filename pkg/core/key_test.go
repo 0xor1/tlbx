@@ -75,3 +75,15 @@ func TestKey(t *testing.T) {
 	})
 	MustToKey(NewIDGen().MustNew().String())
 }
+
+func Test_KeysValueAndScan(t *testing.T) {
+	a := assert.New(t)
+	ks := Keys{"yolo", "nolo"}
+	v, e := ks.Value()
+	a.Nil(e)
+	a.Len(v, 9)
+	scannedKs := Keys{}
+	a.Nil(scannedKs.Scan(v))
+	a.Equal(ks, scannedKs)
+	a.Len(scannedKs, 2)
+}

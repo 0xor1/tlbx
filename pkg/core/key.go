@@ -73,16 +73,6 @@ func MustParseKey(s string) Key {
 	return k
 }
 
-type Keys []Key
-
-func (s Keys) ToIs() []interface{} {
-	res := make([]interface{}, len(s))
-	for i, k := range s {
-		res[i] = k
-	}
-	return res
-}
-
 // keys are user defined ids, max chars 50
 type Key string
 
@@ -163,4 +153,57 @@ func (s *Key) String() string {
 
 func invalidStrKeyErr(s string) error {
 	return Err("invalid key detected: %q must match regex: %s, and must not match regex: %s", s, keyValidRegex.String(), keyValidDoubleUnderscoreRegex.String())
+}
+
+type Keys []Key
+
+func (s Keys) ToIs() []interface{} {
+	res := make([]interface{}, len(s))
+	for i, k := range s {
+		res[i] = k
+	}
+	return res
+}
+
+func (ks Keys) Value() (driver.Value, error) {
+	size := 0
+	for _, k := range ks {
+		size += len(k)
+	}
+	bs := make([]byte, 0, size+(len(ks)-1))
+	for i, k := range ks {
+		b, e := k.MarshalBinary()
+		if e != nil {
+			return nil, e
+		}
+		if i > 0 {
+			bs = append(bs, []byte(",")[0])
+		}
+		bs = append(bs, b...)
+	}
+	return bs, nil
+}
+
+// useful for Keys columns or GROUP_CONCAT(key_col)
+func (ks *Keys) Scan(src interface{}) error {
+	strs, ok := src.(string)
+	if !ok {
+		bs, ok := src.([]byte)
+		if !ok {
+			return ToError(Strf("invalid sql scan type %t", src))
+		}
+		strs = string(bs)
+	}
+	strKeys := StrSplit(strs, ",")
+	if len(*ks) < len(strKeys) {
+		*ks = make(Keys, 0, len(strKeys))
+	}
+	for _, strK := range strKeys {
+		k, e := ParseKey(strK)
+		if e != nil {
+			return e
+		}
+		*ks = append(*ks, k)
+	}
+	return nil
 }

@@ -230,6 +230,18 @@ func IDsMerge(idss ...IDs) IDs {
 	return merge
 }
 
+func (ids IDs) Value() (driver.Value, error) {
+	bs := make([]byte, 0, len(ids)*16)
+	for _, id := range ids {
+		b, e := id.MarshalBinary()
+		if e != nil {
+			return nil, e
+		}
+		bs = append(bs, b...)
+	}
+	return bs, nil
+}
+
 // useful for IDs columns or GROUP_CONCAT(id_col SEPARATOR '')
 func (ids *IDs) Scan(src interface{}) error {
 	bs, ok := src.([]byte)
@@ -239,7 +251,7 @@ func (ids *IDs) Scan(src interface{}) error {
 	if len(bs)%16 != 0 {
 		ToError("invalid ids scan byte slice length is not a multiple of 16")
 	}
-	if len(*ids) < len(bs)%16 {
+	if len(*ids) < len(bs)/16 {
 		*ids = make(IDs, len(bs)%16)
 	}
 	for i := 0; i < len(bs); i += 16 {

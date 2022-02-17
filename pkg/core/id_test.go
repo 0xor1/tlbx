@@ -106,6 +106,19 @@ func Test_IDsStrJoin(t *testing.T) {
 	a.Equal("00000000000000000000000000_00000000000000000000000000", idsStr)
 }
 
+func Test_IDsValueAndScan(t *testing.T) {
+	a := assert.New(t)
+	idGen := NewIDGen()
+	ids := IDs{idGen.MustNew(), idGen.MustNew()}
+	v, e := ids.Value()
+	a.Nil(e)
+	a.Len(v, 32)
+	scannedIDs := IDs{}
+	a.Nil(scannedIDs.Scan(v))
+	a.Equal(ids, scannedIDs)
+	a.Len(scannedIDs, 2)
+}
+
 func Test_IDsMerge(t *testing.T) {
 	a := assert.New(t)
 	gen := NewIDGen()
