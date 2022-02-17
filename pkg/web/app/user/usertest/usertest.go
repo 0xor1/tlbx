@@ -34,6 +34,22 @@ func Everything(t *testing.T) {
 	defer r.CleanUp()
 
 	a := assert.New(t)
+
+	// do a test of IDs.Scan here
+	foundIDs := IDs{}
+	PanicOn(r.User().Primary().Get(&foundIDs, `SELECT GROUP_CONCAT(id SEPARATOR '') FROM users`))
+	expectedIDs := IDs{r.Ali().ID(), r.Bob().ID(), r.Cat().ID(), r.Dan().ID()}
+	idsFound := 0
+	for _, expectedID := range expectedIDs {
+		for _, foundID := range foundIDs {
+			if expectedID.Equal(foundID) {
+				idsFound++
+				break
+			}
+		}
+	}
+	a.Equal(len(expectedIDs), idsFound)
+
 	c := r.NewClient()
 	handle := "test_" + r.UniqueStr()
 	alias := "test 😂 alias"

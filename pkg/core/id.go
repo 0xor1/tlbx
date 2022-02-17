@@ -228,7 +228,29 @@ func IDsMerge(idss ...IDs) IDs {
 		}
 	}
 	return merge
+}
 
+// useful for IDs columns or GROUP_CONCAT(id_col SEPARATOR '')
+func (ids *IDs) Scan(src interface{}) error {
+	bs, ok := src.([]byte)
+	if !ok {
+		return ToError(Strf("invalid sql scan type %t", src))
+	}
+	if len(bs)%16 != 0 {
+		ToError("invalid ids scan byte slice length is not a multiple of 16")
+	}
+	if len(*ids) < len(bs)%16 {
+		*ids = make(IDs, len(bs)%16)
+	}
+	for i := 0; i < len(bs); i += 16 {
+		id := ID{}
+		e := id.Scan(bs[i : i+16])
+		if e != nil {
+			return e
+		}
+		*ids = append(*ids, id)
+	}
+	return nil
 }
 
 func zeroIDErr() Error {
