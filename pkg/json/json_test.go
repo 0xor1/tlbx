@@ -245,7 +245,7 @@ func Test_Get(t *testing.T) {
 	a.Nil(err, "err is nil")
 	obj2 = obj.MustGet("a", 1, "b", 2, "c")
 
-	str := obj2.StringOrDefault("")
+	str := obj2.StringOr("")
 	a.Equal("got it!", str, "str is correct value")
 
 	obj2.MustString()
@@ -626,9 +626,9 @@ func Test_Interface(t *testing.T) {
 	a.Nil(err, "err is nil")
 	a.Equal(map[string]interface{}{"a": true}, val, "val is correct")
 
-	val = obj.InterfaceOrDefault("a", false)
+	val = obj.InterfaceOr("a", false)
 	a.Equal(true, val)
-	val = obj.InterfaceOrDefault("b", false)
+	val = obj.InterfaceOr("b", false)
 	a.Equal(false, val)
 }
 
@@ -656,13 +656,13 @@ func Test_Map_PathError(t *testing.T) {
 	a.Nil(val, "val is correct")
 }
 
-func Test_MapOrDefault(t *testing.T) {
+func Test_MapOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`[{"a":true}]`)
 	a.Nil(err, "err is nil")
 
-	val := obj.MapOrDefault(0, nil)
+	val := obj.MapOr(0, nil)
 	a.Equal(map[string]interface{}{"a": true}, val, "val is correct")
 }
 
@@ -723,20 +723,20 @@ func Test_MustMapString(t *testing.T) {
 	a.Equal(map[string]string{"a": "b"}, val, "val is correct")
 }
 
-func Test_MapStringOrDefault(t *testing.T) {
+func Test_MapStringOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`[{"a":"b"}]`)
 	a.Nil(err, "err is nil")
 
-	val := obj.MapStringOrDefault(0, nil)
+	val := obj.MapStringOr(0, nil)
 	a.Equal(map[string]string{"a": "b"}, val, "val is correct")
 
 	obj, err = FromString(`[{"a":"b"}]`)
 	a.Nil(err, "err is nil")
 
 	def := map[string]string{"c": "d"}
-	val = obj.MapStringOrDefault(def)
+	val = obj.MapStringOr(def)
 	a.Equal(def, val, "val is correct")
 }
 
@@ -746,7 +746,7 @@ func Test_MustMap_DefaultValue(t *testing.T) {
 	obj, err := FromString(`[]`)
 	a.Nil(err, "err is nil")
 
-	val := obj.MapOrDefault(map[string]interface{}{"a": true})
+	val := obj.MapOr(map[string]interface{}{"a": true})
 	a.Equal(map[string]interface{}{"a": true}, val, "val is correct")
 }
 
@@ -764,19 +764,19 @@ func Test_Slice(t *testing.T) {
 	a.Nil(val, "val is nil")
 }
 
-func Test_SliceOrDefault(t *testing.T) {
+func Test_SliceOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`{"a":[true,false,true]}`)
 	a.Nil(err, "err is nil")
 
-	val := obj.SliceOrDefault("a", []interface{}{})
+	val := obj.SliceOr("a", []interface{}{})
 	a.Equal([]interface{}{true, false, true}, val, "val is correct")
 
 	obj, err = FromString(`{}`)
 	a.Nil(err, "err is nil")
 
-	val = obj.SliceOrDefault([]interface{}{true, false, true})
+	val = obj.SliceOr([]interface{}{true, false, true})
 	a.Equal([]interface{}{true, false, true}, val, "val is correct")
 }
 
@@ -826,19 +826,19 @@ func Test_Bool_Error(t *testing.T) {
 	a.Equal(false, val, "val is correct")
 }
 
-func Test_BoolOrDefault(t *testing.T) {
+func Test_BoolOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`true`)
 	a.Nil(err, "err is nil")
 
-	val := obj.BoolOrDefault(false)
+	val := obj.BoolOr(false)
 	a.Equal(true, val, "val is correct")
 
 	obj, err = FromString(`"hi"`)
 	a.Nil(err, "err is nil")
 
-	val = obj.BoolOrDefault(true)
+	val = obj.BoolOr(true)
 	a.Equal(true, val, "val is correct")
 }
 
@@ -859,8 +859,8 @@ func Test_ID(t *testing.T) {
 	id := idGen.MustNew()
 	obj := &Json{id}
 	a.Equal(id, obj.MustID())
-	a.Equal(id, obj.IDOrDefault(id))
-	a.Equal(id, (&Json{}).IDOrDefault(id))
+	a.Equal(id, obj.IDOr(id))
+	a.Equal(id, (&Json{}).IDOr(id))
 
 	id, err := obj.ID("a")
 	a.NotNil(err)
@@ -887,9 +887,9 @@ func Test_IDs(t *testing.T) {
 	ids := IDs{idGen.MustNew()}
 	obj := &Json{ids}
 	a.Equal(ids, obj.MustIDs())
-	a.Equal(ids, obj.IDsOrDefault(ids))
-	a.Nil((&Json{}).IDsOrDefault(ids))
-	a.Equal(ids, (&Json{}).IDsOrDefault("a", ids))
+	a.Equal(ids, obj.IDsOr(ids))
+	a.Nil((&Json{}).IDsOr(ids))
+	a.Equal(ids, (&Json{}).IDsOr("a", ids))
 
 	_, err := obj.IDs("a")
 	a.NotNil(err)
@@ -913,9 +913,9 @@ func Test_Key(t *testing.T) {
 	k := MustToKey("yolo")
 	obj := &Json{k}
 	a.Equal(k, obj.MustKey())
-	a.Equal(k, obj.KeyOrDefault(k))
-	a.Equal(k, (&Json{}).KeyOrDefault(k))
-	a.Equal(k, (&Json{}).KeyOrDefault("yolo"))
+	a.Equal(k, obj.KeyOr(k))
+	a.Equal(k, (&Json{}).KeyOr(k))
+	a.Equal(k, (&Json{}).KeyOr("yolo"))
 
 	k, err := obj.Key("a")
 	a.NotNil(err)
@@ -941,9 +941,9 @@ func Test_Keys(t *testing.T) {
 	ks := Keys{"yolo"}
 	obj := &Json{ks}
 	a.Equal(ks, obj.MustKeys())
-	a.Equal(ks, obj.KeysOrDefault(ks))
-	a.Nil((&Json{}).KeysOrDefault(ks))
-	a.Equal(ks, (&Json{}).KeysOrDefault("a", ks))
+	a.Equal(ks, obj.KeysOr(ks))
+	a.Nil((&Json{}).KeysOr(ks))
+	a.Equal(ks, (&Json{}).KeysOr("a", ks))
 
 	_, err := obj.Keys("a")
 	a.NotNil(err)
@@ -992,7 +992,7 @@ func Test_MustString_DefaultValue(t *testing.T) {
 	obj, err := FromString(`true`)
 	a.Nil(err, "err is nil")
 
-	val := obj.StringOrDefault("hi")
+	val := obj.StringOr("hi")
 	a.Equal("hi", val, "val is correct")
 }
 
@@ -1034,19 +1034,19 @@ func Test_StringSlice_NoneStringValue(t *testing.T) {
 	a.Nil(val, "val is nil")
 }
 
-func Test_StringSliceOrDefault(t *testing.T) {
+func Test_StringSliceOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`{"a":["hi"]}`)
 	a.Nil(err, "err is nil")
 
-	val := obj.StringSliceOrDefault("a", nil)
+	val := obj.StringSliceOr("a", nil)
 	a.Equal([]string{"hi"}, val, "val is correct")
 
 	obj, err = FromString(`"hi"`)
 	a.Nil(err, "err is nil")
 
-	val = obj.StringSliceOrDefault([]string{"yo"})
+	val = obj.StringSliceOr([]string{"yo"})
 	a.Equal([]string{"yo"}, val, "val is correct")
 }
 
@@ -1099,20 +1099,20 @@ func Test_Time_PathError(t *testing.T) {
 	a.True(val.IsZero(), "val is correct")
 }
 
-func Test_TimeOrDefault(t *testing.T) {
+func Test_TimeOr(t *testing.T) {
 	a := assert.New(t)
 
 	now := Now()
 	obj := FromInterface(now)
 
 	var zero time.Time
-	val := obj.TimeOrDefault(zero)
+	val := obj.TimeOr(zero)
 	a.Equal(now, val, "val is correct")
 
 	obj = FromInterface(true)
 
 	now = Now()
-	val = obj.TimeOrDefault(now)
+	val = obj.TimeOr(now)
 	a.Equal(now, val, "val is correct")
 }
 
@@ -1169,20 +1169,20 @@ func Test_TimeSlice_NoneTimeValue(t *testing.T) {
 	a.Nil(val, "val is nil")
 }
 
-func Test_TimeSliceOrDefault(t *testing.T) {
+func Test_TimeSliceOr(t *testing.T) {
 	a := assert.New(t)
 
 	now := Now()
 	obj := FromInterface(map[string]interface{}{"a": []time.Time{now}})
 
-	val := obj.TimeSliceOrDefault("a", nil)
+	val := obj.TimeSliceOr("a", nil)
 	a.Equal([]time.Time{now}, val, "val is correct")
 
 	obj, err := FromString(`"hi"`)
 	a.Nil(err, "err is nil")
 
 	def := []time.Time{Now()}
-	val = obj.TimeSliceOrDefault("a", def)
+	val = obj.TimeSliceOr("a", def)
 	a.Equal(def, val, "val is correct")
 }
 
@@ -1242,19 +1242,19 @@ func Test_Duration_TypeError(t *testing.T) {
 	a.NotNil(err, "err is not nil")
 }
 
-func Test_DurationOrDefault(t *testing.T) {
+func Test_DurationOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`{"a": "1s"}`)
 	a.Nil(err, "err is nil")
 
-	val := obj.DurationOrDefault("a", 5*time.Second)
+	val := obj.DurationOr("a", 5*time.Second)
 	a.Equal(time.Second, val, "val is correct")
 
 	obj, err = FromString(`{"a": "s"}`)
 	a.Nil(err, "err is nil")
 
-	val = obj.DurationOrDefault("a", 5*time.Second)
+	val = obj.DurationOr("a", 5*time.Second)
 	a.Equal(5*time.Second, val, "val is correct")
 }
 
@@ -1304,19 +1304,19 @@ func Test_DurationSlice_PathError(t *testing.T) {
 	a.NotNil(err, "err is not nil")
 }
 
-func Test_DurationSliceOrDefault(t *testing.T) {
+func Test_DurationSliceOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`{"a": ["1s"]}`)
 	a.Nil(err, "err is nil")
 
-	val := obj.DurationSliceOrDefault("a", []time.Duration{5 * time.Second})
+	val := obj.DurationSliceOr("a", []time.Duration{5 * time.Second})
 	a.Equal(time.Second, val[0], "val is correct")
 
 	obj, err = FromString(`{"a": ["s"]}`)
 	a.Nil(err, "err is nil")
 
-	val = obj.DurationSliceOrDefault("a", []time.Duration{5 * time.Second})
+	val = obj.DurationSliceOr("a", []time.Duration{5 * time.Second})
 	a.Equal([]time.Duration{5 * time.Second}, val, "val is correct")
 }
 
@@ -1392,17 +1392,17 @@ func Test_Int_Error(t *testing.T) {
 	a.Equal(0, val, "val is correct")
 }
 
-func Test_IntOrDefault(t *testing.T) {
+func Test_IntOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj := &Json{42}
 
-	val := obj.IntOrDefault(24)
+	val := obj.IntOr(24)
 	a.Equal(42, val, "val is correct")
 
 	obj = &Json{"hi"}
 
-	val = obj.IntOrDefault(24)
+	val = obj.IntOr(24)
 	a.Equal(24, val, "val is correct")
 }
 
@@ -1452,19 +1452,19 @@ func Test_IntSlice_NoneIntValue(t *testing.T) {
 	a.Nil(val, "val is nil")
 }
 
-func Test_IntSliceOrDefault(t *testing.T) {
+func Test_IntSliceOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`[0,1,2]`)
 	a.Nil(err, "err is nil")
 
-	val := obj.IntSliceOrDefault(nil)
+	val := obj.IntSliceOr(nil)
 	a.Equal([]int{0, 1, 2}, val, "val is correct")
 
 	obj, err = FromString(`"hi"`)
 	a.Nil(err, "err is nil")
 
-	val = obj.IntSliceOrDefault([]int{0, 1, 2})
+	val = obj.IntSliceOr([]int{0, 1, 2})
 	a.Equal([]int{0, 1, 2}, val, "val is correct")
 }
 
@@ -1500,17 +1500,17 @@ func Test_Float64_PathError(t *testing.T) {
 	a.Equal(float64(0), val, "val is correct")
 }
 
-func Test_Float64OrDefault(t *testing.T) {
+func Test_Float64Or(t *testing.T) {
 	a := assert.New(t)
 
 	obj := &Json{42}
 
-	val := obj.Float64OrDefault(float64(24))
+	val := obj.Float64Or(float64(24))
 	a.Equal(42.0, val, "val is correct")
 
 	obj = &Json{"hi"}
 
-	val = obj.Float64OrDefault(float64(24))
+	val = obj.Float64Or(float64(24))
 	a.Equal(24.0, val, "val is correct")
 }
 
@@ -1560,19 +1560,19 @@ func Test_Float64Slice_NoneFloat64Value(t *testing.T) {
 	a.Nil(val, "val is nil")
 }
 
-func Test_Float64SliceOrDefault(t *testing.T) {
+func Test_Float64SliceOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`[0,1,2]`)
 	a.Nil(err, "err is nil")
 
-	val := obj.Float64SliceOrDefault(nil)
+	val := obj.Float64SliceOr(nil)
 	a.Equal([]float64{0.0, 1.0, 2.0}, val, "val is correct")
 
 	obj, err = FromString(`"hi"`)
 	a.Nil(err, "err is nil")
 
-	val = obj.Float64SliceOrDefault([]float64{0.0, 1.0, 2.0})
+	val = obj.Float64SliceOr([]float64{0.0, 1.0, 2.0})
 	a.Equal([]float64{0.0, 1.0, 2.0}, val, "val is correct")
 }
 
@@ -1668,17 +1668,17 @@ func Test_Int64_Error(t *testing.T) {
 	a.Equal(int64(0), val, "val is correct")
 }
 
-func Test_Int64OrDefault(t *testing.T) {
+func Test_Int64Or(t *testing.T) {
 	a := assert.New(t)
 
 	obj := &Json{42}
 
-	val := obj.Int64OrDefault(int64(24))
+	val := obj.Int64Or(int64(24))
 	a.Equal(int64(42), val, "val is correct")
 
 	obj = &Json{"hi"}
 
-	val = obj.Int64OrDefault(int64(24))
+	val = obj.Int64Or(int64(24))
 	a.Equal(int64(24), val, "val is correct")
 }
 
@@ -1728,7 +1728,7 @@ func Test_Int64Slice_NoneInt64Value(t *testing.T) {
 	a.Nil(val, "val is nil")
 }
 
-func Test_Int64SliceOrDefault(t *testing.T) {
+func Test_Int64SliceOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`[0,1,2]`)
@@ -1836,17 +1836,17 @@ func Test_Uint64_Error(t *testing.T) {
 	a.Equal(uint64(0), val, "val is correct")
 }
 
-func Test_MustUint64OrDefault(t *testing.T) {
+func Test_MustUint64Or(t *testing.T) {
 	a := assert.New(t)
 
 	obj := &Json{42}
 
-	val := obj.Uint64OrDefault(uint64(24))
+	val := obj.Uint64Or(uint64(24))
 	a.Equal(uint64(42), val, "val is correct")
 
 	obj = &Json{"hi"}
 
-	val = obj.Uint64OrDefault(uint64(24))
+	val = obj.Uint64Or(uint64(24))
 	a.Equal(uint64(24), val, "val is correct")
 }
 
@@ -1896,19 +1896,19 @@ func Test_Uint64Slice_NoneUint64Value(t *testing.T) {
 	a.Nil(val, "val is nil")
 }
 
-func Test_Uint64SliceOrDefault(t *testing.T) {
+func Test_Uint64SliceOr(t *testing.T) {
 	a := assert.New(t)
 
 	obj, err := FromString(`[0,1,2]`)
 	a.Nil(err, "err is nil")
 
-	val := obj.Uint64SliceOrDefault(nil)
+	val := obj.Uint64SliceOr(nil)
 	a.Equal([]uint64{0, 1, 2}, val, "val is correct")
 
 	obj, err = FromString(`"hi"`)
 	a.Nil(err, "err is nil")
 
-	val = obj.Uint64SliceOrDefault([]uint64{0, 1, 2})
+	val = obj.Uint64SliceOr([]uint64{0, 1, 2})
 	a.Equal([]uint64{0, 1, 2}, val, "val is correct")
 }
 
