@@ -89,3 +89,17 @@ func Test_KeysValueAndScan(t *testing.T) {
 	a.Nil(scannedKs.Scan(nil))
 	a.Len(scannedKs, 0)
 }
+
+func Test_ParseKeys(t *testing.T) {
+	a := assert.New(t)
+	ks, e := ParseKeys([]string{"yolo", " nolo"})
+	a.Nil(ks)
+	a.NotNil(e)
+
+	ks = MustParseKeys([]string{"yolo", "nolo"})
+	a.Len(ks, 2)
+
+	ks, e = ToKeys([]string{"yolo", " nolo"})
+	a.Len(ks, 2)
+	a.Nil(e)
+}

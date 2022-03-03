@@ -157,6 +157,42 @@ func invalidStrKeyErr(s string) error {
 
 type Keys []Key
 
+func ToKeys(ss []string) (Keys, error) {
+	ks := make(Keys, 0, len(ss))
+	for _, s := range ss {
+		k, e := ToKey(s)
+		if e != nil {
+			return nil, e
+		}
+		ks = append(ks, k)
+	}
+	return ks, nil
+}
+
+func MustToKeys(ss []string) Keys {
+	ks, e := ToKeys(ss)
+	PanicOn(e)
+	return ks
+}
+
+func ParseKeys(ss []string) (Keys, error) {
+	ks := make(Keys, 0, len(ss))
+	for _, s := range ss {
+		k, e := ParseKey(s)
+		if e != nil {
+			return nil, e
+		}
+		ks = append(ks, k)
+	}
+	return ks, nil
+}
+
+func MustParseKeys(ss []string) Keys {
+	ks, e := ParseKeys(ss)
+	PanicOn(e)
+	return ks
+}
+
 func (s Keys) ToIs() []interface{} {
 	res := make([]interface{}, len(s))
 	for i, k := range s {
