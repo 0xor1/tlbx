@@ -2,13 +2,14 @@ import axios from 'axios'
 import firebase from "firebase/app";
 import "firebase/messaging";
 
-firebase.initializeApp({
-  apiKey: "AIzaSyAg43CfgwC2HLC9x582IMq2UwM6NQ3FRCc",
-  projectId: "trees-82a30",
-  messagingSenderId: "69294578877",
-  appId: "1:69294578877:web:1edb203c55b78f43956bd4",
-});
-const fcmVapidKey = "BIrxz8PBCCRX2XekUa2zAKdYnKLhj9uHKhuSW5gc0WXWSCeh4Kx3c3GjHselJg0ARUgNJvcZLkd6roGfErpodRM"
+firebase.initializeApp(
+  {
+    apiKey: "AIzaSyDFoddqIYlq5p4gYenOS2o4lgNQV9aO364",
+    projectId: "trees-b8fdf",
+    messagingSenderId: "256753508336",
+    appId: "1:256753508336:web:af836cd97251283faac735"
+  });
+const fcmVapidKey = "BIFxwC2V-C_bfcI0yd1A_LeoMTAb4QfqG3GaftlCa0465WiDirZIsCdFoWuHBAL2u6JOXV_cTQBQZJ4rMYnv104"
 let fcm = firebase.messaging()
 let fcmClientId = null
 let fcmToken = null
