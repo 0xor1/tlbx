@@ -39,6 +39,17 @@ func StringOr(v *string, or string) string {
 	return *v
 }
 
+func Key(v core.Key) *core.Key {
+	return &v
+}
+
+func KeyOr(v *core.Key, or core.Key) core.Key {
+	if v == nil {
+		return or
+	}
+	return *v
+}
+
 func Time(v time.Time) *time.Time {
 	return &v
 }
