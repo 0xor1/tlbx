@@ -242,7 +242,7 @@ func (ids IDs) Value() (driver.Value, error) {
 	return bs, nil
 }
 
-// useful for IDs columns or GROUP_CONCAT(id_col SEPARATOR '')
+// useful for IDs columns or GROUP_CONCAT(id_col SEPARATOR ”)
 func (ids *IDs) Scan(src interface{}) error {
 	if src == nil {
 		*ids = nil

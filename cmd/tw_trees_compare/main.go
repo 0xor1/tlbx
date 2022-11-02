@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-//util program to generate and manipulate perfect k-ary trees of subtasks in tw projects
+// util program to generate and manipulate perfect k-ary trees of subtasks in tw projects
 func main() {
 	// cmdFlags
 	fs := flag.NewFlagSet("twtrees", flag.ExitOnError)

@@ -32,7 +32,7 @@ func TestSparkPostClient(t *testing.T) {
 	})
 	c := email.NewSparkPostClient(spC)
 	defer Recover(func(i interface{}) {
-		a.Contains(i.(Error).Message(), "Forbidden")
+		a.Contains(i.(Error).Message(), "Unauthorized")
 	})
 	c.MustSend([]string{"a@a.a"}, "a@a.a", "subject", "<h1>yolo</h1>", "yolo")
 }

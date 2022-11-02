@@ -84,6 +84,7 @@ func New(
 			},
 			Handler: func(tlbx app.Tlbx, a interface{}) interface{} {
 				app.BadReqIf(me.AuthedExists(tlbx), "already logged in")
+				tlbx.Log().Info("yolo")
 				args := a.(*user.Register)
 				args.Email = StrTrimWS(args.Email)
 				validate.Str("email", args.Email, 0, emailMaxLen, emailRegex)

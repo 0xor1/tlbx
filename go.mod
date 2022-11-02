@@ -1,6 +1,6 @@
 module github.com/0xor1/tlbx
 
-go 1.17
+go 1.19
 
 require (
 	firebase.google.com/go v3.13.0+incompatible
